@@ -71,6 +71,21 @@ class Generator:
             + "\n\n".join(rendered)
         )
 
+    def _discriminator_constraints(self) -> str:
+        """Fold the judge's most recent tells back into the prompt as explicit
+        constraints — this is what closes the discriminator loop (fidelity #3)."""
+        if self.store is None:
+            return ""
+        tells = self.store.latest_tells(self.item_type)
+        if not tells:
+            return ""
+        lines = "\n".join(f"- {t}" for t in tells)
+        return (
+            "A judge recently distinguished synthetic items from official ones using "
+            "the tells below. Write this item so none of them apply — make it "
+            "indistinguishable from an official item:\n" + lines
+        )
+
     def system_prompt(self, level: str) -> str:
         parts = [
             "You are an item writer for the BJT ビジネス日本語能力テスト "
@@ -88,6 +103,9 @@ class Generator:
         fs = self._fewshot_block()
         if fs:
             parts.insert(2, fs)
+        constraints = self._discriminator_constraints()
+        if constraints:
+            parts.insert(-1, constraints)  # just before the "return only JSON" line
         return "\n\n".join(parts)
 
     def user_prompt(self, level: str, avoid_topics: list[str]) -> str:

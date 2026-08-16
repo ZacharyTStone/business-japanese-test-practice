@@ -12,6 +12,7 @@ Commands
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import textwrap
 
@@ -175,11 +176,93 @@ def cmd_gen(args) -> int:
         item, iid, kept, detail = _generate_and_gate(
             store, args.type, args.level, gate=not args.no_gate
         )
-        _print_item_question(item)
-        _print_item_answer(item)
-        print(f"  #{iid}  {detail}  {'KEPT' if kept else 'DISCARDED'}")
+        if args.json:
+            print(json.dumps(item, ensure_ascii=False, indent=2))
+        else:
+            _print_item_question(item)
+            _print_item_answer(item)
+        print(f"  #{iid}  {detail}  {'KEPT' if kept else 'DISCARDED'}", file=sys.stderr)
     finally:
         store.close()
+    return 0
+
+
+def cmd_smoke(args) -> int:
+    """Headless acceptance harness — the automated 'answer N in a row without a
+    crash or a repeated scenario' check. No interaction; asserts every item is
+    valid, records the gate verdict spread, and reports scenario repeats."""
+    store = Store()
+    failures = 0
+    topics: list[str] = []
+    kept_n = 0
+    verdicts: dict[str, int] = {}
+    try:
+        for i in range(args.n):
+            try:
+                item, iid, kept, detail = _generate_and_gate(
+                    store, args.type, args.level, gate=not args.no_gate
+                )
+                errs = schemas.validate_item(args.type, item)
+                if errs:
+                    failures += 1
+                    print(f"  [{i+1}/{args.n}] INVALID: {errs}")
+                    continue
+                topics.append(item.get("topic", ""))
+                kept_n += int(kept)
+                verdict = detail.split("verdict=")[-1].split()[0] if "verdict=" in detail else "?"
+                verdicts[verdict] = verdicts.get(verdict, 0) + 1
+                print(f"  [{i+1}/{args.n}] ok  topic={item.get('topic','')!r}  {detail}")
+            except Exception as e:  # a crash is a hard failure of the DoD check
+                failures += 1
+                print(f"  [{i+1}/{args.n}] CRASH: {e}")
+
+        distinct = len({t for t in topics if t})
+        print("\n  " + "=" * 40)
+        print(f"  generated: {len(topics) + failures}   invalid/crashes: {failures}")
+        print(f"  distinct scenarios: {distinct}/{len(topics)}")
+        print(f"  kept (served-able): {kept_n}")
+        print(f"  gate verdicts: {verdicts or 'n/a (gate skipped)'}")
+        ok = failures == 0
+        print(f"  SMOKE {'PASSED' if ok else 'FAILED'}")
+    finally:
+        store.close()
+    return 0 if failures == 0 else 1
+
+
+def cmd_seeds(args) -> int:
+    """Validate and report what's in seeds/ so seeding is guided, not guesswork."""
+    from .generators.base import load_seed_json
+
+    print(f"Seeds directory: {config.SEEDS_DIR}\n")
+    problems = 0
+    for t in sorted(GENERATORS):
+        fs = load_seed_json("fewshot", t)
+        off = load_seed_json("official", t)
+        # A good few-shot example carries its 解説 and a valid option/role set.
+        fs_good = 0
+        for ex in fs:
+            has_expl = bool(ex.get("explanation_ja"))
+            role_ok = not schemas.validate_item(t, ex) if isinstance(ex.get("options"), list) \
+                and ex.get("options") and isinstance(ex["options"][0], dict) else False
+            fs_good += int(has_expl and role_ok)
+        flag = "" if fs else "  ← add 3-5 examples WITH their 解説"
+        print(f"  {t}:")
+        print(f"    fewshot:  {len(fs)} example(s), {fs_good} well-formed{flag}")
+        print(f"    official: {len(off)} item(s)"
+              + ("" if off else "  ← needed for discriminate/calibrate"))
+        if not fs:
+            problems += 1
+
+    vs = vocab.status_summary()
+    print("\n  vocab:")
+    print(f"    JLPT kanji tiers loaded: {vs['tiers_loaded'] or 'none'}"
+          + ("" if vs["tiers_loaded"] else "  ← add seeds/vocab/jlpt_*.txt to enable the kanji gate"))
+    print(f"    business terms: {vs['business_terms']}")
+    print(f"  levels: official CAN-DO descriptors "
+          f"{'loaded' if levels.using_official_descriptors() else 'NOT loaded (using neutral defaults)'}")
+    if problems:
+        print(f"\n  {problems} item type(s) have no few-shot examples — generation quality "
+              "will suffer until you add them. See seeds.example/README.md.")
     return 0
 
 
@@ -347,7 +430,8 @@ def cmd_discriminate(args) -> int:
         print("  judge's stated tells:")
         for r in result.reasons:
             print(f"    - {r}")
-        print("\n  Fold recurring tells back into the generator prompt as explicit constraints.")
+        print("\n  These tells are now auto-folded into the generator prompt for "
+              f"{args.type}; the next items will be written to avoid them.")
     finally:
         store.close()
     return 0
@@ -366,6 +450,9 @@ def cmd_calibrate(args) -> int:
         print(f"Sitting {len(official)} official {args.type} sample items.\n")
         n_correct = 0
         for i, item in enumerate(official):
+            if len(item.get("options", [])) > len(LETTERS):
+                print(f"\n(skipping official item {i+1}: more than {len(LETTERS)} options)")
+                continue
             print(f"\n=== Official item {i+1}/{len(official)} ===")
             _print_item_question(item)
             ci = schemas.correct_index(item["options"])
@@ -444,7 +531,17 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--type", required=True, choices=types)
     g.add_argument("--level", default="J2", choices=levels.LEVELS)
     g.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    g.add_argument("--json", action="store_true", help="print the item as JSON (verdict on stderr)")
     g.set_defaults(func=cmd_gen)
+
+    sm = sub.add_parser("smoke", help="headless acceptance run: generate N items, assert no crash/invalid")
+    sm.add_argument("--type", required=True, choices=types)
+    sm.add_argument("--level", default="J2", choices=levels.LEVELS)
+    sm.add_argument("-n", type=int, default=10, help="how many items")
+    sm.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    sm.set_defaults(func=cmd_smoke)
+
+    sub.add_parser("seeds", help="validate and report what's in seeds/").set_defaults(func=cmd_seeds)
 
     pr = sub.add_parser("practice", help="answer a run of items interactively")
     pr.add_argument("--type", choices=types, help="restrict to one item type")

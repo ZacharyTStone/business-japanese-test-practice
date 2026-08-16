@@ -51,11 +51,13 @@ pytest
 | Command | What it does |
 |---|---|
 | `bjt init` | Create the SQLite DB and print how to populate `seeds/`. |
+| `bjt seeds` | Validate and report what's in `seeds/` (few-shot, official, vocab, levels). |
 | `bjt selftest` | Offline check of schema/role validation and the DB (no key). |
-| `bjt gen --type T --level J2 [--no-gate]` | Generate one item, gate it, store it, print it with its 解説 and roles. |
+| `bjt gen --type T --level J2 [--no-gate] [--json]` | Generate one item, gate it, store it, print it (or JSON, with the verdict on stderr). |
+| `bjt smoke --type T --level J2 -n 10 [--no-gate]` | Headless acceptance run: generate N items, assert none crash or fail validation, report the scenario-repeat count. The automated "10 in a row" check. |
 | `bjt practice --type T --level J2 -n 10 [--fast] [--demo]` | Answer a run of items interactively. `--fast` skips the gate; `--demo` uses offline sample items. |
 | `bjt quality` | The fidelity report — all five mechanisms plus raw per-item-type accuracy. |
-| `bjt discriminate --type T [-n 6]` | Mix official + generated items, ask a judge which are synthetic, report the rate and the tells. |
+| `bjt discriminate --type T [-n 6]` | Mix official + generated items, ask a judge which are synthetic, report the rate and the tells — then auto-fold those tells into the generator prompt. |
 | `bjt calibrate --type T` | Sit the official sample items; compare your accuracy there to your accuracy on generated items. |
 
 `T` is `goi_bunpou` or `hyougen`. Levels are `J3` / `J2` / `J1`.
@@ -97,9 +99,11 @@ can see in `bjt quality`.
 3. **Discriminator loop** (`bjt/fidelity/discriminator.py`). On demand, mix
    official sample items (from `seeds/`) with generated ones and ask a judge model
    to label each. Above-chance discrimination means there's a tell; the judge is
-   asked *why*, and its reasons are recorded so you can fold them into the
-   generator prompt. The discrimination rate is the headline metric and should
-   trend toward 50%.
+   asked *why*, and its reasons are recorded. **The loop is closed:** the most
+   recent tells for an item type are auto-injected into that type's generator
+   prompt as explicit "make it indistinguishable" constraints, so the next items
+   are written to avoid them. The discrimination rate is the headline metric and
+   should trend toward 50%.
 
 4. **Genre templates** (phase 2). For 総合読解 — not built yet; `seeds/genre_templates/`
    is where the real business-document templates will go.

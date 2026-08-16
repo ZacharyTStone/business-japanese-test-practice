@@ -236,6 +236,17 @@ class Store:
         self.conn.commit()
         return int(cur.lastrowid)
 
+    def latest_tells(self, item_type: str, limit: int = 6) -> list[str]:
+        """The tells from the most recent discriminator run for this item type —
+        fed back into the generator prompt so the loop actually closes."""
+        row = self.conn.execute(
+            "SELECT reasons_json FROM discriminator_runs WHERE item_type = ? ORDER BY id DESC LIMIT 1",
+            (item_type,),
+        ).fetchone()
+        if not row:
+            return []
+        return json.loads(row["reasons_json"])[:limit]
+
     def latest_discriminator_runs(self) -> list[dict]:
         rows = self.conn.execute(
             """SELECT * FROM discriminator_runs
