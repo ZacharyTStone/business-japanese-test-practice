@@ -1,0 +1,6 @@
+{
+  "_note": "Replace these with the official CAN-DO descriptors from the BJT level guide (kept in seeds/, gitignored). If this file is absent, neutral built-in defaults are used.",
+  "J3": "PASTE the official J3 CAN-DO descriptor here.",
+  "J2": "PASTE the official J2 CAN-DO descriptor here.",
+  "J1": "PASTE the official J1 CAN-DO descriptor here."
+}

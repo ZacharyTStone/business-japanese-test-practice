@@ -1,0 +1,10 @@
+[
+  {
+    "_note": "PLACEHOLDER — paste real official BJT sample items here (keep them in seeds/, gitignored).",
+    "stem": "ご不明な点が＿＿＿ましたら、お気軽にお問い合わせください。",
+    "options": ["ござい", "おり", "いたし", "まいり"],
+    "answer": 0,
+    "level": "J2",
+    "explanation_ja": "「ございましたら」が正しい丁寧表現。"
+  }
+]

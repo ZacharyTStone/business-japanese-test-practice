@@ -1,0 +1,10 @@
+[
+  {
+    "_note": "PLACEHOLDER — paste real official BJT sample items here (keep them in seeds/, gitignored).",
+    "stem": "来客にお茶を出すとき、最も適切な表現はどれか。",
+    "options": ["どうぞお召し上がりください。", "どうぞいただいてください。", "どうぞ食べてあげてください。", "どうぞ召し上がってあげてください。"],
+    "answer": 0,
+    "level": "J3",
+    "explanation_ja": "相手の食べる行為には尊敬語「召し上がる」を使う。"
+  }
+]

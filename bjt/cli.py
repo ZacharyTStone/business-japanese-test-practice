@@ -1,0 +1,488 @@
+"""Command-line interface.
+
+Commands
+    init          create the database and print seed-setup instructions
+    selftest      offline check of validation + DB (no API key needed)
+    gen           generate one item, gate it, store it, print it
+    practice      answer a run of items interactively (--demo needs no key)
+    quality       print the fidelity report (mechanisms 1-5)
+    discriminate  run the discriminator loop and report the discrimination rate
+    calibrate     sit the official sample items and compare accuracy to generated
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+import textwrap
+
+from . import config, fixtures, levels, schemas
+from .llm import LLMError
+from .db import Store
+from .fidelity import answerability, discriminator, roles, vocab
+from .generators import GENERATORS, get_generator
+
+
+# ----- pretty printing ---------------------------------------------------
+
+LETTERS = ["A", "B", "C", "D"]
+
+
+def _print_item_question(item: dict) -> None:
+    print()
+    print(f"  [{item.get('item_type','')} · {item.get('level','')}]  {item.get('topic','')}")
+    print()
+    for line in textwrap.wrap(item["stem"], width=64):
+        print(f"  {line}")
+    print()
+    for i, o in enumerate(item["options"]):
+        print(f"    {LETTERS[i]}. {o['text']}")
+    print()
+
+
+def _print_item_answer(item: dict) -> None:
+    ci = schemas.correct_index(item["options"])
+    print(f"  正解: {LETTERS[ci]}. {item['options'][ci]['text']}")
+    print()
+    for line in textwrap.wrap(item["explanation_ja"], width=60):
+        print(f"  解説  {line}")
+    print(f"  EN    {item['explanation_en']}")
+    print()
+    print("  なぜ各選択肢が罠なのか (distractor roles):")
+    for i, o in enumerate(item["options"]):
+        if o["role"] == roles.CORRECT:
+            continue
+        print(f"    {LETTERS[i]}. {o['role']} — {roles.ROLE_DESCRIPTIONS.get(o['role'], '')}")
+    notes = item.get("vocab_notes") or []
+    if notes:
+        print("\n  語彙:")
+        for n in notes:
+            print(f"    {n['term']}（{n['reading']}） — {n['meaning']}")
+    print()
+
+
+# ----- generation + gating -----------------------------------------------
+
+def _generate_and_gate(store, item_type: str, level: str, *, gate: bool):
+    """Generate one item, run vocab + answerability checks, persist with metrics.
+    Returns (item, item_id, kept: bool, detail: str)."""
+    gen = get_generator(item_type, store)
+    item = gen.generate(level)
+
+    vres = vocab.check_item(item, level)
+    gate_verdict = "skipped"
+    cold = full = None
+    if gate:
+        gres = answerability.run_gate(item)
+        cold, full, gate_verdict = gres.cold_success_rate, gres.full_success_rate, gres.verdict
+    # A vocab violation (when enforced) is an independent discard reason — it can
+    # fail an item the answerability gate passed or skipped.
+    if vres.enforced and not vres.ok and not gate_verdict.startswith("discarded"):
+        gate_verdict = "discarded:vocab"
+
+    item_id = store.insert_item(
+        item_type, level, item, config.GEN_MODEL,
+        cold_success_rate=cold, full_success_rate=full,
+        gate_verdict=gate_verdict, vocab_violations=vres.violations,
+    )
+    if gate:
+        for t in gres.trials:
+            store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
+
+    kept = gate_verdict in ("kept", "skipped")
+    detail = _gate_detail(cold, full, gate_verdict, vres)
+    return item, item_id, kept, detail
+
+
+def _gate_detail(cold, full, verdict, vres) -> str:
+    bits = []
+    if cold is not None:
+        bits.append(f"cold={cold:.0%} full={full:.0%}")
+    bits.append(f"verdict={verdict}")
+    if vres.enforced and vres.violations:
+        bits.append(f"above-band kanji: {' '.join(vres.violations)}")
+    return "  ".join(bits)
+
+
+# ----- commands ----------------------------------------------------------
+
+def cmd_init(args) -> int:
+    Store().close()  # creates the schema
+    print(f"Initialised database at {config.DB_PATH}")
+    print(f"Seeds directory: {config.SEEDS_DIR}  (gitignored)")
+    print()
+    print("To enable full fidelity, populate seeds/ — see seeds.example/ for the format:")
+    print("  seeds/fewshot/<type>.json    3-5 official-style examples WITH their 解説")
+    print("  seeds/official/<type>.json   official sample items (for discriminate/calibrate)")
+    print("  seeds/vocab/*.txt            JLPT kanji tiers + business term list")
+    print("  seeds/levels.json            official CAN-DO descriptors per level")
+    return 0
+
+
+def cmd_selftest(args) -> int:
+    """Exercise validation, role enforcement, and the DB with no API calls."""
+    print("Running offline self-test (no API)...\n")
+    ok = True
+
+    # 1. Fixtures validate cleanly.
+    for it, item in fixtures.FIXTURES.items():
+        errs = schemas.validate_item(it, item)
+        print(f"  validate {it}: {'OK' if not errs else 'FAIL ' + str(errs)}")
+        ok &= not errs
+
+    # 2. Role validation catches a duplicate role and a bad role.
+    bad = [
+        {"text": "a", "role": "correct"},
+        {"text": "b", "role": "opposite_valence"},
+        {"text": "c", "role": "opposite_valence"},   # duplicate
+        {"text": "d", "role": "not_a_real_role"},     # outside enum
+    ]
+    errs = roles.validate_roles("goi_bunpou", bad)
+    caught = any("duplicate" in e for e in errs) and any("not in" in e for e in errs)
+    print(f"  role validator rejects duplicate + bad role: {'OK' if caught else 'FAIL'}")
+    ok &= caught
+
+    # 3. Missing-correct is caught.
+    no_correct = [{"text": t, "role": "opposite_valence"} for t in "abcd"]
+    errs = roles.validate_roles("goi_bunpou", no_correct)
+    caught = any("exactly 1 correct" in e for e in errs)
+    print(f"  role validator rejects missing correct option: {'OK' if caught else 'FAIL'}")
+    ok &= caught
+
+    # 4. Round-trip through the DB (in-memory).
+    import tempfile, os
+    tmp = tempfile.mktemp(suffix=".db")
+    try:
+        store = Store(__import__("pathlib").Path(tmp))
+        iid = store.insert_item("goi_bunpou", "J2", fixtures.FIXTURES["goi_bunpou"],
+                                "fixture", gate_verdict="skipped")
+        store.record_response(iid, schemas.correct_index(fixtures.FIXTURES["goi_bunpou"]["options"]), True)
+        acc = store.accuracy_by_type()
+        db_ok = bool(store.get_item(iid)) and acc and acc[0]["correct"] == 1
+        print(f"  DB insert + response + accuracy round-trip: {'OK' if db_ok else 'FAIL'}")
+        ok &= db_ok
+        store.close()
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+    print(f"\nSelf-test {'PASSED' if ok else 'FAILED'}.")
+    return 0 if ok else 1
+
+
+def cmd_gen(args) -> int:
+    store = Store()
+    try:
+        item, iid, kept, detail = _generate_and_gate(
+            store, args.type, args.level, gate=not args.no_gate
+        )
+        _print_item_question(item)
+        _print_item_answer(item)
+        print(f"  #{iid}  {detail}  {'KEPT' if kept else 'DISCARDED'}")
+    finally:
+        store.close()
+    return 0
+
+
+def cmd_practice(args) -> int:
+    if args.demo:
+        return _practice_demo(args)
+
+    store = Store()
+    try:
+        served = 0
+        target = args.n
+        attempts_budget = target * 4  # cap regen attempts so a bad streak can't loop forever
+        while served < target and attempts_budget > 0:
+            attempts_budget -= 1
+            item, iid, kept, detail = _generate_and_gate(
+                store, args.type, args.level, gate=not args.fast
+            )
+            if not kept:
+                print(f"  (regenerating — {detail})")
+                continue
+            served += 1
+            print(f"\n=== Item {served}/{target} ===")
+            _ask_and_score(store, item, iid)
+        print(f"\nDone. Answered {served} item(s).")
+        _print_run_accuracy(store)
+    finally:
+        store.close()
+    return 0
+
+
+def _practice_demo(args) -> int:
+    """Offline demo using the author-composed fixtures (no API key)."""
+    print("DEMO MODE — author-composed sample items, not official BJT material.\n")
+    store = Store()
+    try:
+        types = [args.type] if args.type else list(fixtures.FIXTURES)
+        served = 0
+        for i in range(args.n):
+            item = fixtures.FIXTURES[types[i % len(types)]]
+            iid = store.insert_item(item["item_type"], item["level"], item,
+                                    "demo-fixture", gate_verdict="skipped")
+            served += 1
+            print(f"\n=== Item {served}/{args.n} (demo) ===")
+            _ask_and_score(store, item, iid)
+        print(f"\nDone. Answered {served} item(s).")
+        _print_run_accuracy(store)
+    finally:
+        store.close()
+    return 0
+
+
+def _ask_and_score(store, item: dict, item_id: int) -> None:
+    _print_item_question(item)
+    ci = schemas.correct_index(item["options"])
+    choice = _read_choice(len(item["options"]))
+    if choice is None:
+        print("  (skipped)")
+        return
+    correct = choice == ci
+    store.record_response(item_id, choice, correct)
+    print(f"\n  {'✓ 正解！' if correct else '✗ 不正解'}  (you chose {LETTERS[choice]})\n")
+    _print_item_answer(item)
+
+
+def _read_choice(n: int):
+    while True:
+        try:
+            raw = input(f"  Your answer [{'/'.join(LETTERS[:n])}, or 's' to skip]: ").strip().upper()
+        except EOFError:
+            return None
+        if raw == "S":
+            return None
+        if raw in LETTERS[:n]:
+            return LETTERS.index(raw)
+        print("  Please enter one of:", ", ".join(LETTERS[:n]))
+
+
+def _print_run_accuracy(store) -> None:
+    print("\n  Per-item-type accuracy so far (raw — never a BJT score):")
+    for row in store.accuracy_by_type():
+        acc = f"{row['accuracy']:.0%}" if row["accuracy"] is not None else "n/a"
+        print(f"    {row['item_type']}: {row['correct']}/{row['answered']} ({acc})")
+
+
+def cmd_quality(args) -> int:
+    store = Store()
+    try:
+        print("=" * 60)
+        print("FIDELITY REPORT")
+        print("=" * 60)
+
+        print("\n[accuracy] raw per-item-type accuracy (no estimated BJT score):")
+        acc = store.accuracy_by_type()
+        if not acc:
+            print("  (no answers recorded yet)")
+        for row in acc:
+            a = f"{row['accuracy']:.0%}" if row["accuracy"] is not None else "n/a"
+            print(f"  {row['item_type']}: {row['correct']}/{row['answered']} ({a})")
+
+        print("\n[1 · distractor roles] item verdicts (role/gate/vocab enforcement):")
+        vc = store.verdict_counts()
+        if not vc:
+            print("  (no items generated yet)")
+        for row in vc:
+            print(f"  {row['item_type']}: {row['gate_verdict']} × {row['n']}")
+
+        print("\n[2 · answerability gate] average cold/full success (lower cold = less leakage):")
+        gs = store.gate_summary()
+        if not gs:
+            print("  (gate not run on any items yet)")
+        for row in gs:
+            print(f"  {row['item_type']}: cold={row['avg_cold']:.0%}  full={row['avg_full']:.0%}  (n={row['n']})")
+
+        print("\n[3 · discriminator] latest discrimination rate (→ 50% is the goal):")
+        dr = store.latest_discriminator_runs()
+        if not dr:
+            print("  (run `bjt discriminate` — needs seeds/official/<type>.json)")
+        for row in dr:
+            print(f"  {row['item_type']}: {row['discrimination_rate']:.0%} "
+                  f"(gen={row['n_generated']}, official={row['n_official']})")
+            for reason in row["reasons"][:3]:
+                print(f"      tell: {reason}")
+
+        print("\n[4 · genre templates] phase 2 (総合読解) — not built yet.")
+
+        print("\n[5 · vocabulary gating] loaded seed data:")
+        vs = vocab.status_summary()
+        print(f"  JLPT kanji tiers loaded: {vs['tiers_loaded'] or 'none'}")
+        print(f"  business terms loaded: {vs['business_terms']}")
+        print(f"  official CAN-DO level descriptors: "
+              f"{'yes' if levels.using_official_descriptors() else 'no (using neutral defaults)'}")
+
+        print("\n[calibrate] run `bjt calibrate --type <t>` after answering official + generated items.")
+        print("=" * 60)
+    finally:
+        store.close()
+    return 0
+
+
+def cmd_discriminate(args) -> int:
+    from .generators.base import load_seed_json
+
+    official = load_seed_json("official", args.type)
+    if not official:
+        print(f"No official items found at seeds/official/{args.type}.json — "
+              "the discriminator needs real items to compare against.", file=sys.stderr)
+        return 2
+
+    store = Store()
+    try:
+        generated = store.kept_items(args.type, args.n)
+        if len(generated) < 1:
+            print(f"No generated {args.type} items in the DB yet — run `bjt gen` first.",
+                  file=sys.stderr)
+            return 2
+        official = _normalize_official(official, args.type)[: args.n]
+        print(f"Discriminating {len(generated)} generated vs {len(official)} official {args.type} items...")
+        result = discriminator.run_discriminator(args.type, generated, official)
+        store.insert_discriminator_run(
+            args.type, result.n_generated, result.n_official,
+            result.discrimination_rate, result.reasons,
+        )
+        print(f"\n  discrimination rate: {result.discrimination_rate:.0%} "
+              f"(50% = judge cannot tell them apart)")
+        print("  judge's stated tells:")
+        for r in result.reasons:
+            print(f"    - {r}")
+        print("\n  Fold recurring tells back into the generator prompt as explicit constraints.")
+    finally:
+        store.close()
+    return 0
+
+
+def cmd_calibrate(args) -> int:
+    from .generators.base import load_seed_json
+
+    official = _normalize_official(load_seed_json("official", args.type), args.type)
+    if not official:
+        print(f"No official items at seeds/official/{args.type}.json to sit.", file=sys.stderr)
+        return 2
+
+    store = Store()
+    try:
+        print(f"Sitting {len(official)} official {args.type} sample items.\n")
+        n_correct = 0
+        for i, item in enumerate(official):
+            print(f"\n=== Official item {i+1}/{len(official)} ===")
+            _print_item_question(item)
+            ci = schemas.correct_index(item["options"])
+            choice = _read_choice(len(item["options"]))
+            if choice is None:
+                continue
+            correct = choice == ci
+            n_correct += int(correct)
+            print(f"  {'✓' if correct else '✗'}  正解: {LETTERS[ci]}\n")
+
+        official_acc = n_correct / len(official) if official else None
+
+        gen_rows = [r for r in store.accuracy_by_type() if r["item_type"] == args.type]
+        gen_acc = gen_rows[0]["accuracy"] if gen_rows else None
+        n_gen = gen_rows[0]["answered"] if gen_rows else 0
+
+        store.insert_calibration_run(args.type, official_acc, gen_acc, len(official), n_gen)
+
+        print("\n" + "=" * 50)
+        print("CALIBRATION")
+        oa = f"{official_acc:.0%}" if official_acc is not None else "n/a"
+        ga = f"{gen_acc:.0%}" if gen_acc is not None else "n/a"
+        print(f"  official items:  {oa}  (n={len(official)})")
+        print(f"  generated items: {ga}  (n={n_gen})")
+        if official_acc is not None and gen_acc is not None:
+            gap = gen_acc - official_acc
+            if gap > 0.1:
+                print("  → Generated items look consistently EASIER than official ones.")
+                print("    The prompts may have drifted soft — tighten them.")
+            elif gap < -0.1:
+                print("  → Generated items look harder than official ones.")
+            else:
+                print("  → Generated and official difficulty look comparable.")
+        print("=" * 50)
+    finally:
+        store.close()
+    return 0
+
+
+def _normalize_official(items: list[dict], item_type: str) -> list[dict]:
+    """Accept official seed items in either our item shape (options carry roles)
+    or a lighter {stem, options:[str], answer: idx} shape, and normalise to our
+    shape so the rest of the code can treat them uniformly."""
+    out = []
+    for raw in items:
+        opts = raw.get("options", [])
+        if opts and isinstance(opts[0], dict) and "role" in opts[0]:
+            item = dict(raw)
+        else:
+            answer = raw.get("answer", 0)
+            item = dict(raw)
+            item["options"] = [
+                {"text": (o if isinstance(o, str) else o.get("text", "")),
+                 "role": roles.CORRECT if i == answer else "unknown"}
+                for i, o in enumerate(opts)
+            ]
+        item.setdefault("item_type", item_type)
+        item.setdefault("level", raw.get("level", ""))
+        item.setdefault("explanation_ja", raw.get("explanation_ja", ""))
+        out.append(item)
+    return out
+
+
+# ----- argument parsing --------------------------------------------------
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="bjt", description="BJT practice item generator (phase 1)")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    types = sorted(GENERATORS)
+
+    sub.add_parser("init", help="create the DB and print seed setup instructions").set_defaults(func=cmd_init)
+    sub.add_parser("selftest", help="offline validation + DB test (no API key)").set_defaults(func=cmd_selftest)
+
+    g = sub.add_parser("gen", help="generate, gate, store, and print one item")
+    g.add_argument("--type", required=True, choices=types)
+    g.add_argument("--level", default="J2", choices=levels.LEVELS)
+    g.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    g.set_defaults(func=cmd_gen)
+
+    pr = sub.add_parser("practice", help="answer a run of items interactively")
+    pr.add_argument("--type", choices=types, help="restrict to one item type")
+    pr.add_argument("--level", default="J2", choices=levels.LEVELS)
+    pr.add_argument("-n", type=int, default=10, help="how many items")
+    pr.add_argument("--fast", action="store_true", help="skip the gate for speed")
+    pr.add_argument("--demo", action="store_true", help="offline demo with sample items (no API key)")
+    pr.set_defaults(func=cmd_practice)
+
+    sub.add_parser("quality", help="print the fidelity report").set_defaults(func=cmd_quality)
+
+    d = sub.add_parser("discriminate", help="run the discriminator loop")
+    d.add_argument("--type", required=True, choices=types)
+    d.add_argument("-n", type=int, default=6, help="max items per side")
+    d.set_defaults(func=cmd_discriminate)
+
+    c = sub.add_parser("calibrate", help="sit official items, compare to generated accuracy")
+    c.add_argument("--type", required=True, choices=types)
+    c.set_defaults(func=cmd_calibrate)
+
+    return p
+
+
+def main(argv=None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    # practice --demo/--type: type is optional; every other command validates via choices.
+    if args.command == "practice" and not args.demo and not args.type:
+        parser.error("practice requires --type unless --demo is used")
+    try:
+        return args.func(args)
+    except KeyboardInterrupt:
+        print("\ninterrupted.")
+        return 130
+    except LLMError as e:
+        print(f"\nGeneration failed: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
