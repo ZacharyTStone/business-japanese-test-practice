@@ -33,6 +33,17 @@ python -m bjt practice --demo -n 4   # answer author-composed sample items
 
 (`python -m bjt <cmd>` and `bjt <cmd>` are equivalent.)
 
+### Tests
+
+The full offline test suite (role/schema enforcement, DB, the gate and
+discriminator logic with the model call faked, the generator retry loop, and the
+vocab gate) runs without a key:
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
 ---
 
 ## Commands

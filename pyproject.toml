@@ -7,8 +7,14 @@ dependencies = [
     "anthropic>=0.40",   # only needed for live generation; offline commands run without it
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
 [project.scripts]
 bjt = "bjt.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [build-system]
 requires = ["setuptools>=61"]
