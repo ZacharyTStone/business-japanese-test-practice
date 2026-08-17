@@ -20,6 +20,7 @@ From a clean checkout:
 ```bash
 pip install -e .          # installs the `bjt` command + the anthropic SDK
 export ANTHROPIC_API_KEY=sk-ant-...   # your key; the SDK reads it
+# or: cp .env.example .env and put your key there — it auto-loads (gitignored)
 bjt init                  # create the DB, print seed-setup instructions
 bjt practice --type goi_bunpou --level J2 -n 10
 ```

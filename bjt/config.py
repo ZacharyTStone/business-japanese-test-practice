@@ -13,6 +13,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def _load_dotenv() -> None:
+    """Load a .env file if python-dotenv is installed. Real exported env vars
+    always win (override=False); if python-dotenv isn't present, this is a no-op
+    and you can `source` the file yourself instead."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    load_dotenv(ROOT / ".env")   # repo-root .env
+    load_dotenv()                # and one in the current working directory
+
+
+_load_dotenv()
+
+
 def _env(name: str, default: str) -> str:
     return os.environ.get(name, default)
 

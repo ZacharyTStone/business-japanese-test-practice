@@ -13,3 +13,7 @@ __pycache__/
 venv/
 build/
 dist/
+
+# local env (contains your API key)
+.env
+.env.local
