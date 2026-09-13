@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+
+# Contains your project URL and anon key. Copy .env.example instead.
+.env
+.env.local

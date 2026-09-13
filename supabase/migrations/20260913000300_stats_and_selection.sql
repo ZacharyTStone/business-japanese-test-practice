@@ -152,6 +152,10 @@ returns table (
     explanation_en    text,
     vocab_notes       jsonb,
     narration_clip_id text,
+    -- Null until the clip has been synthesised. The app is built to run without
+    -- audio — it shows the text instead — so this is expected to be null for a
+    -- while after an item is published, not an error.
+    narration_path    text,
     options           jsonb,
     times_seen        integer
 )
@@ -191,18 +195,24 @@ as $$
         i.speaker_role, i.listener_role, i.channel, i.seed_cell_id,
         i.correct_index, i.explanation_ja, i.explanation_en, i.vocab_notes,
         i.narration_clip_id,
+        (select c.audio_path from public.audio_clips c where c.id = i.narration_clip_id) as narration_path,
+        -- The audio paths ride along with the options rather than being fetched
+        -- per clip afterwards: a set of five would otherwise be twenty-six
+        -- requests, and this screen has to work on a train.
         (
             select jsonb_agg(
                        jsonb_build_object(
-                           'position', o.position,
-                           'text',     o.text,
-                           'role',     o.role,
-                           'why',      o.why,
-                           'clip_id',  o.clip_id
+                           'position',   o.position,
+                           'text',       o.text,
+                           'role',       o.role,
+                           'why',        o.why,
+                           'clip_id',    o.clip_id,
+                           'audio_path', c.audio_path
                        )
                        order by o.position
                    )
             from public.item_options o
+            left join public.audio_clips c on c.id = o.clip_id
             where o.item_id = i.id
         ) as options,
         coalesce(s.times_seen, 0) as times_seen

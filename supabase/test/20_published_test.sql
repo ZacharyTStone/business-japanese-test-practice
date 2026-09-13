@@ -79,6 +79,10 @@ begin
     perform test.check(length(q.stem) > 20, 'and a stem worth narrating');
     perform test.check(q.narration_clip_id is not null,
                        'and the clip id its narration audio will be filed under');
+    perform test.check(q.narration_path is null,
+                       'with no audio path yet — the screen falls back to the text');
+    perform test.check(q.options -> 0 ? 'audio_path',
+                       'the option audio paths ride along, so five items are one request');
 
     -- Five different questions, not the same one five times.
     perform test.check(

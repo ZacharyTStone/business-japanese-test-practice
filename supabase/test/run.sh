@@ -60,3 +60,11 @@ for f in "$ROOT"/batches/*.sql; do
 done
 
 psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f "$HERE/20_published_test.sql"
+
+# Finally, check the app and the schema still agree. TypeScript cannot catch a
+# column name that is merely asserted; this can.
+if [[ -d "$ROOT/client/src/lib" ]]; then
+    echo "checking the client's queries against the schema"
+    python3 "$HERE/contract.py" "$ROOT/client/src/lib" \
+        | psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f -
+fi

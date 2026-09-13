@@ -1,15 +1,27 @@
-# BJT Practice — the item pipeline
+# ビジネス日本語ドリル
 
-Generates practice items in the format of the **BJT ビジネス日本語能力テスト**
-(Business Japanese Proficiency Test), checks them hard, and writes them to a JSON
-bundle. This repository is the *content pipeline*; the study app is a separate
-thing that ships the bundles it produces.
+A study app for the format of the **BJT ビジネス日本語能力テスト** (Business
+Japanese Proficiency Test), and the pipeline that writes its questions.
 
-**Nothing is generated while somebody is practising.** Generation is a batch job
-run here, on a laptop, and what ships is plain JSON plus an audio manifest. That
-is what keeps the running cost of the app at zero, and it is also why the quality
-gates can afford to be slow and expensive — they run once per item, before
-anything is published.
+```
+bjt/         the item pipeline — generate, check, publish        (Python)
+seedtable/   the axes that produce variety                       (committed data)
+batches/     checked bundles + the hand-written reference batch  (committed data)
+supabase/    schema, row-level security, and its tests           (SQL)
+client/      the app: iOS, Android and web from one codebase     (Expo)
+```
+
+Three things are true of the whole system and explain most of its shape:
+
+* **Nothing is generated while somebody is practising.** Generation is a batch
+  job run on a laptop; what ships is checked JSON, published as reviewable SQL.
+  That is why the running cost is zero and why the quality gates can afford to be
+  slow.
+* **Everyone has an account from the first launch, and nobody signs up.** The app
+  signs in anonymously before it shows anything, so history is server-side from
+  question one; linking Google later keeps the same user id, so nothing merges.
+* **The database grades answers, not the app.** The client posts which option was
+  touched; a trigger decides correctness and records which trap caught them.
 
 Item types built so far:
 
@@ -28,23 +40,33 @@ provide, so getting it right settles the shape of everything after it.
 
 ## Quick start
 
-Everything except live generation runs offline, with no API key:
+Everything except live generation runs offline, with no API key and no Supabase
+project:
 
 ```bash
 pip install -e ".[dev]"
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json --show   # read the reference batch
 python -m bjt seedtable --sample 5                                     # what would be written next
-python -m bjt selftest                                                 # validation + DB round-trip
-pytest
+pytest                                                                 # the pipeline
+supabase/test/run.sh                                                   # the schema, on a throwaway Postgres
+cd client && npm install && npm run typecheck                          # the app
+```
+
+Running the app needs a Supabase project:
+
+```bash
+supabase db push                                  # apply supabase/migrations/
+psql "$SUPABASE_DB_URL" -f batches/hatsugen_choukai_J2_001.sql   # publish the content
+cd client && cp .env.example .env && npm run web
 ```
 
 For live generation:
 
 ```bash
-pip install -e .
 export ANTHROPIC_API_KEY=sk-ant-...      # or put it in .env — see .env.example
 bjt init
 bjt batch --type hatsugen_choukai --level J2 -n 10
+bjt publish batches/hatsugen_choukai_J2_002.json
 ```
 
 (`python -m bjt <cmd>` and `bjt <cmd>` are equivalent.)
@@ -67,6 +89,7 @@ bjt batch --type hatsugen_choukai --level J2 -n 10
 | `bjt practice --type T -n 10 [--demo]` | Answer a run of items interactively. `--demo` needs no key. |
 | `bjt quality` | The fidelity report — all five mechanisms plus raw per-item-type accuracy. |
 | `bjt discriminate --type T` | Mix official + generated items, ask a judge which are synthetic, report the rate and the tells — then auto-fold those tells into the generator prompt. |
+| `bjt publish <bundle.json>` | Turn a checked bundle into idempotent SQL for the database. |
 | `bjt calibrate --type T` | Sit the official sample items; compare your accuracy there to your accuracy on generated items. |
 
 Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
@@ -252,6 +275,54 @@ is ever copied into this repository.
 
 ---
 
+## The database
+
+`supabase/migrations/` holds the whole schema. Three things in it are worth
+knowing before reading the SQL.
+
+**Content is world-readable; everything personal is owner-only.** The item
+library has a `select` policy for `anon` and `authenticated` and no write policy
+at all — publishing runs as the service role, from a laptop, which is why no key
+that can write content ships in the app. Every per-user table is restricted to
+`auth.uid()`, and the stats views are `security_invoker` so they inherit that
+rather than needing their own.
+
+**Grading is a trigger.** `attempts` takes `item_id` and `chosen_index` from the
+client and fills in the rest: who it was, whether it was right, and
+`chosen_role` — *which* trap caught them. That last column is the point. "You get
+発言聴解 wrong 40% of the time" is a grade; "eleven times this month you pointed
+尊敬語 at yourself" is a plan for the evening, and it is what weakness-targeted
+generation will eventually select on. There is no `update` or `delete` policy on
+`attempts`: an answer already given is history, and rewriting it would quietly
+corrupt the profile built from it.
+
+**`next_items()` is the practice queue, in one round trip.** Unseen items first;
+then items you got *wrong*, oldest first, which is deliberate spaced repetition
+rather than a fallback — the second time you meet an item that caught you is when
+it teaches you something; then, in weakness mode, ordered by how badly you do on
+each item's seed-cell tags. Weakness-targeted *selection* works today over a fixed
+library. Weakness-targeted *generation* comes later and needs no schema change.
+
+### Checking it
+
+```bash
+supabase/test/run.sh
+```
+
+Applies every migration to a throwaway Postgres — no project, no keys, no network
+— and asserts what the schema promises: that one user cannot read another's
+history, that a client cannot claim its own answer was right or grant itself the
+paid unlock, that an item whose answer points at no option is rejected, that a
+published bundle applies twice without duplicating, and that a fresh anonymous
+user can pull a real set of five and have it land on the radar.
+
+It finishes by reading every query in `client/src/lib` and asserting each table,
+view, column and function the app names actually exists. TypeScript can only
+check the app against the types we *claim* the database has; this checks the
+claim.
+
+---
+
 ## Seeds (`seeds/` — gitignored)
 
 Licensed and authoritative material never gets committed. It loads at runtime
@@ -282,6 +353,7 @@ licensed text, and is the thing you edit to grow the library.
 ```
 bjt/
   generators/    one module, prompt, and schema per item type
+  publish.py     bundle → idempotent SQL
   fidelity/      roles, answerability gate, discriminator loop, vocab gate, dedupe
   tts/           what to synthesise, in which voice, over which channel (no audio calls)
   render/        phase 2 (document → HTML/SVG) — stub
@@ -293,8 +365,12 @@ bjt/
   llm.py         Anthropic client wrapper (structured output only)
   cli.py         entry point
 seedtable/       the axes — committed
-batches/         generated bundles + the hand-written reference batch — committed
+batches/         bundles, their published SQL, and the reference batch — committed
 seeds.example/   committed templates; real content goes in gitignored seeds/
+supabase/
+  migrations/    schema, RLS, stats views, the selection RPC
+  test/          run.sh — the whole schema, proved against a throwaway Postgres
+client/          the Expo app (see client/README.md)
 ```
 
 ## Design notes
@@ -316,4 +392,10 @@ seeds.example/   committed templates; real content goes in gitignored seeds/
 ## Naming
 
 "BJT" is a registered trademark. It is used here to describe the exam format this
-tool targets; it is not part of any product name.
+tool targets; it is not part of any product name, slug, or bundle identifier — the
+app is 「ビジネス日本語ドリル」. A store description may say it follows the BJT
+format; the name may not.
+
+No past-paper text is copied anywhere in this repository. Every item is an
+original composition, which is why generation was a requirement from the start
+rather than a convenience.
