@@ -77,3 +77,15 @@ def test_missing_table_raises_rather_than_silently_degrading(tmp_path, monkeypat
     monkeypatch.setattr("bjt.config.SEEDTABLE_DIR", tmp_path)
     with pytest.raises(FileNotFoundError):
         seedtable.load("hyougen")
+
+
+def test_every_referenced_scene_has_a_label(table):
+    """The bank is a commissioning list: an id with no description is a picture
+    nobody can draw."""
+    labels = table.scene_labels
+    for scene in table.scene_bank:
+        assert labels.get(scene), f"{scene} has no label"
+
+
+def test_no_orphan_labels(table):
+    assert set(table.scene_labels) == set(table.scene_bank)

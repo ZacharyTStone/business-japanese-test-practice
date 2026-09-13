@@ -120,6 +120,14 @@ class SeedTable:
                     seen.append(sc)
         return seen
 
+    @property
+    def scene_labels(self) -> dict:
+        """scene id → what the picture shows. Lives in the table rather than
+        being inferred from the settings that use it: a scene like
+        `scene_phone_desk` is shared by several settings, and guessing its label
+        from whichever one happens to come first gets it wrong."""
+        return dict(self.data.get("scenes", {}))
+
     # -- sampling ----------------------------------------------------------
 
     def sample(

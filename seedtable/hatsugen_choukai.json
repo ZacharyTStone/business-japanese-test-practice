@@ -6,6 +6,24 @@
     "J2",
     "J1"
   ],
+  "scenes": {
+    "scene_client_meeting_room": "取引先の会議室",
+    "scene_client_office_sofa": "取引先の応接ソファ",
+    "scene_corridor": "オフィスの廊下",
+    "scene_elevator_hall": "エレベーターホール",
+    "scene_entrance_lobby": "エントランスロビー",
+    "scene_expo_booth": "展示会のブース",
+    "scene_izakaya_table": "居酒屋のテーブル",
+    "scene_meeting_room_table": "社内の会議室のテーブル",
+    "scene_office_desk_pair": "自分の席で向かい合う二人",
+    "scene_office_open_floor": "執務フロア全体",
+    "scene_phone_desk": "デスクで固定電話",
+    "scene_phone_mobile_outside": "外出先で携帯電話",
+    "scene_reception_counter": "自社の受付カウンター",
+    "scene_restaurant_private": "料理店の個室",
+    "scene_seminar_hall": "セミナー会場",
+    "scene_video_call_laptop": "ノートPCでオンライン会議"
+  },
   "settings": [
     {
       "id": "office_desk",

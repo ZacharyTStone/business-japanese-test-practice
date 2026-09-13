@@ -6,6 +6,7 @@ Commands
     seedtable     inspect the 場面×関係×機能×レベル table and how much of it is spent
     batch         generate a batch offline into a shippable JSON bundle
     checkbatch    run every offline quality check over an existing bundle
+    publish       turn a checked bundle into idempotent SQL for the database
     gen           generate one item, gate it, store it, print it
     practice      answer a run of items interactively (--demo needs no key)
     quality       print the fidelity report (mechanisms 1-5)
@@ -20,7 +21,7 @@ import sys
 import textwrap
 
 from . import batch as batchmod
-from . import config, fixtures, levels, schemas, seedtable
+from . import config, fixtures, levels, publish, schemas, seedtable
 from .llm import LLMError
 from .db import Store
 from .fidelity import answerability, dedupe, discriminator, roles, vocab
@@ -734,6 +735,33 @@ def cmd_checkbatch(args) -> int:
     return 0 if report.ok else 1
 
 
+def cmd_publish(args) -> int:
+    """Bundle → SQL. Content reaches the database as a reviewable file, never as
+    a live call from a laptop holding a service key."""
+    import pathlib
+
+    path = pathlib.Path(args.path)
+    bundle = batchmod.load(path)
+    report = batchmod.check_bundle(bundle)
+    if not report.ok and not args.force:
+        _print_bundle_report(bundle, report)
+        print("\nRefusing to publish a bundle that fails its own checks.", file=sys.stderr)
+        return 1
+
+    out, _ = publish.publish_bundle(path, args.out)
+    n_clips = len(bundle.get("audio_manifest", []))
+    print(f"Wrote {out}")
+    print(f"  {len(bundle['items'])} item(s), {n_clips} audio clip(s), "
+          f"{len(bundle.get('scenes', []))} scene(s)")
+    print()
+    print("Apply it with either:")
+    print(f"  psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f {out}")
+    print("  or paste it into the Supabase SQL editor")
+    print()
+    print("Re-running it is safe — every statement is an upsert.")
+    return 0
+
+
 def _print_bundle_report(bundle: dict, report) -> None:
     marks = {"pass": "OK  ", "warn": "WARN", "fail": "FAIL"}
     print("\n" + "=" * 62)
@@ -802,6 +830,14 @@ def build_parser() -> argparse.ArgumentParser:
                     help="do not record the items (and so the cells they use) in the DB")
     ib.add_argument("--force", action="store_true", help="write the bundle even if checks fail")
     ib.set_defaults(func=cmd_importbatch)
+
+    pb = sub.add_parser("publish", help="turn a bundle into idempotent SQL for the database")
+    pb.add_argument("path")
+    pb.add_argument("--out", type=__import__("pathlib").Path, default=None,
+                    help="where to write the SQL (default: alongside the bundle)")
+    pb.add_argument("--force", action="store_true",
+                    help="publish even if the bundle fails its own checks")
+    pb.set_defaults(func=cmd_publish)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")
