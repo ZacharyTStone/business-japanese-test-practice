@@ -1,0 +1,1120 @@
+{
+  "bundle_version": 1,
+  "item_type": "hatsugen_choukai",
+  "level": "J3",
+  "generated_at": "2026-09-13T17:43:21+00:00",
+  "generator_model": "author-composed",
+  "items": [
+    {
+      "id": "3b2ba9c2cc",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "office_desk+subordinate_to_superior+request@J3",
+        "setting": "office_desk",
+        "relation": "subordinate_to_superior",
+        "function": "request",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "上司に会議室の鍵を貸してもらう",
+      "stem": "会議室を使いたいのですが、鍵が見当たりません。鍵は課長が持っていると聞きました。近くに課長がいます。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "課長、すみません。会議室の鍵をお借りできますか。",
+          "role": "correct",
+          "why": "自分がへりくだって借りる意向を伝える、簡潔で失礼のない依頼の言い方になっている。"
+        },
+        {
+          "text": "課長、会議室の鍵をお借りになってもよろしいでしょうか。",
+          "role": "wrong_honorific_direction",
+          "why": "「お借りになる」は相手が借りるときに使う尊敬語。借りるのは自分なので、自分の行為を高めてしまっている。"
+        },
+        {
+          "text": "課長、会議室の鍵、ちょっと貸してもらえますか。",
+          "role": "register_too_casual",
+          "why": "内容は正しいが「ちょっと」「もらえますか」と話し言葉的で、上司に向けるには丁寧さが足りない。"
+        },
+        {
+          "text": "課長、会議室の鍵をお借りさせていただかせていただいてもよろしいでしょうか。",
+          "role": "over_polite_misfit",
+          "why": "「させていただく」を二重に重ねており、丁寧にしようとしてかえって不自然な言い方になっている。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "自分が何かをする許可や助けを求めるときは、自分の行為をへりくだって述べる。「お借りできますか」はその型どおりで、簡潔にも配慮している。「お借りになって」は尊敬語を自分の行為に使っており、敬意の方向が逆になっている。「ちょっと貸してもらえますか」は話し言葉が崩れており、上司に向ける丁寧さに欠ける。「お借りさせていただかせていただいて」は「させていただく」を二重に重ねた誤りで、丁寧さが行き過ぎている。",
+      "explanation_en": "Ask to borrow with a modest, humble form — honorifics on your own act, casual speech, or doubled させていただく all fail.",
+      "vocab_notes": [
+        {
+          "term": "お借りできますか",
+          "reading": "おかりできますか",
+          "meaning": "may I borrow (humble request form)"
+        },
+        {
+          "term": "二重敬語",
+          "reading": "にじゅうけいご",
+          "meaning": "doubled honorifics — excessive politeness that becomes an error"
+        }
+      ],
+      "audio": {
+        "narration": "239353dd4532e131",
+        "options": [
+          "d775217875790d2b",
+          "7d5a7b0cae3cc0a1",
+          "1539164858fecb53",
+          "2e0502f8ea6b8422"
+        ]
+      },
+      "scene_id": "scene_office_desk_pair",
+      "speaker_role": "若手社員",
+      "listener_role": "直属の上司（課長）",
+      "channel": "in_person"
+    },
+    {
+      "id": "6ad0f15b5f",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "reception+staff_to_visitor+greet_first_meet@J3",
+        "setting": "reception",
+        "relation": "staff_to_visitor",
+        "function": "greet_first_meet",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "受付で初めての来客を迎える",
+      "stem": "取引先の方が、今日はじめて会社にいらっしゃいました。受付であなたが応対します。相手はまだ名乗っていません。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "毎度ありがとうございます。少々お待ちください。",
+          "role": "set_phrase_wrong_situation",
+          "why": "「毎度ありがとうございます」は繰り返し来る取引先に使う言い方で、はじめて来社した相手への最初の一言としては場面が合わない。"
+        },
+        {
+          "text": "いらっしゃいませ。恐れ入りますが、お名前とお約束のお時間をうかがえますでしょうか。",
+          "role": "correct",
+          "why": "来客を迎える決まり文句のあと、名前と約束の時間を確認しており、初対面の来客への応対として過不足がない。"
+        },
+        {
+          "text": "いらっしゃいませ。お忙しいところありがとうございます。",
+          "role": "content_mismatch",
+          "why": "あいさつとしては丁寧だが、名前や約束の確認という、この場面でまず必要なことに答えていない。"
+        },
+        {
+          "text": "いらっしゃいませ。恐れ入りますが、お名前をお伺いさせていただかせていただいてもよろしいでしょうか。",
+          "role": "over_polite_misfit",
+          "why": "「させていただく」を二重に重ねており、丁寧にしようとしてかえって不自然な言い方になっている。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "初めての来客には、迎える決まり文句のあとに名前と約束の時間を確認するのが基本の型。正解はこの型どおりで、次の対応に必要な情報がそろう。「毎度ありがとうございます」はすでに何度も来ている相手に使う言い方で、初対面には合わない。「お忙しいところありがとうございます」は丁寧だが名前も約束も確認しておらず、応対が進まない。「お伺いさせていただかせていただいて」は「させていただく」の重ね使いで、丁寧さが行き過ぎている。",
+      "explanation_en": "Greet, then confirm name and appointment time — a regular-customer phrase, a reply with no check-in, or doubled させていただく all miss the mark.",
+      "vocab_notes": [
+        {
+          "term": "いらっしゃいませ",
+          "reading": "いらっしゃいませ",
+          "meaning": "welcome (standard greeting to a visitor/customer)"
+        },
+        {
+          "term": "お約束のお時間",
+          "reading": "おやくそくのおじかん",
+          "meaning": "your appointment time"
+        }
+      ],
+      "audio": {
+        "narration": "3cc88f8ba5836f6c",
+        "options": [
+          "bce2bdb74ca5a6b2",
+          "84faf20e0c74aae6",
+          "aa3534f6339ffd4d",
+          "85280c90ffcda7ac"
+        ]
+      },
+      "scene_id": "scene_reception_counter",
+      "speaker_role": "受付で応対する社員",
+      "listener_role": "はじめて来社した取引先の担当者",
+      "channel": "in_person"
+    },
+    {
+      "id": "c1fcf0a342",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "phone_internal+other_department+phone_message@J3",
+        "setting": "phone_internal",
+        "relation": "other_department",
+        "function": "phone_message",
+        "level": "J3",
+        "channel": "phone"
+      },
+      "topic": "他部署に電話し、担当者への伝言を頼む",
+      "stem": "内線で経理部に電話をかけました。担当の鈴木さんが席におらず、戻ったら電話がほしいと伝えたいです。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "恐れ入りますが、鈴木さんの携帯番号を教えていただけますか。",
+          "role": "phone_protocol_violation",
+          "why": "取り次いだ相手に担当者個人の連絡先を求めるのは電話の作法から外れており、頼むべきは伝言である。"
+        },
+        {
+          "text": "鈴木さんがお戻りになりましたら、私からまたおかけ直しします。",
+          "role": "wrong_speech_act",
+          "why": "丁寧ではあるが、自分からかけ直すという申し出になっており、電話がほしいという依頼にはなっていない。"
+        },
+        {
+          "text": "恐れ入りますが、鈴木さんがお戻りになりましたら、お電話をいただきたいとお伝えいただけますか。",
+          "role": "correct",
+          "why": "戻る時点、してほしいこと、伝言の依頼が一文にそろっており、取り次いだ相手がそのまま伝えられる。"
+        },
+        {
+          "text": "恐れ入りますが、鈴木さんに、見積もりの件で電話しましたとだけお伝えいただけますか。",
+          "role": "content_mismatch",
+          "why": "電話があったことは伝わるが、折り返してほしいという肝心の依頼が抜けており、用件が完結しない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "伝言を頼むときは、戻る時点、してほしいこと、伝言の依頼を一文にまとめて言うと、取り次いだ相手がそのまま伝えられる。正解はこの型どおり。「携帯番号を教えて」は取り次いだ相手に求めることではなく、電話の作法を外れている。「私からまたおかけ直しします」は丁寧だが自分からかける申し出で、電話をもらいたいという依頼とは逆になっている。「電話しましたとだけお伝えください」は電話があったことは伝わるが、折り返してほしいという要件が抜けている。",
+      "explanation_en": "A callback request names when they'll be back, what you need, and the relay — asking for a cell number, offering to call back yourself, or leaving out the callback ask all fail.",
+      "vocab_notes": [
+        {
+          "term": "折り返し",
+          "reading": "おりかえし",
+          "meaning": "a return call / calling back"
+        },
+        {
+          "term": "お伝えいただけますか",
+          "reading": "おつたえいただけますか",
+          "meaning": "could you please pass this along (humble request)"
+        }
+      ],
+      "audio": {
+        "narration": "fd843c0ba8cf68f0",
+        "options": [
+          "e957ca0a6154e8c0",
+          "3d520ab208c99584",
+          "26df4fa12bee72d8",
+          "9ca1a6edeae9ce26"
+        ]
+      },
+      "scene_id": "scene_phone_desk",
+      "speaker_role": "内線をかけた社員",
+      "listener_role": "経理部で電話に出た社員",
+      "channel": "phone"
+    },
+    {
+      "id": "22487a1794",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "corridor+junior_to_senior+thank@J3",
+        "setting": "corridor",
+        "relation": "junior_to_senior",
+        "function": "thank",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "先輩に教えてもらったお礼を言う",
+      "stem": "先輩に、仕事で分からないことを教えてもらいました。廊下で先輩と会ったので、お礼を言いたいです。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "先輩、いつもお世話になっております。",
+          "role": "set_phrase_wrong_situation",
+          "why": "取引先など社外の相手に使うあいさつで、教えてもらったことへのお礼にはなっておらず、場面に合わない。"
+        },
+        {
+          "text": "先輩、今度何かあったら聞いてください。",
+          "role": "wrong_speech_act",
+          "why": "お礼の代わりに手伝いを申し出る言葉になっており、教えてもらったことに対するお礼という場面の目的を果たしていない。"
+        },
+        {
+          "text": "先輩、この前はどうも!助かりました。",
+          "role": "register_too_casual",
+          "why": "「どうも」だけでお礼を済ませており、先輩に向けるお礼の言葉としては軽すぎる。"
+        },
+        {
+          "text": "先輩、先日は教えていただき、ありがとうございました。",
+          "role": "correct",
+          "why": "教えてもらったという具体的な内容を添えたうえでお礼を述べており、先輩への言葉として過不足がない。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "お礼を言うときは、何をしてもらったかを添えて述べると気持ちが伝わる。正解はこの型どおり。「いつもお世話になっております」は社外向けのあいさつで、教えてもらったお礼にはならない。「今度何かあったら聞いてください」はお礼ではなく手伝いの申し出になっており、場面の目的からずれている。「どうも!助かりました」は「どうも」だけで済ませており、先輩に向けるには丁寧さが足りない。",
+      "explanation_en": "Thank someone by naming what they did for you — a client greeting, an offer of help instead of thanks, or a bare どうも all miss it.",
+      "vocab_notes": [
+        {
+          "term": "教えていただき、ありがとうございました",
+          "reading": "おしえていただき、ありがとうございました",
+          "meaning": "thank you for teaching/showing me (humble)"
+        },
+        {
+          "term": "先日は",
+          "reading": "せんじつは",
+          "meaning": "the other day — refers back to a recent specific occasion"
+        }
+      ],
+      "audio": {
+        "narration": "c0ea4821898076ec",
+        "options": [
+          "4e374f82ddbb3b06",
+          "412a9593745579d6",
+          "f930648f849129f1",
+          "56d3394d1c072e9e"
+        ]
+      },
+      "scene_id": "scene_corridor",
+      "speaker_role": "後輩社員",
+      "listener_role": "先輩社員",
+      "channel": "in_person"
+    },
+    {
+      "id": "43f67d1f13",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "meeting_room+subordinate_to_superior+confirm@J3",
+        "setting": "meeting_room",
+        "relation": "subordinate_to_superior",
+        "function": "confirm",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "会議の開始時刻を課長に確認する",
+      "stem": "明日の会議が、午後2時からか3時からか、はっきり覚えていません。近くにいる課長に確認したいです。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "課長、明日の会議は何時からか、確認してもよろしいでしょうか。",
+          "role": "correct",
+          "why": "自分が確認したいという意向を、へりくだった形で丁寧に尋ねており、上司への質問として自然である。"
+        },
+        {
+          "text": "課長、明日の会議は何時からか、ご確認になってもよろしいでしょうか。",
+          "role": "wrong_honorific_direction",
+          "why": "「ご確認になる」は相手が確認するときの尊敬語。確認したいのは自分なので、自分の行為を高めてしまっている。"
+        },
+        {
+          "text": "課長、明日の会議、何時でしたっけ?",
+          "role": "register_too_casual",
+          "why": "「でしたっけ」と話し言葉が崩れており、上司に向けて確認するには丁寧さが足りない。"
+        },
+        {
+          "text": "課長、明日の会議は何時からか、ご確認させていただかせていただいてもよろしいでしょうか。",
+          "role": "over_polite_misfit",
+          "why": "「させていただく」を二重に重ねており、丁寧にしようとしてかえって不自然な言い方になっている。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "自分が確認したいときは、自分の行為をへりくだって尋ねる。正解はこの型どおりで簡潔にも配慮している。「ご確認になって」は尊敬語を自分の行為に使っており、敬意の方向が逆になっている。「何時でしたっけ」は話し言葉が崩れており、上司への確認としては軽すぎる。「ご確認させていただかせていただいて」は「させていただく」の重ね使いで、丁寧さが行き過ぎている。",
+      "explanation_en": "Confirm something yourself with a humble ask — honorifics on your own act, casual speech, or doubled させていただく all fail.",
+      "vocab_notes": [
+        {
+          "term": "確認してもよろしいでしょうか",
+          "reading": "かくにんしてもよろしいでしょうか",
+          "meaning": "may I confirm (polite request to check something)"
+        },
+        {
+          "term": "〜でしたっけ",
+          "reading": "でしたっけ",
+          "meaning": "wasn't it...? — a casual filler for recalling something"
+        }
+      ],
+      "audio": {
+        "narration": "08c25c15b8a9bcd2",
+        "options": [
+          "67bf77e85d5a8a16",
+          "381608922dd6c3ed",
+          "f3662c4349cc13de",
+          "f0290ae370ec8e75"
+        ]
+      },
+      "scene_id": "scene_meeting_room_table",
+      "speaker_role": "部下",
+      "listener_role": "課長",
+      "channel": "in_person"
+    },
+    {
+      "id": "91a3dbc338",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "phone_external+staff_to_client+phone_open@J3",
+        "setting": "phone_external",
+        "relation": "staff_to_client",
+        "function": "phone_open",
+        "level": "J3",
+        "channel": "phone"
+      },
+      "topic": "取引先に電話をかけて名乗る",
+      "stem": "取引先の佐藤さんに電話をかけました。佐藤さんが電話に出ました。こんなとき、最初に何と言いますか。",
+      "options": [
+        {
+          "text": "もしもし、佐藤さんですか。",
+          "role": "phone_protocol_violation",
+          "why": "相手の確認だけで自分の社名や名前を名乗っておらず、相手は誰からの電話か分からないまま話が進んでしまう。"
+        },
+        {
+          "text": "いつもお世話になっております。〇〇商事の田中です。",
+          "role": "correct",
+          "why": "あいさつのあと、自社の名前と自分の名前を名乗っており、電話をかけた側が最初にすべきことができている。"
+        },
+        {
+          "text": "いつもお世話になっております。〇〇商事の田中です。ご用件をうかがいます。",
+          "role": "wrong_speech_act",
+          "why": "名乗りまでは正しいが、「ご用件をうかがいます」は電話を受けた側の言葉で、かけた本人が言うと話が逆になる。"
+        },
+        {
+          "text": "もしもし、田中だけど、佐藤さんいる?",
+          "role": "register_too_casual",
+          "why": "「だけど」「いる?」と話し言葉が崩れており、取引先に向ける電話としては丁寧さが足りない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "こちらから電話をかけたときは、あいさつのあとに社名と自分の名前を名乗る。正解はこの型どおり。「もしもし、佐藤さんですか」は名乗りが抜けており、相手は誰からの電話か分からない。「ご用件をうかがいます」は名乗りは正しいが、電話を受けた側の言葉であり、かけた本人が言うと立場が逆になる。「田中だけど、佐藤さんいる?」は話し言葉が崩れすぎており、取引先には使えない。",
+      "explanation_en": "An outgoing call opens with the greeting, then your company and name — skipping the name, using the receiver's line, or casual speech all fail.",
+      "vocab_notes": [
+        {
+          "term": "いつもお世話になっております",
+          "reading": "いつもおせわになっております",
+          "meaning": "the standard opening to a client"
+        },
+        {
+          "term": "ご用件をうかがいます",
+          "reading": "ごようけんをうかがいます",
+          "meaning": "I will hear your business (said by the side taking the call)"
+        }
+      ],
+      "audio": {
+        "narration": "77ff0c1d78e017c9",
+        "options": [
+          "e5c39471af1a89b6",
+          "eb8b3749ef4393d4",
+          "4b1c0ece00ea57de",
+          "f372a9e4f1c63cc3"
+        ]
+      },
+      "scene_id": "scene_phone_desk",
+      "speaker_role": "電話をかけた社員",
+      "listener_role": "取引先の担当者（佐藤さん）",
+      "channel": "phone"
+    },
+    {
+      "id": "0e6c106a8e",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "office_desk+peer_to_peer+offer_help@J3",
+        "setting": "office_desk",
+        "relation": "peer_to_peer",
+        "function": "offer_help",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "困っている同僚に手伝いを申し出る",
+      "stem": "隣の席の同僚が、資料作りに苦労している様子です。あなたは今、手が空いています。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "何かお手伝いさせていただいてもよろしいでしょうか。",
+          "role": "over_polite_misfit",
+          "why": "同じ立場の同僚に対して敬語を重ねすぎており、かしこまりすぎて逆に不自然な言い方になっている。"
+        },
+        {
+          "text": "大変そうですね。私も忙しいので、また今度手伝いますね。",
+          "role": "content_mismatch",
+          "why": "大変な様子には触れているが、今手伝う気がないと言っているのと同じで、この場面で求められている申し出になっていない。"
+        },
+        {
+          "text": "何か手伝いましょうか。",
+          "role": "correct",
+          "why": "同僚に対して自然な丁寧さで、今すぐ手伝う意思をはっきり示した申し出になっている。"
+        },
+        {
+          "text": "手伝ってやろうか?",
+          "role": "register_too_casual",
+          "why": "「〜てやろうか」は上から目線に聞こえる言い方で、同じ立場の同僚に対しても配慮に欠ける。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "同僚に手伝いを申し出るときは、かしこまりすぎず、今すぐ手伝う意思がはっきり伝わる言い方がよい。正解はその型どおり。「お手伝いさせていただいても」は同僚には敬語が過剰で不自然。「また今度手伝いますね」は今は手伝わないと言っているに等しく、申し出になっていない。「手伝ってやろうか」は上から目線に響く言い方で、同僚への配慮を欠く。",
+      "explanation_en": "Offer help to a peer plainly and now — over-formal keigo, a deferred offer, or a condescending tone all miss it.",
+      "vocab_notes": [
+        {
+          "term": "手伝いましょうか",
+          "reading": "てつだいましょうか",
+          "meaning": "shall I help? (a natural offer among equals)"
+        },
+        {
+          "term": "〜てやろうか",
+          "reading": "てやろうか",
+          "meaning": "shall I do ... for you — can sound condescending"
+        }
+      ],
+      "audio": {
+        "narration": "1023b8b7ddb9fb58",
+        "options": [
+          "dfe66946bd4337e6",
+          "58dd21c6134d54d2",
+          "fba3e08d573c9a84",
+          "4920cba115af8fa3"
+        ]
+      },
+      "scene_id": "scene_office_desk_pair",
+      "speaker_role": "同僚",
+      "listener_role": "隣の席の同僚",
+      "channel": "in_person"
+    },
+    {
+      "id": "2099bba427",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "corridor+subordinate_to_superior+ask_permission@J3",
+        "setting": "corridor",
+        "relation": "subordinate_to_superior",
+        "function": "ask_permission",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "体調不良で早退の許可を求める",
+      "stem": "少し体調が悪く、今日は早く帰りたいと思っています。廊下で課長に会いました。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "課長、ちょっと具合悪いんで、今日早退していいですか。",
+          "role": "register_too_casual",
+          "why": "「悪いんで」「いいですか」と話し言葉が崩れており、上司に許可を求める言い方としては丁寧さが足りない。"
+        },
+        {
+          "text": "課長、少し体調が悪いので、今日は早退します。",
+          "role": "wrong_speech_act",
+          "why": "許可を求める場面なのに、すでに決めたことのように言い切っており、依頼ではなく報告になっている。"
+        },
+        {
+          "text": "課長、少し体調が悪いので、今日は早退させていただかせていただいてもよろしいでしょうか。",
+          "role": "over_polite_misfit",
+          "why": "「させていただく」を二重に重ねており、丁寧にしようとしてかえって不自然な言い方になっている。"
+        },
+        {
+          "text": "課長、少し体調が悪いので、今日は早退してもよろしいでしょうか。",
+          "role": "correct",
+          "why": "理由を短く添えたうえで許可を求めており、上司への依頼として過不足がない。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "許可を求めるときは、理由を短く添えたうえで、許可を尋ねる形で述べる。正解はこの型どおり。「早退していいですか」は話し言葉が崩れており、上司への言い方として軽すぎる。「早退します」は言い切りで、許可を求める場面なのに報告になってしまっている。「早退させていただかせていただいて」は「させていただく」の重ね使いで、丁寧さが行き過ぎている。",
+      "explanation_en": "Ask permission with a short reason and a genuine question — casual speech, a flat announcement, or doubled させていただく all fail.",
+      "vocab_notes": [
+        {
+          "term": "早退してもよろしいでしょうか",
+          "reading": "そうたいしてもよろしいでしょうか",
+          "meaning": "may I leave early (polite request for permission)"
+        },
+        {
+          "term": "体調が悪い",
+          "reading": "たいちょうがわるい",
+          "meaning": "not feeling well"
+        }
+      ],
+      "audio": {
+        "narration": "42524b6df37d3651",
+        "options": [
+          "8ca6ea1453949b55",
+          "1fe18e6515a3de9e",
+          "3e0e2293bcf9b3c9",
+          "5b18226f23d53f76"
+        ]
+      },
+      "scene_id": "scene_corridor",
+      "speaker_role": "部下",
+      "listener_role": "課長",
+      "channel": "in_person"
+    },
+    {
+      "id": "325876c7a8",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "client_office+staff_to_client+thank@J3",
+        "setting": "client_office",
+        "relation": "staff_to_client",
+        "function": "thank",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "訪問先での打ち合わせを終えてお礼を言う",
+      "stem": "取引先での打ち合わせが終わりました。時間をとってもらったので、帰る前にお礼を言いたいです。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "本日はお忙しい中、お時間をいただき、ありがとうございました。",
+          "role": "correct",
+          "why": "相手が忙しい中で時間をとってくれたことに触れてお礼を述べており、訪問後のあいさつとして自然である。"
+        },
+        {
+          "text": "本日はご足労いただき、ありがとうございました。",
+          "role": "set_phrase_wrong_situation",
+          "why": "「ご足労いただき」はこちらまで来てもらった相手に使う言い方で、自分が訪問した今回の場面には合わない。"
+        },
+        {
+          "text": "本日はお疲れさまでした。",
+          "role": "wrong_uchi_soto",
+          "why": "「お疲れさま」は同じ職場の身内どうしでねぎらう言い方で、社外の取引先に向けると身内扱いになってしまう。"
+        },
+        {
+          "text": "本日はお忙しい中、お時間をいただかれまして、ありがとうございました。",
+          "role": "over_polite_misfit",
+          "why": "「いただかれる」は謙譲語「いただく」に尊敬語「れる」を重ねた誤った形で、敬語として成立していない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "訪問先でお礼を言うときは、相手が時間をとってくれたことに触れる。正解はこの型どおり。「ご足労いただき」はこちらまで来てもらった相手への言葉で、自分が訪問した今回の場面には合わない。「お疲れさまでした」は身内どうしのねぎらいの言葉で、社外の取引先に使うと身内扱いになってしまう。「いただかれまして」は謙譲語と尊敬語を重ねた誤った形で、敬語として成り立っていない。",
+      "explanation_en": "Thank a client by naming their time — a phrase for someone who came to you, an in-group colleague's line, or a broken doubled-honorific form all fail.",
+      "vocab_notes": [
+        {
+          "term": "お時間をいただき",
+          "reading": "おじかんをいただき",
+          "meaning": "thank you for your time (humble)"
+        },
+        {
+          "term": "ご足労いただき",
+          "reading": "ごそくろういただき",
+          "meaning": "thank you for taking the trouble to come (said to a visitor)"
+        }
+      ],
+      "audio": {
+        "narration": "3374d484c3cb2e8c",
+        "options": [
+          "2cd3ebc98f0b5e7e",
+          "d74fd365cc133eb4",
+          "51d73e327c86da5a",
+          "cb448908433dcd99"
+        ]
+      },
+      "scene_id": "scene_client_office_sofa",
+      "speaker_role": "訪問した営業担当",
+      "listener_role": "取引先の担当者",
+      "channel": "in_person"
+    },
+    {
+      "id": "f1c44b24eb",
+      "item_type": "hatsugen_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "video_call+staff_to_client+greet_first_meet@J3",
+        "setting": "video_call",
+        "relation": "staff_to_client",
+        "function": "greet_first_meet",
+        "level": "J3",
+        "channel": "video"
+      },
+      "topic": "オンライン会議で取引先に初めてあいさつする",
+      "stem": "オンライン会議で、取引先の新しい担当者と初めて顔を合わせます。会議が始まり、まず自己紹介をします。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "いつもお世話になっております。〇〇商事の田中です。",
+          "role": "set_phrase_wrong_situation",
+          "why": "「いつもお世話になっております」はすでに取引のある相手に使うあいさつで、正真正銘の初対面には合わない。"
+        },
+        {
+          "text": "はじめまして。〇〇商事の田中と申します。よろしくお願いいたします。",
+          "role": "correct",
+          "why": "初対面のあいさつ、社名と名前の名乗り、結びの言葉がそろっており、自己紹介として過不足がない。"
+        },
+        {
+          "text": "本日はお忙しい中お集まりいただき、ありがとうございます。〇〇商事です。",
+          "role": "content_mismatch",
+          "why": "会議を開く側の言葉としては自然だが、自分の名前を名乗っておらず、自己紹介という場面の目的を果たしていない。"
+        },
+        {
+          "text": "はじめまして。〇〇商事の田中と仰います。よろしくお願いいたします。",
+          "role": "wrong_honorific_direction",
+          "why": "「仰る」は相手の発言に使う尊敬語。自分の名前を名乗る場面で使うと、自分の行為を高めてしまっている。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "初対面の自己紹介は、あいさつ、社名と名前の名乗り、結びの言葉をそろえるのが基本。正解はこの型どおり。「いつもお世話になっております」は継続的な取引先に使うあいさつで、初対面には合わない。「お忙しい中お集まりいただき」は会議の開始のあいさつとしては自然だが、自分の名前を名乗っておらず自己紹介になっていない。「仰います」は相手に使う尊敬語を自分の名乗りに使っており、敬意の方向が逆になっている。",
+      "explanation_en": "A first-meeting self-introduction pairs greeting, name and company, and a closing line — a regular-client phrase, a name-less opener, or an honorific pointed at yourself all miss it.",
+      "vocab_notes": [
+        {
+          "term": "はじめまして",
+          "reading": "はじめまして",
+          "meaning": "nice to meet you (genuine first meeting only)"
+        },
+        {
+          "term": "よろしくお願いいたします",
+          "reading": "よろしくおねがいいたします",
+          "meaning": "standard polite closing after a self-introduction"
+        }
+      ],
+      "audio": {
+        "narration": "9741bcd66cf8eb34",
+        "options": [
+          "54340baf2b04c8df",
+          "f397de59386e87ec",
+          "e6d39827ba98df46",
+          "a8b08ab8b3ce7538"
+        ]
+      },
+      "scene_id": "scene_video_call_laptop",
+      "speaker_role": "自社の担当者",
+      "listener_role": "オンライン会議で初めて会う取引先の担当者",
+      "channel": "video"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "239353dd4532e131",
+      "item_id": "3b2ba9c2cc",
+      "kind": "narration",
+      "index": null,
+      "text": "会議室を使いたいのですが、鍵が見当たりません。鍵は課長が持っていると聞きました。近くに課長がいます。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d775217875790d2b",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option",
+      "index": 0,
+      "text": "課長、すみません。会議室の鍵をお借りできますか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "7d5a7b0cae3cc0a1",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option",
+      "index": 1,
+      "text": "課長、会議室の鍵をお借りになってもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1539164858fecb53",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option",
+      "index": 2,
+      "text": "課長、会議室の鍵、ちょっと貸してもらえますか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "2e0502f8ea6b8422",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option",
+      "index": 3,
+      "text": "課長、会議室の鍵をお借りさせていただかせていただいてもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3cc88f8ba5836f6c",
+      "item_id": "6ad0f15b5f",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先の方が、今日はじめて会社にいらっしゃいました。受付であなたが応対します。相手はまだ名乗っていません。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "bce2bdb74ca5a6b2",
+      "item_id": "6ad0f15b5f",
+      "kind": "option",
+      "index": 0,
+      "text": "毎度ありがとうございます。少々お待ちください。",
+      "voice": "reception_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "84faf20e0c74aae6",
+      "item_id": "6ad0f15b5f",
+      "kind": "option",
+      "index": 1,
+      "text": "いらっしゃいませ。恐れ入りますが、お名前とお約束のお時間をうかがえますでしょうか。",
+      "voice": "reception_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "aa3534f6339ffd4d",
+      "item_id": "6ad0f15b5f",
+      "kind": "option",
+      "index": 2,
+      "text": "いらっしゃいませ。お忙しいところありがとうございます。",
+      "voice": "reception_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "85280c90ffcda7ac",
+      "item_id": "6ad0f15b5f",
+      "kind": "option",
+      "index": 3,
+      "text": "いらっしゃいませ。恐れ入りますが、お名前をお伺いさせていただかせていただいてもよろしいでしょうか。",
+      "voice": "reception_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fd843c0ba8cf68f0",
+      "item_id": "c1fcf0a342",
+      "kind": "narration",
+      "index": null,
+      "text": "内線で経理部に電話をかけました。担当の鈴木さんが席におらず、戻ったら電話がほしいと伝えたいです。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e957ca0a6154e8c0",
+      "item_id": "c1fcf0a342",
+      "kind": "option",
+      "index": 0,
+      "text": "恐れ入りますが、鈴木さんの携帯番号を教えていただけますか。",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "3d520ab208c99584",
+      "item_id": "c1fcf0a342",
+      "kind": "option",
+      "index": 1,
+      "text": "鈴木さんがお戻りになりましたら、私からまたおかけ直しします。",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "26df4fa12bee72d8",
+      "item_id": "c1fcf0a342",
+      "kind": "option",
+      "index": 2,
+      "text": "恐れ入りますが、鈴木さんがお戻りになりましたら、お電話をいただきたいとお伝えいただけますか。",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "9ca1a6edeae9ce26",
+      "item_id": "c1fcf0a342",
+      "kind": "option",
+      "index": 3,
+      "text": "恐れ入りますが、鈴木さんに、見積もりの件で電話しましたとだけお伝えいただけますか。",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "c0ea4821898076ec",
+      "item_id": "22487a1794",
+      "kind": "narration",
+      "index": null,
+      "text": "先輩に、仕事で分からないことを教えてもらいました。廊下で先輩と会ったので、お礼を言いたいです。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4e374f82ddbb3b06",
+      "item_id": "22487a1794",
+      "kind": "option",
+      "index": 0,
+      "text": "先輩、いつもお世話になっております。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "412a9593745579d6",
+      "item_id": "22487a1794",
+      "kind": "option",
+      "index": 1,
+      "text": "先輩、今度何かあったら聞いてください。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f930648f849129f1",
+      "item_id": "22487a1794",
+      "kind": "option",
+      "index": 2,
+      "text": "先輩、この前はどうも!助かりました。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "56d3394d1c072e9e",
+      "item_id": "22487a1794",
+      "kind": "option",
+      "index": 3,
+      "text": "先輩、先日は教えていただき、ありがとうございました。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "08c25c15b8a9bcd2",
+      "item_id": "43f67d1f13",
+      "kind": "narration",
+      "index": null,
+      "text": "明日の会議が、午後2時からか3時からか、はっきり覚えていません。近くにいる課長に確認したいです。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "67bf77e85d5a8a16",
+      "item_id": "43f67d1f13",
+      "kind": "option",
+      "index": 0,
+      "text": "課長、明日の会議は何時からか、確認してもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "381608922dd6c3ed",
+      "item_id": "43f67d1f13",
+      "kind": "option",
+      "index": 1,
+      "text": "課長、明日の会議は何時からか、ご確認になってもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f3662c4349cc13de",
+      "item_id": "43f67d1f13",
+      "kind": "option",
+      "index": 2,
+      "text": "課長、明日の会議、何時でしたっけ?",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f0290ae370ec8e75",
+      "item_id": "43f67d1f13",
+      "kind": "option",
+      "index": 3,
+      "text": "課長、明日の会議は何時からか、ご確認させていただかせていただいてもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "77ff0c1d78e017c9",
+      "item_id": "91a3dbc338",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先の佐藤さんに電話をかけました。佐藤さんが電話に出ました。こんなとき、最初に何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e5c39471af1a89b6",
+      "item_id": "91a3dbc338",
+      "kind": "option",
+      "index": 0,
+      "text": "もしもし、佐藤さんですか。",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "eb8b3749ef4393d4",
+      "item_id": "91a3dbc338",
+      "kind": "option",
+      "index": 1,
+      "text": "いつもお世話になっております。〇〇商事の田中です。",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "4b1c0ece00ea57de",
+      "item_id": "91a3dbc338",
+      "kind": "option",
+      "index": 2,
+      "text": "いつもお世話になっております。〇〇商事の田中です。ご用件をうかがいます。",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "f372a9e4f1c63cc3",
+      "item_id": "91a3dbc338",
+      "kind": "option",
+      "index": 3,
+      "text": "もしもし、田中だけど、佐藤さんいる?",
+      "voice": "staff_mid_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "1023b8b7ddb9fb58",
+      "item_id": "0e6c106a8e",
+      "kind": "narration",
+      "index": null,
+      "text": "隣の席の同僚が、資料作りに苦労している様子です。あなたは今、手が空いています。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "dfe66946bd4337e6",
+      "item_id": "0e6c106a8e",
+      "kind": "option",
+      "index": 0,
+      "text": "何かお手伝いさせていただいてもよろしいでしょうか。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "58dd21c6134d54d2",
+      "item_id": "0e6c106a8e",
+      "kind": "option",
+      "index": 1,
+      "text": "大変そうですね。私も忙しいので、また今度手伝いますね。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fba3e08d573c9a84",
+      "item_id": "0e6c106a8e",
+      "kind": "option",
+      "index": 2,
+      "text": "何か手伝いましょうか。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4920cba115af8fa3",
+      "item_id": "0e6c106a8e",
+      "kind": "option",
+      "index": 3,
+      "text": "手伝ってやろうか?",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "42524b6df37d3651",
+      "item_id": "2099bba427",
+      "kind": "narration",
+      "index": null,
+      "text": "少し体調が悪く、今日は早く帰りたいと思っています。廊下で課長に会いました。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8ca6ea1453949b55",
+      "item_id": "2099bba427",
+      "kind": "option",
+      "index": 0,
+      "text": "課長、ちょっと具合悪いんで、今日早退していいですか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1fe18e6515a3de9e",
+      "item_id": "2099bba427",
+      "kind": "option",
+      "index": 1,
+      "text": "課長、少し体調が悪いので、今日は早退します。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3e0e2293bcf9b3c9",
+      "item_id": "2099bba427",
+      "kind": "option",
+      "index": 2,
+      "text": "課長、少し体調が悪いので、今日は早退させていただかせていただいてもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5b18226f23d53f76",
+      "item_id": "2099bba427",
+      "kind": "option",
+      "index": 3,
+      "text": "課長、少し体調が悪いので、今日は早退してもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3374d484c3cb2e8c",
+      "item_id": "325876c7a8",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先での打ち合わせが終わりました。時間をとってもらったので、帰る前にお礼を言いたいです。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "2cd3ebc98f0b5e7e",
+      "item_id": "325876c7a8",
+      "kind": "option",
+      "index": 0,
+      "text": "本日はお忙しい中、お時間をいただき、ありがとうございました。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d74fd365cc133eb4",
+      "item_id": "325876c7a8",
+      "kind": "option",
+      "index": 1,
+      "text": "本日はご足労いただき、ありがとうございました。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "51d73e327c86da5a",
+      "item_id": "325876c7a8",
+      "kind": "option",
+      "index": 2,
+      "text": "本日はお疲れさまでした。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "cb448908433dcd99",
+      "item_id": "325876c7a8",
+      "kind": "option",
+      "index": 3,
+      "text": "本日はお忙しい中、お時間をいただかれまして、ありがとうございました。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9741bcd66cf8eb34",
+      "item_id": "f1c44b24eb",
+      "kind": "narration",
+      "index": null,
+      "text": "オンライン会議で、取引先の新しい担当者と初めて顔を合わせます。会議が始まり、まず自己紹介をします。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "54340baf2b04c8df",
+      "item_id": "f1c44b24eb",
+      "kind": "option",
+      "index": 0,
+      "text": "いつもお世話になっております。〇〇商事の田中です。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "f397de59386e87ec",
+      "item_id": "f1c44b24eb",
+      "kind": "option",
+      "index": 1,
+      "text": "はじめまして。〇〇商事の田中と申します。よろしくお願いいたします。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "e6d39827ba98df46",
+      "item_id": "f1c44b24eb",
+      "kind": "option",
+      "index": 2,
+      "text": "本日はお忙しい中お集まりいただき、ありがとうございます。〇〇商事です。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "a8b08ab8b3ce7538",
+      "item_id": "f1c44b24eb",
+      "kind": "option",
+      "index": 3,
+      "text": "はじめまして。〇〇商事の田中と仰います。よろしくお願いいたします。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    }
+  ],
+  "scenes": [
+    "scene_client_office_sofa",
+    "scene_corridor",
+    "scene_meeting_room_table",
+    "scene_office_desk_pair",
+    "scene_phone_desk",
+    "scene_reception_counter",
+    "scene_video_call_laptop"
+  ]
+}

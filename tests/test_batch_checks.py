@@ -10,6 +10,7 @@ from bjt import batch, config
 from bjt.fidelity import dedupe
 
 REFERENCE = pathlib.Path(__file__).resolve().parent.parent / "batches" / "hatsugen_choukai_J2_001.json"
+REFERENCE_J3 = pathlib.Path(__file__).resolve().parent.parent / "batches" / "hatsugen_choukai_J3_001.json"
 
 
 # ----- near-duplicate detection ------------------------------------------
@@ -76,6 +77,25 @@ def test_reference_batch_reuses_its_scenes(bundle):
     """Fewer scenes than items is the point — images are a shared bank."""
     scenes = [it["scene_id"] for it in bundle["items"]]
     assert len(set(scenes)) < len(scenes)
+
+
+@pytest.fixture
+def bundle_j3():
+    return batch.load(REFERENCE_J3)
+
+
+def test_j3_reference_batch_still_ships(bundle_j3):
+    """The ten J3 items are a second regression set, at the basic level: if a
+    check starts failing them, the check changed, not the items."""
+    report = batch.check_bundle(bundle_j3)
+    assert report.ok, [(c.name, c.detail) for c in report.failed]
+    assert report.warned == [], [(c.name, c.detail) for c in report.warned]
+
+
+def test_j3_reference_batch_uses_every_distractor_role(bundle_j3):
+    used = {o["role"] for it in bundle_j3["items"] for o in it["options"] if o["role"] != "correct"}
+    from bjt.fidelity import roles
+    assert used == set(roles.DISTRACTOR_ROLES["hatsugen_choukai"])
 
 
 def test_empty_bundle_fails(bundle):
