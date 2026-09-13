@@ -3,6 +3,9 @@
 Commands
     init          create the database and print seed-setup instructions
     selftest      offline check of validation + DB (no API key needed)
+    seedtable     inspect the 場面×関係×機能×レベル table and how much of it is spent
+    batch         generate a batch offline into a shippable JSON bundle
+    checkbatch    run every offline quality check over an existing bundle
     gen           generate one item, gate it, store it, print it
     practice      answer a run of items interactively (--demo needs no key)
     quality       print the fidelity report (mechanisms 1-5)
@@ -16,10 +19,11 @@ import json
 import sys
 import textwrap
 
-from . import config, fixtures, levels, schemas
+from . import batch as batchmod
+from . import config, fixtures, levels, schemas, seedtable
 from .llm import LLMError
 from .db import Store
-from .fidelity import answerability, discriminator, roles, vocab
+from .fidelity import answerability, dedupe, discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
 
 
@@ -31,6 +35,12 @@ LETTERS = ["A", "B", "C", "D"]
 def _print_item_question(item: dict) -> None:
     print()
     print(f"  [{item.get('item_type','')} · {item.get('level','')}]  {item.get('topic','')}")
+    if item.get("speaker_role"):
+        chan = {"phone": "電話", "video": "オンライン", "in_person": "対面"}.get(
+            item.get("channel", ""), item.get("channel", "")
+        )
+        print(f"  {item['speaker_role']} → {item.get('listener_role','')}"
+              f"（{chan} / {item.get('scene_id','')}）")
     print()
     for line in textwrap.wrap(item["stem"], width=64):
         print(f"  {line}")
@@ -53,6 +63,8 @@ def _print_item_answer(item: dict) -> None:
         if o["role"] == roles.CORRECT:
             continue
         print(f"    {LETTERS[i]}. {o['role']} — {roles.ROLE_DESCRIPTIONS.get(o['role'], '')}")
+        for line in textwrap.wrap(o.get("why", ""), width=56):
+            print(f"        {line}")
     notes = item.get("vocab_notes") or []
     if notes:
         print("\n  語彙:")
@@ -63,11 +75,13 @@ def _print_item_answer(item: dict) -> None:
 
 # ----- generation + gating -----------------------------------------------
 
-def _generate_and_gate(store, item_type: str, level: str, *, gate: bool):
+def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, cell=None):
     """Generate one item, run vocab + answerability checks, persist with metrics.
     Returns (item, item_id, kept: bool, detail: str)."""
     gen = get_generator(item_type, store)
-    item = gen.generate(level)
+    if cell is None and gen.requires_cell:
+        cell = _next_cell(store, item_type, level)
+    item = gen.generate(level, cell=cell)
 
     vres = vocab.check_item(item, level)
     gate_verdict = "skipped"
@@ -92,6 +106,34 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool):
     kept = gate_verdict in ("kept", "skipped")
     detail = _gate_detail(cold, full, gate_verdict, vres)
     return item, item_id, kept, detail
+
+
+def _next_cell(store, item_type: str, level: str):
+    """One unused seed-table cell. Raises if the table for this type is exhausted
+    — better a clear stop than silently writing the same cell twice."""
+    table = seedtable.load(item_type)
+    picked = table.sample(1, level=level, exclude_ids=store.used_cell_ids(item_type))
+    if not picked:
+        raise LLMError(
+            f"every {item_type} seed cell at {level} has been used; extend "
+            f"seedtable/{item_type}.json before generating more"
+        )
+    return picked[0]
+
+
+def _sample_cells(store, item_type: str, level: str, n: int) -> list:
+    """N unused cells for a run, spread across the axes. Empty list for types
+    that do not use a seed table."""
+    if not get_generator(item_type).requires_cell:
+        return []
+    table = seedtable.load(item_type)
+    cells = table.sample(n, level=level, exclude_ids=store.used_cell_ids(item_type))
+    if len(cells) < n:
+        raise LLMError(
+            f"only {len(cells)} unused {item_type} cell(s) left at {level}; extend "
+            f"seedtable/{item_type}.json"
+        )
+    return cells
 
 
 def _gate_detail(cold, full, verdict, vres) -> str:
@@ -197,10 +239,12 @@ def cmd_smoke(args) -> int:
     kept_n = 0
     verdicts: dict[str, int] = {}
     try:
+        cells = _sample_cells(store, args.type, args.level, args.n)
         for i in range(args.n):
             try:
                 item, iid, kept, detail = _generate_and_gate(
-                    store, args.type, args.level, gate=not args.no_gate
+                    store, args.type, args.level, gate=not args.no_gate,
+                    cell=cells[i] if cells else None,
                 )
                 errs = schemas.validate_item(args.type, item)
                 if errs:
@@ -516,6 +560,195 @@ def _normalize_official(items: list[dict], item_type: str) -> list[dict]:
     return out
 
 
+def cmd_seedtable(args) -> int:
+    """Inspect the axes and how much of the table has been spent. This is the
+    answer to 'will we run out of questions?' — it is a counting question, not a
+    prompting one."""
+    types = seedtable.available()
+    if not types:
+        print(f"No seed tables in {config.SEEDTABLE_DIR}.", file=sys.stderr)
+        return 2
+
+    store = Store()
+    try:
+        for t in types if not args.type else [args.type]:
+            table = seedtable.load(t)
+            used = store.used_cell_ids(t)
+            cov = table.coverage(used)
+            print(f"\n{t}  ({config.SEEDTABLE_DIR / (t + '.json')})")
+            print(f"  valid cells: {cov['total_cells']}   used: {cov['used_cells']}   "
+                  f"remaining: {cov['total_cells'] - cov['used_cells']}")
+            for level in table.levels:
+                print(f"    {level}: {len(table.cells(level))} cell(s)")
+            print(f"  scene bank: {cov['scene_bank']} reusable image(s)")
+            if args.sample:
+                print(f"\n  sample of {args.sample} unused cell(s) at {args.level}:")
+                for c in table.sample(args.sample, level=args.level,
+                                      exclude_ids=used, seed=args.seed):
+                    print(f"    {c.id}")
+                    print(f"      {c.describe_ja()}  ·  {c.channel}  ·  {'、'.join(c.scenes)}")
+    finally:
+        store.close()
+    return 0
+
+
+def cmd_batch(args) -> int:
+    """Generate a batch offline and write a shippable bundle.
+
+    Nothing is generated at practice time, so this is where the money and the
+    waiting happen: gate each item, drop the ones that fail, then run the
+    whole-batch checks that a per-item gate cannot see."""
+    store = Store()
+    kept_items: list[dict] = []
+    try:
+        cells = _sample_cells(store, args.type, args.level, args.n)
+        attempts = 0
+        budget = args.n * 3
+        idx = 0
+        while len(kept_items) < args.n and attempts < budget:
+            attempts += 1
+            cell = cells[idx % len(cells)] if cells else None
+            idx += 1
+            try:
+                item, iid, kept, detail = _generate_and_gate(
+                    store, args.type, args.level, gate=not args.no_gate, cell=cell
+                )
+            except LLMError as e:
+                print(f"  [{len(kept_items)}/{args.n}] generation failed: {e}")
+                continue
+            if not kept:
+                print(f"  [{len(kept_items)}/{args.n}] dropped — {detail}")
+                continue
+            close = dedupe.max_similarity(item, kept_items)
+            if close >= dedupe.DEFAULT_THRESHOLD:
+                print(f"  [{len(kept_items)}/{args.n}] dropped — near-duplicate "
+                      f"of an item already in this batch ({close:.2f})")
+                continue
+            kept_items.append(item)
+            print(f"  [{len(kept_items)}/{args.n}] kept  {item.get('topic','')!r}  {detail}")
+
+        if not kept_items:
+            print("\nNothing passed the gates; no bundle written.", file=sys.stderr)
+            return 1
+
+        bundle = batchmod.build_bundle(args.type, args.level, kept_items, config.GEN_MODEL)
+        report = batchmod.check_bundle(bundle)
+        _print_bundle_report(bundle, report)
+        if not report.ok and not args.force:
+            print("\nBundle NOT written — fix the failures above or pass --force.",
+                  file=sys.stderr)
+            return 1
+        path = batchmod.save(bundle, args.out)
+        print(f"\nWrote {len(kept_items)} item(s) to {path}")
+        print(f"Next: synthesise the {len(bundle['audio_manifest'])} clip(s) in "
+              "audio_manifest, then eyeball the items once.")
+    finally:
+        store.close()
+    return 0
+
+
+def cmd_importbatch(args) -> int:
+    """Turn a hand-written source file into a checked bundle.
+
+    Not every item has to come out of a model. The first batch of any new type is
+    written by hand — that is how you find out what the generator is supposed to
+    be aiming at — and the reference batch stays in the repo afterwards as the
+    regression set. This path runs exactly the same validation and the same
+    whole-batch checks as generated items; the only thing it skips is the model
+    call.
+    """
+    import pathlib
+
+    src = json.loads(pathlib.Path(args.path).read_text(encoding="utf-8"))
+    item_type, level = src["item_type"], src["level"]
+    table = seedtable.load(item_type)
+    gen = get_generator(item_type)
+
+    items: list[dict] = []
+    problems = 0
+    for i, raw in enumerate(src["items"]):
+        cell = table.get(raw.get("seed_cell_id", ""))
+        if cell is None:
+            print(f"  item {i}: seed_cell_id {raw.get('seed_cell_id')!r} is not a valid "
+                  f"cell in seedtable/{item_type}.json")
+            problems += 1
+            continue
+        if cell.level != level:
+            print(f"  item {i}: cell is {cell.level}, bundle is {level}")
+            problems += 1
+            continue
+        item = {k: v for k, v in raw.items() if not k.startswith("_") and k != "seed_cell_id"}
+        item["item_type"] = item_type
+        item["level"] = level
+        item["seed_cell"] = cell.to_dict()
+        errs = schemas.validate_item(item_type, item) + gen.validate_extra(item, cell)
+        if errs:
+            print(f"  item {i} ({item.get('topic','')}): {errs}")
+            problems += 1
+            continue
+        items.append(item)
+
+    if problems:
+        print(f"\n{problems} item(s) rejected; nothing written.", file=sys.stderr)
+        return 1
+
+    if args.shuffle:
+        import random
+        rng = random.Random(args.seed)
+        for item in items:
+            rng.shuffle(item["options"])
+
+    model = src.get("source", "author-composed")
+    if not args.no_store:
+        store = Store()
+        try:
+            for item in items:
+                store.insert_item(item_type, level, item, model, gate_verdict="skipped")
+        finally:
+            store.close()
+
+    bundle = batchmod.build_bundle(item_type, level, items, model)
+    report = batchmod.check_bundle(bundle)
+    _print_bundle_report(bundle, report)
+    if not report.ok and not args.force:
+        print("\nBundle NOT written — fix the failures above or pass --force.", file=sys.stderr)
+        return 1
+    path = batchmod.save(bundle, args.out or pathlib.Path(args.path.replace(".source.json", ".json")))
+    print(f"\nWrote {len(items)} item(s) to {path}")
+    return 0
+
+
+def cmd_checkbatch(args) -> int:
+    """Re-run every offline check over an existing bundle. No API key needed."""
+    import pathlib
+
+    bundle = batchmod.load(pathlib.Path(args.path))
+    report = batchmod.check_bundle(bundle)
+    _print_bundle_report(bundle, report)
+    if args.show:
+        for bi in bundle["items"]:
+            item = dict(bi)
+            item["options"] = list(bi["options"])
+            _print_item_question(item)
+            _print_item_answer(item)
+    return 0 if report.ok else 1
+
+
+def _print_bundle_report(bundle: dict, report) -> None:
+    marks = {"pass": "OK  ", "warn": "WARN", "fail": "FAIL"}
+    print("\n" + "=" * 62)
+    print(f"BUNDLE CHECK — {bundle['item_type']} / {bundle['level']} / "
+          f"{len(bundle['items'])} item(s)")
+    print("=" * 62)
+    for c in report.checks:
+        print(f"  [{marks[c.status]}] {c.name}: {c.detail}")
+    print("-" * 62)
+    print(f"  {len(report.failed)} failure(s), {len(report.warned)} warning(s) — "
+          f"{'SHIPPABLE' if report.ok else 'NOT SHIPPABLE'}")
+    print("  (offline checks only: the answerability gate and the discriminator "
+          "need an API key)")
+
+
 # ----- argument parsing --------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
@@ -542,6 +775,38 @@ def build_parser() -> argparse.ArgumentParser:
     sm.set_defaults(func=cmd_smoke)
 
     sub.add_parser("seeds", help="validate and report what's in seeds/").set_defaults(func=cmd_seeds)
+
+    st = sub.add_parser("seedtable", help="inspect the 場面×関係×機能×レベル table")
+    st.add_argument("--type", choices=seedtable.available() or None)
+    st.add_argument("--level", default="J2", choices=levels.LEVELS)
+    st.add_argument("--sample", type=int, default=0, help="also print N unused cells")
+    st.add_argument("--seed", type=int, default=None, help="make the sample reproducible")
+    st.set_defaults(func=cmd_seedtable)
+
+    b = sub.add_parser("batch", help="generate a batch offline into a shippable JSON bundle")
+    b.add_argument("--type", required=True, choices=types)
+    b.add_argument("--level", default="J2", choices=levels.LEVELS)
+    b.add_argument("-n", type=int, default=10, help="how many items to keep")
+    b.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    b.add_argument("--out", type=__import__("pathlib").Path, default=None, help="bundle path")
+    b.add_argument("--force", action="store_true", help="write the bundle even if checks fail")
+    b.set_defaults(func=cmd_batch)
+
+    ib = sub.add_parser("importbatch", help="validate a hand-written source file into a bundle")
+    ib.add_argument("path")
+    ib.add_argument("--out", type=__import__("pathlib").Path, default=None, help="bundle path")
+    ib.add_argument("--shuffle", action="store_true",
+                    help="re-shuffle option order (leave off when the author set it deliberately)")
+    ib.add_argument("--seed", type=int, default=None, help="make --shuffle reproducible")
+    ib.add_argument("--no-store", action="store_true",
+                    help="do not record the items (and so the cells they use) in the DB")
+    ib.add_argument("--force", action="store_true", help="write the bundle even if checks fail")
+    ib.set_defaults(func=cmd_importbatch)
+
+    cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
+    cb.add_argument("path")
+    cb.add_argument("--show", action="store_true", help="also print every item with its 解説")
+    cb.set_defaults(func=cmd_checkbatch)
 
     pr = sub.add_parser("practice", help="answer a run of items interactively")
     pr.add_argument("--type", choices=types, help="restrict to one item type")

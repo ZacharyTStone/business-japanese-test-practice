@@ -1,0 +1,515 @@
+{
+  "item_type": "hatsugen_choukai",
+  "_note": "Original design, not licensed material — this file is committed on purpose. Diversity is produced HERE (by enumerating valid 場面×関係×機能×レベル cells and consuming them without replacement), not by asking the prompt to 'be varied'.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "settings": [
+    {
+      "id": "office_desk",
+      "ja": "自分の席・執務スペース",
+      "channel": "in_person",
+      "scenes": [
+        "scene_office_desk_pair",
+        "scene_office_open_floor"
+      ]
+    },
+    {
+      "id": "meeting_room",
+      "ja": "社内の会議室",
+      "channel": "in_person",
+      "scenes": [
+        "scene_meeting_room_table"
+      ]
+    },
+    {
+      "id": "corridor",
+      "ja": "廊下・エレベーター前",
+      "channel": "in_person",
+      "scenes": [
+        "scene_corridor",
+        "scene_elevator_hall"
+      ]
+    },
+    {
+      "id": "reception",
+      "ja": "自社の受付・エントランス",
+      "channel": "in_person",
+      "scenes": [
+        "scene_reception_counter",
+        "scene_entrance_lobby"
+      ]
+    },
+    {
+      "id": "client_office",
+      "ja": "取引先のオフィス（訪問先）",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_office_sofa",
+        "scene_client_meeting_room"
+      ]
+    },
+    {
+      "id": "dining",
+      "ja": "会食・懇親会の席",
+      "channel": "in_person",
+      "scenes": [
+        "scene_restaurant_private",
+        "scene_izakaya_table"
+      ]
+    },
+    {
+      "id": "event_venue",
+      "ja": "展示会・セミナー会場",
+      "channel": "in_person",
+      "scenes": [
+        "scene_expo_booth",
+        "scene_seminar_hall"
+      ]
+    },
+    {
+      "id": "phone_internal",
+      "ja": "社内からの電話",
+      "channel": "phone",
+      "scenes": [
+        "scene_phone_desk"
+      ]
+    },
+    {
+      "id": "phone_external",
+      "ja": "社外との電話",
+      "channel": "phone",
+      "scenes": [
+        "scene_phone_desk",
+        "scene_phone_mobile_outside"
+      ]
+    },
+    {
+      "id": "video_call",
+      "ja": "オンライン会議",
+      "channel": "video",
+      "scenes": [
+        "scene_video_call_laptop"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の相手",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "自社 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "自社 → 一般のお客様",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "request",
+      "ja": "依頼する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "ask_permission",
+      "ja": "許可を求める",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "decline",
+      "ja": "断る",
+      "relations": [
+        "subordinate_to_superior",
+        "peer_to_peer",
+        "staff_to_client",
+        "staff_to_customer",
+        "other_department"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "apologize_report",
+      "ja": "ミスを謝罪して報告する",
+      "relations": [
+        "subordinate_to_superior",
+        "staff_to_client",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "thank",
+      "ja": "礼を述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "offer_help",
+      "ja": "申し出る・手伝いを買って出る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "staff_to_client",
+        "staff_to_visitor",
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "report_progress",
+      "ja": "経過を報告する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "confirm",
+      "ja": "内容を確認する",
+      "relations": [
+        "subordinate_to_superior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "propose",
+      "ja": "提案する",
+      "relations": [
+        "subordinate_to_superior",
+        "peer_to_peer",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "follow_up",
+      "ja": "催促する",
+      "relations": [
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "handle_complaint",
+      "ja": "苦情に対応する",
+      "relations": [
+        "staff_to_client",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "greet_first_meet",
+      "ja": "初対面のあいさつをする",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "other_department"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "greet_and_guide",
+      "ja": "来客を迎えて案内する",
+      "relations": [
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person"
+      ]
+    },
+    {
+      "id": "farewell",
+      "ja": "別れ際・退社時のあいさつをする",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "superior_to_subordinate",
+        "staff_to_client",
+        "staff_to_visitor"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "offer_food",
+      "ja": "食事や飲み物を勧める",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "in_person"
+      ]
+    },
+    {
+      "id": "congratulate",
+      "ja": "祝いやねぎらいを述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "superior_to_subordinate",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "phone_open",
+      "ja": "電話をかけて名乗る",
+      "relations": [
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "phone"
+      ]
+    },
+    {
+      "id": "phone_absence",
+      "ja": "担当者の不在を伝える",
+      "relations": [
+        "staff_to_client",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "phone"
+      ]
+    },
+    {
+      "id": "phone_transfer",
+      "ja": "電話を取り次ぐ",
+      "relations": [
+        "staff_to_client",
+        "staff_to_customer",
+        "other_department"
+      ],
+      "channels": [
+        "phone"
+      ]
+    },
+    {
+      "id": "phone_message",
+      "ja": "伝言を頼む・受ける",
+      "relations": [
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "phone"
+      ]
+    },
+    {
+      "id": "correct_mistake",
+      "ja": "相手の誤りをやんわり正す",
+      "relations": [
+        "subordinate_to_superior",
+        "peer_to_peer",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "small_talk",
+      "ja": "雑談・場をつなぐ",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "peer_to_peer",
+        "other_department"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "office_desk": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "meeting_room": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "corridor": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_visitor"
+    ],
+    "reception": [
+      "staff_to_visitor",
+      "staff_to_customer",
+      "staff_to_client"
+    ],
+    "client_office": [
+      "staff_to_client"
+    ],
+    "dining": [
+      "staff_to_client",
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer"
+    ],
+    "event_venue": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "peer_to_peer"
+    ],
+    "phone_internal": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "phone_external": [
+      "staff_to_client",
+      "staff_to_customer"
+    ],
+    "video_call": [
+      "subordinate_to_superior",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ]
+  }
+}

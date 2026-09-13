@@ -31,6 +31,20 @@ DISTRACTOR_ROLES: dict[str, list[str]] = {
         "register_insulting",              # grammatical but demeaning (お食事をあげましょうか)
         "correct_keigo_wrong_speech_act",  # correct honorific verb, wrong illocutionary act
     ],
+    # 発言聴解問題 — the situation is narrated, the four options are spoken
+    # utterances, and the test-taker picks the one that fits. The failure modes
+    # below are the ones the official 解説 name for this section: they are almost
+    # all about *direction* of respect and about 場面 fit, not about grammar.
+    "hatsugen_choukai": [
+        "wrong_honorific_direction",   # 尊敬語/謙譲語 pointed at the wrong party
+        "wrong_uchi_soto",             # in-group treated as out-group or vice versa
+        "register_too_casual",         # plain/casual form where the relation forbids it
+        "over_polite_misfit",          # 二重敬語・過剰敬語 — polite enough to be wrong
+        "wrong_speech_act",            # right keigo, wrong act (an offer where a request is needed)
+        "set_phrase_wrong_situation",  # a real set phrase, wrong 場面 or wrong moment
+        "phone_protocol_violation",    # breaks the fixed shape of a business phone call
+        "content_mismatch",            # natural and polite, but does not do what the situation requires
+    ],
     # 総合読解問題 (phase 2 — enum ready, generator not yet built)
     "sougou_dokkai": [
         "unsupported_but_plausible",           # true of the world, not stated in the passage
@@ -50,6 +64,12 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
     "real_form_wrong_context": "a genuine expression used where its licensing conditions fail",
     "set_phrase_misfit": "a real greeting or idiom dropped into a grammatical slot",
     "wrong_honorific_direction": "尊敬語 and 謙譲語 swapped relative to the speaker",
+    "wrong_uchi_soto": "ウチ/ソト handled backwards — e.g. honorifics on one's own boss to a client",
+    "over_polite_misfit": "二重敬語 or otherwise over-polite to the point of being wrong",
+    "wrong_speech_act": "the keigo is right but the act is wrong (an offer where a request was needed)",
+    "set_phrase_wrong_situation": "a genuine set phrase used in the wrong 場面 or at the wrong moment",
+    "phone_protocol_violation": "breaks the fixed shape of a business phone call (naming oneself, relaying absence, transferring)",
+    "content_mismatch": "natural and polite, but does not do what the situation requires",
     "register_too_casual": "plain or casual form addressed to a superior or client",
     "register_insulting": "grammatical but demeaning to the listener",
     "correct_keigo_wrong_speech_act": "correct honorific verb, but the wrong illocutionary act",

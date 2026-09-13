@@ -14,10 +14,14 @@ FIXTURES: dict[str, dict] = {
         "topic": "プロジェクト成功のお礼",
         "stem": "このたびのプロジェクト成功は、皆様のご協力の＿＿＿です。",
         "options": [
-            {"text": "おかげ", "role": "correct"},
-            {"text": "せい", "role": "opposite_valence"},
-            {"text": "おかげさま", "role": "set_phrase_misfit"},
-            {"text": "おかげがち", "role": "nonexistent_form"},
+            {"text": "おかげ", "role": "correct",
+             "why": "感謝の文脈で良い結果の原因を示す語で、「ご協力の—です」の名詞スロットに収まる。"},
+            {"text": "せい", "role": "opposite_valence",
+             "why": "原因を示す点は同じだが悪い結果に使う語なので、お礼の文が非難に変わる。"},
+            {"text": "おかげさま", "role": "set_phrase_misfit",
+             "why": "「おかげさまで」の形であいさつに使う定型で、「の—です」の名詞スロットには立てられない。"},
+            {"text": "おかげがち", "role": "nonexistent_form",
+             "why": "「〜がち」は動詞連用形や一部の名詞に付くが、「おかげがち」という語は存在しない。"},
         ],
         "explanation_ja": (
             "「おかげ」はよい結果の原因を感謝の気持ちを込めて示す表現で、正解。"
@@ -43,10 +47,14 @@ FIXTURES: dict[str, dict] = {
             "最も適切な表現はどれか。"
         ),
         "options": [
-            {"text": "資料を拝見してもよろしいでしょうか。", "role": "correct"},
-            {"text": "資料をご覧になってもよろしいでしょうか。", "role": "wrong_honorific_direction"},
-            {"text": "資料、見てもいい？", "role": "register_too_casual"},
-            {"text": "資料を拝見いたしましょうか。", "role": "correct_keigo_wrong_speech_act"},
+            {"text": "資料を拝見してもよろしいでしょうか。", "role": "correct",
+             "why": "見るのは自分なので謙譲語「拝見する」、さらに「〜てもよろしいでしょうか」で許可を求めている。"},
+            {"text": "資料をご覧になってもよろしいでしょうか。", "role": "wrong_honorific_direction",
+             "why": "「ご覧になる」は尊敬語。自分が見る行為に使うと、自分を高めることになる。"},
+            {"text": "資料、見てもいい？", "role": "register_too_casual",
+             "why": "内容は正しいが、取引先の担当者に対してタメ口で、丁寧さがまったく足りない。"},
+            {"text": "資料を拝見いたしましょうか。", "role": "correct_keigo_wrong_speech_act",
+             "why": "謙譲語は正しいが「〜ましょうか」は申し出で、許可を求める場面の発話行為とずれる。"},
         ],
         "explanation_ja": (
             "自分が見る行為には謙譲語「拝見する」を使う。「拝見してもよろしいでしょうか」は"

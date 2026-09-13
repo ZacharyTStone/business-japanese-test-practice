@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 from .goi_bunpou import GoiBunpouGenerator
+from .hatsugen_choukai import HatsugenChoukaiGenerator
 from .hyougen import HyougenGenerator
 
-# Registry of the generators built so far (phase 1: two text-only types).
+# Registry of the generators built so far.
 GENERATORS = {
     GoiBunpouGenerator.item_type: GoiBunpouGenerator,
     HyougenGenerator.item_type: HyougenGenerator,
+    HatsugenChoukaiGenerator.item_type: HatsugenChoukaiGenerator,
 }
 
 

@@ -1,0 +1,39 @@
+[
+  {
+    "_note": "PLACEHOLDER — replace with a real official-style 発言聴解 example and its 解説. Note that `stem` is what the NARRATOR reads aloud, and the four options are what the speaker says.",
+    "stem": "取引先の会社を訪問し、応接室に通されました。担当の課長が入ってきました。こんなとき、何と言いますか。",
+    "scene_id": "scene_client_office_sofa",
+    "speaker_role": "訪問した営業担当（若手）",
+    "listener_role": "取引先の課長",
+    "channel": "in_person",
+    "options": [
+      {
+        "text": "お忙しいところ、お時間をいただきありがとうございます。",
+        "role": "correct",
+        "why": "時間を割いてもらった側からの礼で、初対面でなくても訪問の冒頭に使える定型。"
+      },
+      {
+        "text": "お忙しいところ、お時間をくださって差し上げます。",
+        "role": "wrong_honorific_direction",
+        "why": "「差し上げる」は自分が与える側の謙譲語で、時間をもらった側の発言にすると関係が逆になる。"
+      },
+      {
+        "text": "お忙しいところ、お時間をいただかせていただき、ありがとうございます。",
+        "role": "over_polite_misfit",
+        "why": "「いただく」と「させていただく」が重なった二重敬語で、丁寧にしようとして不自然になっている。"
+      },
+      {
+        "text": "お忙しいところ、わざわざありがとうございます。",
+        "role": "set_phrase_wrong_situation",
+        "why": "「わざわざ」は相手が出向いてくれたときの語。訪問しているのは自分なので場面に合わない。"
+      }
+    ],
+    "topic": "取引先訪問の冒頭のあいさつ",
+    "explanation_ja": "訪問した側は時間をもらう側なので「お時間をいただき」が正しい。以下、各誤答の敬意の方向・場面のずれを官製解説の要領で記す。",
+    "explanation_en": "The visitor is the one receiving time, so いただく is the right direction.",
+    "vocab_notes": [
+      {"term": "お時間をいただく", "reading": "おじかんをいただく", "meaning": "to be given someone's time"},
+      {"term": "わざわざ", "reading": "わざわざ", "meaning": "to go out of one's way (said of the other party)"}
+    ]
+  }
+]

@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS items (
     explanation_en  TEXT NOT NULL,
     vocab_notes_json TEXT NOT NULL,
     model           TEXT NOT NULL,
+    seed_cell_id    TEXT,                -- the seed-table cell this item was written for
+    extra_json      TEXT,                -- type-specific fields (scene_id, channel, roles, ...)
     -- fidelity metrics captured at generation time (nullable until the gate runs)
     cold_success_rate REAL,
     full_success_rate REAL,
@@ -79,13 +81,29 @@ CREATE TABLE IF NOT EXISTS calibration_runs (
 """
 
 
+#: Columns added after the first release. SQLite has no "ADD COLUMN IF NOT
+#: EXISTS", so we diff against PRAGMA table_info and add what is missing — a
+#: database from before 発言聴解 existed keeps working.
+_MIGRATIONS = [
+    ("items", "seed_cell_id", "TEXT"),
+    ("items", "extra_json", "TEXT"),
+]
+
+
 class Store:
     def __init__(self, path: Optional[Path] = None):
         self.path = path or config.DB_PATH
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(_SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        for table, column, decl in _MIGRATIONS:
+            existing = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})")}
+            if column not in existing:
+                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
     def close(self) -> None:
         self.conn.close()
@@ -108,9 +126,9 @@ class Store:
         cur = self.conn.execute(
             """INSERT INTO items (item_type, level, topic, stem, options_json,
                     correct_index, explanation_ja, explanation_en, vocab_notes_json,
-                    model, cold_success_rate, full_success_rate, gate_verdict,
-                    vocab_violations_json, created_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    model, seed_cell_id, extra_json, cold_success_rate,
+                    full_success_rate, gate_verdict, vocab_violations_json, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 item_type,
                 level,
@@ -122,6 +140,8 @@ class Store:
                 item["explanation_en"],
                 json.dumps(item.get("vocab_notes", []), ensure_ascii=False),
                 model,
+                (item.get("seed_cell") or {}).get("id"),
+                json.dumps(extra_fields(item), ensure_ascii=False),
                 cold_success_rate,
                 full_success_rate,
                 gate_verdict,
@@ -146,6 +166,15 @@ class Store:
             (item_type, limit),
         ).fetchall()
         return [_item_row_to_dict(r) for r in rows]
+
+    def used_cell_ids(self, item_type: str) -> set:
+        """Seed-table cells already spent on this item type. Passed to
+        SeedTable.sample as exclude_ids so a cell is never written twice."""
+        rows = self.conn.execute(
+            "SELECT DISTINCT seed_cell_id FROM items WHERE item_type = ? AND seed_cell_id IS NOT NULL",
+            (item_type,),
+        ).fetchall()
+        return {r["seed_cell_id"] for r in rows}
 
     def recent_topics(self, item_type: str, limit: int) -> list[str]:
         rows = self.conn.execute(
@@ -273,10 +302,27 @@ class Store:
         return int(cur.lastrowid)
 
 
+#: Item keys that live in their own columns; everything else an item carries is
+#: type-specific and goes to extra_json.
+_CORE_KEYS = {
+    "item_type", "level", "topic", "stem", "options", "explanation_ja",
+    "explanation_en", "vocab_notes", "seed_cell",
+}
+
+
+def extra_fields(item: dict) -> dict:
+    """The type-specific fields of an item (scene_id, channel, speaker_role...)."""
+    return {k: v for k, v in item.items() if k not in _CORE_KEYS}
+
+
 def _item_row_to_dict(row: sqlite3.Row) -> dict:
     d = dict(row)
     d["options"] = json.loads(d.pop("options_json"))
     d["vocab_notes"] = json.loads(d.pop("vocab_notes_json"))
     vv = d.pop("vocab_violations_json", None)
     d["vocab_violations"] = json.loads(vv) if vv else []
+    extra = d.pop("extra_json", None)
+    # Type-specific fields are flattened back onto the item so callers see the
+    # same shape the generator produced.
+    d.update(json.loads(extra) if extra else {})
     return d

@@ -10,12 +10,19 @@ Every item faces two checks before it reaches the study user:
 Each side is run several times (config.GATE_TRIALS) and we require consistency —
 a model that gets it right once out of three cold is noise, not leakage.
 
-Adaptation for phase-1 item types: 語彙・文法 and 表現読解 have no separate
-passage or audio, so the brief's literal "cold = stem+options, no passage" would
-make cold identical to full. For these text-only types the meaningful leakage
-probe is to withhold the *stem* and show only the option set: if a strong model
-can still pick the key from the four options alone, the distractors are
-individually implausible and the item leaks. This is documented in the README.
+What "the stimulus" means depends on the type:
+
+  * 発言聴解 — the stimulus is the narrated situation, which the test-taker hears
+    and cannot re-read. Withholding it is the brief's literal cold view: four
+    candidate utterances with no situation should not be separable, because the
+    whole point of the type is that appropriateness is situational. If a model
+    picks the key from the utterances alone, the item is really a politeness
+    ranking with a dressed-up preamble.
+  * 語彙・文法 and 表現読解 — these have no separate passage or audio, so the
+    literal reading would make cold identical to full. For them the equivalent
+    probe is to withhold the *stem* and show only the option set. Same mechanic,
+    same interpretation: a cold success means the distractors are individually
+    implausible.
 """
 from __future__ import annotations
 
@@ -62,16 +69,34 @@ def _run_side(question: str, options: list[str], answer: int, side: str) -> list
     return trials
 
 
+def _questions(item: dict) -> tuple[str, str]:
+    """The full-view and cold-view prompts, worded for the item type."""
+    if item.get("item_type") == "hatsugen_choukai":
+        full = (
+            f"{item['stem']}\n\n"
+            "Which of these utterances is the appropriate thing to say in that situation?"
+        )
+        cold = (
+            "A BJT 発言聴解 item asks which utterance fits a described situation. The "
+            "situation has been withheld. Based ONLY on the four candidate utterances "
+            "below, which one is the intended correct answer?"
+        )
+        return full, cold
+
+    full = f"{item['stem']}\n\nWhich option correctly completes/answers this item?"
+    cold = (
+        "The stem of a BJT item has been withheld. Based ONLY on the four candidate "
+        "options below, which one is the intended correct answer for the hidden stem?"
+    )
+    return full, cold
+
+
 def run_gate(item: dict) -> GateResult:
     """Run both sides and decide the verdict."""
     options = textutil.option_texts(item)
     answer = correct_index(item["options"])
 
-    full_q = f"{item['stem']}\n\nWhich option correctly completes/answers this item?"
-    cold_q = (
-        "The stem of a BJT item has been withheld. Based ONLY on the four candidate "
-        "options below, which one is the intended correct answer for the hidden stem?"
-    )
+    full_q, cold_q = _questions(item)
 
     full_trials = _run_side(full_q, options, answer, "full")
     cold_trials = _run_side(cold_q, options, answer, "cold")

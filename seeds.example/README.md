@@ -17,12 +17,22 @@ is **gitignored**. Nothing copyrighted is committed. Copy this directory to
 | `seeds/levels.json` | official CAN-DO descriptors per level | generators |
 | `seeds/genre_templates/` | phase 2 (総合読解) genre templates | not yet used |
 
+Note that `seedtable/` (場面×関係×機能×レベル) is **not** part of this — it is our
+own design, contains no licensed text, and is committed at the repo root.
+
 ## Item shape
 
 `fewshot` examples use the same shape the model emits (see `bjt/schemas.py`):
-`stem`, `options` (each `{text, role}`, exactly one `role: "correct"`),
+`stem`, `options` (each `{text, role, why}`, exactly one `role: "correct"`),
 `explanation_ja`, `explanation_en`, `topic`, `vocab_notes`. The 解説 in
-`explanation_ja` is the important part — it teaches the model the item shape.
+`explanation_ja` is the important part — it teaches the model the item shape —
+and the per-option `why` is what teaches it to build a trap for a *nameable*
+reason rather than writing three vaguely worse answers.
+
+`hatsugen_choukai` (発言聴解) adds four fields, because its stimulus is heard
+rather than read: `scene_id`, `speaker_role`, `listener_role`, and `channel`
+(`in_person` / `phone` / `video`). Its `stem` is what the **narrator** reads
+aloud; the options are what the **speaker** says.
 
 `official` items may use that same shape, **or** a lighter form:
 `{"stem": "...", "options": ["...", "..."], "answer": 0, "explanation_ja": "..."}`.

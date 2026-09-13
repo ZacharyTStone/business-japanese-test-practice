@@ -47,6 +47,13 @@ DB_PATH = Path(_env("BJT_DB_PATH", str(ROOT / "bjt.db")))
 # descriptors live here. Gitignored — see README.
 SEEDS_DIR = Path(_env("BJT_SEEDS_DIR", str(ROOT / "seeds")))
 
+# The seed tables (場面×関係×機能×レベル). Our own design, not licensed — these
+# ARE committed, unlike seeds/. See bjt/seedtable.py.
+SEEDTABLE_DIR = Path(_env("BJT_SEEDTABLE_DIR", str(ROOT / "seedtable")))
+
+# Where batch runs write their bundles (the JSON the app ships with).
+BATCH_DIR = Path(_env("BJT_BATCH_DIR", str(ROOT / "batches")))
+
 # How many recent stems/topics to feed back into a generation prompt as a
 # "do not repeat these" list.
 RECENT_TOPICS_WINDOW = int(_env("BJT_RECENT_TOPICS_WINDOW", "25"))
