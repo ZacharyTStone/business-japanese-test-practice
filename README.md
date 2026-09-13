@@ -270,6 +270,22 @@ bjt importbatch batches/hatsugen_choukai_J2_001.source.json
 It stays in the repo afterwards as the regression set (`tests/test_batch_checks.py`):
 if a check starts failing these ten items, the check changed, not the items.
 
+Every committed bundle is held to that regression set, not just the first one —
+`batches/*.json` is swept rather than named, so a new batch is covered the moment
+it lands.
+
+Three invariants only exist *across* bundles, and all three became breakable the
+moment there was a second batch, so they are tested over the whole library:
+
+* **No seed cell is spent twice.** Reusing a cell is worse than a repeated
+  question — `item_id` is a hash of (item type, cell), so the second item
+  silently replaces the first on publish and the library shrinks without saying
+  so.
+* **Item ids are unique.** `bjt publish` upserts on id; a collision is data loss.
+* **The dedupe threshold holds across bundle boundaries.** Two batches can each
+  be internally varied and still ask the same question. A learner meets the
+  library, not a bundle.
+
 They are original compositions, **not** official BJT material — no past-paper text
 is ever copied into this repository.
 

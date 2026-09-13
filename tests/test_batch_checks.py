@@ -9,8 +9,18 @@ import pytest
 from bjt import batch, config
 from bjt.fidelity import dedupe
 
-REFERENCE = pathlib.Path(__file__).resolve().parent.parent / "batches" / "hatsugen_choukai_J2_001.json"
-REFERENCE_J3 = pathlib.Path(__file__).resolve().parent.parent / "batches" / "hatsugen_choukai_J3_001.json"
+BATCHES = pathlib.Path(__file__).resolve().parent.parent / "batches"
+REFERENCE = BATCHES / "hatsugen_choukai_J2_001.json"
+
+#: Every bundle committed to the repo. The library grows one batch at a time and
+#: each one has to keep passing the gates it was admitted under, so the sweep is
+#: over the directory rather than over a list of names: a regression test pinned
+#: to one file stops being a regression test the moment a second file exists.
+COMMITTED = sorted(p for p in BATCHES.glob("*.json") if not p.name.endswith(".source.json"))
+
+
+def _bundle_id(path):
+    return path.stem
 
 
 # ----- near-duplicate detection ------------------------------------------
@@ -59,43 +69,86 @@ def _status(report, name):
     return next(c.status for c in report.checks if c.name == name)
 
 
-def test_reference_batch_still_ships(bundle):
-    """The ten hand-written items are the regression set: if a check starts
-    failing them, the check changed, not the items."""
-    report = batch.check_bundle(bundle)
+@pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
+def test_every_committed_batch_still_ships(path):
+    """The committed bundles are the regression set: if a check starts failing
+    one of them, the check changed, not the items."""
+    report = batch.check_bundle(batch.load(path))
     assert report.ok, [(c.name, c.detail) for c in report.failed]
     assert report.warned == [], [(c.name, c.detail) for c in report.warned]
 
 
-def test_reference_batch_uses_every_distractor_role(bundle):
+@pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
+def test_every_committed_batch_uses_every_distractor_role(path):
+    from bjt.fidelity import roles
+    bundle = batch.load(path)
     used = {o["role"] for it in bundle["items"] for o in it["options"] if o["role"] != "correct"}
-    from bjt.fidelity import roles
-    assert used == set(roles.DISTRACTOR_ROLES["hatsugen_choukai"])
+    assert used == set(roles.DISTRACTOR_ROLES[bundle["item_type"]])
 
 
-def test_reference_batch_reuses_its_scenes(bundle):
+@pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
+def test_every_committed_batch_reuses_its_scenes(path):
     """Fewer scenes than items is the point — images are a shared bank."""
-    scenes = [it["scene_id"] for it in bundle["items"]]
-    assert len(set(scenes)) < len(scenes)
+    scenes = [it["scene_id"] for it in batch.load(path)["items"] if it.get("scene_id")]
+    assert scenes and len(set(scenes)) < len(scenes)
 
 
-@pytest.fixture
-def bundle_j3():
-    return batch.load(REFERENCE_J3)
+# ----- the library as a whole ---------------------------------------------
+#
+# check_bundle looks at one bundle and cannot see the others. Three invariants
+# only exist across the shipped library, and all three became breakable the
+# moment a second batch was committed.
+
+def _library():
+    """(bundle filename, item) for every item that ships."""
+    return [(p.name, it) for p in COMMITTED for it in batch.load(p)["items"]]
 
 
-def test_j3_reference_batch_still_ships(bundle_j3):
-    """The ten J3 items are a second regression set, at the basic level: if a
-    check starts failing them, the check changed, not the items."""
-    report = batch.check_bundle(bundle_j3)
-    assert report.ok, [(c.name, c.detail) for c in report.failed]
-    assert report.warned == [], [(c.name, c.detail) for c in report.warned]
+def test_no_seed_cell_is_spent_twice_across_the_library():
+    """A cell is consumed at most once. Reusing one is not merely a repeated
+    question — it is worse: `item_id` is a hash of (item type, cell), so the
+    second item silently REPLACES the first on publish and the library shrinks
+    without saying so."""
+    seen: dict[tuple, str] = {}
+    clashes = []
+    for path in COMMITTED:
+        bundle = batch.load(path)
+        for it in bundle["items"]:
+            key = (bundle["item_type"], (it.get("seed_cell") or {}).get("id"))
+            if key in seen:
+                clashes.append(f"{key[1]} in both {seen[key]} and {path.name}")
+            seen[key] = path.name
+    assert not clashes, clashes
 
 
-def test_j3_reference_batch_uses_every_distractor_role(bundle_j3):
-    used = {o["role"] for it in bundle_j3["items"] for o in it["options"] if o["role"] != "correct"}
-    from bjt.fidelity import roles
-    assert used == set(roles.DISTRACTOR_ROLES["hatsugen_choukai"])
+def test_item_ids_are_unique_across_the_library():
+    """`bjt publish` upserts on id. Two items sharing one is data loss."""
+    seen: dict[str, str] = {}
+    clashes = []
+    for name, it in _library():
+        if it["id"] in seen:
+            clashes.append(f"{it['id']} in both {seen[it['id']]} and {name}")
+        seen[it["id"]] = name
+    assert not clashes, clashes
+
+
+def test_no_near_duplicates_across_the_library():
+    """Two batches can each be internally varied and still ask the same question.
+    A learner meets the whole library, not one bundle, so the dedupe threshold
+    has to hold across bundle boundaries too."""
+    lib = _library()
+    sigs = [(name, it, dedupe.item_signature(it)) for name, it in lib]
+    collisions = []
+    for i in range(len(sigs)):
+        for j in range(i + 1, len(sigs)):
+            (na, ia, sa), (nb, ib, sb) = sigs[i], sigs[j]
+            if na == nb:
+                continue  # check_bundle already covers within-bundle pairs
+            score = dedupe.similarity(sa, sb)
+            if score >= dedupe.DEFAULT_THRESHOLD:
+                collisions.append(
+                    f"{ia['topic']} [{na}] ~ {ib['topic']} [{nb}] at {score:.2f}")
+    assert not collisions, collisions
 
 
 def test_empty_bundle_fails(bundle):
@@ -192,18 +245,19 @@ def test_checkbatch_exits_zero_on_the_reference_bundle(capsys):
     assert "SHIPPABLE" in capsys.readouterr().out
 
 
-def test_importbatch_reproduces_the_committed_bundle(tmp_path, monkeypatch, bundle):
+@pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
+def test_importbatch_reproduces_the_committed_bundle(path, tmp_path, monkeypatch):
     """The source file is the thing a human edits; the bundle is derived. If the
     two ever drift, the committed bundle is stale."""
     from bjt import cli
 
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "t.db")
     out = tmp_path / "rebuilt.json"
-    src = REFERENCE.with_name(REFERENCE.name.replace(".json", ".source.json"))
+    src = path.with_name(path.name.replace(".json", ".source.json"))
     assert cli.main(["importbatch", str(src), "--out", str(out)]) == 0
-    rebuilt = batch.load(out)
-    assert rebuilt["items"] == bundle["items"]
-    assert rebuilt["audio_manifest"] == bundle["audio_manifest"]
+    rebuilt, committed = batch.load(out), batch.load(path)
+    assert rebuilt["items"] == committed["items"]
+    assert rebuilt["audio_manifest"] == committed["audio_manifest"]
 
 
 def test_importbatch_rejects_an_unknown_seed_cell(tmp_path, monkeypatch):
