@@ -98,31 +98,35 @@ database has. It cannot prove that claim is true — for that,
 `supabase/test/run.sh` at the repo root reads every query in `src/lib` and
 asserts each table, view, column and function it names actually exists.
 
-## Deploying the web build to Cloudflare Pages
+## Deploying the web build to Cloudflare
 
 The app is a static export: `expo export -p web` renders one HTML file per
-route into `dist/`, and everything else is served from Supabase. Nothing runs
-on the host, so Pages is a good fit and the free tier is enough.
+route into `dist/`, and everything else is Supabase's job. Nothing runs at the
+edge, which is why `wrangler.jsonc` has an `assets` block and no `main`.
 
-Point Pages at this repo with:
+Cloudflare's current flow is **Workers**, not the legacy Pages one. Dashboard →
+**Workers & Pages → Create → Import a repository**, pick this repo, then:
 
 | Setting | Value |
 |---|---|
-| Root directory | `client` |
-| Build command | `npx expo export -p web` |
-| Output directory | `dist` |
+| Worker name | `business-japanese-drill` — must match `name` in `wrangler.jsonc`, or the build fails |
+| Root directory | `client` *(under Advanced settings)* |
+| Build command | `npm run build:web` |
+| Deploy command | `npx wrangler deploy` *(the default)* |
 
-and two build-time environment variables, `EXPO_PUBLIC_SUPABASE_URL` and
-`EXPO_PUBLIC_SUPABASE_ANON_KEY`. Both are baked into the bundle — that is what
-the `EXPO_PUBLIC_` prefix means, and it is safe, because the anon key only
-reaches what an anonymous visitor is allowed to reach. **The service_role key
-must never be set here.**
+Build-time environment variables: `EXPO_PUBLIC_SUPABASE_URL`,
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `NODE_VERSION=22`. The first two are baked
+into the bundle — that is what `EXPO_PUBLIC_` means, and it is safe, because the
+anon key only reaches what an anonymous visitor is allowed to reach. **The
+service_role key must never be set here.**
 
-Nothing needs a rewrite rule: Pages serves `/practice` from `practice.html`
-already. `public/_redirects` only routes the misses to the app's own not-found
-screen, and `public/_headers` caches the content-hashed bundle forever while
-keeping the HTML revalidating, so a deploy is not stuck behind a stale page.
-Expo copies both files to the output root.
+`build:web` is `expo export` plus one copy: Expo writes the not-found page as
+`+not-found.html`, and `not_found_handling: "404-page"` looks for `404.html`.
+Without the copy a bad URL falls through to Cloudflare's own error page.
 
-Set **Retry builds** or a Node version override to 22 if the default image
-picks something older; the export is tested on Node 22.
+No rewrite rules are needed — `html_handling` serves `/practice` from
+`practice.html`. `public/_redirects` and `public/_headers` are copied to the
+output root by Expo; the headers cache the content-hashed bundle forever while
+keeping the HTML revalidating, so a deploy is never stuck behind a stale page.
+
+To check the config without deploying: `cd client && npx wrangler deploy --dry-run`.
