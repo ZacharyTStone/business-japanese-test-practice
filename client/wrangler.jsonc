@@ -2,7 +2,7 @@
   // The Worker name in the Cloudflare dashboard must match this exactly, or
   // the build fails. Note it is not "bjt-…": BJT is a registered trademark and
   // does not go in a product name, slug, or identifier.
-  "name": "business-japanese-drill",
+  "name": "business-japanese-test-practice",
   "compatibility_date": "2026-09-14",
 
   // Assets only — no Worker script. Everything dynamic is Supabase's job, so
