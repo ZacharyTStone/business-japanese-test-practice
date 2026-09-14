@@ -23,7 +23,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../src/lib/auth";
 import { fetchProfile, fetchQueue, finishSession, recordAttempt, startSession } from "../src/lib/db";
 import { setSummary } from "../src/lib/session";
-import { isConfigured } from "../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { AnsweredItem, PracticeMode, QueuedItem } from "../src/lib/types";
 import { ClipButton } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
@@ -40,7 +40,7 @@ const CHANNEL_LABEL: Record<string, string> = {
 
 export default function Practice() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, loading: authLoading, error: authError } = useAuth();
   const params = useLocalSearchParams<{ mode?: string }>();
   const mode = (params.mode as PracticeMode) ?? "daily";
 
@@ -82,6 +82,23 @@ export default function Practice() {
     [item]
   );
 
+  if (!isConfigured) {
+    return (
+      <View style={styles.page}>
+        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} />
+        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+      </View>
+    );
+  }
+  if (authLoading) return <Loading label="問題を用意しています…" />;
+  if (authError) {
+    return (
+      <View style={styles.page}>
+        <Notice title="接続できません" body={authError} />
+        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+      </View>
+    );
+  }
   if (error) {
     return (
       <View style={styles.page}>

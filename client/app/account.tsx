@@ -12,6 +12,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../src/lib/auth";
 import { fetchProfile, updateProfile } from "../src/lib/db";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { Level, Profile } from "../src/lib/types";
 import { Button, Card, Loading, Notice } from "../src/ui/components";
 import { colors, radius, space, type } from "../src/ui/theme";
@@ -25,14 +26,25 @@ const LEVEL_HINT: Record<Level, string> = {
 
 export default function Account() {
   const router = useRouter();
-  const { isAnonymous, email, linkGoogle, signOut } = useAuth();
+  const {
+    isAnonymous,
+    email,
+    linkGoogle,
+    signOut,
+    loading: authLoading,
+    error: authError,
+  } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProfile().then(setProfile).catch(() => setProfile(null));
-  }, [isAnonymous]);
+    if (!isConfigured || authLoading || authError) return;
+    fetchProfile()
+      .then(setProfile)
+      .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
+  }, [isAnonymous, authLoading, authError]);
 
   async function onLink() {
     setBusy(true);
@@ -52,6 +64,31 @@ export default function Account() {
     await updateProfile({ target_level: level });
   }
 
+  if (!isConfigured) {
+    return (
+      <View style={styles.page}>
+        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} />
+        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+      </View>
+    );
+  }
+  if (authLoading) return <Loading />;
+  if (authError) {
+    return (
+      <View style={styles.page}>
+        <Notice title="接続できません" body={authError} />
+        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+      </View>
+    );
+  }
+  if (profileError) {
+    return (
+      <View style={styles.page}>
+        <Notice title="読み込めません" body={profileError} />
+        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+      </View>
+    );
+  }
   if (!profile) return <Loading />;
 
   return (
