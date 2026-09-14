@@ -109,7 +109,7 @@ Cloudflare's current flow is **Workers**, not the legacy Pages one. Dashboard �
 
 | Setting | Value |
 |---|---|
-| Worker name | `business-japanese-drill` — must match `name` in `wrangler.jsonc`, or the build fails |
+| Worker name | `business-japanese-test-practice` — must match `name` in `wrangler.jsonc`, or the build fails |
 | Root directory | `client` *(under Advanced settings)* |
 | Build command | `npm run build:web` |
 | Deploy command | `npx wrangler deploy` *(the default)* |
@@ -125,8 +125,9 @@ service_role key must never be set here.**
 Without the copy a bad URL falls through to Cloudflare's own error page.
 
 No rewrite rules are needed — `html_handling` serves `/practice` from
-`practice.html`. `public/_redirects` and `public/_headers` are copied to the
-output root by Expo; the headers cache the content-hashed bundle forever while
-keeping the HTML revalidating, so a deploy is never stuck behind a stale page.
+`practice.html`, and `not_found_handling` serves `404.html` for missing routes.
+`public/_headers` is copied to the output root by Expo; it caches the
+content-hashed bundle forever while keeping the HTML revalidating, so a deploy
+is never stuck behind a stale page.
 
 To check the config without deploying: `cd client && npx wrangler deploy --dry-run`.
