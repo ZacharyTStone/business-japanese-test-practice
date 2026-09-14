@@ -40,6 +40,48 @@ The official BJT has listening, listening-and-reading, and reading sections. The
 - Every format needs a fixture bundle, generation schema, validity gate, and rendered app example before it is called supported.
 - First prove one format per section: hatsugen_choukai, joukyou_haaku, and sougou_dokkai.
 
+## Reading documents: reusable templates that feel like real work
+
+Reading and mixed-media questions should render inside realistic, reusable document templates rather than a generic paragraph card. The template supplies the visual grammar; the generated or hand-written scenario supplies only the original business content.
+
+| Template | Visual structure | Best formats | Example use |
+|---|---|---|---|
+| External email | From, To, CC, subject, timestamp, greeting, signature | hyougen, shiryou_choudokkai, sougou_dokkai | A client asks whether a revised quotation can arrive before Friday |
+| Email thread | Quoted replies, sender hierarchy, timestamps, action request | shiryou_choudokkai, sougou_dokkai | Identify the latest decision in a three-message approval chain |
+| Internal memo / notice | Title, owner, issue date, audience, short sections | joukyou_haaku, sougou_dokkai | New visitor-access procedure and the action staff must take |
+| Meeting agenda / minutes | Date, attendees, numbered agenda, decisions, action owners | sougou_choukai, sougou_choudokkai, sougou_dokkai | Hear a meeting excerpt and match it to the pending action in the minutes |
+| Schedule / calendar | Date grid, time ranges, attendee/location chips, conflict state | joukyou_haaku, shiryou_choudokkai | Choose the only viable reschedule time after hearing a voicemail |
+| Progress report | Heading, status summary, milestones, risks, next steps | sougou_dokkai | Infer which risk must be escalated from an internal project update |
+| Quote / order form | Sender/recipient blocks, line-item table, due date, notes | shiryou_choudokkai, sougou_dokkai | Compare an oral change request with the revised quantity and delivery date |
+| Office sign / form | Clear heading, icon, rules, location or deadline | bamen_haaku, joukyou_haaku | Use a meeting-room sign to decide how a visitor should be guided |
+
+### Template contract
+
+Each document should be a structured, accessible object with a template id, version, audience, metadata, and ordered content blocks such as paragraphs, bullet lists, tables, callouts, and quoted messages. Render that object as semantic HTML; do not create a screenshot or an image of a document.
+
+Templates should have controlled variations so they do not become visually predictable:
+
+- Email threads can have 2–4 messages, different reply depth, and one or more recipients.
+- Schedules can show an open slot, a conflict, a provisional reservation, or a changed location.
+- Tables can contain one distractor row whose values are plausible but not relevant to the question.
+- Reports can use a concise summary, a milestone list, or a risk-and-action layout.
+
+### Realism guardrails
+
+- Use fictional companies, people, dates, phone numbers, addresses, and amounts. Never use real brands, logos, or copied documents.
+- Keep the layout stable enough to feel like workplace material, while making the tested evidence explicit and readable on a phone.
+- Maintain Japanese business conventions in the template: appropriate subject lines, honorifics, greetings, sign-offs, and internal/external distinction.
+- Make every visual field selectable and screen-reader-accessible; tables need headers and all labels need text equivalents.
+- Test at phone width, desktop width, large text, and with a Japanese screen reader before approving a template.
+
+### First three template fixtures
+
+1. **External email:** a customer asks to move a delivery. The learner identifies the correct respectful acknowledgement.
+2. **Schedule plus voicemail:** a manager's meeting changes time; the learner finds the compatible room and attendee slot.
+3. **Internal memo plus action list:** a security procedure changes; the learner identifies which employee owns the immediate action.
+
+These fixtures should become the reference cases for the reading and mixed-media renderers before the library expands.
+
 ## Images: reviewed scene bank, not per-item art
 
 ### Recommendation
