@@ -1,0 +1,5 @@
+# expo-router exports one HTML file per route, and Pages already serves
+# /practice from practice.html, so this file only needs the fallback: anything
+# with no page behind it gets the app's own not-found screen rather than
+# Cloudflare's.
+/* /+not-found.html 404

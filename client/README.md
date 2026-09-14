@@ -97,3 +97,32 @@ src/ui/             theme, shared components, the meter, the radar
 database has. It cannot prove that claim is true — for that,
 `supabase/test/run.sh` at the repo root reads every query in `src/lib` and
 asserts each table, view, column and function it names actually exists.
+
+## Deploying the web build to Cloudflare Pages
+
+The app is a static export: `expo export -p web` renders one HTML file per
+route into `dist/`, and everything else is served from Supabase. Nothing runs
+on the host, so Pages is a good fit and the free tier is enough.
+
+Point Pages at this repo with:
+
+| Setting | Value |
+|---|---|
+| Root directory | `client` |
+| Build command | `npx expo export -p web` |
+| Output directory | `dist` |
+
+and two build-time environment variables, `EXPO_PUBLIC_SUPABASE_URL` and
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`. Both are baked into the bundle — that is what
+the `EXPO_PUBLIC_` prefix means, and it is safe, because the anon key only
+reaches what an anonymous visitor is allowed to reach. **The service_role key
+must never be set here.**
+
+Nothing needs a rewrite rule: Pages serves `/practice` from `practice.html`
+already. `public/_redirects` only routes the misses to the app's own not-found
+screen, and `public/_headers` caches the content-hashed bundle forever while
+keeping the HTML revalidating, so a deploy is not stuck behind a stale page.
+Expo copies both files to the output root.
+
+Set **Retry builds** or a Node version override to 22 if the default image
+picks something older; the export is tested on Node 22.

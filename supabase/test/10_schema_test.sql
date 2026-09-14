@@ -293,6 +293,52 @@ begin
     perform test.check(ok, 'an item whose correct_index points at no option is rejected');
 end
 $$;
+-- --- the trigger functions are not an API -----------------------------------
+
+-- They are `security definer` because they write rows the caller has no policy
+-- for. Living in `public` also publishes them at /rest/v1/rpc/<name>, so the
+-- grant is revoked in 20260914000100. Assert both halves of that: the door is
+-- shut, and the triggers behind it still fire — which the grading tests above
+-- have already demonstrated on this very connection.
+reset role;
+
+do $$
+declare
+    f text;
+begin
+    raise notice 'definer functions are not reachable over the API';
+    foreach f in array array['handle_new_user()', 'sync_profile_identity()', 'grade_attempt()']
+    loop
+        perform test.check(
+            not has_function_privilege('anon', 'public.' || f, 'execute'),
+            'anon cannot call public.' || f || ' as an RPC');
+        perform test.check(
+            not has_function_privilege('authenticated', 'public.' || f, 'execute'),
+            'authenticated cannot call public.' || f || ' as an RPC');
+    end loop;
+
+    -- The two read functions ARE the app's API and must stay callable.
+    perform test.check(
+        has_function_privilege('authenticated', 'public.my_streak()', 'execute'),
+        'my_streak stays callable — it is the app''s own RPC');
+    perform test.check(
+        has_function_privilege('authenticated',
+                               'public.next_items(integer, text, text, text)', 'execute'),
+        'next_items stays callable — it is the app''s own RPC');
+
+    -- ...with a pinned search_path, so a caller cannot shadow what they read.
+    foreach f in array array['my_streak', 'next_items']
+    loop
+        perform test.check(
+            (select proconfig is not null
+                and exists (select 1 from unnest(proconfig) c where split_part(c, '=', 1) = 'search_path')
+             from pg_proc
+             where oid = ('public.' || f)::regproc),
+            'public.' || f || ' pins its search_path');
+    end loop;
+end
+$$;
+
 rollback;
 
 \echo 'ALL SCHEMA TESTS PASSED'
