@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-from bjt import fixtures
+from bjt import fixtures, seedtable
 from bjt.db import Store
 
 
@@ -31,3 +31,17 @@ def seeds_dir(tmp_path, monkeypatch):
     (d / "vocab").mkdir(parents=True)
     monkeypatch.setattr("bjt.config.SEEDS_DIR", d)
     return d
+
+
+@pytest.fixture
+def goi_cell():
+    """A real goi_bunpou seed cell. Every type whose variety comes from the
+    table refuses to generate without one, so the tests hand it a genuine cell
+    rather than a stub — a stub would let the assignment drift out of sync with
+    the committed table without anything noticing."""
+    return seedtable.load("goi_bunpou").cells("J2")[0]
+
+
+@pytest.fixture
+def hyougen_cell():
+    return seedtable.load("hyougen").cells("J2")[0]

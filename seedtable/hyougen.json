@@ -1,0 +1,455 @@
+{
+  "item_type": "hyougen",
+  "_note": "Original design, not licensed material — committed on purpose. Same axis shape as 発言聴解 because the type asks the same question in writing, but with written settings included: choosing an expression for an email is a different skill from choosing one to say out loud, and the traps differ accordingly.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "settings": [
+    {
+      "id": "email_external",
+      "ja": "社外あてのメール",
+      "channel": "written"
+    },
+    {
+      "id": "email_internal",
+      "ja": "社内あてのメール",
+      "channel": "written"
+    },
+    {
+      "id": "chat_internal",
+      "ja": "社内チャット",
+      "channel": "written"
+    },
+    {
+      "id": "notice_document",
+      "ja": "社内通知・掲示",
+      "channel": "written"
+    },
+    {
+      "id": "meeting_room",
+      "ja": "社内の会議室",
+      "channel": "in_person"
+    },
+    {
+      "id": "desk_conversation",
+      "ja": "席でのやりとり",
+      "channel": "in_person"
+    },
+    {
+      "id": "reception",
+      "ja": "受付・応対",
+      "channel": "in_person"
+    },
+    {
+      "id": "client_office",
+      "ja": "取引先のオフィス",
+      "channel": "in_person"
+    },
+    {
+      "id": "phone_call",
+      "ja": "電話でのやりとり",
+      "channel": "phone"
+    },
+    {
+      "id": "video_call",
+      "ja": "オンライン会議",
+      "channel": "video"
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "request",
+      "ja": "依頼する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "decline",
+      "ja": "断る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "apologize_report",
+      "ja": "謝罪して報告する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer",
+        "peer_to_peer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "thank",
+      "ja": "礼を述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "ask_permission",
+      "ja": "許可を求める",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer",
+        "other_department"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "propose",
+      "ja": "提案する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "confirm",
+      "ja": "確認する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "report_progress",
+      "ja": "進捗を報告する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "follow_up",
+      "ja": "催促する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "phone"
+      ]
+    },
+    {
+      "id": "handle_complaint",
+      "ja": "苦情に応対する",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "offer_help",
+      "ja": "手伝いを申し出る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "correct_mistake",
+      "ja": "誤りを指摘・訂正する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "schedule_change",
+      "ja": "日程の変更を伝える",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "greet_seasonal",
+      "ja": "時候・儀礼のあいさつ",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer",
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "introduce_self",
+      "ja": "自己紹介・引き継ぎのあいさつ",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer",
+        "other_department"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "congratulate",
+      "ja": "祝意を述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "email_external": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "subordinate_to_superior"
+    ],
+    "email_internal": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "chat_internal": [
+      "peer_to_peer",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "other_department"
+    ],
+    "notice_document": [
+      "superior_to_subordinate",
+      "other_department",
+      "peer_to_peer"
+    ],
+    "meeting_room": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "desk_conversation": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "reception": [
+      "staff_to_visitor",
+      "staff_to_customer",
+      "peer_to_peer"
+    ],
+    "client_office": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "peer_to_peer"
+    ],
+    "phone_call": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer"
+    ],
+    "video_call": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ]
+  }
+}

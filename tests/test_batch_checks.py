@@ -285,3 +285,51 @@ def test_importbatch_marks_the_cells_used(tmp_path, monkeypatch):
         assert len(store.used_cell_ids("hatsugen_choukai")) == 10
     finally:
         store.close()
+
+
+# ----- the spent-cell ledger ---------------------------------------------
+#
+# The ledger used to live only in the gitignored SQLite database, so a fresh
+# clone believed every cell was free and the next batch re-spent cells the
+# committed library had already used. `item_id` hashes (item type, cell), so the
+# duplicate would have replaced the original on publish.
+
+def test_spent_cells_are_readable_without_the_local_database():
+    """Every cell in a committed bundle counts as spent, from the repo alone."""
+    spent = batch.spent_cell_ids("hatsugen_choukai")
+    committed = {
+        (it.get("seed_cell") or {}).get("id")
+        for name, it in _library()
+        if name.startswith("hatsugen_choukai_")
+    }
+    assert spent == committed
+    assert spent, "the reference batches should have spent some cells"
+
+
+def test_spent_cells_are_scoped_to_one_item_type():
+    assert batch.spent_cell_ids("goi_bunpou") == set()
+
+
+def test_source_files_are_not_counted_as_bundles(tmp_path, monkeypatch):
+    """`*.source.json` is the input to importbatch, not a bundle. Counting both
+    would double every cell a hand-written batch spends."""
+    monkeypatch.setattr(config, "BATCH_DIR", tmp_path)
+    cell = {"id": "a+b+c@J2"}
+    bundle = {"item_type": "t", "level": "J2", "items": [{"seed_cell": cell}]}
+    (tmp_path / "t_J2_001.json").write_text(json.dumps(bundle), encoding="utf-8")
+    (tmp_path / "t_J2_001.source.json").write_text(json.dumps(bundle), encoding="utf-8")
+
+    assert [p.name for p in batch.bundles("t")] == ["t_J2_001.json"]
+    assert batch.spent_cell_ids("t") == {"a+b+c@J2"}
+
+
+def test_a_damaged_bundle_does_not_take_the_ledger_down(tmp_path, monkeypatch):
+    """One unreadable file must not make every other cell look free — that is
+    the failure mode this whole ledger exists to prevent."""
+    monkeypatch.setattr(config, "BATCH_DIR", tmp_path)
+    (tmp_path / "t_J2_001.json").write_text(
+        json.dumps({"item_type": "t", "level": "J2", "items": [{"seed_cell": {"id": "x@J2"}}]}),
+        encoding="utf-8",
+    )
+    (tmp_path / "t_J2_002.json").write_text("{ not json", encoding="utf-8")
+    assert batch.spent_cell_ids("t") == {"x@J2"}

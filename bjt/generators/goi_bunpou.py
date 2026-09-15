@@ -3,6 +3,12 @@
 A single carrier sentence with one blank (＿＿＿) and four options; exactly one
 completes the sentence correctly. The tested knowledge is the word or grammatical
 form itself, so the trap is built entirely in the option set.
+
+Variety here is a different problem from the listening types. Ask a prompt for
+"a business sentence with a blank" ten times and you get ten sentences testing
+敬語, because that is what "business Japanese" means to a model. So the seed
+table's `function` axis carries the GRAMMAR POINT under test, and the cell
+assigns it: ten items are ten different grammar points by construction.
 """
 from __future__ import annotations
 
@@ -12,6 +18,7 @@ from .base import Generator
 class GoiBunpouGenerator(Generator):
     item_type = "goi_bunpou"
     label = "語彙・文法問題 (vocabulary/grammar)"
+    requires_cell = True
     task_spec = (
         "Format: a natural business sentence containing exactly one blank written as "
         "＿＿＿. The four options are candidate fillers for that blank. Exactly one is "
@@ -20,3 +27,24 @@ class GoiBunpouGenerator(Generator):
         "must supply enough context that the answer is unambiguous WITH the sentence, "
         "but the option set alone must not give the answer away."
     )
+
+    def cell_spec(self, cell) -> str:
+        channel_note = {
+            "written": "The carrier sentence is a line of written business Japanese — "
+                       "an email, a report, or a notice. Written conventions apply: no "
+                       "spoken fillers, no 話し言葉 contractions.",
+            "in_person": "The carrier sentence is something said out loud at work.",
+            "phone": "The carrier sentence is something said on the telephone.",
+        }[cell.channel]
+        return (
+            "Write this item for the following assignment. These are requirements, not "
+            "suggestions:\n"
+            f"- 場面（この文が現れる場所）: {cell.setting_ja}\n"
+            f"- 関係（書き手・話し手 → 相手）: {cell.relation_ja}\n"
+            f"- 出題ポイント（空欄で試す文法・語彙）: {cell.function_ja}\n"
+            f"- channel: {cell.channel} — {channel_note}\n"
+            "The blank must test exactly the 出題ポイント above. A sentence where the "
+            "blank happens to be fillable by testing something else instead is a failed "
+            "item: the whole point of the assignment is that a batch of ten covers ten "
+            "different points rather than ten flavours of 敬語."
+        )

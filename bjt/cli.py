@@ -109,11 +109,26 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, cell=No
     return item, item_id, kept, detail
 
 
+def _spent_cells(store, item_type: str) -> set:
+    """Every seed cell this item type has already used.
+
+    Two ledgers, unioned. The committed bundles in `batches/` are the
+    authoritative one — they are what ships, and they survive a fresh clone. The
+    local SQLite database is consulted as well because it holds cells spent on
+    items generated but not yet bundled, which exist only on this machine.
+
+    Reading only the database was the bug: it is gitignored, so on a new
+    checkout every cell looked free and the next batch re-spent cells the
+    library had already used.
+    """
+    return store.used_cell_ids(item_type) | batchmod.spent_cell_ids(item_type)
+
+
 def _next_cell(store, item_type: str, level: str):
     """One unused seed-table cell. Raises if the table for this type is exhausted
     — better a clear stop than silently writing the same cell twice."""
     table = seedtable.load(item_type)
-    picked = table.sample(1, level=level, exclude_ids=store.used_cell_ids(item_type))
+    picked = table.sample(1, level=level, exclude_ids=_spent_cells(store, item_type))
     if not picked:
         raise LLMError(
             f"every {item_type} seed cell at {level} has been used; extend "
@@ -128,7 +143,7 @@ def _sample_cells(store, item_type: str, level: str, n: int) -> list:
     if not get_generator(item_type).requires_cell:
         return []
     table = seedtable.load(item_type)
-    cells = table.sample(n, level=level, exclude_ids=store.used_cell_ids(item_type))
+    cells = table.sample(n, level=level, exclude_ids=_spent_cells(store, item_type))
     if len(cells) < n:
         raise LLMError(
             f"only {len(cells)} unused {item_type} cell(s) left at {level}; extend "
@@ -574,11 +589,17 @@ def cmd_seedtable(args) -> int:
     try:
         for t in types if not args.type else [args.type]:
             table = seedtable.load(t)
-            used = store.used_cell_ids(t)
+            shipped = batchmod.spent_cell_ids(t)
+            local = store.used_cell_ids(t) - shipped
+            used = shipped | local
             cov = table.coverage(used)
             print(f"\n{t}  ({config.SEEDTABLE_DIR / (t + '.json')})")
             print(f"  valid cells: {cov['total_cells']}   used: {cov['used_cells']}   "
                   f"remaining: {cov['total_cells'] - cov['used_cells']}")
+            # Split out, because the two ledgers mean different things: one
+            # travels with the repository, the other only exists here.
+            print(f"    of which shipped in batches/: {len(shipped)}"
+                  + (f"   local only: {len(local)}" if local else ""))
             for level in table.levels:
                 print(f"    {level}: {len(table.cells(level))} cell(s)")
             print(f"  scene bank: {cov['scene_bank']} reusable image(s)")

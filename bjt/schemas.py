@@ -19,7 +19,17 @@ from .levels import LEVELS
 
 #: Channels an utterance can be delivered over. Drives TTS treatment: a phone
 #: line is band-limited on purpose so the listening practice matches the exam.
-CHANNELS = ["in_person", "phone", "video"]
+SPOKEN_CHANNELS = ["in_person", "phone", "video"]
+
+#: The stimulus is text on a page. Never synthesised — bjt/tts/plan.py has no
+#: profile for it on purpose. It exists so a 定型表現 inside an email lands in a
+#: different weakness bucket from face-to-face 敬語, which is the whole point of
+#: the reading types.
+WRITTEN_CHANNEL = "written"
+
+#: Every channel an item may carry. Spoken types constrain themselves to
+#: SPOKEN_CHANNELS through their own schema; the column accepts all four.
+CHANNELS = [*SPOKEN_CHANNELS, WRITTEN_CHANNEL]
 
 # Per-type additions to the core shape: what the stem means for this type, plus
 # any extra required fields and their schema.
@@ -55,7 +65,7 @@ TYPE_EXTRAS: dict[str, dict] = {
             },
             "channel": {
                 "type": "string",
-                "enum": CHANNELS,
+                "enum": SPOKEN_CHANNELS,
                 "description": "How the utterance reaches the listener. Must match the seed cell.",
             },
         },
@@ -160,8 +170,8 @@ def validate_item(item_type: str, item: dict) -> list[str]:
         if not item.get(field):
             errors.append(f"missing or empty field: {field}")
 
-    if item_type == "hatsugen_choukai" and item.get("channel") not in (None, *CHANNELS):
-        errors.append(f"channel {item['channel']!r} is not one of {CHANNELS}")
+    if item_type == "hatsugen_choukai" and item.get("channel") not in (None, *SPOKEN_CHANNELS):
+        errors.append(f"channel {item['channel']!r} is not one of {SPOKEN_CHANNELS}")
 
     options = item.get("options")
     if not isinstance(options, list):

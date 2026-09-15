@@ -5,7 +5,7 @@ import copy
 import pytest
 
 from bjt import fixtures, llm, schemas
-from bjt.generators import get_generator
+from bjt.generators import GENERATORS, get_generator
 from bjt.generators.base import Generator
 from bjt.fidelity import roles
 
@@ -14,11 +14,12 @@ def _valid(item_type):
     return copy.deepcopy(fixtures.FIXTURES[item_type])
 
 
-def test_happy_path(monkeypatch):
+def test_happy_path(monkeypatch, goi_cell):
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("goi_bunpou"))
-    item = get_generator("goi_bunpou").generate("J2", seed=0)
+    item = get_generator("goi_bunpou").generate(cell=goi_cell, seed=0)
     assert item["level"] == "J2"
+    assert item["seed_cell"]["id"] == goi_cell.id
     assert item["item_type"] == "goi_bunpou"
     assert len(item["options"]) == 4
     # exactly one correct survives the shuffle
@@ -26,7 +27,7 @@ def test_happy_path(monkeypatch):
     assert schemas.validate_item("goi_bunpou", item) == []
 
 
-def test_retries_on_invalid_then_succeeds(monkeypatch):
+def test_retries_on_invalid_then_succeeds(monkeypatch, goi_cell):
     calls = {"n": 0}
 
     def fake(*a, **k):
@@ -38,12 +39,12 @@ def test_retries_on_invalid_then_succeeds(monkeypatch):
         return _valid("goi_bunpou")
 
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
-    item = get_generator("goi_bunpou").generate("J2", seed=0)
+    item = get_generator("goi_bunpou").generate(cell=goi_cell, seed=0)
     assert calls["n"] == 2
     assert schemas.validate_item("goi_bunpou", item) == []
 
 
-def test_raises_after_max_attempts(monkeypatch):
+def test_raises_after_max_attempts(monkeypatch, goi_cell):
     def always_bad(*a, **k):
         bad = _valid("goi_bunpou")
         bad["options"] = bad["options"][:3]  # only 3 options -> always invalid
@@ -51,7 +52,7 @@ def test_raises_after_max_attempts(monkeypatch):
 
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", always_bad)
     with pytest.raises(llm.LLMError):
-        get_generator("goi_bunpou").generate("J2", max_attempts=2)
+        get_generator("goi_bunpou").generate(cell=goi_cell, max_attempts=2)
 
 
 def test_rejects_bad_level():
@@ -59,7 +60,19 @@ def test_rejects_bad_level():
         get_generator("goi_bunpou").generate("J9")
 
 
-def test_avoid_topics_flow_into_prompt(store, monkeypatch, goi_item):
+@pytest.mark.parametrize("item_type", sorted(GENERATORS))
+def test_every_generator_refuses_to_run_without_its_cell(item_type):
+    """Variety is a property of the seed table, not of the prompt. A generator
+    that will quietly write an item without an assignment is one that will
+    produce the same three scenarios forever, so every type declares a table and
+    refuses without a cell from it."""
+    gen = get_generator(item_type)
+    assert gen.requires_cell, f"{item_type} has no seed table backing it"
+    with pytest.raises(ValueError):
+        gen.generate("J2")
+
+
+def test_avoid_topics_flow_into_prompt(store, monkeypatch, goi_item, goi_cell):
     goi_item["topic"] = "納期の連絡"
     store.insert_item("goi_bunpou", "J2", goi_item, "m")
     gen = get_generator("goi_bunpou", store=store)
@@ -70,7 +83,7 @@ def test_avoid_topics_flow_into_prompt(store, monkeypatch, goi_item):
         return _valid("goi_bunpou")
 
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
-    gen.generate("J2", seed=0)
+    gen.generate(cell=goi_cell, seed=0)
     assert "納期の連絡" in captured["user"]  # recent topic fed back as do-not-repeat
 
 

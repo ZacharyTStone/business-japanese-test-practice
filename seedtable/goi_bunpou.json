@@ -1,0 +1,428 @@
+{
+  "item_type": "goi_bunpou",
+  "_note": "Original design, not licensed material — committed on purpose. For this type the `function` axis is the GRAMMAR OR VOCABULARY POINT under test, not a speech act: that is what has to vary for a set of ten items to be ten different questions, and it is also the tag worth reporting a weakness against.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "settings": [
+    {
+      "id": "email_external",
+      "ja": "社外あてのメール本文",
+      "channel": "written"
+    },
+    {
+      "id": "email_internal",
+      "ja": "社内あてのメール本文",
+      "channel": "written"
+    },
+    {
+      "id": "report_document",
+      "ja": "報告書・議事録の一文",
+      "channel": "written"
+    },
+    {
+      "id": "notice_document",
+      "ja": "社内通知・掲示の一文",
+      "channel": "written"
+    },
+    {
+      "id": "quote_document",
+      "ja": "見積書・注文書の連絡文",
+      "channel": "written"
+    },
+    {
+      "id": "meeting_floor",
+      "ja": "会議での発言",
+      "channel": "in_person"
+    },
+    {
+      "id": "desk_conversation",
+      "ja": "席でのやりとり",
+      "channel": "in_person"
+    },
+    {
+      "id": "client_visit",
+      "ja": "訪問先でのやりとり",
+      "channel": "in_person"
+    },
+    {
+      "id": "phone_call",
+      "ja": "電話でのやりとり",
+      "channel": "phone"
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "keigo_honorific",
+      "ja": "尊敬表現の選択",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "keigo_humble",
+      "ja": "謙譲表現の選択",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "keigo_courteous",
+      "ja": "丁重語・美化語の選択",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "phone"
+      ]
+    },
+    {
+      "id": "juju_expression",
+      "ja": "授受表現（〜ていただく/くださる）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer",
+        "peer_to_peer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "causative_permission",
+      "ja": "使役・許可の表現（〜させていただく）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "passive_adversity",
+      "ja": "受身・迷惑の受身",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department"
+      ],
+      "channels": [
+        "written",
+        "in_person"
+      ]
+    },
+    {
+      "id": "transitive_intransitive",
+      "ja": "自動詞・他動詞の使い分け",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person"
+      ]
+    },
+    {
+      "id": "aspect_form",
+      "ja": "アスペクト（〜ておく/〜てある/〜ている）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "conditional_form",
+      "ja": "条件表現（〜たら/〜れば/〜なら）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "connective_expression",
+      "ja": "接続表現（つきましては/とはいえ）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person"
+      ]
+    },
+    {
+      "id": "modality_report",
+      "ja": "推量・伝聞のモダリティ",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "business_idiom",
+      "ja": "ビジネス慣用表現（お手数/恐れ入り）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "sino_verb_choice",
+      "ja": "漢語サ変動詞の選択（検討/確認/対応）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    },
+    {
+      "id": "collocation",
+      "ja": "コロケーション（〜を図る/〜に努める）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person"
+      ]
+    },
+    {
+      "id": "letter_set_phrase",
+      "ja": "文書の定型表現（拝啓/何卒/ご査収）",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer",
+        "subordinate_to_superior"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "counter_and_quantity",
+      "ja": "数量・助数詞・期間の言い方",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "email_external": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "subordinate_to_superior"
+    ],
+    "email_internal": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "report_document": [
+      "subordinate_to_superior",
+      "other_department",
+      "peer_to_peer"
+    ],
+    "notice_document": [
+      "superior_to_subordinate",
+      "other_department",
+      "peer_to_peer"
+    ],
+    "quote_document": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer"
+    ],
+    "meeting_floor": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "desk_conversation": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "client_visit": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "peer_to_peer"
+    ],
+    "phone_call": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer"
+    ]
+  }
+}

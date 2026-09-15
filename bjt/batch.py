@@ -102,6 +102,53 @@ def load(path: Path) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
+def bundles(item_type: Optional[str] = None) -> list[Path]:
+    """Every committed bundle, optionally narrowed to one item type.
+
+    `.source.json` files are the hand-written inputs to `importbatch`, not
+    bundles, so they are skipped — counting both would double every cell a
+    hand-written batch spends.
+    """
+    if not config.BATCH_DIR.exists():
+        return []
+    out = []
+    for p in sorted(config.BATCH_DIR.glob("*.json")):
+        if p.name.endswith(".source.json"):
+            continue
+        if item_type and not p.name.startswith(f"{item_type}_"):
+            continue
+        out.append(p)
+    return out
+
+
+def spent_cell_ids(item_type: str) -> set[str]:
+    """Seed cells already spent by the bundles in this repository.
+
+    The local SQLite database also knows this, but it is gitignored: a fresh
+    clone reports nothing spent even with forty items committed, and the next
+    `bjt batch` on that machine quietly re-spends cells the library already
+    used. Since `item_id` is a hash of (item type, cell), the second item would
+    REPLACE the first on publish — the library would shrink without saying so.
+
+    The bundles are the thing that actually ships, so they are the ledger. The
+    database is still consulted as well (it holds cells spent on items that have
+    not been bundled yet); the two are unioned at the call sites.
+    """
+    spent: set[str] = set()
+    for path in bundles(item_type):
+        try:
+            bundle = load(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if bundle.get("item_type") != item_type:
+            continue
+        for item in bundle.get("items", []):
+            cell_id = (item.get("seed_cell") or {}).get("id")
+            if cell_id:
+                spent.add(cell_id)
+    return spent
+
+
 def default_path(item_type: str, level: str) -> Path:
     """Next free numbered bundle for this type and level."""
     config.BATCH_DIR.mkdir(parents=True, exist_ok=True)
