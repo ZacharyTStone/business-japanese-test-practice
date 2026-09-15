@@ -270,6 +270,13 @@ $$;
 
 reset role;
 
+-- These fixtures exist only to prove grading and RLS. Left in place, they sit
+-- in the same J2 pool as the published reference batch, and next_items() picks
+-- among all of it at random — so 20_published_test.sql would intermittently
+-- draw a fixture item instead of real content and fail on its short stem or
+-- missing narration clip. Clean up before that file runs.
+delete from public.items where id in ('itm_phone', 'itm_desk');
+
 -- --- the answer key cannot dangle -------------------------------------------
 
 begin;
