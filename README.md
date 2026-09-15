@@ -6,9 +6,10 @@ Japanese Proficiency Test), and the pipeline that writes its questions.
 ```
 bjt/         the item pipeline — generate, check, publish        (Python)
 seedtable/   the axes that produce variety                       (committed data)
-batches/     checked bundles + the hand-written reference batch  (committed data)
+batches/     checked bundles + the hand-written reference sets   (committed data)
 supabase/    schema, row-level security, and its tests           (SQL)
 client/      the app: iOS, Android and web from one codebase     (Expo)
+blockers.md  what is finished up to the point it needs a key
 ```
 
 Three things are true of the whole system and explain most of its shape:
@@ -23,18 +24,34 @@ Three things are true of the whole system and explain most of its shape:
 * **The database grades answers, not the app.** The client posts which option was
   touched; a trigger decides correctness and records which trap caught them.
 
-Item types built so far:
+All nine BJT problem types are built. Each has a seed table, an item schema, a
+generator, a worked fixture, and a hand-written reference batch:
 
-| Type | What it is | State |
-|---|---|---|
-| `hatsugen_choukai` | **発言聴解** — a narrated situation, four spoken utterances, pick the one that fits | the type the whole pipeline is being proved on |
-| `goi_bunpou` | 語彙・文法 — one blank, four fillers | built (text only) |
-| `hyougen` | 表現読解 — a situation, four expressions | built (text only) |
+| Section | Type | What it is | Stimulus |
+|---|---|---|---|
+| 聴解 | `bamen_haaku` | 場面把握 — hear a moment, answer about the situation | narration |
+| 聴解 | `hatsugen_choukai` | 発言聴解 — a narrated situation, four spoken utterances | narration + spoken options |
+| 聴解 | `sougou_choukai` | 総合聴解 — a conversation, then a question about it | narration + dialogue |
+| 聴読解 | `joukyou_haaku` | 状況把握 — read a notice, hear a request, choose an action | narration + document |
+| 聴読解 | `shiryou_choudokkai` | 資料聴読解 — a document on the page, a prompt in the ear | narration + document |
+| 聴読解 | `sougou_choudokkai` | 総合聴読解 — a longer exchange and its documents | narration + dialogue + documents |
+| 読解 | `goi_bunpou` | 語彙・文法 — one blank, four fillers | text |
+| 読解 | `hyougen` | 表現読解 — a situation, four expressions | text |
+| 読解 | `sougou_dokkai` | 総合読解 — read a document, infer intent or action | document |
 
-発言聴解 goes first on purpose: it exercises every hard part at once — 敬語
+発言聴解 was built first on purpose: it exercises every hard part at once — 敬語
 direction, ウチ/ソト, telephone protocol, a reused scene image, and TTS. Whatever
-it needs is what the images, the audio, and the app's review screen have to
-provide, so getting it right settles the shape of everything after it.
+it needed is what the images, the audio, and the app's review screen had to
+provide, and that settled the shape of the eight that followed.
+
+The three listening-and-reading types all turn on one requirement: **the answer
+must need both the document and the audio.** It is the requirement a generator
+will quietly drop, because writing a document that contains the answer is much
+easier than writing a pair that have to be combined — and the result looks fine
+until you notice the audio is decorative.
+
+`blockers.md` lists the work that is finished up to the point where it needs an
+API key, a vendor account, or a person to listen to something.
 
 ---
 
@@ -90,6 +107,10 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt quality` | The fidelity report — all five mechanisms plus raw per-item-type accuracy. |
 | `bjt discriminate --type T` | Mix official + generated items, ask a judge which are synthetic, report the rate and the tells — then auto-fold those tells into the generator prompt. |
 | `bjt publish <bundle.json>` | Turn a checked bundle into idempotent SQL for the database. |
+| `bjt synth <bundle.json>` | Synthesise the bundle's audio offline and write the SQL that points at it. `--provider silent` runs with no vendor account. |
+| `bjt scenes` | What the scene bank needs, most-wanted first; `--prompt` for one brief, `--sql` for approved art. |
+| `bjt render <bundle.json>` | Render a document stimulus to HTML, to look at while writing one. |
+| `bjt grant <user-id>` | SQL granting or revoking the ad-free unlock, as the service role. |
 | `bjt calibrate --type T` | Sit the official sample items; compare your accuracy there to your accuracy on generated items. |
 
 Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
@@ -170,8 +191,14 @@ can see in `bjt quality`.
    are auto-injected into that type's generator prompt, so the next items are
    written to avoid them. The rate should trend toward 50%.
 
-4. **Genre templates** (phase 2). For 総合読解 — not built yet;
-   `seeds/genre_templates/` is where the real business-document templates go.
+4. **Document templates** (`bjt/render/templates.py`). Eight templates — external
+   email, email thread, internal notice, minutes, schedule, progress report,
+   quotation, office sign — each declaring the header fields it cannot do without
+   and the axes it is allowed to vary along, so a library of them does not become
+   visually predictable. A document is **data**, rendered by us: a screenshot of
+   an email cannot be selected, scaled, or read aloud, and an image model cannot
+   spell 御中. The template is assigned by the seed cell exactly as a scene id is,
+   and an item that substitutes a different one is rejected.
 
 5. **Vocabulary gating** (`bjt/fidelity/vocab.py`). A JLPT-kanji-tier ceiling for
    level control, plus a business-term list. The ceiling is enforced for a level
@@ -227,10 +254,20 @@ the clip ids its audio files will be named after.
 }
 ```
 
-### Audio (`bjt/tts/plan.py`)
+### Audio (`bjt/tts/`)
 
-No audio is synthesised here — this module only decides *what* to synthesise. Two
-decisions are encoded:
+`plan.py` decides *what* to synthesise; `synth.py` is the offline job that does
+it; `channel.py` applies the treatment; `providers.py` holds the vendor adapters.
+Nothing is ever synthesised at practice time — the job runs on a laptop, over a
+bundle that has already passed every gate, and emits files plus the SQL that
+points the database at them. Uploading and applying are separate deliberate acts,
+which is why no key that can write media needs to exist on a build machine.
+
+`--provider silent` runs the whole thing with no vendor account: valid, silent
+clips, pathed `silent/` so they can never be mistaken for real recordings. What
+they cannot tell you is whether the Japanese sounds right — see `blockers.md`.
+
+Two decisions are encoded in the plan:
 
 - **Voices are cast by role, not per item.** A learner who hears a different voice
   every question is doing speaker identification instead of 敬語, so the voice
@@ -239,10 +276,17 @@ decisions are encoded:
   appears in dozens of items and is synthesised once; re-running a batch re-uses
   every clip whose text didn't change.
 
+- **What is spoken differs by type, and that is a table rather than a guess.**
+  発言聴解 speaks its options, because there the options *are* the utterances
+  under test; everywhere else they are statements on the page, and speaking them
+  would turn a reading choice into a memory test. 総合読解 speaks nothing at all,
+  and the pipeline says so rather than reporting zero clips as a failure.
+
 The narrator stays clean even on a telephone item — the narrator is outside the
-scene. Only the utterances get the band-limited phone treatment, because business
-phone Japanese really is harder to hear than studio audio, and an item about a
-phone call that sounds like a studio recording is easier than the real thing.
+scene. Only what happens inside the scene gets the band-limited phone treatment,
+because business phone Japanese really is harder to hear than studio audio, and
+an item about a phone call that sounds like a studio recording is easier than the
+real thing.
 
 ### Images
 
@@ -254,14 +298,17 @@ serves many items and nothing is at the mercy of a model's handwriting.
 
 ---
 
-## The reference batch
+## The reference batches
 
-`batches/hatsugen_choukai_J2_001.source.json` is ten 発言聴解 items written by
-hand. Not every item has to come out of a model: the first batch of a new type is
-written by hand because that is how you find out what the generator is supposed
-to be aiming at. It runs through exactly the same validation and the same
-whole-batch checks as generated items — the only thing it skips is the model
-call:
+Every type has one, and `batches/hatsugen_choukai_J2_001.source.json` was the
+first: ten 発言聴解 items written by hand. Not every item has to come out of a
+model, and the first batch of a new type deliberately does not — that is how you
+find out what the generator is supposed to be aiming at. Each of the other eight
+types has six, written the same way, exercising every distractor role in its
+enum, which is the thing a generator most needs an example of. 88 items in total.
+
+They run through exactly the same validation and the same whole-batch checks as
+generated items; the only thing they skip is the model call:
 
 ```bash
 bjt importbatch batches/hatsugen_choukai_J2_001.source.json
@@ -371,8 +418,10 @@ bjt/
   generators/    one module, prompt, and schema per item type
   publish.py     bundle → idempotent SQL
   fidelity/      roles, answerability gate, discriminator loop, vocab gate, dedupe
-  tts/           what to synthesise, in which voice, over which channel (no audio calls)
-  render/        phase 2 (document → HTML/SVG) — stub
+  tts/           what to synthesise, in which voice, over which channel — and the
+                 offline job that does it (plan.py, synth.py, channel.py, providers.py)
+  scenes.py      what the scene bank needs, and what exists
+  render/        document data → semantic HTML, and the eight templates
   db/            SQLite store + schema
   seedtable.py   場面×関係×機能×レベル → cells
   batch.py       batch runs, the bundle format, the whole-batch checks
@@ -395,12 +444,12 @@ client/          the Expo app (see client/README.md)
   explicit JSON schema; free text is never parsed.
 - **One generator per item type.** No generic "generate a BJT question" function
   with a type parameter — item shapes differ too much.
-- **Variety comes from the seed table, not the prompt.** 発言聴解 refuses to
-  generate without a cell (`requires_cell`) so nobody can accidentally fall back
-  to asking a prompt to be interesting.
+- **Variety comes from the seed table, not the prompt.** Every one of the nine
+  types refuses to generate without a cell (`requires_cell`), so nobody can
+  accidentally fall back to asking a prompt to be interesting.
 - **The cell is an assignment, not a hint.** If the model substitutes a different
   scene or channel, the item is rejected and regenerated.
-- **Documents will be data, not images** (phase 2). The model emits structured
+- **Documents are data, not images.** The model emits structured
   JSON and we render it; no image model for anything with text in it.
 - **Option order is shuffled** at generation time so the correct answer is never
   positionally predictable — and `checkbatch` verifies it across the batch.
