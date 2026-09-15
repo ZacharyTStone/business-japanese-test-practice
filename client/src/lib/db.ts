@@ -158,12 +158,20 @@ export async function fetchAnsweredToday(): Promise<number> {
   return data?.[0]?.answered ?? 0;
 }
 
-/** The ad-free unlock. Absence of a row is the normal case. */
+/** The ad-free unlock. Absence of a row is the normal case.
+ *
+ *  A revoked entitlement keeps its row rather than being deleted — a refund
+ *  should still leave an answer to "why did this person have the unlock in
+ *  March" — so the filter is on `revoked_at`, not on existence. Failure reads as
+ *  "not unlocked", which errs toward showing an ad to a paying customer rather
+ *  than withholding one from everybody; the reverse would be a worse trade for
+ *  a free tier that is meant to be genuinely complete. */
 export async function hasAdFree(): Promise<boolean> {
   const { data, error } = await supabase
     .from("entitlements")
     .select("product")
     .eq("product", "ads_free")
+    .is("revoked_at", null)
     .maybeSingle();
   if (error) return false;
   return Boolean(data);

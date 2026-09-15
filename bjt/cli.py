@@ -916,6 +916,34 @@ def cmd_render(args) -> int:
     return 0
 
 
+def cmd_grant(args) -> int:
+    """SQL granting (or withdrawing) the ad-free unlock for one user.
+
+    SQL rather than a live call, for the same reason content is: the thing that
+    reaches the database is a file somebody can read first. It also means no key
+    that can write entitlements has to live anywhere near this process.
+    """
+    fn = "revoke_entitlement" if args.revoke else "grant_entitlement"
+    call = (
+        f"select * from public.{fn}({publish.lit(args.user)}, {publish.lit(args.product)}"
+        + (f", {publish.lit(args.note)}" if args.revoke and args.note else "")
+        + (
+            f", {publish.lit(args.source)}, {publish.lit(args.external_id)}, "
+            f"{publish.lit(args.note)}"
+            if not args.revoke
+            else ""
+        )
+        + ");"
+    )
+    print(f"-- {'Revoke' if args.revoke else 'Grant'} {args.product} for {args.user}.")
+    print("-- Runs as the service role; a client cannot call either function.")
+    if not args.revoke:
+        print("-- Idempotent: a replayed purchase updates the row it already wrote.")
+    print()
+    print(call)
+    return 0
+
+
 def _print_bundle_report(bundle: dict, report) -> None:
     marks = {"pass": "OK  ", "warn": "WARN", "fail": "FAIL"}
     print("\n" + "=" * 62)
@@ -1028,6 +1056,17 @@ def build_parser() -> argparse.ArgumentParser:
                     help="a standalone HTML page rather than a fragment")
     rn.add_argument("--out", help="write to a file instead of stdout")
     rn.set_defaults(func=cmd_render)
+
+    gr = sub.add_parser("grant", help="SQL granting or revoking the ad-free unlock")
+    gr.add_argument("user", help="the Supabase user id (uuid)")
+    gr.add_argument("--product", default="ads_free")
+    gr.add_argument("--source", default="grant",
+                    choices=["app_store", "play_store", "stripe", "grant"])
+    gr.add_argument("--external-id", help="the store or processor transaction id")
+    gr.add_argument("--note", help="why — shows up in the row, and in a dispute")
+    gr.add_argument("--revoke", action="store_true",
+                    help="withdraw it instead, keeping the record that it existed")
+    gr.set_defaults(func=cmd_grant)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")

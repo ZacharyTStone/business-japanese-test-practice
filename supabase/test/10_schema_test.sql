@@ -463,3 +463,65 @@ begin
     perform test.check(n = 0, 'no client-side write policy on storage objects');
 end
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Entitlements: the table finally has a writer, and it had better be the only
+-- one. Every assertion below is about who CANNOT call it.
+
+do $$
+declare
+    uid uuid;
+    ent public.entitlements;
+    denied boolean := false;
+begin
+    raise notice 'entitlement grants';
+
+    insert into auth.users (email, is_anonymous) values ('buyer@example.com', false)
+    returning id into uid;
+
+    set local role service_role;
+    ent := public.grant_entitlement(uid, 'ads_free', 'stripe', 'txn_0001');
+    perform test.check(ent.user_id = uid and ent.revoked_at is null,
+                       'the service role can grant the unlock');
+
+    -- A store delivers the same purchase more than once. That is normal.
+    ent := public.grant_entitlement(uid, 'ads_free', 'stripe', 'txn_0001');
+    perform test.check(
+        (select count(*) from public.entitlements where user_id = uid) = 1,
+        'a replayed purchase webhook updates rather than duplicating');
+
+    ent := public.revoke_entitlement(uid, 'ads_free', 'refunded');
+    perform test.check(ent.revoked_at is not null,
+                       'revoking marks the row');
+    perform test.check(
+        (select count(*) from public.entitlements where user_id = uid) = 1,
+        'and keeps it — a chargeback dispute is when that record is wanted');
+
+    ent := public.grant_entitlement(uid, 'ads_free', 'stripe', 'txn_0002');
+    perform test.check(ent.revoked_at is null,
+                       'buying again after a refund restores the unlock');
+    reset role;
+
+    -- The whole point. A client that could call this could grant itself the
+    -- paid unlock, so it must not be able to reach the function at all.
+    set local role authenticated;
+    begin
+        perform public.grant_entitlement(uid, 'ads_free', 'grant', null, 'nice try');
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied, 'a signed-in client cannot call grant_entitlement');
+
+    denied := false;
+    begin
+        perform public.revoke_entitlement(uid, 'ads_free');
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied, 'nor revoke_entitlement');
+    reset role;
+
+    delete from public.entitlements where user_id = uid;
+    delete from auth.users where id = uid;
+end
+$$;
