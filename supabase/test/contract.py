@@ -22,10 +22,21 @@ import re
 import sys
 from pathlib import Path
 
-# supabase.from("table") ... up to the end of the statement. Anchored on the
-# client itself so that supabase.storage.from("audio") — a bucket, not a table —
-# is not mistaken for one.
-CHAIN = re.compile(r'\bsupabase\s*\.\s*from\(\s*"([a-z_0-9]+)"\s*\)(.*?);', re.S)
+# supabase.from("table") ... up to the end of the statement, OR up to the next
+# query, whichever comes first. Anchored on the client itself so that
+# supabase.storage.from("audio") — a bucket, not a table — is not mistaken for
+# one.
+#
+# The "next query" half matters because a screen that needs two tables at once
+# fetches them in one Promise.all, which is one statement with two chains in it.
+# Stopping only at the semicolon attributed the second query's filters to the
+# first query's table, and reported a perfectly good column as missing from a
+# table that never mentioned it.
+CHAIN = re.compile(
+    r'\bsupabase\s*\.\s*from\(\s*"([a-z_0-9]+)"\s*\)'
+    r'(.*?)(?=;|\bsupabase\s*\.\s*(?:from|rpc)\()',
+    re.S,
+)
 SELECT = re.compile(r'\.select\(\s*"([^"]*)"')
 OBJECT_KEYS = re.compile(r'\.(?:insert|update|upsert)\(\s*\{(.*?)\}', re.S)
 KEY = re.compile(r'(?:^|[\s,{])([a-z_][a-z_0-9]*)\s*:', re.M)

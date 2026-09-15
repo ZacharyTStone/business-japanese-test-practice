@@ -412,11 +412,34 @@ begin
                        'an item arrives with the path to its scene artwork');
 
     -- Items whose scene has no artwork yet are the normal case, not an error.
-    perform test.check(
-        (select scene_image_path from public.next_items(20) where id = 'itm_phone') is null,
-        'an item whose scene has no art yet still comes back, with a null path');
+    -- Asserted against a scene created here with no image_path, rather than
+    -- against a fixture from an earlier block: those are deleted above, and a
+    -- subquery over no rows returns null whatever the function does.
+    insert into public.scenes (id, label_ja) values ('scene_test_unart', 'まだ絵のない場面')
+    on conflict (id) do nothing;
+
+    set constraints all deferred;
+    insert into public.items (id, bundle_id, item_type, level, stem, correct_index, scene_id)
+    values ('itm_unart', 'bnd_doc', 'sougou_choudokkai', 'J2', '絵のない問題', 0, 'scene_test_unart');
+    insert into public.item_options (item_id, position, text, role, why) values
+        ('itm_unart', 0, 'あ', 'correct', 'これが正解。'),
+        ('itm_unart', 1, 'い', 'combines_wrong_pair', 'これは誤り。'),
+        ('itm_unart', 2, 'う', 'stated_by_wrong_speaker', 'これは誤り。'),
+        ('itm_unart', 3, 'え', 'wrong_action_owner', 'これは誤り。');
+    set constraints all immediate;
+
+    select * into v from public.next_items(20) where id = 'itm_unart';
+    perform test.check(v.id = 'itm_unart' and v.scene_image_path is null,
+                       'an item whose scene has no art yet still comes back, with a null path');
 end
 $$;
+
+-- Same reason as the cleanup further up: these fixtures share the J2 pool with
+-- the published reference batch, and next_items() draws among all of it at
+-- random. Left in place they would make 20_published_test.sql intermittently
+-- count a fixture as real content.
+delete from public.items where id in ('itm_doc', 'itm_unart');
+delete from public.bundles where id = 'bnd_doc';
 
 do $$
 declare

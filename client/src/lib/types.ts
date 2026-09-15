@@ -8,12 +8,67 @@
  */
 
 export type Level = "J3" | "J2" | "J1";
-export type Channel = "in_person" | "phone" | "video";
+/** `written` is a tag, never an audio treatment — a 総合読解 item is read, and
+ *  nothing about it is ever synthesised. */
+export type Channel = "in_person" | "phone" | "video" | "written";
 export type PracticeMode = "daily" | "weakness" | "mock" | "free";
 
 /** The nine BJT problem types, as ids. Kept as a string because the database
  *  owns the list; this alias only documents what the string means. */
 export type ItemTypeId = string;
+
+export type Section = "choukai" | "choudokkai" | "dokkai";
+
+/** One turn of a heard conversation.
+ *
+ *  `speaker_role` rather than a name, because the role is what casts the voice:
+ *  a learner who hears a different voice every question is doing speaker
+ *  identification instead of listening to Japanese. */
+export type DialogueTurn = {
+  speaker_role: string;
+  text: string;
+  clip_id: string | null;
+  /** Null while this turn has not been synthesised. The screen shows the text. */
+  audio_path: string | null;
+};
+
+/** A block of a document stimulus. One shape with optional fields rather than a
+ *  union, matching what the database stores — see bjt/render/document.py, which
+ *  is where the shape is enforced before an item is ever published. */
+export type DocBlock = {
+  type:
+    | "heading"
+    | "paragraph"
+    | "bullets"
+    | "numbered"
+    | "table"
+    | "key_values"
+    | "quoted_message"
+    | "callout";
+  text?: string;
+  level?: number;
+  items?: string[];
+  caption?: string;
+  columns?: string[];
+  rows?: string[][];
+  pairs?: { label: string; value: string }[];
+  sender?: string;
+  sent_at?: string;
+  depth?: number;
+  tone?: "info" | "warning" | "action";
+};
+
+/** A document the learner reads: an email, a schedule, a set of minutes.
+ *
+ *  Data, never a picture. A screenshot could not be selected, scaled to the
+ *  reader's text size, or read aloud — and for a language exam aid, somebody
+ *  reading it with their ears is a real case, not a hypothetical. */
+export type StimulusDocument = {
+  template: string;
+  title: string;
+  meta: { label: string; value: string }[];
+  blocks: DocBlock[];
+};
 
 export type ItemOption = {
   position: number;
@@ -39,6 +94,10 @@ export type QueuedItem = {
   stem: string;
   /** Which reusable picture this is set in. Null for types that have no picture. */
   scene_id: string | null;
+  /** Where that picture lives, or null while it does not exist yet. Items are
+   *  published long before their artwork, so this is the ordinary case rather
+   *  than an error — the screen simply draws the question without it. */
+  scene_image_path: string | null;
   speaker_role: string | null;
   listener_role: string | null;
   channel: Channel | null;
@@ -47,6 +106,11 @@ export type QueuedItem = {
   explanation_ja: string;
   explanation_en: string;
   vocab_notes: VocabNote[];
+  /** The document(s) to read. Always an array, empty for the types that have
+   *  none, so a screen branches on length rather than on null. */
+  documents: StimulusDocument[];
+  /** The conversation to hear, in order. Empty for types with none. */
+  dialogue: DialogueTurn[];
   narration_clip_id: string | null;
   narration_path: string | null;
   options: ItemOption[];
@@ -69,7 +133,7 @@ export type Profile = {
 export type TypeStat = {
   item_type: ItemTypeId;
   label_ja: string;
-  section: "choukai" | "choudokkai" | "dokkai";
+  section: Section;
   sort_order: number;
   answered: number;
   correct: number;
@@ -97,4 +161,35 @@ export type AnsweredItem = {
   item: QueuedItem;
   chosenIndex: number;
   isCorrect: boolean;
+};
+
+/** One of the nine problem types, as the practice picker offers it. */
+export type ItemType = {
+  id: ItemTypeId;
+  label_ja: string;
+  label_en: string;
+  section: Section;
+  sort_order: number;
+  /** How many published items exist at the learner's level. Zero is worth
+   *  showing rather than hiding: "not written yet" is honest, and a picker that
+   *  silently drops the empty types makes the app look smaller than it is. */
+  available: number;
+};
+
+/** A past answer, for the review screen. */
+export type HistoryEntry = {
+  attempt_id: string;
+  item_id: string;
+  answered_at: string;
+  is_correct: boolean;
+  chosen_index: number;
+  chosen_role: string;
+  item_type: ItemTypeId;
+  label_ja: string;
+  level: Level;
+  topic: string;
+  stem: string;
+  correct_index: number;
+  explanation_ja: string;
+  options: ItemOption[];
 };

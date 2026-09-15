@@ -15,6 +15,9 @@
  */
 import { supabase } from "./supabase";
 import type {
+  HistoryEntry,
+  ItemType,
+  Level,
   PracticeMode,
   Profile,
   QueuedItem,
@@ -172,4 +175,98 @@ export async function hasAdFree(): Promise<boolean> {
 export function clipUrl(audioPath: string | null): string | null {
   if (!audioPath) return null;
   return supabase.storage.from("audio").getPublicUrl(audioPath).data.publicUrl;
+}
+
+/** Public URL for a scene illustration, on exactly the same terms: null is the
+ *  ordinary case, because items are published long before their artwork. */
+export function sceneUrl(imagePath: string | null): string | null {
+  if (!imagePath) return null;
+  return supabase.storage.from("scenes").getPublicUrl(imagePath).data.publicUrl;
+}
+
+/**
+ * The nine problem types, with how many published items each has at a level.
+ *
+ * The count is the point. A picker that silently hid the empty types would make
+ * the app look smaller than it is and would leave someone wondering why 総合読解
+ * never appears; saying "0問" is honest and costs nothing.
+ */
+export async function fetchItemTypes(level: Level): Promise<ItemType[]> {
+  const [types, counts] = await Promise.all([
+    supabase.from("item_types").select("id, label_ja, label_en, section, sort_order"),
+    supabase.from("items").select("item_type").eq("level", level).eq("is_published", true),
+  ]);
+  if (types.error) throw types.error;
+
+  const available = new Map<string, number>();
+  for (const row of counts.data ?? []) {
+    available.set(row.item_type, (available.get(row.item_type) ?? 0) + 1);
+  }
+  return (types.data ?? [])
+    .map((t) => ({ ...t, available: available.get(t.id) ?? 0 }) as ItemType)
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/**
+ * Past answers, newest first — the review screen.
+ *
+ * `attempts` has no update or delete policy: an answer already given is
+ * history, and this is the screen that treats it as such. Two queries rather
+ * than an embedded select, because PostgREST's nested filtering across a
+ * many-to-one would still fetch the same rows and the join is clearer here.
+ */
+export async function fetchHistory(limit = 50): Promise<HistoryEntry[]> {
+  const { data: attempts, error } = await supabase
+    .from("attempts")
+    .select("id, item_id, answered_at, is_correct, chosen_index, chosen_role")
+    .order("answered_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  if (!attempts?.length) return [];
+
+  const ids = [...new Set(attempts.map((a) => a.item_id))];
+  const [items, options, types] = await Promise.all([
+    supabase
+      .from("items")
+      .select("id, item_type, level, topic, stem, correct_index, explanation_ja")
+      .in("id", ids),
+    supabase.from("item_options").select("item_id, position, text, role, why").in("item_id", ids),
+    supabase.from("item_types").select("id, label_ja"),
+  ]);
+  if (items.error) throw items.error;
+  if (options.error) throw options.error;
+
+  const byId = new Map((items.data ?? []).map((i) => [i.id, i]));
+  const labels = new Map((types.data ?? []).map((t) => [t.id, t.label_ja]));
+  const optionsById = new Map<string, HistoryEntry["options"]>();
+  for (const o of options.data ?? []) {
+    const list = optionsById.get(o.item_id) ?? [];
+    list.push({ ...o, clip_id: null, audio_path: null });
+    optionsById.set(o.item_id, list);
+  }
+
+  const out: HistoryEntry[] = [];
+  for (const attempt of attempts) {
+    const item = byId.get(attempt.item_id);
+    // An item can be unpublished without deleting the attempts that reference
+    // it, so a missing row here is expected rather than broken data.
+    if (!item) continue;
+    out.push({
+      attempt_id: attempt.id,
+      item_id: attempt.item_id,
+      answered_at: attempt.answered_at,
+      is_correct: attempt.is_correct,
+      chosen_index: attempt.chosen_index,
+      chosen_role: attempt.chosen_role,
+      item_type: item.item_type,
+      label_ja: labels.get(item.item_type) ?? item.item_type,
+      level: item.level,
+      topic: item.topic,
+      stem: item.stem,
+      correct_index: item.correct_index,
+      explanation_ja: item.explanation_ja,
+      options: (optionsById.get(item.id) ?? []).sort((a, b) => a.position - b.position),
+    });
+  }
+  return out;
 }

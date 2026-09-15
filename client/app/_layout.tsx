@@ -25,7 +25,9 @@ export default function RootLayout() {
               a phone the swipe is easy to trigger by accident while reading. */}
           <Stack.Screen name="practice" options={{ title: "練習", gestureEnabled: false }} />
           <Stack.Screen name="result" options={{ title: "結果", headerBackVisible: false }} />
+          <Stack.Screen name="choose" options={{ title: "練習を選ぶ" }} />
           <Stack.Screen name="progress" options={{ title: "記録" }} />
+          <Stack.Screen name="history" options={{ title: "解いた問題" }} />
           <Stack.Screen name="account" options={{ title: "アカウント" }} />
         </Stack>
       </AuthProvider>

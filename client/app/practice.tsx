@@ -15,34 +15,70 @@
  *
  * **No ads here, ever.** Not in a break, not between the narration and the
  * options. See AdSlot: the placement type has no member for this screen.
+ *
+ * **One screen for all nine types.** The stimulus differs — an utterance, a
+ * narrated scene, a conversation, a document, or some combination — but the act
+ * does not: read or listen, choose one of four, find out why. Nine screens would
+ * have drifted into nine slightly different ways of showing a wrong answer.
  */
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../src/lib/auth";
-import { fetchProfile, fetchQueue, finishSession, recordAttempt, startSession } from "../src/lib/db";
+import {
+  fetchProfile,
+  fetchQueue,
+  finishSession,
+  recordAttempt,
+  sceneUrl,
+  startSession,
+} from "../src/lib/db";
 import { setSummary } from "../src/lib/session";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import type { AnsweredItem, PracticeMode, QueuedItem } from "../src/lib/types";
-import { ClipButton } from "../src/ui/audio";
+import type { AnsweredItem, Level, PracticeMode, QueuedItem } from "../src/lib/types";
+import { ClipButton, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
+import { DocumentView } from "../src/ui/document";
 import { RudenessMeter } from "../src/ui/meters";
 import { colors, radius, space, type } from "../src/ui/theme";
 
 const LETTERS = ["A", "B", "C", "D"];
 
+/** A mock run is longer than a daily set on purpose: the thing it simulates is
+ *  sitting still and concentrating, which five questions cannot rehearse. */
+const MOCK_LENGTH = 20;
+
 const CHANNEL_LABEL: Record<string, string> = {
   in_person: "対面",
   phone: "電話",
   video: "オンライン",
+  written: "文書",
+};
+
+/** What to tell the learner to do. The act is the same everywhere, but the
+ *  instruction is not: "最も適切な言い方" makes no sense for a reading item. */
+const PROMPT_BY_TYPE: Record<string, string> = {
+  hatsugen_choukai: "この場面で最も適切な言い方を選んでください。",
+  hyougen: "この場面で最も適切な表現を選んでください。",
+  goi_bunpou: "空欄に入る最も適切なものを選んでください。",
+  bamen_haaku: "聞いた内容に合うものを選んでください。",
+  sougou_choukai: "会話の内容に合うものを選んでください。",
+  joukyou_haaku: "掲示と依頼の両方をふまえて選んでください。",
+  shiryou_choudokkai: "資料と音声の両方をふまえて選んでください。",
+  sougou_choudokkai: "会話と資料の両方をふまえて選んでください。",
+  sougou_dokkai: "文書から読み取れることを選んでください。",
 };
 
 export default function Practice() {
   const router = useRouter();
   const { session, loading: authLoading, error: authError } = useAuth();
-  const params = useLocalSearchParams<{ mode?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; itemType?: string; level?: string }>();
   const mode = (params.mode as PracticeMode) ?? "daily";
+  // Free and mock runs come from the picker, which names what to practise.
+  // Daily and weakness do not: the whole point of those is that the app chooses.
+  const itemType = params.itemType || null;
+  const level = (params.level as Level) || null;
 
   const [items, setItems] = useState<QueuedItem[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -62,7 +98,8 @@ export default function Practice() {
     (async () => {
       try {
         const profile = await fetchProfile();
-        const queue = await fetchQueue({ limit: profile?.daily_goal ?? 5, mode });
+        const limit = mode === "mock" ? MOCK_LENGTH : (profile?.daily_goal ?? 5);
+        const queue = await fetchQueue({ limit, mode, itemType, level });
         if (cancelled) return;
         setItems(queue);
         setSessionId(await startSession(mode, session.user.id));
@@ -74,7 +111,7 @@ export default function Practice() {
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id, mode]);
+  }, [session?.user?.id, mode, itemType, level]);
 
   const item = items?.[index];
   const options = useMemo(
@@ -168,6 +205,11 @@ export default function Practice() {
   const revealed = graded !== null;
   const chosenOption = chosen !== null ? options[chosen] : null;
   const correctOption = options[item.correct_index];
+  const sceneImage = sceneUrl(item.scene_image_path);
+  // A clip id means this type narrates; a null path means it has not been
+  // synthesised yet. Either way there is something to show — the difference is
+  // whether it is a play button or the text of it.
+  const hasNarration = Boolean(item.narration_clip_id);
 
   return (
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
@@ -191,7 +233,39 @@ export default function Practice() {
           ) : null}
         </View>
 
-        <ClipButton path={item.narration_path} text={item.stem} label="場面を聞く" />
+        {sceneImage ? (
+          // Decorative on purpose. The scene is one of sixteen shared drawings,
+          // so it cannot contain the answer — describing it to a screen reader
+          // would be describing a stock illustration, not the question.
+          <Image
+            source={{ uri: sceneImage }}
+            style={styles.scene}
+            resizeMode="cover"
+            accessible={false}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          />
+        ) : null}
+
+        {/* The stimulus, in the order it is met: what you read, then what you
+            hear. A document comes first because the audio usually revises it —
+            hearing the change before reading the original teaches nothing. */}
+        {item.documents?.map((doc, i) => (
+          <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
+        ))}
+
+        {item.dialogue?.length ? <DialoguePlayer turns={item.dialogue} /> : null}
+
+        {hasNarration ? (
+          <ClipButton
+            path={item.narration_path}
+            text={item.stem}
+            label={item.dialogue?.length ? "質問を聞く" : "場面を聞く"}
+          />
+        ) : (
+          // Nothing is spoken for this type. The stem is the question, read.
+          <Text style={type.body}>{item.stem}</Text>
+        )}
       </Card>
 
       <View style={{ gap: space.md }}>
@@ -259,7 +333,9 @@ export default function Practice() {
           />
         </View>
       ) : (
-        <Text style={[type.small, styles.hint]}>この場面で最も適切な言い方を選んでください。</Text>
+        <Text style={[type.small, styles.hint]}>
+          {PROMPT_BY_TYPE[item.item_type] ?? "最も適切なものを選んでください。"}
+        </Text>
       )}
     </ScrollView>
   );
@@ -271,6 +347,7 @@ const styles = StyleSheet.create({
   bar: { flex: 1, height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: "hidden" },
   barFill: { height: 4, backgroundColor: colors.accent },
   metaRow: { flexDirection: "row", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
+  scene: { width: "100%", aspectRatio: 3 / 2, borderRadius: radius.sm, backgroundColor: colors.accentSoft },
   option: {
     backgroundColor: colors.surface,
     borderWidth: 1,

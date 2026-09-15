@@ -6,7 +6,7 @@
  * 発言聴解 is a grade; knowing you are at 30% on the telephone and 85% face to
  * face is a plan for the evening.
  */
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -14,7 +14,7 @@ import { fetchRoleTraps, fetchTagStats, fetchTypeStats, hasAdFree } from "../src
 import { roleInfo } from "../src/lib/roles";
 import { isConfigured } from "../src/lib/supabase";
 import type { RoleTrap, TagStat, TypeStat } from "../src/lib/types";
-import { AdSlot, Card, Loading, Notice } from "../src/ui/components";
+import { AdSlot, Button, Card, Loading, Notice } from "../src/ui/components";
 import { TypeRadar } from "../src/ui/radar";
 import { colors, space, type } from "../src/ui/theme";
 
@@ -30,6 +30,7 @@ const AXIS_LABEL: Record<TagStat["axis"], string> = {
 const MIN_ANSWERS_PER_TAG = 4;
 
 export default function Progress() {
+  const router = useRouter();
   const [types, setTypes] = useState<TypeStat[] | null>(null);
   const [tags, setTags] = useState<TagStat[]>([]);
   const [traps, setTraps] = useState<RoleTrap[]>([]);
@@ -125,6 +126,14 @@ export default function Progress() {
           </Text>
         </Card>
       )}
+
+      {/* Right where a wrong answer is most likely to be on somebody's mind. */}
+      <Button
+        label="解いた問題を見返す"
+        tone="secondary"
+        sub="まちがえた問題と、その解説"
+        onPress={() => router.push("/history")}
+      />
 
       <AdSlot placement="list_screen" enabled={!adFree} />
     </ScrollView>

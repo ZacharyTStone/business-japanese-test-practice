@@ -123,6 +123,15 @@ export default function Home() {
       ) : null}
 
       <View style={styles.links}>
+        {/* Deliberately below the fold of the one-button decision above. Most
+            days the right answer is "the set the app picked"; this is for the
+            week before the exam, when somebody knows what their problem is. */}
+        <Button
+          label="種類を選んで練習する"
+          tone="secondary"
+          sub="模試もここから"
+          onPress={() => router.push("/choose")}
+        />
         <Button label="記録を見る" tone="secondary" onPress={() => router.push("/progress")} />
         <Button
           label={isAnonymous ? "記録を引き継ぐ" : "アカウント"}

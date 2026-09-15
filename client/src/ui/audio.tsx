@@ -15,6 +15,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { clipUrl } from "../lib/db";
+import type { DialogueTurn } from "../lib/types";
 import { colors, radius, space, type } from "./theme";
 
 export function ClipButton({
@@ -78,4 +79,131 @@ const styles = StyleSheet.create({
     padding: space.lg,
   },
   playIcon: { fontSize: 16, color: colors.accent },
+  transcript: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.md,
+    padding: space.lg,
+    gap: space.md,
+  },
+  toggle: { textDecorationLine: "underline" },
 });
+
+
+/**
+ * A heard conversation.
+ *
+ * Turns play one after another rather than as a single file, for a reason that
+ * outlives this component: clip ids are content hashes, so 「承知しました。」 is
+ * synthesised once and shared by every item that contains it. Concatenating a
+ * conversation server-side would throw that away and make one file per item.
+ *
+ * The transcript is hidden until the learner asks for it. 総合聴解 is a listening
+ * item — a transcript on screen from the start turns it into a reading item with
+ * an audio track — but refusing to show it at all would be worse: practice is
+ * not the exam, and the fourth listen is where you finally hear that it was
+ * 伺います and not 参ります.
+ */
+export function DialoguePlayer({ turns }: { turns: DialogueTurn[] }) {
+  const [showText, setShowText] = React.useState(false);
+  const paths = turns.map((t) => clipUrl(t.audio_path));
+  const playable = paths.filter(Boolean).length;
+
+  // Nothing synthesised yet: the whole exchange is a script on the page, which
+  // is how every item works before its audio exists.
+  if (playable === 0) {
+    return (
+      <View style={styles.transcript}>
+        <Text style={type.small}>会話（音声は準備中）</Text>
+        {turns.map((turn, i) => (
+          <Turn key={i} turn={turn} />
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ gap: space.sm }}>
+      <DialogueTrack turns={turns} paths={paths} />
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => setShowText((v) => !v)}
+        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+      >
+        <Text style={[type.small, styles.toggle]}>
+          {showText ? "本文を隠す" : "本文を見る"}
+        </Text>
+      </Pressable>
+      {showText ? (
+        <View style={styles.transcript}>
+          {turns.map((turn, i) => (
+            <Turn key={i} turn={turn} />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function Turn({ turn }: { turn: DialogueTurn }) {
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={type.small}>{turn.speaker_role}</Text>
+      <Text style={type.body}>{turn.text}</Text>
+    </View>
+  );
+}
+
+/** Plays each turn in order, advancing when one finishes. */
+function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string | null)[] }) {
+  const [at, setAt] = React.useState(0);
+  const [running, setRunning] = React.useState(false);
+  const player = useAudioPlayer(paths[at] ?? null);
+  const status = useAudioPlayerStatus(player);
+
+  React.useEffect(() => {
+    if (!running) return;
+    if (!status.didJustFinish) return;
+    // Skip any turn that has no clip yet rather than stalling on it: a
+    // half-synthesised conversation should still play the parts that exist.
+    let next = at + 1;
+    while (next < paths.length && !paths[next]) next += 1;
+    if (next >= paths.length) {
+      setRunning(false);
+      setAt(0);
+      return;
+    }
+    setAt(next);
+  }, [status.didJustFinish, running, at, paths]);
+
+  React.useEffect(() => {
+    if (running && paths[at]) {
+      player.seekTo(0);
+      player.play();
+    }
+  }, [at, running]);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={running ? "会話を止める" : "会話を再生する"}
+      onPress={() => {
+        if (running) {
+          player.pause();
+          setRunning(false);
+          setAt(0);
+        } else {
+          setRunning(true);
+          player.seekTo(0);
+          player.play();
+        }
+      }}
+      style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
+    >
+      <Text style={styles.playIcon}>{running ? "■" : "▶"}</Text>
+      <Text style={type.body}>会話を聞く</Text>
+      <Text style={type.small}>
+        {at + 1} / {turns.length}
+      </Text>
+    </Pressable>
+  );
+}

@@ -47,12 +47,22 @@ export default function Result() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Card style={{ gap: space.sm, alignItems: "center" }}>
-        <Text style={type.small}>今回</Text>
+        <Text style={type.small}>{summary.mode === "mock" ? "模試" : "今回"}</Text>
         <Text style={type.h1}>
           {correct} / {total} 問
         </Text>
         <Text style={type.small}>{minutes}分</Text>
       </Card>
+
+      {summary.mode === "mock" ? (
+        <Card style={{ gap: space.xs }}>
+          <Text style={type.small}>点数の予測は出していません</Text>
+          <Text style={type.body}>
+            ここにある問題は本番の問題ではなく、何点に当たるかを換算する根拠がありません。
+            正答数と、下に出ている「落ちた罠」のほうが、次に何をすればよいかをはっきり示します。
+          </Text>
+        </Card>
+      ) : null}
 
       {trap ? (
         <Card style={{ gap: space.sm }}>
@@ -89,6 +99,11 @@ export default function Result() {
       <View style={{ gap: space.md }}>
         <Button label="ホームへ" onPress={() => router.replace("/")} />
         <Button label="記録を見る" tone="secondary" onPress={() => router.replace("/progress")} />
+        <Button
+          label="まちがえた問題を見返す"
+          tone="secondary"
+          onPress={() => router.replace("/history")}
+        />
       </View>
     </ScrollView>
   );
