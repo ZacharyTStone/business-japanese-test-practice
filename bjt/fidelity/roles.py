@@ -45,7 +45,52 @@ DISTRACTOR_ROLES: dict[str, list[str]] = {
         "phone_protocol_violation",    # breaks the fixed shape of a business phone call
         "content_mismatch",            # natural and polite, but does not do what the situation requires
     ],
-    # 総合読解問題 (phase 2 — enum ready, generator not yet built)
+    # 場面把握問題 — a narrated situation, and the question is about the
+    # situation itself: where this is, who is talking, what happens next. The
+    # traps are therefore about mis-locating the scene rather than about 敬語.
+    "bamen_haaku": [
+        "wrong_participant",           # a person who is present, but not the one asked about
+        "adjacent_setting",            # a setting next door to the real one (受付 for 応接室)
+        "right_scene_wrong_moment",    # the right situation, at the wrong stage of it
+        "plausible_but_unmentioned",   # something that would make sense, but was not said
+    ],
+    # 総合聴解問題 — a meeting or presentation heard once, then questions about
+    # it. Everything here is a memory trap: each distractor was true at some
+    # point, or true of somebody else.
+    "sougou_choukai": [
+        "stated_by_wrong_speaker",     # said in the conversation, by a different person
+        "superseded_by_later_turn",    # true earlier, revised before the end
+        "unsupported_but_plausible",   # consistent with the world, never said
+        "surface_keyword_match",       # reuses a salient word with the wrong referent
+    ],
+    # 状況把握問題 — read the notice, hear the request, choose the action. The
+    # whole type is about combining two sources, so the traps are about using
+    # only one of them.
+    "joukyou_haaku": [
+        "ignores_the_document",        # answers the request, contradicts what is posted
+        "ignores_the_request",         # follows the document, not what was actually asked
+        "wrong_action_owner",          # the right action, done by the wrong person
+        "right_action_wrong_condition",  # an action that applies only under a condition not met
+    ],
+    # 資料聴読解問題 — a document on the page, a prompt in the ear, usually a
+    # value to find. The classic failure is reading the document and ignoring
+    # the change announced aloud.
+    "shiryou_choudokkai": [
+        "reads_wrong_row",             # a plausible neighbouring row, column or entry
+        "ignores_the_spoken_change",   # the document's original value, after it was revised aloud
+        "wrong_timeframe",             # confuses completed work with planned work
+        "surface_keyword_match",       # reuses a salient word with the wrong referent
+    ],
+    # 総合聴読解問題 — a longer exchange plus its documents. Both of the
+    # single-source traps apply, and one more: pairing the right document with
+    # the wrong turn of the conversation.
+    "sougou_choudokkai": [
+        "combines_wrong_pair",         # the right document read against the wrong turn
+        "stated_by_wrong_speaker",     # said in the exchange, by a different person
+        "unsupported_but_plausible",   # consistent with the documents, stated in neither
+        "wrong_action_owner",          # the right action, assigned to the wrong person
+    ],
+    # 総合読解問題
     "sougou_dokkai": [
         "unsupported_but_plausible",           # true of the world, not stated in the passage
         "stated_but_answers_different_question",  # true in the passage, irrelevant to the question
@@ -73,6 +118,19 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
     "register_too_casual": "plain or casual form addressed to a superior or client",
     "register_insulting": "grammatical but demeaning to the listener",
     "correct_keigo_wrong_speech_act": "correct honorific verb, but the wrong illocutionary act",
+    "wrong_participant": "a person who is present in the situation, but not the one asked about",
+    "adjacent_setting": "a setting next door to the real one (受付 for 応接室)",
+    "right_scene_wrong_moment": "the right situation, but at the wrong stage of it",
+    "plausible_but_unmentioned": "something that would make sense here, but was never said",
+    "stated_by_wrong_speaker": "said in the conversation, but by a different person",
+    "superseded_by_later_turn": "true earlier in the conversation, revised before it ended",
+    "ignores_the_document": "answers the spoken request while contradicting what is posted",
+    "ignores_the_request": "follows the document, but not what was actually asked",
+    "wrong_action_owner": "the right action, carried out by the wrong person",
+    "right_action_wrong_condition": "an action that applies only under a condition this situation does not meet",
+    "reads_wrong_row": "a plausible neighbouring row, column or entry in the document",
+    "ignores_the_spoken_change": "the document's original value, after it was revised aloud",
+    "combines_wrong_pair": "the right document read against the wrong turn of the conversation",
     "unsupported_but_plausible": "true of the world, but not stated in the passage",
     "stated_but_answers_different_question": "true in the passage, but irrelevant to the question asked",
     "wrong_timeframe": "confuses completed work with planned work",

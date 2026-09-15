@@ -29,7 +29,11 @@ from . import config, schemas, seedtable
 from .fidelity import dedupe, roles
 from .tts import plan as tts_plan
 
-BUNDLE_VERSION = 1
+#: 2 — audio clip ids are filed by role (`narration` / `options` / `dialogue`)
+#: rather than by position, and items may carry `documents` and `dialogue`.
+#: Version 1 bundles are not read anywhere: the source files are the authority,
+#: so a format change means re-running `importbatch`, not a compatibility path.
+BUNDLE_VERSION = 2
 
 #: A listening stem is heard once. Shorter than this and it cannot have set up a
 #: situation; longer and the test-taker is being tested on memory.
@@ -44,11 +48,33 @@ def item_id(item: dict) -> str:
     return hashlib.sha1(f"{item.get('item_type','')}|{key}".encode("utf-8")).hexdigest()[:10]
 
 
+def _documents_of(item: dict) -> list[dict]:
+    """A type's documents, always as a list.
+
+    The schema calls it `document` for the three types that have one and
+    `documents` for the one type that has two. Everything downstream — the
+    database column, the app's renderer — would rather deal with one shape than
+    with that distinction, so the bundle normalises it here and the singular
+    never leaves the generator.
+    """
+    field = schemas.DOCUMENT_FIELDS.get(item.get("item_type", ""))
+    if field is None:
+        return []
+    value = item.get(field)
+    if isinstance(value, list):
+        return [d for d in value if isinstance(d, dict)]
+    return [value] if isinstance(value, dict) else []
+
+
 def to_bundle_item(item: dict) -> dict:
     """One item in app-facing shape: answer resolved to an index, audio clip ids
-    attached, our internal metrics left out."""
+    attached, documents normalised to a list, our internal metrics left out."""
     iid = item_id(item)
     clips = tts_plan.plan_item(item, iid)
+    by_kind: dict[str, list] = {}
+    for clip in clips:
+        by_kind.setdefault(clip.kind, []).append(clip)
+    narration = by_kind.get("narration") or []
     out = {
         "id": iid,
         "item_type": item.get("item_type"),
@@ -64,11 +90,33 @@ def to_bundle_item(item: dict) -> dict:
         "explanation_ja": item.get("explanation_ja", ""),
         "explanation_en": item.get("explanation_en", ""),
         "vocab_notes": item.get("vocab_notes", []),
+        # Clip ids by role rather than by position. The old shape assumed
+        # "narration first, options after", which is true of exactly one of the
+        # nine types: a dialogue type would have had its turns filed as options,
+        # and a reading type has no clips at all to take a first element from.
         "audio": {
-            "narration": clips[0].clip_id,
-            "options": [c.clip_id for c in clips[1:]],
+            "narration": narration[0].clip_id if narration else None,
+            "options": [c.clip_id for c in by_kind.get("option", [])],
+            "dialogue": [c.clip_id for c in by_kind.get("dialogue", [])],
         },
     }
+
+    documents = _documents_of(item)
+    if documents:
+        out["documents"] = documents
+
+    turns = item.get("dialogue")
+    if turns:
+        dialogue_clips = by_kind.get("dialogue", [])
+        out["dialogue"] = [
+            {
+                "speaker_role": t.get("speaker_role", ""),
+                "text": t.get("text", ""),
+                "clip_id": dialogue_clips[i].clip_id if i < len(dialogue_clips) else None,
+            }
+            for i, t in enumerate(turns)
+        ]
+
     for key in ("scene_id", "speaker_role", "listener_role", "channel"):
         if key in item:
             out[key] = item[key]

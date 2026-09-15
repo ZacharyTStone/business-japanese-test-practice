@@ -49,6 +49,9 @@ class Cell:
     setting_ja: str
     relation_ja: str
     function_ja: str
+    #: Document templates this setting may be rendered in — the reading types'
+    #: equivalent of `scenes`. Empty for types whose stimulus is not a document.
+    templates: tuple[str, ...] = ()
 
     @property
     def id(self) -> str:
@@ -99,6 +102,7 @@ class SeedTable:
                             level=level,
                             channel=s["channel"],
                             scenes=tuple(s.get("scenes", [])),
+                            templates=tuple(s.get("templates", [])),
                             setting_ja=s.get("ja", s_id),
                             relation_ja=self._relations[r_id].get("ja", r_id),
                             function_ja=f.get("ja", f_id),
@@ -118,6 +122,18 @@ class SeedTable:
             for sc in s.get("scenes", []):
                 if sc not in seen:
                     seen.append(sc)
+        return seen
+
+    @property
+    def template_bank(self) -> list[str]:
+        """Every document template this table can ask for. The reading types'
+        counterpart of `scene_bank`: the set a batch's documents must come
+        from, known before any document is written."""
+        seen: list[str] = []
+        for s in self._settings.values():
+            for t in s.get("templates", []):
+                if t not in seen:
+                    seen.append(t)
         return seen
 
     @property

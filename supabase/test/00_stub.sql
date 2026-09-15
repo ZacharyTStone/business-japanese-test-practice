@@ -42,6 +42,30 @@ as $$
     select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb);
 $$;
 
+-- Storage. Only the two tables the media migration touches, with only the
+-- columns it sets — the real storage schema is a great deal larger and none of
+-- the rest is ours to assert anything about.
+create schema if not exists storage;
+
+create table if not exists storage.buckets (
+    id                 text primary key,
+    name               text not null,
+    public             boolean not null default false,
+    file_size_limit    bigint,
+    allowed_mime_types text[],
+    created_at         timestamptz not null default now()
+);
+
+create table if not exists storage.objects (
+    id         uuid primary key default gen_random_uuid(),
+    bucket_id  text references storage.buckets (id),
+    name       text not null,
+    owner      uuid,
+    created_at timestamptz not null default now()
+);
+
+alter table storage.objects enable row level security;
+
 do $$
 begin
     if not exists (select 1 from pg_roles where rolname = 'anon') then
@@ -56,7 +80,9 @@ begin
 end
 $$;
 
-grant usage on schema public, auth to anon, authenticated, service_role;
+grant usage on schema public, auth, storage to anon, authenticated, service_role;
+grant select on storage.buckets, storage.objects to anon, authenticated;
+grant all on storage.buckets, storage.objects to service_role;
 alter default privileges in schema public
     grant select on tables to anon, authenticated;
 alter default privileges in schema public

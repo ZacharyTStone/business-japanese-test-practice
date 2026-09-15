@@ -147,7 +147,7 @@ def bundle_sql(bundle: dict, bundle_id: str) -> str:
         "id", "bundle_id", "item_type", "level", "seed_cell_id", "setting", "relation",
         "function", "channel", "scene_id", "speaker_role", "listener_role", "topic",
         "stem", "correct_index", "explanation_ja", "explanation_en", "vocab_notes",
-        "narration_clip_id",
+        "documents", "dialogue", "narration_clip_id",
     ]
     item_rows = []
     option_rows = []
@@ -161,6 +161,11 @@ def bundle_sql(bundle: dict, bundle_id: str) -> str:
             it.get("topic", ""), it["stem"], it["correct_index"],
             it.get("explanation_ja", ""), it.get("explanation_en", ""),
             it.get("vocab_notes", []),
+            # Always arrays, even for the types that carry exactly one document
+            # or no conversation: the column's default is `[]` and the app would
+            # rather branch on emptiness than on null.
+            it.get("documents", []),
+            it.get("dialogue", []),
             (it.get("audio") or {}).get("narration"),
         ])
         clip_ids = (it.get("audio") or {}).get("options") or []

@@ -1,8 +1,8 @@
 {
-  "bundle_version": 1,
+  "bundle_version": 2,
   "item_type": "hatsugen_choukai",
   "level": "J3",
-  "generated_at": "2026-09-13T17:43:21+00:00",
+  "generated_at": "2026-09-15T17:20:43+00:00",
   "generator_model": "author-composed",
   "items": [
     {
@@ -63,7 +63,8 @@
           "7d5a7b0cae3cc0a1",
           "1539164858fecb53",
           "2e0502f8ea6b8422"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_office_desk_pair",
       "speaker_role": "若手社員",
@@ -128,7 +129,8 @@
           "84faf20e0c74aae6",
           "aa3534f6339ffd4d",
           "85280c90ffcda7ac"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_reception_counter",
       "speaker_role": "受付で応対する社員",
@@ -193,7 +195,8 @@
           "3d520ab208c99584",
           "26df4fa12bee72d8",
           "9ca1a6edeae9ce26"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_phone_desk",
       "speaker_role": "内線をかけた社員",
@@ -258,7 +261,8 @@
           "412a9593745579d6",
           "f930648f849129f1",
           "56d3394d1c072e9e"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_corridor",
       "speaker_role": "後輩社員",
@@ -323,7 +327,8 @@
           "381608922dd6c3ed",
           "f3662c4349cc13de",
           "f0290ae370ec8e75"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_meeting_room_table",
       "speaker_role": "部下",
@@ -388,7 +393,8 @@
           "eb8b3749ef4393d4",
           "4b1c0ece00ea57de",
           "f372a9e4f1c63cc3"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_phone_desk",
       "speaker_role": "電話をかけた社員",
@@ -453,7 +459,8 @@
           "58dd21c6134d54d2",
           "fba3e08d573c9a84",
           "4920cba115af8fa3"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_office_desk_pair",
       "speaker_role": "同僚",
@@ -518,7 +525,8 @@
           "1fe18e6515a3de9e",
           "3e0e2293bcf9b3c9",
           "5b18226f23d53f76"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_corridor",
       "speaker_role": "部下",
@@ -583,7 +591,8 @@
           "d74fd365cc133eb4",
           "51d73e327c86da5a",
           "cb448908433dcd99"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_client_office_sofa",
       "speaker_role": "訪問した営業担当",
@@ -648,7 +657,8 @@
           "f397de59386e87ec",
           "e6d39827ba98df46",
           "a8b08ab8b3ce7538"
-        ]
+        ],
+        "dialogue": []
       },
       "scene_id": "scene_video_call_laptop",
       "speaker_role": "自社の担当者",

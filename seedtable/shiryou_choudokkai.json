@@ -1,0 +1,286 @@
+{
+  "item_type": "shiryou_choudokkai",
+  "_note": "Original design, not licensed material. A document on the page, a prompt in the ear, and usually a value to find. The `function` axis is what has to be extracted; the template axis is which document it has to be extracted from.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "scenes": {
+    "scene_client_meeting_room": "取引先の会議室",
+    "scene_client_office_sofa": "取引先の応接ソファ",
+    "scene_corridor": "オフィスの廊下",
+    "scene_elevator_hall": "エレベーターホール",
+    "scene_entrance_lobby": "エントランスロビー",
+    "scene_expo_booth": "展示会のブース",
+    "scene_izakaya_table": "居酒屋のテーブル",
+    "scene_meeting_room_table": "社内の会議室のテーブル",
+    "scene_office_desk_pair": "自分の席で向かい合う二人",
+    "scene_office_open_floor": "執務フロア全体",
+    "scene_phone_desk": "デスクで固定電話",
+    "scene_phone_mobile_outside": "外出先で携帯電話",
+    "scene_reception_counter": "自社の受付カウンター",
+    "scene_restaurant_private": "料理店の個室",
+    "scene_seminar_hall": "セミナー会場",
+    "scene_video_call_laptop": "ノートPCでオンライン会議"
+  },
+  "settings": [
+    {
+      "id": "quotation",
+      "ja": "見積書・注文書を見ながら",
+      "channel": "in_person",
+      "scenes": [
+        "scene_office_desk_pair"
+      ],
+      "templates": [
+        "quote_order"
+      ]
+    },
+    {
+      "id": "delivery_email",
+      "ja": "納期連絡のメールを見ながら",
+      "channel": "phone",
+      "scenes": [
+        "scene_phone_desk"
+      ],
+      "templates": [
+        "email_external",
+        "email_thread"
+      ]
+    },
+    {
+      "id": "schedule_sheet",
+      "ja": "予定表を見ながら",
+      "channel": "phone",
+      "scenes": [
+        "scene_phone_desk"
+      ],
+      "templates": [
+        "schedule"
+      ]
+    },
+    {
+      "id": "meeting_handout",
+      "ja": "配布資料を見ながら",
+      "channel": "in_person",
+      "scenes": [
+        "scene_meeting_room_table"
+      ],
+      "templates": [
+        "quote_order",
+        "schedule"
+      ]
+    },
+    {
+      "id": "video_shared_doc",
+      "ja": "画面共有の資料を見ながら",
+      "channel": "video",
+      "scenes": [
+        "scene_video_call_laptop"
+      ],
+      "templates": [
+        "schedule",
+        "quote_order",
+        "email_thread"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "find_the_date",
+      "ja": "日付・納期を読み取る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "find_the_quantity",
+      "ja": "数量・金額を読み取る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "find_the_owner",
+      "ja": "担当者を読み取る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "apply_spoken_change",
+      "ja": "口頭の変更を資料に反映する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "find_the_conflict",
+      "ja": "食い違いを見つける",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "choose_the_option",
+      "ja": "条件に合う選択肢を選ぶ",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "quotation": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "subordinate_to_superior",
+      "peer_to_peer"
+    ],
+    "delivery_email": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "subordinate_to_superior",
+      "peer_to_peer"
+    ],
+    "schedule_sheet": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "meeting_handout": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "video_shared_doc": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ]
+  }
+}

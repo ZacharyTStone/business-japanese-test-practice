@@ -1,0 +1,253 @@
+{
+  "item_type": "sougou_dokkai",
+  "_note": "Original design, not licensed material. Reading only — the channel is always `written`, and nothing in this type is ever synthesised. The `function` axis is the inference the question demands, because a batch of ten 総合読解 items that all ask 「何が書いてあるか」 is not a reading test.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "settings": [
+    {
+      "id": "client_escalation",
+      "ja": "取引先からの申し入れ",
+      "channel": "written",
+      "templates": [
+        "email_thread",
+        "email_external"
+      ]
+    },
+    {
+      "id": "internal_change",
+      "ja": "社内の方針・手続きの変更",
+      "channel": "written",
+      "templates": [
+        "memo_notice",
+        "office_sign"
+      ]
+    },
+    {
+      "id": "project_update",
+      "ja": "案件の進捗",
+      "channel": "written",
+      "templates": [
+        "progress_report",
+        "meeting_minutes"
+      ]
+    },
+    {
+      "id": "order_exchange",
+      "ja": "受発注のやりとり",
+      "channel": "written",
+      "templates": [
+        "quote_order",
+        "email_thread"
+      ]
+    },
+    {
+      "id": "scheduling",
+      "ja": "日程の調整",
+      "channel": "written",
+      "templates": [
+        "schedule",
+        "email_thread"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "infer_intent",
+      "ja": "書き手の意図を読み取る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "infer_next_step",
+      "ja": "次に取るべき行動を判断する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "infer_owner",
+      "ja": "誰が対応すべきかを判断する",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "infer_cause",
+      "ja": "原因・経緯を読み取る",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "infer_risk",
+      "ja": "報告すべき問題を見抜く",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "compare_versions",
+      "ja": "変更前後を読み比べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "written"
+      ]
+    },
+    {
+      "id": "infer_tone",
+      "ja": "相手の姿勢・温度感を読み取る",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer",
+        "subordinate_to_superior"
+      ],
+      "channels": [
+        "written"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "client_escalation": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "subordinate_to_superior"
+    ],
+    "internal_change": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "project_update": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "order_exchange": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "subordinate_to_superior",
+      "peer_to_peer"
+    ],
+    "scheduling": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer"
+    ]
+  }
+}

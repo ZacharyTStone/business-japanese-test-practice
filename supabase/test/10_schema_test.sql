@@ -349,3 +349,94 @@ $$;
 rollback;
 
 \echo 'ALL SCHEMA TESTS PASSED'
+
+-- ---------------------------------------------------------------------------
+-- Documents, dialogue, and the scene image path.
+--
+-- Six of the nine item types carry a stimulus that is not a string. All three
+-- of the things that carry it were added at once and all three are read by the
+-- app through next_items, so all three are asserted here rather than trusted.
+
+do $$
+declare
+    v record;
+begin
+    raise notice 'documents, dialogue, and scene art';
+
+    -- A scene with artwork, and an item set in it.
+    insert into public.scenes (id, label_ja, image_path)
+    values ('scene_test_room', 'テスト用の場面', 'scenes/test_room.webp')
+    on conflict (id) do update set image_path = excluded.image_path;
+
+    insert into public.bundles (id, item_type, level, generator_model, generated_at)
+    values ('bnd_doc', 'sougou_choudokkai', 'J2', 'test', now())
+    on conflict (id) do nothing;
+
+    set constraints all deferred;
+    insert into public.items (
+        id, bundle_id, item_type, level, stem, correct_index, scene_id,
+        documents, dialogue
+    ) values (
+        'itm_doc', 'bnd_doc', 'sougou_choudokkai', 'J2', '資料と会話の問題', 0, 'scene_test_room',
+        '[{"template": "quote_order", "title": "お見積書", "meta": [], "blocks": []}]'::jsonb,
+        '[{"speaker_role": "課長", "text": "数量を増やしてください", "clip_id": "clip_doc"},
+          {"speaker_role": "担当", "text": "承知しました", "clip_id": null}]'::jsonb
+    );
+    insert into public.item_options (item_id, position, text, role, why) values
+        ('itm_doc', 0, '二十脚にする', 'correct', 'これが正解。'),
+        ('itm_doc', 1, '十二脚のまま', 'combines_wrong_pair', 'これは誤り。'),
+        ('itm_doc', 2, '課長が直す', 'stated_by_wrong_speaker', 'これは誤り。'),
+        ('itm_doc', 3, '担当が直す', 'wrong_action_owner', 'これは誤り。');
+    insert into public.audio_clips (id, text, voice, channel, audio_path)
+    values ('clip_doc', '数量を増やしてください', 'manager_m', 'in_person', 'audio/clip_doc.m4a')
+    on conflict (id) do update set audio_path = excluded.audio_path;
+    set constraints all immediate;
+
+    select * into v from public.next_items(20) where id = 'itm_doc';
+
+    perform test.check(jsonb_array_length(v.documents) = 1,
+                       'a document item arrives with its document');
+    perform test.check(v.documents -> 0 ->> 'template' = 'quote_order',
+                       'the document keeps the template it was published with');
+
+    perform test.check(jsonb_array_length(v.dialogue) = 2,
+                       'a conversation item arrives with every turn');
+    perform test.check(v.dialogue -> 0 ->> 'speaker_role' = '課長',
+                       'dialogue turns keep their order and their speaker');
+    perform test.check(v.dialogue -> 0 ->> 'audio_path' = 'audio/clip_doc.m4a',
+                       'a synthesised turn arrives with its audio path resolved');
+    perform test.check(v.dialogue -> 1 ->> 'audio_path' is null,
+                       'an unsynthesised turn says so rather than failing the whole item');
+
+    perform test.check(v.scene_image_path = 'scenes/test_room.webp',
+                       'an item arrives with the path to its scene artwork');
+
+    -- Items whose scene has no artwork yet are the normal case, not an error.
+    perform test.check(
+        (select scene_image_path from public.next_items(20) where id = 'itm_phone') is null,
+        'an item whose scene has no art yet still comes back, with a null path');
+end
+$$;
+
+do $$
+declare
+    n integer;
+begin
+    raise notice 'media buckets';
+
+    select count(*) into n from storage.buckets where id in ('audio', 'scenes');
+    perform test.check(n = 2, 'both media buckets exist');
+
+    perform test.check(
+        (select bool_and(public) from storage.buckets where id in ('audio', 'scenes')),
+        'media is public-read: these are questions, identical for every learner');
+
+    -- The same rule the item library follows. A client that could write here
+    -- could replace the audio of a question with anything at all.
+    select count(*) into n
+      from pg_policies
+     where schemaname = 'storage' and tablename = 'objects'
+       and cmd <> 'SELECT';
+    perform test.check(n = 0, 'no client-side write policy on storage objects');
+end
+$$;

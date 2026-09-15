@@ -1,0 +1,250 @@
+{
+  "item_type": "sougou_choudokkai",
+  "_note": "Original design, not licensed material. The hardest type: a longer exchange AND its documents, where the answer is in neither alone. Every cell therefore assigns both a conversation setting and the document template it has to be read against.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "scenes": {
+    "scene_client_meeting_room": "取引先の会議室",
+    "scene_client_office_sofa": "取引先の応接ソファ",
+    "scene_corridor": "オフィスの廊下",
+    "scene_elevator_hall": "エレベーターホール",
+    "scene_entrance_lobby": "エントランスロビー",
+    "scene_expo_booth": "展示会のブース",
+    "scene_izakaya_table": "居酒屋のテーブル",
+    "scene_meeting_room_table": "社内の会議室のテーブル",
+    "scene_office_desk_pair": "自分の席で向かい合う二人",
+    "scene_office_open_floor": "執務フロア全体",
+    "scene_phone_desk": "デスクで固定電話",
+    "scene_phone_mobile_outside": "外出先で携帯電話",
+    "scene_reception_counter": "自社の受付カウンター",
+    "scene_restaurant_private": "料理店の個室",
+    "scene_seminar_hall": "セミナー会場",
+    "scene_video_call_laptop": "ノートPCでオンライン会議"
+  },
+  "settings": [
+    {
+      "id": "project_meeting",
+      "ja": "案件の打ち合わせと資料",
+      "channel": "in_person",
+      "scenes": [
+        "scene_meeting_room_table"
+      ],
+      "templates": [
+        "meeting_minutes",
+        "progress_report",
+        "schedule"
+      ]
+    },
+    {
+      "id": "client_review",
+      "ja": "取引先との検討会と資料",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room"
+      ],
+      "templates": [
+        "quote_order",
+        "progress_report",
+        "email_thread"
+      ]
+    },
+    {
+      "id": "video_review",
+      "ja": "オンライン会議と共有資料",
+      "channel": "video",
+      "scenes": [
+        "scene_video_call_laptop"
+      ],
+      "templates": [
+        "meeting_minutes",
+        "schedule",
+        "quote_order"
+      ]
+    },
+    {
+      "id": "handover",
+      "ja": "引き継ぎの説明と資料",
+      "channel": "in_person",
+      "scenes": [
+        "scene_office_desk_pair"
+      ],
+      "templates": [
+        "progress_report",
+        "memo_notice",
+        "email_thread"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "identify_action_owner",
+      "ja": "誰が何をするか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "reconcile_document",
+      "ja": "資料と発言の食い違いを解く",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "find_the_deadline",
+      "ja": "期限がいつになったか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "choose_revision",
+      "ja": "どの修正を採るか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "identify_risk",
+      "ja": "何が問題として残るか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "summarise_outcome",
+      "ja": "結局どうなったか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "project_meeting": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "client_review": [
+      "staff_to_client",
+      "peer_to_peer",
+      "subordinate_to_superior"
+    ],
+    "video_review": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "handover": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ]
+  }
+}

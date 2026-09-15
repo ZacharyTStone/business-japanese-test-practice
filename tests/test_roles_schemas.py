@@ -1,8 +1,9 @@
 """Distractor-role enforcement and item validation (fidelity mechanism #1)."""
 import pytest
 
-from bjt import schemas
+from bjt import fixtures, schemas, seedtable
 from bjt.fidelity import roles
+from bjt.generators import GENERATORS
 
 
 def test_fixtures_validate_clean(goi_item, hyougen_item):
@@ -82,3 +83,33 @@ def test_every_item_type_has_role_descriptions():
     for item_type, role_list in roles.DISTRACTOR_ROLES.items():
         for r in role_list:
             assert r in roles.ROLE_DESCRIPTIONS, f"{r} missing a description"
+
+
+# ----- every type is real, not merely declared ----------------------------
+
+@pytest.mark.parametrize("item_type", sorted(GENERATORS))
+def test_every_item_type_has_a_valid_fixture(item_type):
+    """A schema nothing ever constructs is a schema that is only asserted. The
+    fixtures are the thing that proves each of the nine types can actually be
+    filled in — with no API key, before a paid batch run finds out."""
+    assert item_type in fixtures.FIXTURES, f"{item_type} has no fixture"
+    assert schemas.validate_item(item_type, fixtures.FIXTURES[item_type]) == []
+
+
+@pytest.mark.parametrize("item_type", sorted(GENERATORS))
+def test_every_item_type_has_a_seed_table(item_type):
+    """Variety comes from the table. A type without one can only get its
+    variety from the prompt, which is the thing the table exists to replace."""
+    table = seedtable.load(item_type)
+    assert table.cells(), f"{item_type}'s seed table enumerates no valid cells"
+    for level in ("J3", "J2", "J1"):
+        assert table.cells(level), f"{item_type} has no cells at {level}"
+
+
+@pytest.mark.parametrize("item_type", sorted(GENERATORS))
+def test_every_item_type_has_distinct_distractor_roles(item_type):
+    """Three distractors need three distinct roles, so an enum of fewer than
+    three cannot produce a valid item at all."""
+    assert len(roles.DISTRACTOR_ROLES[item_type]) >= 3
+    for role in roles.DISTRACTOR_ROLES[item_type]:
+        assert role in roles.ROLE_DESCRIPTIONS, f"{role} has no description"
