@@ -1,0 +1,46 @@
+[
+  {
+    "_note": "PLACEHOLDER — replace with 3-5 official-style examples INCLUDING their 解説. The 解説 and the per-option `why` are what teach the model to build a trap for a nameable reason rather than writing three vaguely worse answers. Keep them in seeds/, which is gitignored.",
+    "level": "J2",
+    "topic": "受付での来客対応",
+    "scene_id": "scene_reception_counter",
+    "channel": "in_person",
+    "stem": "女の人が男の人に話しています。「お約束の一時からでしたね。第二会議室にご案内いたしますので、こちらの札をお付けください。」この人はこのあと何をしますか。",
+    "options": [
+      {
+        "text": "来客に入館の札を渡して、会議室まで案内する。",
+        "role": "correct",
+        "why": "札を付けるよう頼み、会議室に案内すると自分で述べているので、次の行動はその二つ。"
+      },
+      {
+        "text": "来客の約束の時間を担当者に電話で確認する。",
+        "role": "plausible_but_unmentioned",
+        "why": "受付でよくある行動だが、時間はすでに「一時からでしたね」と確認済みで、電話の話は出ていない。"
+      },
+      {
+        "text": "来客を第二会議室ではなく応接室に通す。",
+        "role": "adjacent_setting",
+        "why": "案内先として自然だが、発話では「第二会議室」と明示されている。"
+      },
+      {
+        "text": "打ち合わせが終わった来客を出口まで見送る。",
+        "role": "right_scene_wrong_moment",
+        "why": "同じ受付での行動だが、これから案内する場面であり、見送りは打ち合わせの後のこと。"
+      }
+    ],
+    "explanation_ja": "「ご案内いたします」「札をお付けください」から、これから会議室へ案内する場面だと分かる。時間の確認はすでに終わっており、案内先も「第二会議室」と言われている。見送りは同じ受付でも、打ち合わせが終わったあとの場面である。",
+    "explanation_en": "The speaker states both next actions: hand over the badge, then guide the visitor.",
+    "vocab_notes": [
+      {
+        "term": "ご案内する",
+        "reading": "ごあんないする",
+        "meaning": "to show someone the way (humble)"
+      },
+      {
+        "term": "札",
+        "reading": "ふだ",
+        "meaning": "badge / tag"
+      }
+    ]
+  }
+]

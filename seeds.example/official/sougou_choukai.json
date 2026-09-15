@@ -1,0 +1,39 @@
+[
+  {
+    "_note": "PLACEHOLDER — paste real official BJT sample items here. They stay in seeds/, which is gitignored; nothing licensed is ever committed.",
+    "stem": "提案書はいつ提出することになりましたか。",
+    "options": [
+      "予定どおり、今週の金曜日に提出する。",
+      "月曜日まで延ばしてもらう。",
+      "価格が固まってから、日を決めて提出する。",
+      "課長が先方に連絡してから提出する。"
+    ],
+    "answer": 0,
+    "level": "J2",
+    "explanation_ja": "いったん月曜への延期が希望として出るが、先輩社員が価格は今日中に出せると述べたことで撤回され、課長が「予定どおりで」と結論づける。会話の途中で出た案がそのまま結論になるとは限らない。",
+    "channel": "in_person",
+    "scene_id": "scene_meeting_room_table",
+    "dialogue": [
+      {
+        "speaker_role": "課長",
+        "text": "みどり物産さんへの提案書、今週の金曜でしたね。間に合いそうですか。"
+      },
+      {
+        "speaker_role": "営業担当（若手）",
+        "text": "申し訳ありません。価格の部分がまだ固まっていなくて、月曜まで延ばしていただけないかと思っております。"
+      },
+      {
+        "speaker_role": "課長",
+        "text": "先方には私から伝えましょうか。"
+      },
+      {
+        "speaker_role": "先輩社員",
+        "text": "いえ、価格は今日中に出せます。金曜のままで大丈夫です。"
+      },
+      {
+        "speaker_role": "課長",
+        "text": "そうですか。では予定どおりで。連絡は要りませんね。"
+      }
+    ]
+  }
+]

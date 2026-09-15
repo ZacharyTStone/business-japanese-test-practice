@@ -1,0 +1,96 @@
+[
+  {
+    "_note": "PLACEHOLDER — replace with 3-5 official-style examples INCLUDING their 解説. The 解説 and the per-option `why` are what teach the model to build a trap for a nameable reason rather than writing three vaguely worse answers. Keep them in seeds/, which is gitignored.",
+    "level": "J2",
+    "topic": "打ち合わせの日程変更",
+    "scene_id": "scene_phone_desk",
+    "channel": "phone",
+    "document": {
+      "template": "schedule",
+      "title": "第二会議室 予約状況（四月第二週）",
+      "meta": [
+        {
+          "label": "期間",
+          "value": "四月八日（月）〜四月十二日（金）"
+        },
+        {
+          "label": "作成者",
+          "value": "総務部 川口"
+        }
+      ],
+      "blocks": [
+        {
+          "type": "table",
+          "columns": [
+            "日付",
+            "十時〜十二時",
+            "十三時〜十五時",
+            "十五時〜十七時"
+          ],
+          "rows": [
+            [
+              "四月九日（火）",
+              "経理部 月次",
+              "空き",
+              "空き"
+            ],
+            [
+              "四月十日（水）",
+              "空き",
+              "営業部 定例",
+              "空き"
+            ],
+            [
+              "四月十一日（木）",
+              "採用面接",
+              "採用面接",
+              "空き"
+            ]
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "text": "十一日（木）の十五時以降は、内装工事のため使用できません。"
+        }
+      ]
+    },
+    "stem": "取引先から電話がありました。「水曜日は終日出られなくなってしまいまして。木曜の午後、遅い時間でしたら伺えます。」打ち合わせはいつになりますか。",
+    "options": [
+      {
+        "text": "四月九日（火）の十五時から",
+        "role": "correct",
+        "why": "木曜の十五時以降は工事で使えないため、先方の条件に合う空きは残らず、空いている火曜の午後に回すことになる。"
+      },
+      {
+        "text": "四月十一日（木）の十五時から",
+        "role": "ignores_the_spoken_change",
+        "why": "予約表の上では空きだが、工事のため使用できないと注記されており、この枠は取れない。"
+      },
+      {
+        "text": "四月十日（水）の十五時から",
+        "role": "reads_wrong_row",
+        "why": "表では空いている枠だが、先方が終日出られないと言っているのは、まさにこの水曜日。"
+      },
+      {
+        "text": "四月十一日（木）の十時から",
+        "role": "wrong_timeframe",
+        "why": "木曜ではあるが午前で、「午後の遅い時間」という先方の条件から外れ、採用面接も入っている。"
+      }
+    ],
+    "explanation_ja": "先方の条件は「水曜は不可」「木曜の午後の遅い時間なら可」の二つ。木曜十五時以降は工事で使用できないため、条件を満たす枠は木曜には残らない。空いていて条件に反しないのは火曜の午後で、これが答えになる。予約表の「空き」だけを見ると、注記の工事を見落とす。",
+    "explanation_en": "Thursday's late slot is blocked by the building work note, so the only workable free slot is Tuesday afternoon.",
+    "vocab_notes": [
+      {
+        "term": "終日",
+        "reading": "しゅうじつ",
+        "meaning": "all day"
+      },
+      {
+        "term": "内装工事",
+        "reading": "ないそうこうじ",
+        "meaning": "interior building work"
+      }
+    ]
+  }
+]

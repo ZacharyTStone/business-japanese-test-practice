@@ -1,0 +1,19 @@
+# Sample subset — replace with a complete, authoritative tier list.
+# Any whitespace-separated kanji; non-kanji is ignored.
+#
+# The gate enforces a level's ceiling only when EVERY tier up to it is loaded
+# (J3→N3, J2→N2, J1→N1). A partial file like this one leaves the gate
+# permissive, and `bjt quality` says so rather than claiming a strictness it
+# does not have. That is the point of shipping these at all: the tier-loading
+# logic can be exercised, and the report tells the truth about what is missing.
+愛 案 以 位 囲 委 化 加 可 果 課 過 解 格 確 額 刊 完 官 感
+観 関 願 危 喜 寄 規 技 義 議 客 求 救 給 居 許 境 共 協 鏡
+強 経 景 結 件 健 券 権 験 元 限 現 減 故 個 護 光 功 効 厚
+康 告 婚 差 査 際 在 財 罪 殺 察 参 散 産 賛 残 誌 支 資 似
+児 治 示 識 質 舎 謝 種 収 周 祝 順 初 助 承 招 証 象 賞 常
+情 職 織 信 申 深 神 進 数 制 性 政 精 製 税 責 績 接 設 絶
+舌 選 然 争 想 総 造 像 増 則 測 属 損 退 貸 態 団 断 築 貯
+帳 張 提 程 適 敵 展 徒 努 統 導 得 毒 独 任 燃 能 破 判 版
+比 悲 費 非 備 評 貧 婦 富 布 府 副 復 複 仏 粉 編 弁 保 墓
+報 豊 防 貿 暴 満 未 脈 務 夢 迷 綿 輸 余 預 容 略 留 領 類
+例 歴 連 老 労 録

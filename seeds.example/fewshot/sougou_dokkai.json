@@ -1,0 +1,87 @@
+[
+  {
+    "_note": "PLACEHOLDER — replace with 3-5 official-style examples INCLUDING their 解説. The 解説 and the per-option `why` are what teach the model to build a trap for a nameable reason rather than writing three vaguely worse answers. Keep them in seeds/, which is gitignored.",
+    "level": "J1",
+    "topic": "取引先からの問い合わせへの対応",
+    "document": {
+      "template": "email_thread",
+      "title": "Re: 保守契約の更新について",
+      "meta": [
+        {
+          "label": "差出人",
+          "value": "みどり物産 購買部 田中"
+        },
+        {
+          "label": "宛先",
+          "value": "山川商事 営業部 佐藤様"
+        },
+        {
+          "label": "件名",
+          "value": "Re: 保守契約の更新について"
+        },
+        {
+          "label": "日時",
+          "value": "四月十二日 十七時四十分"
+        }
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "佐藤様　お世話になっております。みどり物産の田中でございます。"
+        },
+        {
+          "type": "paragraph",
+          "text": "先日いただいた更新のご案内につきまして、社内で検討いたしました。条件そのものに異存はございませんが、稟議の関係で、月末までに正式なご回答を差し上げることが難しくなりました。"
+        },
+        {
+          "type": "paragraph",
+          "text": "つきましては、現行の契約を一か月だけ延長していただくことは可能でしょうか。難しいようでしたら、こちらの進め方を改めて検討いたします。"
+        },
+        {
+          "type": "quoted_message",
+          "sender": "山川商事 佐藤",
+          "sent_at": "四月八日 十時十五分",
+          "depth": 1,
+          "text": "保守契約の更新期限は四月末でございます。更新条件は昨年度と同一です。期限を過ぎますと、いったん契約が切れる形になりますのでご注意ください。"
+        }
+      ]
+    },
+    "stem": "このメールを受けて、佐藤さんがまずすべきことは何ですか。",
+    "options": [
+      {
+        "text": "現行契約を一か月延長できるかを社内で確認し、その可否を回答する。",
+        "role": "correct",
+        "why": "先方は延長の可否を尋ねており、その答えによって先方の進め方が変わるため、まず確認して返すべきこと。"
+      },
+      {
+        "text": "更新条件を見直し、値引きを含む新しい案を提示する。",
+        "role": "unsupported_but_plausible",
+        "why": "商談としてはありうるが、先方は「条件そのものに異存はない」と書いており、条件は論点になっていない。"
+      },
+      {
+        "text": "四月末で契約がいったん切れることを、改めて知らせる。",
+        "role": "stated_but_answers_different_question",
+        "why": "引用部分にある事実だが、先方はそれを踏まえたうえで延長を尋ねており、繰り返しても質問に答えていない。"
+      },
+      {
+        "text": "稟議が通るまで待ってから、正式な回答を受け取る。",
+        "role": "wrong_timeframe",
+        "why": "先方が待てるかどうかを聞いているのは今であり、稟議の結果を待つ判断そのものが、まだ返せていない。"
+      }
+    ],
+    "explanation_ja": "先方のメールの中心は「現行契約を一か月延長できるか」という問いで、条件への異存はないと明記されている。契約が切れることは引用部分ですでに伝えた内容であり、繰り返しても問いの答えにはならない。延長の可否によって先方の進め方が変わると書かれている以上、まず社内で確認して回答するのが先。",
+    "explanation_en": "The email's actual question is whether a one-month extension is possible; everything else is already settled or already said.",
+    "vocab_notes": [
+      {
+        "term": "稟議",
+        "reading": "りんぎ",
+        "meaning": "internal circulated approval"
+      },
+      {
+        "term": "異存",
+        "reading": "いぞん",
+        "meaning": "objection"
+      }
+    ]
+  }
+]
