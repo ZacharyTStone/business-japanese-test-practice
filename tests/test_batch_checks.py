@@ -6,7 +6,7 @@ import pathlib
 
 import pytest
 
-from bjt import batch, config
+from bjt import batch, config, seedtable
 from bjt.fidelity import dedupe
 
 BATCHES = pathlib.Path(__file__).resolve().parent.parent / "batches"
@@ -87,10 +87,42 @@ def test_every_committed_batch_uses_every_distractor_role(path):
 
 
 @pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
-def test_every_committed_batch_reuses_its_scenes(path):
-    """Fewer scenes than items is the point — images are a shared bank."""
-    scenes = [it["scene_id"] for it in batch.load(path)["items"] if it.get("scene_id")]
-    assert scenes and len(set(scenes)) < len(scenes)
+def test_every_committed_batch_draws_its_scenes_from_the_bank(path):
+    """Every picture an item asks for is one somebody could commission.
+
+    This is the per-bundle half of the shared-bank rule. The other half — that
+    the bank is actually smaller than the library — is asserted across the whole
+    library below, because it is not true of one small batch and should not be:
+    a batch of six spread across six settings cannot repeat a scene, and
+    contorting the content so it could would be writing items to suit a test.
+
+    Types with no scene bank are exempt rather than excused: a reading item has
+    no picture to share, and demanding one would be demanding art nobody should
+    draw.
+    """
+    bundle = batch.load(path)
+    bank = set(seedtable.load(bundle["item_type"]).scene_bank)
+    if not bank:
+        pytest.skip(f"{bundle['item_type']} has no scene bank — its items are read")
+    scenes = [it["scene_id"] for it in bundle["items"] if it.get("scene_id")]
+    assert scenes, "a type with a scene bank should set scene_id on its items"
+    assert set(scenes) <= bank, f"not in the bank: {sorted(set(scenes) - bank)}"
+
+
+def test_the_library_reuses_its_scenes():
+    """The shared bank, as an economic fact rather than an aspiration.
+
+    A thousand items cannot have a thousand drawings — but the reason that
+    matters is quality, not cost: because one picture serves many items, the
+    picture cannot contain the answer, and an illustration specific enough to
+    give the situation away would make the listening optional.
+    """
+    scenes = [it["scene_id"] for _, it in _library() if it.get("scene_id")]
+    assert scenes
+    assert len(set(scenes)) < len(scenes) / 2, (
+        f"{len(set(scenes))} scenes for {len(scenes)} items — that is close to "
+        "one drawing each, which is the thing the bank exists to avoid"
+    )
 
 
 # ----- the library as a whole ---------------------------------------------
@@ -307,7 +339,16 @@ def test_spent_cells_are_readable_without_the_local_database():
 
 
 def test_spent_cells_are_scoped_to_one_item_type():
-    assert batch.spent_cell_ids("goi_bunpou") == set()
+    """A cell id names a cell within its own table; two types can legitimately
+    enumerate the same setting and function, so the ledger must not pool them."""
+    for item_type in ("hatsugen_choukai", "goi_bunpou"):
+        spent = batch.spent_cell_ids(item_type)
+        committed = {
+            (it.get("seed_cell") or {}).get("id")
+            for name, it in _library()
+            if name.startswith(f"{item_type}_")
+        }
+        assert spent == committed
 
 
 def test_source_files_are_not_counted_as_bundles(tmp_path, monkeypatch):
@@ -333,3 +374,67 @@ def test_a_damaged_bundle_does_not_take_the_ledger_down(tmp_path, monkeypatch):
     )
     (tmp_path / "t_J2_002.json").write_text("{ not json", encoding="utf-8")
     assert batch.spent_cell_ids("t") == {"x@J2"}
+
+
+def test_a_small_batch_that_always_answers_a_is_caught(bundle):
+    """The share rule needs eight items before a 45% lean means anything, so a
+    batch of six with every answer in the same place used to pass. "The answer
+    is always A" is the most exploitable pattern there is, and a new item type's
+    first batch is exactly the size that slipped through."""
+    bundle["items"] = bundle["items"][:6]
+    for item in bundle["items"]:
+        options = item["options"]
+        correct = options.pop(item["correct_index"])
+        item["options"] = [correct, *options]
+        item["correct_index"] = 0
+
+    report = batch.check_bundle(bundle)
+    check = next(c for c in report.checks if c.name == "answer position spread")
+    assert check.status == "warn"
+    assert "only ever lands in 1 of 4" in check.detail
+
+
+def test_two_positions_out_of_four_is_still_a_pattern(bundle):
+    for i, item in enumerate(bundle["items"][:6]):
+        options = item["options"]
+        correct = options.pop(item["correct_index"])
+        target = i % 2
+        options.insert(target, correct)
+        item["options"] = options
+        item["correct_index"] = target
+    bundle["items"] = bundle["items"][:6]
+    check = next(c for c in batch.check_bundle(bundle).checks
+                 if c.name == "answer position spread")
+    assert check.status == "warn"
+
+
+def test_three_positions_is_enough_for_a_small_batch(bundle):
+    for i, item in enumerate(bundle["items"][:6]):
+        options = item["options"]
+        correct = options.pop(item["correct_index"])
+        target = i % 3
+        options.insert(target, correct)
+        item["options"] = options
+        item["correct_index"] = target
+    bundle["items"] = bundle["items"][:6]
+    check = next(c for c in batch.check_bundle(bundle).checks
+                 if c.name == "answer position spread")
+    assert check.status == "pass"
+
+
+def test_a_document_item_re_validates_after_bundling():
+    """The bundle normalises documents to a list; the validator checks the
+    type's own field, which is singular for three of the four. Left
+    untranslated, every committed document item failed its own re-validation
+    with "missing field: document" while being perfectly well formed."""
+    from bjt import fixtures
+
+    for item_type in ("joukyou_haaku", "shiryou_choudokkai", "sougou_dokkai",
+                      "sougou_choudokkai", "sougou_choukai"):
+        bundle = batch.build_bundle(
+            item_type, fixtures.FIXTURES[item_type]["level"],
+            [fixtures.FIXTURES[item_type]], "test",
+        )
+        report = batch.check_bundle(bundle)
+        validity = next(c for c in report.checks if c.name == "item validity")
+        assert validity.status == "pass", f"{item_type}: {validity.detail}"

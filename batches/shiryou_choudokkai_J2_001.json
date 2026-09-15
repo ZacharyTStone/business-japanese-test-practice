@@ -1,0 +1,707 @@
+{
+  "bundle_version": 2,
+  "item_type": "shiryou_choudokkai",
+  "level": "J2",
+  "generated_at": "2026-09-15T17:56:20+00:00",
+  "generator_model": "author-composed",
+  "items": [
+    {
+      "id": "013fa68b2a",
+      "item_type": "shiryou_choudokkai",
+      "level": "J2",
+      "seed_cell": {
+        "id": "quotation+staff_to_visitor+apply_spoken_change@J2",
+        "setting": "quotation",
+        "relation": "staff_to_visitor",
+        "function": "apply_spoken_change",
+        "level": "J2",
+        "channel": "in_person"
+      },
+      "topic": "見積書の数量を口頭で直す",
+      "stem": "来客がこう言いました。「用紙は四十箱で結構です。ただ、インクのほうを倍にしていただけますか。ファイルはそのままで。」インクは何本になりますか。",
+      "options": [
+        {
+          "text": "二十四本",
+          "role": "ignores_the_spoken_change",
+          "why": "見積書に書かれている数量のままで、口頭で告げられた「倍に」を反映していない。"
+        },
+        {
+          "text": "八十箱",
+          "role": "reads_wrong_row",
+          "why": "倍にする計算は合っているが、対象が用紙の行で、しかも用紙は「四十箱で結構」と据え置かれている。"
+        },
+        {
+          "text": "四十八本",
+          "role": "correct",
+          "why": "見積書のインクは二十四本で、それを倍にするので四十八本。"
+        },
+        {
+          "text": "二百四十冊",
+          "role": "surface_keyword_match",
+          "why": "ファイルの行を倍にした数で、ファイルは「そのままで」と明言されている。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "口頭の変更はインクだけで、用紙とファイルは据え置き。資料の二十四本を倍にして四十八本になる。資料だけを読むと二十四本、変更だけを聞くと別の行を倍にしてしまう。どちらか一方では答えが決まらない。",
+      "explanation_en": "Only one row changes; the document supplies the base number and the audio the operation.",
+      "vocab_notes": [
+        {
+          "term": "据え置き",
+          "reading": "すえおき",
+          "meaning": "leaving unchanged"
+        },
+        {
+          "term": "倍",
+          "reading": "ばい",
+          "meaning": "double"
+        }
+      ],
+      "audio": {
+        "narration": "097a5d3677f03767",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "quote_order",
+          "title": "お見積書（事務用品）",
+          "meta": [
+            {
+              "label": "宛先",
+              "value": "あさひ工業株式会社 御中"
+            },
+            {
+              "label": "発行者",
+              "value": "山川商事株式会社 営業部"
+            },
+            {
+              "label": "発行日",
+              "value": "九月二日"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "品名",
+                "数量",
+                "単価",
+                "金額"
+              ],
+              "rows": [
+                [
+                  "コピー用紙（A4）",
+                  "40箱",
+                  "2,500円",
+                  "100,000円"
+                ],
+                [
+                  "ファイル",
+                  "120冊",
+                  "180円",
+                  "21,600円"
+                ],
+                [
+                  "インク",
+                  "24本",
+                  "3,200円",
+                  "76,800円"
+                ]
+              ]
+            },
+            {
+              "type": "key_values",
+              "pairs": [
+                {
+                  "label": "納入希望日",
+                  "value": "九月二十日"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_office_desk_pair",
+      "channel": "in_person"
+    },
+    {
+      "id": "f760e4e239",
+      "item_type": "shiryou_choudokkai",
+      "level": "J2",
+      "seed_cell": {
+        "id": "delivery_email+subordinate_to_superior+find_the_date@J2",
+        "setting": "delivery_email",
+        "relation": "subordinate_to_superior",
+        "function": "find_the_date",
+        "level": "J2",
+        "channel": "phone"
+      },
+      "topic": "納期がいつになるか",
+      "stem": "上司からこう聞かれました。「あの品物、結局いつ着くことになっているんですか。十八日が土曜だとかで、そのあと二十日の日曜も挟みますよね。」品物はいつ届きますか。",
+      "options": [
+        {
+          "text": "九月二十四日",
+          "role": "correct",
+          "why": "十八日（土）の翌々営業日。十九日（日）、二十日（日曜と述べられた日）、二十一日と二十二日の休業日を飛ばすと、営業日は二十三日と二十四日になる。"
+        },
+        {
+          "text": "九月二十日",
+          "role": "ignores_the_spoken_change",
+          "why": "出荷の二日後をそのまま数えた日で、上司が述べた曜日も、メールの休業日も飛ばしていない。"
+        },
+        {
+          "text": "九月十八日",
+          "role": "wrong_timeframe",
+          "why": "これは出荷日で、届く日ではない。"
+        },
+        {
+          "text": "九月二十二日",
+          "role": "reads_wrong_row",
+          "why": "メールに出てくる日付ではあるが、それは休業日として挙げられた日で、届く日ではない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "「翌々営業日」は営業日で二日後という意味で、休日と休業日は数えない。上司の発言で十八日が土曜、二十日が日曜と分かり、メールで二十一日と二十二日が休業日と分かる。両方を合わせて初めて二十四日が出る。",
+      "explanation_en": "The email gives the closures, the caller gives the weekend; neither alone fixes the date.",
+      "vocab_notes": [
+        {
+          "term": "出荷",
+          "reading": "しゅっか",
+          "meaning": "shipment"
+        },
+        {
+          "term": "休業日",
+          "reading": "きゅうぎょうび",
+          "meaning": "non-working day"
+        }
+      ],
+      "audio": {
+        "narration": "4a2810d17831a2e5",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "email_external",
+          "title": "納品日のご連絡",
+          "meta": [
+            {
+              "label": "差出人",
+              "value": "みどり物産 出荷課 田中"
+            },
+            {
+              "label": "宛先",
+              "value": "山川商事 営業部 佐藤様"
+            },
+            {
+              "label": "件名",
+              "value": "納品日のご連絡"
+            },
+            {
+              "label": "日時",
+              "value": "九月八日 十六時"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "ご注文の品は、九月十八日に出荷いたします。"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "出荷の翌々営業日にお届けの予定です。",
+                "九月二十一日と二十二日は、当社の休業日にあたります。"
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone"
+    },
+    {
+      "id": "353e5d008b",
+      "item_type": "shiryou_choudokkai",
+      "level": "J2",
+      "seed_cell": {
+        "id": "schedule_sheet+peer_to_peer+choose_the_option@J2",
+        "setting": "schedule_sheet",
+        "relation": "peer_to_peer",
+        "function": "choose_the_option",
+        "level": "J2",
+        "channel": "phone"
+      },
+      "topic": "条件に合う時間を選ぶ",
+      "stem": "同僚から電話がありました。「佐藤さんとの打ち合わせ、一時間でいいので来週入れたいんです。私は午前中がずっと埋まっていて、あと木曜は一日休みを取ります。」いつにすればいいですか。",
+      "options": [
+        {
+          "text": "十八日（木）の午後",
+          "role": "ignores_the_spoken_change",
+          "why": "予定表では空いているが、同僚が木曜は一日休みを取ると述べている。"
+        },
+        {
+          "text": "十七日（水）の午前",
+          "role": "reads_wrong_row",
+          "why": "佐藤は空いているが、同僚の午前はずっと埋まっている。"
+        },
+        {
+          "text": "十八日（木）の午前",
+          "role": "surface_keyword_match",
+          "why": "表で唯一の「空き」が二つ並ぶ日だが、午前も木曜も同僚の条件に反している。"
+        },
+        {
+          "text": "十六日（火）の午後",
+          "role": "correct",
+          "why": "同僚は午前が不可、木曜は終日不可。残る午後の空きは火曜だけで、水曜の午後は佐藤が外出している。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "予定表は佐藤の都合しか示しておらず、同僚の条件（午前は不可、木曜は不可）は電話でしか分からない。両方を重ねると、残るのは火曜の午後だけ。片方だけでは二つ以上の候補が残る。",
+      "explanation_en": "The sheet shows one person's availability; the call supplies the other's.",
+      "vocab_notes": [
+        {
+          "term": "終日",
+          "reading": "しゅうじつ",
+          "meaning": "all day"
+        },
+        {
+          "term": "埋まる",
+          "reading": "うまる",
+          "meaning": "to be booked up"
+        }
+      ],
+      "audio": {
+        "narration": "b7dc5745a7eb9f0c",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "佐藤の来週の予定",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "九月十五日（月）〜十九日（金）"
+            },
+            {
+              "label": "作成者",
+              "value": "営業部 佐藤"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "日付",
+                "午前",
+                "午後"
+              ],
+              "rows": [
+                [
+                  "十六日（火）",
+                  "社内会議",
+                  "空き"
+                ],
+                [
+                  "十七日（水）",
+                  "空き",
+                  "外出（終日）"
+                ],
+                [
+                  "十八日（木）",
+                  "空き",
+                  "空き"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone"
+    },
+    {
+      "id": "a58a148f1d",
+      "item_type": "shiryou_choudokkai",
+      "level": "J2",
+      "seed_cell": {
+        "id": "meeting_handout+subordinate_to_superior+find_the_conflict@J2",
+        "setting": "meeting_handout",
+        "relation": "subordinate_to_superior",
+        "function": "find_the_conflict",
+        "level": "J2",
+        "channel": "in_person"
+      },
+      "topic": "資料と発言の食い違い",
+      "stem": "上司が資料を見ながらこう言いました。「先方の話では、A-205は二百個に増えて、納期も一週間前倒しになったはずなんですがね。B-012は変更なしだそうです。」資料と食い違っているのはどこですか。",
+      "options": [
+        {
+          "text": "A-205の数量だけ",
+          "role": "wrong_timeframe",
+          "why": "数量の食い違いは正しいが、納期も一週間前倒しと述べられており、片方だけでは足りない。"
+        },
+        {
+          "text": "A-205の数量と納期の両方",
+          "role": "correct",
+          "why": "資料は百五十個・九月十七日だが、上司の話では二百個・一週間前倒しで、二つとも合っていない。"
+        },
+        {
+          "text": "A-101の数量",
+          "role": "reads_wrong_row",
+          "why": "隣の行の品番で、A-101については何も述べられていない。"
+        },
+        {
+          "text": "B-012の納期",
+          "role": "ignores_the_spoken_change",
+          "why": "B-012は「変更なし」と明言されており、食い違ってはいない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "食い違いを問う問題では、変更が何項目あるかまで数える必要がある。A-205は数量と納期の二つが動き、B-012は変更なしと明言されている。数量だけを見つけて満足すると、納期の食い違いを落とす。",
+      "explanation_en": "Two fields moved on one row; finding one of them is not finding the conflict.",
+      "vocab_notes": [
+        {
+          "term": "前倒し",
+          "reading": "まえだおし",
+          "meaning": "bringing forward"
+        },
+        {
+          "term": "品番",
+          "reading": "ひんばん",
+          "meaning": "product number"
+        }
+      ],
+      "audio": {
+        "narration": "ea14344732d61d04",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "quote_order",
+          "title": "九月分 発注一覧",
+          "meta": [
+            {
+              "label": "宛先",
+              "value": "山川商事株式会社 御中"
+            },
+            {
+              "label": "発行者",
+              "value": "みどり物産 購買部"
+            },
+            {
+              "label": "発行日",
+              "value": "九月一日"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "品番",
+                "数量",
+                "納期"
+              ],
+              "rows": [
+                [
+                  "A-101",
+                  "300個",
+                  "九月十日"
+                ],
+                [
+                  "A-205",
+                  "150個",
+                  "九月十七日"
+                ],
+                [
+                  "B-012",
+                  "80個",
+                  "九月二十四日"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person"
+    },
+    {
+      "id": "0c022ece93",
+      "item_type": "shiryou_choudokkai",
+      "level": "J2",
+      "seed_cell": {
+        "id": "video_shared_doc+junior_to_senior+find_the_quantity@J2",
+        "setting": "video_shared_doc",
+        "relation": "junior_to_senior",
+        "function": "find_the_quantity",
+        "level": "J2",
+        "channel": "video"
+      },
+      "topic": "追加分を足した金額",
+      "stem": "先輩が画面を見ながらこう言いました。「二名追加でお願いすることになりました。教材もその分お願いします。」全部でいくらになりますか。",
+      "options": [
+        {
+          "text": "二十万円",
+          "role": "ignores_the_spoken_change",
+          "why": "資料の合計そのままで、二名の追加を反映していない。"
+        },
+        {
+          "text": "二十一万六千円",
+          "role": "reads_wrong_row",
+          "why": "研修費だけを十二名分にした額で、教材費の行が抜けている。"
+        },
+        {
+          "text": "二十四万四千円",
+          "role": "surface_keyword_match",
+          "why": "追加分を単価ではなく一人あたり二万四千円で計算した額で、注記の「同じ単価で」に反している。"
+        },
+        {
+          "text": "二十四万円",
+          "role": "correct",
+          "why": "十二名分で、研修が一万八千円×十二の二十一万六千円、教材が二千円×十二の二万四千円。合わせて二十四万円。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "追加は二名で、注記により単価は据え置き。研修と教材の両方が人数に連動するので、どちらも十二名分にする。片方だけを直すと二十一万六千円、何も直さないと二十万円になる。",
+      "explanation_en": "Both rows scale with headcount; the note fixes the unit price.",
+      "vocab_notes": [
+        {
+          "term": "単価",
+          "reading": "たんか",
+          "meaning": "unit price"
+        },
+        {
+          "term": "承る",
+          "reading": "うけたまわる",
+          "meaning": "to accept (humble)"
+        }
+      ],
+      "audio": {
+        "narration": "c53b6bf06b1657c4",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "quote_order",
+          "title": "研修費用のお見積り",
+          "meta": [
+            {
+              "label": "宛先",
+              "value": "山川商事株式会社 御中"
+            },
+            {
+              "label": "発行者",
+              "value": "みらい研修センター"
+            },
+            {
+              "label": "発行日",
+              "value": "九月三日"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "内容",
+                "人数",
+                "単価",
+                "金額"
+              ],
+              "rows": [
+                [
+                  "基礎研修（二日間）",
+                  "10名",
+                  "18,000円",
+                  "180,000円"
+                ],
+                [
+                  "教材費",
+                  "10名",
+                  "2,000円",
+                  "20,000円"
+                ]
+              ]
+            },
+            {
+              "type": "callout",
+              "tone": "info",
+              "text": "追加のお申し込みは、一名につき同じ単価で承ります。"
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video"
+    },
+    {
+      "id": "d0694b8a01",
+      "item_type": "shiryou_choudokkai",
+      "level": "J2",
+      "seed_cell": {
+        "id": "video_shared_doc+subordinate_to_superior+find_the_owner@J2",
+        "setting": "video_shared_doc",
+        "relation": "subordinate_to_superior",
+        "function": "find_the_owner",
+        "level": "J2",
+        "channel": "video"
+      },
+      "topic": "誰が担当しているか",
+      "stem": "上司が画面を見ながらこう言いました。「あさひ工業から急ぎの連絡が来ているんですが、誰に回せばいいですか。」",
+      "options": [
+        {
+          "text": "川口",
+          "role": "correct",
+          "why": "あさひ工業の担当は川口と明記されており、急ぎであることは担当を変えない。"
+        },
+        {
+          "text": "佐藤",
+          "role": "reads_wrong_row",
+          "why": "佐藤が担当するのはみどり物産で、あさひ工業ではない。"
+        },
+        {
+          "text": "山本",
+          "role": "surface_keyword_match",
+          "why": "同じ一覧に並んでいるが、担当はひかり製作所。"
+        },
+        {
+          "text": "急ぎなので川口ではなく佐藤",
+          "role": "ignores_the_spoken_change",
+          "why": "引用部分の「急ぎの件は川口さんに」は佐藤が持つ案件についての話で、向きが逆になっている。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "一覧のとおり、あさひ工業の担当は川口。引用されている佐藤のメールは、自分が持つみどり物産について急ぎなら川口に頼むことがあると述べたもので、あさひ工業の担当を動かす話ではない。引用部分の向きを読み違えると逆になる。",
+      "explanation_en": "The quoted message hands work one way; reading it backwards inverts the answer.",
+      "vocab_notes": [
+        {
+          "term": "担当割り",
+          "reading": "たんとうわり",
+          "meaning": "assignment of accounts"
+        },
+        {
+          "term": "各位",
+          "reading": "かくい",
+          "meaning": "all concerned (in a salutation)"
+        }
+      ],
+      "audio": {
+        "narration": "e32b473e7174bd9f",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "email_thread",
+          "title": "Re: 九月の担当割り",
+          "meta": [
+            {
+              "label": "差出人",
+              "value": "営業部 川口"
+            },
+            {
+              "label": "宛先",
+              "value": "営業部 各位"
+            },
+            {
+              "label": "件名",
+              "value": "Re: 九月の担当割り"
+            },
+            {
+              "label": "日時",
+              "value": "九月一日 九時"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "九月の担当は次のとおりです。"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "みどり物産：佐藤",
+                "あさひ工業：川口",
+                "ひかり製作所：山本"
+              ]
+            },
+            {
+              "type": "quoted_message",
+              "sender": "営業部 佐藤",
+              "sent_at": "八月二十八日 十七時",
+              "depth": 1,
+              "text": "九月は研修で不在の日が多いため、みどり物産は引き続き私が持ちますが、急ぎの件は川口さんにお願いすることがあるかもしれません。"
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "097a5d3677f03767",
+      "item_id": "013fa68b2a",
+      "kind": "narration",
+      "index": null,
+      "text": "来客がこう言いました。「用紙は四十箱で結構です。ただ、インクのほうを倍にしていただけますか。ファイルはそのままで。」インクは何本になりますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4a2810d17831a2e5",
+      "item_id": "f760e4e239",
+      "kind": "narration",
+      "index": null,
+      "text": "上司からこう聞かれました。「あの品物、結局いつ着くことになっているんですか。十八日が土曜だとかで、そのあと二十日の日曜も挟みますよね。」品物はいつ届きますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b7dc5745a7eb9f0c",
+      "item_id": "353e5d008b",
+      "kind": "narration",
+      "index": null,
+      "text": "同僚から電話がありました。「佐藤さんとの打ち合わせ、一時間でいいので来週入れたいんです。私は午前中がずっと埋まっていて、あと木曜は一日休みを取ります。」いつにすればいいですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ea14344732d61d04",
+      "item_id": "a58a148f1d",
+      "kind": "narration",
+      "index": null,
+      "text": "上司が資料を見ながらこう言いました。「先方の話では、A-205は二百個に増えて、納期も一週間前倒しになったはずなんですがね。B-012は変更なしだそうです。」資料と食い違っているのはどこですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c53b6bf06b1657c4",
+      "item_id": "0c022ece93",
+      "kind": "narration",
+      "index": null,
+      "text": "先輩が画面を見ながらこう言いました。「二名追加でお願いすることになりました。教材もその分お願いします。」全部でいくらになりますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e32b473e7174bd9f",
+      "item_id": "d0694b8a01",
+      "kind": "narration",
+      "index": null,
+      "text": "上司が画面を見ながらこう言いました。「あさひ工業から急ぎの連絡が来ているんですが、誰に回せばいいですか。」",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_meeting_room_table",
+    "scene_office_desk_pair",
+    "scene_phone_desk",
+    "scene_video_call_laptop"
+  ]
+}

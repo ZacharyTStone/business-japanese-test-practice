@@ -289,9 +289,18 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
         if 0 <= ci < 4:
             counts[ci] += 1
     worst_share = max(counts) / n
+    positions_used = sum(1 for c in counts if c)
+    # Two rules, because one of them was blind to exactly the batch a new item
+    # type starts as. The share rule needs eight items before a 45% lean means
+    # anything; a batch of six with every answer at A sailed past it, and
+    # "the answer is always A" is the most exploitable pattern there is.
     if n >= 8 and worst_share > 0.45:
         add("answer position spread", "warn",
             f"positions {counts} — {worst_share:.0%} on one position; reshuffle")
+    elif n >= 4 and positions_used < 3:
+        add("answer position spread", "warn",
+            f"positions {counts} — the answer only ever lands in {positions_used} "
+            f"of 4 places; reshuffle")
     else:
         add("answer position spread", "pass", f"positions {counts}")
 
@@ -344,23 +353,61 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
                 f"not in the bank: {unknown}" if unknown
                 else f"{n_scenes} scene(s) reused across {n} items")
 
-    # 9. The audio manifest should be smaller than 5 clips × items — shared
-    #    utterances are supposed to collapse into one file.
+    # 9. Shared utterances are supposed to collapse into one file, so the
+    #    manifest should be smaller than the clips the items ask for between
+    #    them. The old form of this check assumed five clips per item —
+    #    narration plus four spoken options — which is true of exactly one of
+    #    the nine types. A dialogue item plans more than five and made the
+    #    check report a manifest larger than its own stated maximum; a reading
+    #    item plans none.
     clips = bundle.get("audio_manifest", [])
-    add("audio manifest", "pass",
-        f"{len(clips)} clip(s) for {n} items (max would be {n * 5})")
+    planned = sum(
+        len(tts_plan.plan_item(_as_generator_shape(it), it["id"])) for it in items
+    )
+    if not planned:
+        add("audio manifest", "pass", "no audio — this item type is read, not heard")
+    elif len(clips) > planned:
+        add("audio manifest", "fail",
+            f"{len(clips)} clip(s) for {planned} planned — the manifest has entries "
+            "no item asked for")
+    else:
+        saved = planned - len(clips)
+        add("audio manifest", "pass",
+            f"{len(clips)} clip(s) for {n} items"
+            + (f" — {saved} shared utterance(s) collapsed" if saved else ""))
 
     return report
 
 
 def _as_generator_shape(bundle_item: dict) -> dict:
-    """A bundle item has the answer as an index; validate_item wants the roles
-    on the options, which the bundle keeps too. This just drops bundle-only keys
-    so the validator sees what the generator emitted."""
+    """Turn a bundle item back into what the generator emitted, so the same
+    validator can be re-run over it.
+
+    Mostly this drops bundle-only keys. The one real translation is documents:
+    the bundle normalises them to a list under `documents`, because everything
+    downstream would rather deal with one shape — but the validator checks the
+    type's own field, singular for the three types that have exactly one. Left
+    untranslated, every committed document item failed its own re-validation
+    with "missing field: document" while being perfectly well formed.
+    """
     it = dict(bundle_item)
     it.pop("correct_index", None)
     it.pop("audio", None)
     it.pop("id", None)
+
+    field = schemas.DOCUMENT_FIELDS.get(it.get("item_type", ""))
+    documents = it.pop("documents", None)
+    if field and documents is not None:
+        it[field] = documents if field == "documents" else (documents or [None])[0]
+
+    dialogue = it.get("dialogue")
+    if isinstance(dialogue, list):
+        # The bundle staples a clip id onto each turn; the generator did not.
+        it["dialogue"] = [
+            {"speaker_role": t.get("speaker_role", ""), "text": t.get("text", "")}
+            for t in dialogue
+            if isinstance(t, dict)
+        ]
     return it
 
 

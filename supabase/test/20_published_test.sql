@@ -72,17 +72,34 @@ begin
     select count(*) as n into v from public.next_items(5);
     perform test.check(v.n = 5, 'a new user gets a full set of five');
 
+    -- What is true of every item, whatever type it is.
     select * into q from public.next_items(5) limit 1;
     perform test.check(q.times_seen = 0, 'all of them unseen');
     perform test.check(jsonb_array_length(q.options) = 4, 'with four options attached');
     perform test.check(q.options -> 0 ->> 'why' is not null, 'and the why for each');
-    perform test.check(length(q.stem) > 20, 'and a stem worth narrating');
-    perform test.check(q.narration_clip_id is not null,
-                       'and the clip id its narration audio will be filed under');
-    perform test.check(q.narration_path is null,
-                       'with no audio path yet — the screen falls back to the text');
     perform test.check(q.options -> 0 ? 'audio_path',
                        'the option audio paths ride along, so five items are one request');
+
+    -- And what is true only of some. These used to be asserted on whatever
+    -- item came back first, which worked while the library was one listening
+    -- type and started failing the moment it was nine: a 語彙・文法 stem is one
+    -- short sentence and has no narration at all, by design.
+    select * into q from public.next_items(50) where item_type = 'hatsugen_choukai' limit 1;
+    perform test.check(length(q.stem) > 20, 'a narrated stem is long enough to set up a situation');
+    perform test.check(q.narration_clip_id is not null,
+                       'and carries the clip id its audio will be filed under');
+    perform test.check(q.narration_path is null,
+                       'with no audio path yet — the screen falls back to the text');
+
+    select * into q from public.next_items(50) where item_type = 'sougou_dokkai' limit 1;
+    perform test.check(q.narration_clip_id is null,
+                       'a reading item has no narration, and says so with a null rather than a gap');
+    perform test.check(jsonb_array_length(q.documents) = 1,
+                       'and arrives with the document it is about');
+
+    select * into q from public.next_items(50) where item_type = 'sougou_choukai' limit 1;
+    perform test.check(jsonb_array_length(q.dialogue) >= 3,
+                       'a conversation item arrives with its turns');
 
     -- Five different questions, not the same one five times.
     perform test.check(
@@ -102,6 +119,8 @@ begin
     insert into public.practice_sessions (user_id, mode)
     values ((select auth.uid()), 'daily') returning id into sess;
 
+    -- A real set: whatever the queue serves at this user's level, across
+    -- however many types have content there.
     for r in select id, correct_index from public.next_items(5) loop
         -- Get three right and two wrong, deterministically.
         insert into public.attempts (session_id, item_id, chosen_index)
@@ -116,9 +135,16 @@ begin
     perform test.check(
         (select count(*) from public.attempts where session_id = sess) = 5,
         'all five belong to the session');
+    -- Across types, not within one. The published pool used to be a single
+    -- item type, so a set of five was five 発言聴解 items and the radar had one
+    -- row to check. It is nine types now, a set is drawn from all of them, and
+    -- an assertion pinned to one type was asserting the library had not grown.
     perform test.check(
-        (select answered from public.v_my_type_stats where item_type = 'hatsugen_choukai') = 5,
-        'the radar picks them up immediately');
+        (select coalesce(sum(answered), 0) from public.v_my_type_stats) = 5,
+        'the radar picks them up immediately, whichever types they came from');
+    perform test.check(
+        (select count(*) from public.v_my_type_stats) = 9,
+        'and still reports all nine types, including the ones not answered yet');
     perform test.check(public.my_streak() = 1, 'and the streak starts');
     perform test.check(
         (select count(*) from public.v_my_tag_stats where axis = 'function') > 0,
