@@ -17,3 +17,7 @@ dist/
 # local env (contains your API key)
 .env
 .env.local
+
+# Generated media, before it is uploaded. Large, regenerable, and its home is
+# object storage — `bjt synth` and `bjt scenes` write here.
+media/

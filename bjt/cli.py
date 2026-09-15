@@ -17,11 +17,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import pathlib
 import sys
 import textwrap
 
 from . import batch as batchmod
-from . import config, fixtures, levels, publish, schemas, seedtable
+from . import config, fixtures, levels, publish, render, schemas, scenes as scenemod, seedtable
 from .llm import LLMError
 from .db import Store
 from .fidelity import answerability, dedupe, discriminator, roles, vocab
@@ -783,6 +784,138 @@ def cmd_publish(args) -> int:
     return 0
 
 
+def cmd_synth(args) -> int:
+    """Bundle → audio files + the SQL that points the database at them.
+
+    Nothing uploads itself. Producing files and producing SQL are the job; making
+    either one live is a separate, deliberate act — which is why no key that can
+    write media has to exist on a build machine.
+    """
+    import pathlib
+
+    from .tts import synth
+
+    path = pathlib.Path(args.path)
+    bundle = batchmod.load(path)
+    report = batchmod.check_bundle(bundle)
+    if not report.ok and not args.force:
+        _print_bundle_report(bundle, report)
+        print("\nRefusing to synthesise audio for a bundle that fails its own checks.",
+              file=sys.stderr)
+        print("A clip is expensive and permanent; an item that has not cleared its "
+              "gates has no business having a voice recorded for it.", file=sys.stderr)
+        return 1
+
+    try:
+        result = synth.synthesise_bundle(
+            bundle,
+            provider=args.provider,
+            out_dir=args.media_dir,
+            force=args.force_clips,
+            limit=args.limit,
+        )
+    except KeyError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    print(result.summary())
+    for clip_id, error in result.failed:
+        print(f"  FAILED {clip_id}: {error}", file=sys.stderr)
+
+    if args.provider == "silent":
+        print()
+        print("  These are SILENT placeholder clips. They exercise the pipeline — "
+              "planning,\n  channel treatment, durations, the SQL — and prove nothing "
+              "about how the\n  Japanese sounds. Their storage path says `silent/` so "
+              "they can never be\n  mistaken for real recordings.")
+
+    if not result.clips:
+        return 0
+
+    out = pathlib.Path(args.out) if args.out else path.with_name(
+        path.stem + ".audio.sql"
+    )
+    out.write_text(synth.to_sql(result), encoding="utf-8")
+    print(f"\nWrote {out}")
+
+    record = (args.media_dir or config.MEDIA_DIR) / "reports" / f"{path.stem}.json"
+    synth.write_report(result, pathlib.Path(record))
+    print(f"Wrote {record}")
+
+    print()
+    print("Next: upload media/audio/** to the `audio` bucket, then apply the SQL:")
+    print(f"  psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f {out}")
+    return 1 if result.failed else 0
+
+
+def cmd_scenes(args) -> int:
+    """What the scene bank needs, what exists, and the SQL for what is approved."""
+    import pathlib
+
+    survey = scenemod.survey(args.media_dir)
+    have = [s for s in survey if s.has_art]
+
+    if args.prompt:
+        wanted = [s for s in survey if s.scene_id == args.prompt]
+        if not wanted:
+            print(f"no scene {args.prompt!r} in any committed seed table", file=sys.stderr)
+            return 2
+        print(scenemod.prompt_for(wanted[0]))
+        return 0
+
+    if args.sql:
+        out = pathlib.Path(args.out) if args.out else config.ROOT / "batches" / "scenes.sql"
+        out.write_text(scenemod.to_sql(survey), encoding="utf-8")
+        print(f"Wrote {out}  ({len(have)} scene(s) with artwork)")
+        return 0
+
+    print(f"scene bank: {len(survey)} scene(s), {len(have)} with artwork\n")
+    print(f"  {'scene_id':32} {'art':4} {'cells':>6}  used by")
+    for scene in survey:
+        mark = "yes" if scene.has_art else "—"
+        print(f"  {scene.scene_id:32} {mark:4} {scene.cell_count:6}  "
+              f"{'、'.join(scene.used_by)}")
+    if not have:
+        print("\n  No artwork yet. Items ship and are practised without pictures;")
+        print("  put approved files in media/scenes/<scene_id>.webp when they exist.")
+        print("  `bjt scenes --prompt <scene_id>` prints the brief for one.")
+    return 0
+
+
+def cmd_render(args) -> int:
+    """Render a document stimulus to HTML, to look at while writing one."""
+    import pathlib
+
+    item = None
+    if args.item_type:
+        item = fixtures.FIXTURES.get(args.item_type)
+        if item is None:
+            print(f"no fixture for {args.item_type!r}", file=sys.stderr)
+            return 2
+    else:
+        bundle = batchmod.load(pathlib.Path(args.path))
+        items = [i for i in bundle["items"] if i.get("documents")]
+        if not items:
+            print("no document items in that bundle", file=sys.stderr)
+            return 2
+        item = items[min(args.index, len(items) - 1)]
+
+    field = schemas.DOCUMENT_FIELDS.get(item.get("item_type", ""))
+    raw = item.get("documents") or ([item.get(field)] if field else [])
+    docs = [d for d in (raw if isinstance(raw, list) else [raw]) if isinstance(d, dict)]
+    if not docs:
+        print("that item has no document", file=sys.stderr)
+        return 2
+
+    html = "\n".join(render.render_page(d) if args.page else render.render(d) for d in docs)
+    if args.out:
+        pathlib.Path(args.out).write_text(html, encoding="utf-8")
+        print(f"Wrote {args.out}")
+    else:
+        print(html)
+    return 0
+
+
 def _print_bundle_report(bundle: dict, report) -> None:
     marks = {"pass": "OK  ", "warn": "WARN", "fail": "FAIL"}
     print("\n" + "=" * 62)
@@ -859,6 +992,42 @@ def build_parser() -> argparse.ArgumentParser:
     pb.add_argument("--force", action="store_true",
                     help="publish even if the bundle fails its own checks")
     pb.set_defaults(func=cmd_publish)
+
+    sy = sub.add_parser("synth", help="synthesise a bundle's audio and write the SQL for it")
+    sy.add_argument("path", help="path to a checked bundle .json")
+    sy.add_argument("--provider", default="silent",
+                    help="TTS backend: silent (offline, placeholder), openai, google")
+    sy.add_argument("--out", help="where to write the SQL (default: alongside the bundle)")
+    sy.add_argument("--media-dir", type=pathlib.Path,
+                    help=f"where audio files go (default: {config.MEDIA_DIR})")
+    sy.add_argument("--limit", type=int,
+                    help="cap how many NEW clips this run may make — a budget, not a "
+                         "debugging convenience")
+    sy.add_argument("--force-clips", action="store_true",
+                    help="re-synthesise clips that already exist on disk")
+    sy.add_argument("--force", action="store_true",
+                    help="synthesise even if the bundle fails its checks")
+    sy.set_defaults(func=cmd_synth)
+
+    sc = sub.add_parser("scenes", help="what the scene bank needs, and what exists")
+    sc.add_argument("--media-dir", type=pathlib.Path,
+                    help=f"where scene art lives (default: {config.MEDIA_DIR}/scenes)")
+    sc.add_argument("--prompt", metavar="SCENE_ID",
+                    help="print the illustration brief for one scene")
+    sc.add_argument("--sql", action="store_true",
+                    help="write the SQL pointing the database at approved artwork")
+    sc.add_argument("--out", help="where to write that SQL")
+    sc.set_defaults(func=cmd_scenes)
+
+    rn = sub.add_parser("render", help="render a document stimulus to HTML")
+    rn.add_argument("path", nargs="?", help="a bundle .json containing document items")
+    rn.add_argument("--item-type", choices=sorted(GENERATORS),
+                    help="render this type's fixture instead of a bundle item")
+    rn.add_argument("--index", type=int, default=0, help="which document item in the bundle")
+    rn.add_argument("--page", action="store_true",
+                    help="a standalone HTML page rather than a fragment")
+    rn.add_argument("--out", help="write to a file instead of stdout")
+    rn.set_defaults(func=cmd_render)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")

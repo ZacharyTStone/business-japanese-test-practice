@@ -54,6 +54,11 @@ SEEDTABLE_DIR = Path(_env("BJT_SEEDTABLE_DIR", str(ROOT / "seedtable")))
 # Where batch runs write their bundles (the JSON the app ships with).
 BATCH_DIR = Path(_env("BJT_BATCH_DIR", str(ROOT / "batches")))
 
+# Where the media jobs put files before they are uploaded: `media/audio/...`
+# and `media/scenes/...`, mirroring the storage buckets. Gitignored — audio and
+# artwork are large, regenerable, and belong in object storage, not in git.
+MEDIA_DIR = Path(_env("BJT_MEDIA_DIR", str(ROOT / "media")))
+
 # How many recent stems/topics to feed back into a generation prompt as a
 # "do not repeat these" list.
 RECENT_TOPICS_WINDOW = int(_env("BJT_RECENT_TOPICS_WINDOW", "25"))
