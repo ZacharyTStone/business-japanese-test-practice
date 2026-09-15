@@ -1,0 +1,38 @@
+[
+  {
+    "_note": "PLACEHOLDER — replace with a real official-style 語彙・文法 example and its 解説.",
+    "stem": "会議の資料は、明日までに＿＿＿ように準備しておいてください。",
+    "options": [
+      {
+        "text": "間に合う",
+        "role": "correct",
+        "why": "「〜ように」の前は状態を表す自動詞。締め切りに遅れない状態を望む文意にも合う。"
+      },
+      {
+        "text": "間に合わせる",
+        "role": "wrong_grammatical_category",
+        "why": "他動詞「間に合わせる」は目的語を取る使役的な語で、「〜ように準備する」の前に立つと主体がずれる。"
+      },
+      {
+        "text": "間に合わない",
+        "role": "opposite_valence",
+        "why": "形は正しいが否定なので、望む状態が逆になる。"
+      },
+      {
+        "text": "間に合いがち",
+        "role": "nonexistent_form",
+        "why": "「〜がち」は「遅れがち」のように傾向を表すが、「間に合いがち」という語は使われない。"
+      }
+    ],
+    "topic": "会議資料の締め切り",
+    "explanation_ja": "「〜ように」の前には状態を表す動詞が入る。締め切りに遅れない状態を望むので「間に合う」が正解。以下、各誤答が成立しない理由を官製解説の要領で記す。",
+    "explanation_en": "The slot needs a stative verb; the deadline-meeting reading requires 間に合う.",
+    "vocab_notes": [
+      {
+        "term": "間に合う",
+        "reading": "まにあう",
+        "meaning": "to be in time"
+      }
+    ]
+  }
+]

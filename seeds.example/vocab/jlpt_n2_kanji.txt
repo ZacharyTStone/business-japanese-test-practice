@@ -1,0 +1,35 @@
+# Sample subset — replace with a complete, authoritative tier list.
+# Any whitespace-separated kanji; non-kanji is ignored.
+#
+# The gate enforces a level's ceiling only when EVERY tier up to it is loaded
+# (J3→N3, J2→N2, J1→N1). A partial file like this one leaves the gate
+# permissive, and `bjt quality` says so rather than claiming a strictness it
+# does not have. That is the point of shipping these at all: the tier-loading
+# logic can be exercised, and the report tells the truth about what is missing.
+依 威 為 維 緯 違 遺 域 印 因 隠 営 影 鋭 越 援 塩 央 奥 押
+欧 殴 憶 憂 汚 沖 億 恩 仮 価 佳 華 菓 貨 荷 介 皆 壊 戒 械
+概 較 郭 閣 隔 刈 甘 汗 環 慣 監 簡 含 岸 岩 企 基 奇 幾 輝
+儀 戯 詰 却 脚 及 朽 拠 距 御 凶 叫 恐 響 驚 仰 暁 菌 偶 遇
+屈 掘 繰 傾 継 茎 恵 憩 撃 激 傑 肩 兼 剣 圏 堅 嫌 懸 顕 幻
+弦 孤 誇 鼓 互 呉 娯 悟 攻 更 貢 荒 郊 香 稿 豪 込 婚 恨 紺
+魂 恒 佐 沙 詐 鎖 彩 歳 載 剤 咲 削 索 錯 冊 撮 擦 暫 伺 刺
+祉 脂 紫 諮 賜 侍 慈 軸 執 湿 漆 芝 斜 煮 遮 蛇 邪 寂 朱 狩
+殊 珠 趣 儒 寿 需 囚 舟 秀 臭 襲 柔 獣 瞬 巡 盾 准 循 徐 匠
+床 沼 昇 掌 晶 焦 硝 粧 詔 鐘 譲 醸 錠 嬢 殖 飾 触 辱 伸 侵
+唇 娠 慎 振 浸 紳 診 刃 尋 陣 尽 迅 甚 酢 澄 是 姓 征 牲 誓
+請 隻 惜 斥 籍 潜 繊 薦 遷 鮮 漸 礎 措 粗 訴 阻 双 倉 掃 桑
+燥 荘 藻 遭 霜 騒 憎 贈 促 賊 怠 胎 袋 逮 滝 卓 択 沢 濁 但
+奪 脱 棚 丹 嘆 淡 端 弾 恥 致 遅 蓄 抽 鋳 駐 彫 徴 懲 沈 珍
+鎮 陳 墜 塚 漬 坪 釣 亭 貞 帝 訂 締 泥 摘 滴 迭 哲 徹 撤 添
+殿 吐 塗 斗 途 渡 奴 悼 搭 桃 棟 痘 筒 踏 騰 洞 胴 峠 匿 督
+篤 凸 屯 豚 鈍 曇 縄 軟 弐 尼 虹 忍 妊 寧 猫 粘 悩 濃 把 覇
+婆 廃 排 輩 培 媒 賠 陪 伯 拍 泊 迫 漠 爆 縛 肌 鉢 髪 伐 抜
+罰 閥 帆 伴 畔 般 藩 販 範 繁 盤 蛮 卑 妃 彼 披 扉 罷 泌 碑
+秘 姫 漂 苗 描 浜 賓 頻 敏 瓶 扶 敷 膚 譜 賦 赴 附 侮 舞 封
+伏 幅 覆 沸 噴 墳 憤 紛 雰 丙 併 塀 幣 弊 柄 壁 癖 偏 遍 舗
+捕 穂 募 慕 簿 芳 邦 奉 胞 倣 崩 抱 泡 縫 褒 飽 乏 妨 房 某
+冒 剖 紡 膨 謀 撲 朴 牧 没 堀 奔 翻 凡 盆 魔 埋 膜 又 抹 慢
+漫 魅 岬 妙 眠 矛 霧 婿 娘 銘 滅 免 網 黙 紋 厄 躍 幽 悠 誘
+猶 裕 雄 融 与 誉 庸 揚 揺 擁 溶 腰 踊 謡 抑 翼 羅 裸 頼 濫
+吏 履 痢 離 慄 硫 隆 竜 虜 慮 涼 猟 療 糧 陵 塁 累 励 鈴 隷
+零 霊 麗 暦 劣 烈 裂 廉 恋 錬 炉 露 廊 楼 浪 漏 賄 惑 湾 腕

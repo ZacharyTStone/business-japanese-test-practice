@@ -1,0 +1,102 @@
+# The four checks CLAUDE.md asks for before every push, run on the server too.
+#
+# Work lands directly on `main` with no gate in front of it, so this workflow is
+# the only thing between a mistake and the tree everyone reads. That is why it
+# runs on push as well as on pull requests: a check that only guards PRs guards
+# nothing in a repo where nobody opens one.
+#
+# Every job here is offline. No API key, no Supabase project, no network calls.
+name: checks
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pipeline:
+    name: pytest — the item pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+
+  bundles:
+    name: checkbatch — every committed bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      # Swept rather than named: a bundle added tomorrow is covered the moment
+      # it lands, which is the same rule tests/test_batch_checks.py follows.
+      - name: check every bundle
+        run: |
+          shopt -s nullglob
+          found=0
+          for f in batches/*.json; do
+            case "$f" in *.source.json) continue ;; esac
+            found=1
+            echo "::group::$f"
+            python -m bjt checkbatch "$f"
+            echo "::endgroup::"
+          done
+          [ "$found" = 1 ] || { echo "no bundles found in batches/"; exit 1; }
+
+  schema:
+    name: supabase — schema, RLS, publish
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install psql
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      # PGHOST is set, so run.sh uses this server instead of starting its own.
+      - run: supabase/test/run.sh
+
+  app:
+    name: typecheck — the Expo app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck

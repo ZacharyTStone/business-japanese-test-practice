@@ -1,0 +1,283 @@
+{
+  "item_type": "sougou_choukai",
+  "_note": "Original design, not licensed material. This type plays a multi-speaker exchange once and then asks about it, so every distractor is a memory trap: true of someone else, or true earlier in the conversation. The `function` axis is what the question is about.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "scenes": {
+    "scene_client_meeting_room": "取引先の会議室",
+    "scene_client_office_sofa": "取引先の応接ソファ",
+    "scene_corridor": "オフィスの廊下",
+    "scene_elevator_hall": "エレベーターホール",
+    "scene_entrance_lobby": "エントランスロビー",
+    "scene_expo_booth": "展示会のブース",
+    "scene_izakaya_table": "居酒屋のテーブル",
+    "scene_meeting_room_table": "社内の会議室のテーブル",
+    "scene_office_desk_pair": "自分の席で向かい合う二人",
+    "scene_office_open_floor": "執務フロア全体",
+    "scene_phone_desk": "デスクで固定電話",
+    "scene_phone_mobile_outside": "外出先で携帯電話",
+    "scene_reception_counter": "自社の受付カウンター",
+    "scene_restaurant_private": "料理店の個室",
+    "scene_seminar_hall": "セミナー会場",
+    "scene_video_call_laptop": "ノートPCでオンライン会議"
+  },
+  "settings": [
+    {
+      "id": "team_meeting",
+      "ja": "社内の打ち合わせ",
+      "channel": "in_person",
+      "scenes": [
+        "scene_meeting_room_table"
+      ]
+    },
+    {
+      "id": "desk_huddle",
+      "ja": "席での短い相談",
+      "channel": "in_person",
+      "scenes": [
+        "scene_office_desk_pair"
+      ]
+    },
+    {
+      "id": "client_meeting",
+      "ja": "取引先との打ち合わせ",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room"
+      ]
+    },
+    {
+      "id": "presentation",
+      "ja": "社内説明会・セミナー",
+      "channel": "in_person",
+      "scenes": [
+        "scene_seminar_hall"
+      ]
+    },
+    {
+      "id": "video_meeting",
+      "ja": "オンライン会議",
+      "channel": "video",
+      "scenes": [
+        "scene_video_call_laptop"
+      ]
+    },
+    {
+      "id": "conference_call",
+      "ja": "電話会議",
+      "channel": "phone",
+      "scenes": [
+        "scene_phone_desk"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "who_decides",
+      "ja": "誰が担当することになったか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video",
+        "phone"
+      ]
+    },
+    {
+      "id": "what_was_decided",
+      "ja": "結論は何か",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video",
+        "phone"
+      ]
+    },
+    {
+      "id": "why_delayed",
+      "ja": "遅れ・問題の原因は何か",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video",
+        "phone"
+      ]
+    },
+    {
+      "id": "what_changed",
+      "ja": "前回から何が変わったか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video",
+        "phone"
+      ]
+    },
+    {
+      "id": "next_step",
+      "ja": "次に何をするか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video",
+        "phone"
+      ]
+    },
+    {
+      "id": "dates_and_numbers",
+      "ja": "日付・数量はどうなったか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video",
+        "phone"
+      ]
+    },
+    {
+      "id": "speaker_stance",
+      "ja": "話し手はどう考えているか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "team_meeting": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "desk_huddle": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "client_meeting": [
+      "staff_to_client",
+      "peer_to_peer"
+    ],
+    "presentation": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "other_department"
+    ],
+    "video_meeting": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "conference_call": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ]
+  }
+}

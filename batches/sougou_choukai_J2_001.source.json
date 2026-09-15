@@ -1,0 +1,398 @@
+{
+  "_note": "Author-composed reference batch — the first items of this type, written by hand to settle what the generator should be aiming at before a model is pointed at it. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` turns this file into the shippable bundle next to it, and the same file is the regression set the generator's output is compared against.",
+  "item_type": "sougou_choukai",
+  "level": "J2",
+  "source": "author-composed",
+  "items": [
+    {
+      "seed_cell_id": "team_meeting+junior_to_senior+what_was_decided@J2",
+      "topic": "展示会の出展規模の結論",
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "先輩社員",
+          "text": "来月の展示会、ブースは去年と同じ二区画で出す方向でしたよね。"
+        },
+        {
+          "speaker_role": "後輩社員",
+          "text": "はい。ただ、予算が去年より一割減っていまして、二区画だと備品が借りられません。"
+        },
+        {
+          "speaker_role": "先輩社員",
+          "text": "では一区画に減らしますか。"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "いや、区画は二つのままでいきましょう。備品は社内にあるものを運びます。"
+        },
+        {
+          "speaker_role": "後輩社員",
+          "text": "承知しました。運搬の手配をいたします。"
+        }
+      ],
+      "stem": "展示会の出展について、結論はどうなりましたか。",
+      "options": [
+        {
+          "text": "一区画に減らして出展する。",
+          "role": "superseded_by_later_turn",
+          "why": "先輩が案として出したが、課長が「いや」と明確に否定して二区画のままに決めている。"
+        },
+        {
+          "text": "予算を一割増やして備品を借りる。",
+          "role": "unsupported_but_plausible",
+          "why": "予算が一割減ったことは述べられているが、増やすという話は誰もしていない。"
+        },
+        {
+          "text": "二区画のまま出展し、備品は社内から運ぶ。",
+          "role": "correct",
+          "why": "課長が「区画は二つのまま」「備品は社内にあるものを運びます」と決めており、後輩もそれを受けている。"
+        },
+        {
+          "text": "備品の運搬を外部の業者に頼む。",
+          "role": "stated_by_wrong_speaker",
+          "why": "運搬の手配をすると言ったのは後輩で、社内から運ぶという課長の決定に沿った話。外部業者には触れていない。"
+        }
+      ],
+      "explanation_ja": "会話の途中で「一区画に減らしますか」という案が出るが、課長が否定して二区画のままに決めている。途中で出た案をそのまま答えにすると誤る。予算を増やす話も、外部業者に頼む話も出ていない。",
+      "explanation_en": "A proposal made mid-conversation is overruled; the decision is the manager's, at the end.",
+      "vocab_notes": [
+        {
+          "term": "区画",
+          "reading": "くかく",
+          "meaning": "a booth section"
+        },
+        {
+          "term": "手配",
+          "reading": "てはい",
+          "meaning": "arrangements"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "video_meeting+junior_to_senior+why_delayed@J2",
+      "topic": "試作品の遅れの原因",
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "dialogue": [
+        {
+          "speaker_role": "先輩社員",
+          "text": "試作品、今週中に上がる予定でしたよね。どうなっていますか。"
+        },
+        {
+          "speaker_role": "後輩社員",
+          "text": "すみません、来週に延びそうです。最初は部品の入荷待ちだったのですが。"
+        },
+        {
+          "speaker_role": "先輩社員",
+          "text": "部品は届いたんですか。"
+        },
+        {
+          "speaker_role": "後輩社員",
+          "text": "はい、月曜に届きました。ただ、仕様の変更が先週入りまして、図面の引き直しに時間がかかっています。"
+        },
+        {
+          "speaker_role": "先輩社員",
+          "text": "なるほど。では図面が上がり次第、すぐ組み立てに入れますね。"
+        }
+      ],
+      "stem": "試作品が遅れているのは、今は何が原因ですか。",
+      "options": [
+        {
+          "text": "仕様が変わり、図面を引き直しているから",
+          "role": "correct",
+          "why": "後輩が「ただ、仕様の変更が先週入りまして、図面の引き直しに時間がかかっています」と、今の原因として述べている。"
+        },
+        {
+          "text": "部品がまだ届いていないから",
+          "role": "superseded_by_later_turn",
+          "why": "最初の原因ではあったが、「月曜に届きました」と解消済みであることが述べられている。"
+        },
+        {
+          "text": "組み立てを担当する人が足りないから",
+          "role": "unsupported_but_plausible",
+          "why": "遅れの原因としてはありうるが、人手については誰も触れていない。"
+        },
+        {
+          "text": "先輩社員が図面の確認に時間をかけているから",
+          "role": "stated_by_wrong_speaker",
+          "why": "図面の話をしているのは後輩で、先輩は確認を担当しているとは述べていない。"
+        }
+      ],
+      "explanation_ja": "遅れの原因は途中で入れ替わっている。部品の入荷待ちは「最初は」と断ったうえで述べられ、「月曜に届きました」と解消済み。今の原因は仕様変更にともなう図面の引き直し。最初に出た原因をそのまま答えると誤る。",
+      "explanation_en": "The cause changes mid-conversation: the first one is explicitly resolved.",
+      "vocab_notes": [
+        {
+          "term": "試作品",
+          "reading": "しさくひん",
+          "meaning": "prototype"
+        },
+        {
+          "term": "仕様",
+          "reading": "しよう",
+          "meaning": "specification"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "presentation+other_department+who_decides@J2",
+      "topic": "問い合わせ窓口の担当",
+      "scene_id": "scene_seminar_hall",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "課長",
+          "text": "新しい手順について、外からの問い合わせが増えると思います。窓口を決めておきましょう。"
+        },
+        {
+          "speaker_role": "他部署の担当者",
+          "text": "内容によっては、こちらの部署で受けたほうが早いものもありますが。"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "そうですね。ただ、入り口は一つにしたいので、まず営業部で受けます。"
+        },
+        {
+          "speaker_role": "先輩社員",
+          "text": "では営業部で受けて、技術的な内容だけそちらにお回しする形でよろしいですか。"
+        },
+        {
+          "speaker_role": "他部署の担当者",
+          "text": "はい、それで結構です。"
+        }
+      ],
+      "stem": "外からの問い合わせは、まずどこが受けることになりましたか。",
+      "options": [
+        {
+          "text": "内容によって、営業部と他部署が振り分けて受ける。",
+          "role": "superseded_by_later_turn",
+          "why": "他部署の担当者がそう提案したが、課長が「入り口は一つにしたい」と述べて採らなかった。"
+        },
+        {
+          "text": "技術的な内容は、はじめから他部署が受ける。",
+          "role": "surface_keyword_match",
+          "why": "「技術的な内容」は会話に出てくるが、それは営業部が受けたあとに回す分であって、入り口ではない。"
+        },
+        {
+          "text": "課長がすべての問い合わせを受ける。",
+          "role": "stated_by_wrong_speaker",
+          "why": "課長は窓口を決める側であって、自分が受けるとは述べていない。"
+        },
+        {
+          "text": "営業部が受け、技術的な内容だけ他部署に回す。",
+          "role": "correct",
+          "why": "課長が「まず営業部で受けます」と決め、先輩の整理に他部署の担当者も同意している。"
+        }
+      ],
+      "explanation_ja": "「入り口は一つにしたい」という課長の言葉が決め手で、窓口は営業部に一本化される。技術的な内容が他部署に回るのは、受けたあとの話。振り分けて受ける案は出たが採用されていない。",
+      "explanation_en": "「入り口は一つに」 settles it: one intake point, with a hand-off afterwards.",
+      "vocab_notes": [
+        {
+          "term": "窓口",
+          "reading": "まどぐち",
+          "meaning": "point of contact"
+        },
+        {
+          "term": "回す",
+          "reading": "まわす",
+          "meaning": "to pass on / forward"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "conference_call+staff_to_client+dates_and_numbers@J2",
+      "topic": "納入数量と日付の確定",
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "dialogue": [
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "先月の注文ですが、五十個を六十個に増やしたいのです。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "六十個ですね。納期は十五日のままでよろしいでしょうか。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "できれば十日に早めていただきたいのですが。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "十日ですと、四十個までしかご用意できません。六十個でしたら十五日になります。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "分かりました。では数のほうを優先します。"
+        }
+      ],
+      "stem": "納入はどうなりましたか。",
+      "options": [
+        {
+          "text": "四十個を十日に納入する。",
+          "role": "superseded_by_later_turn",
+          "why": "早めた場合の条件として示されたが、取引先が数を優先すると述べて選ばなかった。"
+        },
+        {
+          "text": "六十個を十五日に納入する。",
+          "role": "correct",
+          "why": "「数のほうを優先します」という取引先の言葉が、六十個・十五日という組み合わせを選んだことを意味する。"
+        },
+        {
+          "text": "六十個を十日に納入する。",
+          "role": "unsupported_but_plausible",
+          "why": "取引先の当初の希望を両方かなえた形だが、営業担当が十日では四十個までと明確に述べている。"
+        },
+        {
+          "text": "五十個を十五日に納入する。",
+          "role": "surface_keyword_match",
+          "why": "五十個は先月の注文の数で、会話の冒頭で六十個に増やすと述べられている。"
+        }
+      ],
+      "explanation_ja": "数量と日付が二者択一になっている。十日なら四十個、六十個なら十五日。取引先が「数のほうを優先します」と述べたので、六十個・十五日に決まる。最後の一言が何を選んだのかを言い換えている点が、この型の要。",
+      "explanation_en": "The final line names a priority rather than a number; the pairing has to be reconstructed.",
+      "vocab_notes": [
+        {
+          "term": "納入",
+          "reading": "のうにゅう",
+          "meaning": "delivery (to a customer)"
+        },
+        {
+          "term": "優先",
+          "reading": "ゆうせん",
+          "meaning": "to prioritise"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "desk_huddle+junior_to_senior+what_changed@J2",
+      "topic": "前回から変わった点",
+      "scene_id": "scene_office_desk_pair",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "後輩社員",
+          "text": "先方から新しい資料が届きました。前回と比べて、金額は同じでした。"
+        },
+        {
+          "speaker_role": "先輩社員",
+          "text": "では中身は変わっていないということですか。"
+        },
+        {
+          "speaker_role": "後輩社員",
+          "text": "いえ、支払いの回数が三回から二回になっています。金額の合計は同じですが。"
+        },
+        {
+          "speaker_role": "先輩社員",
+          "text": "一回あたりが増えるわけですね。経理に伝えておいてください。"
+        },
+        {
+          "speaker_role": "後輩社員",
+          "text": "はい、すぐに連絡します。"
+        }
+      ],
+      "stem": "前回の資料から変わったのはどこですか。",
+      "options": [
+        {
+          "text": "支払いの合計金額が上がった点",
+          "role": "surface_keyword_match",
+          "why": "「一回あたりが増える」とは言われているが、合計は「同じ」と二度述べられている。"
+        },
+        {
+          "text": "支払いの期限が早まった点",
+          "role": "unsupported_but_plausible",
+          "why": "支払い条件の変更として想像しやすいが、期限については何も述べられていない。"
+        },
+        {
+          "text": "経理の担当者が変わった点",
+          "role": "stated_by_wrong_speaker",
+          "why": "経理は連絡先として出てくるだけで、担当が変わったとは誰も言っていない。"
+        },
+        {
+          "text": "支払いの回数が三回から二回に減った点",
+          "role": "correct",
+          "why": "後輩が「支払いの回数が三回から二回になっています」と、変わった点として明確に述べている。"
+        }
+      ],
+      "explanation_ja": "合計金額は「同じ」と二度確認され、変わったのは支払いの回数。「一回あたりが増える」は回数が減った結果であって、合計が上がったわけではない。同じ数字が別の意味で出てくる点が、この型の落とし穴。",
+      "explanation_en": "The total is unchanged; only its division is. The per-instalment rise is a consequence, not a change in total.",
+      "vocab_notes": [
+        {
+          "term": "合計",
+          "reading": "ごうけい",
+          "meaning": "total"
+        },
+        {
+          "term": "経理",
+          "reading": "けいり",
+          "meaning": "accounting (department)"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "client_meeting+staff_to_client+next_step@J2",
+      "topic": "打ち合わせのあとの段取り",
+      "scene_id": "scene_client_meeting_room",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "本日の内容で、社内の会議にかけてみます。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "ありがとうございます。資料をお送りしたほうがよろしいでしょうか。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "本日いただいたもので足ります。ただ、価格の内訳だけ、別にいただけますか。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "承知しました。明日中にお送りいたします。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "助かります。会議は来週の火曜です。"
+        }
+      ],
+      "stem": "自社の営業担当は、このあとまず何をしますか。",
+      "options": [
+        {
+          "text": "価格の内訳を明日中に先方へ送る。",
+          "role": "correct",
+          "why": "「価格の内訳だけ、別にいただけますか」という依頼に「明日中にお送りいたします」と答えている。"
+        },
+        {
+          "text": "本日の資料一式を改めて先方へ送る。",
+          "role": "superseded_by_later_turn",
+          "why": "営業担当が申し出たが、「本日いただいたもので足ります」と断られている。"
+        },
+        {
+          "text": "来週の火曜の会議に出席する。",
+          "role": "surface_keyword_match",
+          "why": "会議の日は述べられているが、出席するのは先方の社内会議で、営業担当が呼ばれてはいない。"
+        },
+        {
+          "text": "社内の会議に本日の内容をかける。",
+          "role": "stated_by_wrong_speaker",
+          "why": "社内の会議にかけると言ったのは取引先の担当者で、自社側の行動ではない。"
+        }
+      ],
+      "explanation_ja": "資料一式を送る申し出は断られ、代わりに価格の内訳だけを明日中に送ることになった。社内会議にかけるのは先方の行動で、来週火曜の会議も先方のもの。誰の行動かを取り違えると誤る。",
+      "explanation_en": "The offer is declined and replaced by a narrower one; the meeting belongs to the other side.",
+      "vocab_notes": [
+        {
+          "term": "内訳",
+          "reading": "うちわけ",
+          "meaning": "breakdown (of a price)"
+        },
+        {
+          "term": "会議にかける",
+          "reading": "かいぎにかける",
+          "meaning": "to put before a meeting"
+        }
+      ]
+    }
+  ]
+}

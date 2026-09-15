@@ -1,0 +1,353 @@
+{
+  "item_type": "bamen_haaku",
+  "_note": "Original design, not licensed material. The `function` axis is WHAT THE QUESTION ASKS ABOUT the situation — where this is, who is speaking, what happens next. That is the axis that has to vary: ten items all asking 「ここはどこですか」 is one item asked ten times, however different the scenes are.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "scenes": {
+    "scene_client_meeting_room": "取引先の会議室",
+    "scene_client_office_sofa": "取引先の応接ソファ",
+    "scene_corridor": "オフィスの廊下",
+    "scene_elevator_hall": "エレベーターホール",
+    "scene_entrance_lobby": "エントランスロビー",
+    "scene_expo_booth": "展示会のブース",
+    "scene_izakaya_table": "居酒屋のテーブル",
+    "scene_meeting_room_table": "社内の会議室のテーブル",
+    "scene_office_desk_pair": "自分の席で向かい合う二人",
+    "scene_office_open_floor": "執務フロア全体",
+    "scene_phone_desk": "デスクで固定電話",
+    "scene_phone_mobile_outside": "外出先で携帯電話",
+    "scene_reception_counter": "自社の受付カウンター",
+    "scene_restaurant_private": "料理店の個室",
+    "scene_seminar_hall": "セミナー会場",
+    "scene_video_call_laptop": "ノートPCでオンライン会議"
+  },
+  "settings": [
+    {
+      "id": "reception",
+      "ja": "自社の受付",
+      "channel": "in_person",
+      "scenes": [
+        "scene_reception_counter",
+        "scene_entrance_lobby"
+      ]
+    },
+    {
+      "id": "office_floor",
+      "ja": "執務フロア",
+      "channel": "in_person",
+      "scenes": [
+        "scene_office_open_floor",
+        "scene_office_desk_pair"
+      ]
+    },
+    {
+      "id": "meeting_room",
+      "ja": "社内の会議室",
+      "channel": "in_person",
+      "scenes": [
+        "scene_meeting_room_table"
+      ]
+    },
+    {
+      "id": "corridor",
+      "ja": "廊下・エレベーターホール",
+      "channel": "in_person",
+      "scenes": [
+        "scene_corridor",
+        "scene_elevator_hall"
+      ]
+    },
+    {
+      "id": "client_office",
+      "ja": "取引先のオフィス",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room",
+        "scene_client_office_sofa"
+      ]
+    },
+    {
+      "id": "event_venue",
+      "ja": "展示会・セミナー会場",
+      "channel": "in_person",
+      "scenes": [
+        "scene_expo_booth",
+        "scene_seminar_hall"
+      ]
+    },
+    {
+      "id": "dining",
+      "ja": "会食の席",
+      "channel": "in_person",
+      "scenes": [
+        "scene_restaurant_private",
+        "scene_izakaya_table"
+      ]
+    },
+    {
+      "id": "phone_desk",
+      "ja": "電話（社内・社外）",
+      "channel": "phone",
+      "scenes": [
+        "scene_phone_desk",
+        "scene_phone_mobile_outside"
+      ]
+    },
+    {
+      "id": "video_call",
+      "ja": "オンライン会議",
+      "channel": "video",
+      "scenes": [
+        "scene_video_call_laptop"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "identify_place",
+      "ja": "どこで話しているか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "identify_speaker_role",
+      "ja": "話しているのは誰か（立場）",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "identify_listener_role",
+      "ja": "誰に向かって話しているか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "identify_purpose",
+      "ja": "何のための場面か",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "identify_next_action",
+      "ja": "このあと何をするか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "identify_problem",
+      "ja": "何が問題になっているか",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "identify_stage",
+      "ja": "やりとりのどの段階か",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client",
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "reception": [
+      "staff_to_visitor",
+      "staff_to_customer",
+      "peer_to_peer"
+    ],
+    "office_floor": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "meeting_room": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "corridor": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_visitor"
+    ],
+    "client_office": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "peer_to_peer"
+    ],
+    "event_venue": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "dining": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "phone_desk": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client",
+      "staff_to_visitor",
+      "staff_to_customer"
+    ],
+    "video_call": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ]
+  }
+}

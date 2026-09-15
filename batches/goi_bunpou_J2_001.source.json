@@ -1,0 +1,260 @@
+{
+  "_note": "Author-composed reference batch — the first items of this type, written by hand to settle what the generator should be aiming at before a model is pointed at it. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` turns this file into the shippable bundle next to it, and the same file is the regression set the generator's output is compared against.",
+  "item_type": "goi_bunpou",
+  "level": "J2",
+  "source": "author-composed",
+  "items": [
+    {
+      "seed_cell_id": "email_external+staff_to_client+causative_permission@J2",
+      "topic": "訪問日時の希望を伝える",
+      "channel": "written",
+      "stem": "来週の火曜日、午後二時に御社へ＿＿＿と存じますが、ご都合はいかがでしょうか。",
+      "options": [
+        {
+          "text": "伺われたい",
+          "role": "wrong_grammatical_category",
+          "why": "「伺う」はすでに謙譲語で、そこに尊敬の「〜れる」は付かない。自分の行為に尊敬を使うことにもなる。"
+        },
+        {
+          "text": "お伺いさせられたい",
+          "role": "nonexistent_form",
+          "why": "使役受身の「させられる」を謙譲の形に混ぜた形で、日本語として成立していない。"
+        },
+        {
+          "text": "伺わせていただきたい",
+          "role": "correct",
+          "why": "相手の許可を得て自分が行く場面で、「伺う」に「〜させていただく」を重ねた形が社外あて文書の型どおりの言い方。"
+        },
+        {
+          "text": "伺わせてくださりたい",
+          "role": "real_form_wrong_context",
+          "why": "「くださる」は相手の行為を高める語で、「〜たい」という自分の希望とは主語が食い違う。"
+        }
+      ],
+      "explanation_ja": "自分が相手のところへ行く許可を求める場面。「伺う」＋「〜させていただく」で、行為も許可の求め方も謙譲になる。「伺われたい」は謙譲語に尊敬の助動詞を重ねた誤り、「お伺いさせられたい」は語として存在せず、「伺わせてくださりたい」は「くださる」の主語が相手なのに「〜たい」で自分の希望を述べており、ねじれている。",
+      "explanation_en": "伺わせていただく is the standard humble way to ask permission to visit.",
+      "vocab_notes": [
+        {
+          "term": "伺う",
+          "reading": "うかがう",
+          "meaning": "to visit / to ask (humble)"
+        },
+        {
+          "term": "存じる",
+          "reading": "ぞんじる",
+          "meaning": "to think (humble)"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "quote_document+staff_to_customer+juju_expression@J2",
+      "topic": "見積書の確認依頼",
+      "channel": "written",
+      "stem": "お見積書を同封いたしましたので、ご確認＿＿＿ようお願い申し上げます。",
+      "options": [
+        {
+          "text": "いただきます",
+          "role": "correct",
+          "why": "相手にしてもらう行為を「ご〜いただく」で受け、「〜ますようお願い申し上げます」の定型につながる。"
+        },
+        {
+          "text": "くださいます",
+          "role": "real_form_wrong_context",
+          "why": "「ご確認くださいますよう」も実在の形だが、ここは「お願い申し上げます」の前で「〜いただきますよう」が対になる。文の据わりが悪い。"
+        },
+        {
+          "text": "さしあげます",
+          "role": "opposite_valence",
+          "why": "「さしあげる」は自分が相手にする行為で、確認するのは相手なので、行為の向きが逆になる。"
+        },
+        {
+          "text": "いたします",
+          "role": "wrong_grammatical_category",
+          "why": "「いたす」は自分の行為の謙譲語。相手に確認を求める文で使うと、自分が確認することになってしまう。"
+        }
+      ],
+      "explanation_ja": "確認するのは相手なので、相手の行為を自分が受け取る「ご〜いただく」を使う。「ご確認いただきますよう」は文書の定型。「さしあげます」「いたします」は自分の行為を表すので向きが逆。「くださいますよう」も存在する形だが、「お願い申し上げます」と組むのは「いただきますよう」のほうが据わる。",
+      "explanation_en": "The customer does the checking, so the humble receiving form いただく is what pairs with お願い申し上げます.",
+      "vocab_notes": [
+        {
+          "term": "同封",
+          "reading": "どうふう",
+          "meaning": "enclosure (in a letter)"
+        },
+        {
+          "term": "お見積書",
+          "reading": "おみつもりしょ",
+          "meaning": "quotation"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "desk_conversation+subordinate_to_superior+counter_and_quantity@J2",
+      "topic": "会議室の椅子の数を報告する",
+      "channel": "in_person",
+      "stem": "会議室に椅子を＿＿＿並べておきました。",
+      "options": [
+        {
+          "text": "十二台",
+          "role": "real_form_wrong_context",
+          "why": "「台」は機械や車両を数える助数詞で、椅子には使わない。"
+        },
+        {
+          "text": "十二枚",
+          "role": "opposite_valence",
+          "why": "「枚」は紙や板など薄いものを数える語で、立体の椅子には合わない。"
+        },
+        {
+          "text": "十二脚ら",
+          "role": "nonexistent_form",
+          "why": "助数詞に「〜ら」を付けて複数を表す言い方は存在しない。"
+        },
+        {
+          "text": "十二脚",
+          "role": "correct",
+          "why": "椅子を数える助数詞は「脚」で、業務の報告として自然な言い方。"
+        }
+      ],
+      "explanation_ja": "椅子は「脚」で数える。「台」は機械や車両、「枚」は薄いもので、どちらも椅子には合わない。「十二脚ら」という形は日本語にない。助数詞は場面よりも数える対象で決まる。",
+      "explanation_en": "Chairs take the counter 脚; 台 is for machines and 枚 for flat things.",
+      "vocab_notes": [
+        {
+          "term": "脚",
+          "reading": "きゃく",
+          "meaning": "counter for chairs"
+        },
+        {
+          "term": "並べる",
+          "reading": "ならべる",
+          "meaning": "to line up / arrange"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "phone_call+staff_to_client+keigo_courteous@J2",
+      "topic": "電話で自社の場所を説明する",
+      "channel": "phone",
+      "stem": "弊社は駅の南口を出まして、まっすぐ三分ほどの場所に＿＿＿。",
+      "options": [
+        {
+          "text": "いらっしゃいます",
+          "role": "opposite_valence",
+          "why": "「いらっしゃる」は人に対する尊敬語で、場所や建物の存在には使わない。"
+        },
+        {
+          "text": "ございます",
+          "role": "correct",
+          "why": "「ある」の丁重語で、取引先との電話で自社について述べるときの標準的な言い方。"
+        },
+        {
+          "text": "おありになります",
+          "role": "set_phrase_misfit",
+          "why": "「おありになる」は相手の所有を高める形。自社の所在地を高めることになり、場面に合わない。"
+        },
+        {
+          "text": "ありでございます",
+          "role": "nonexistent_form",
+          "why": "「あり」に「でございます」を続けた形で、語として成立していない。"
+        }
+      ],
+      "explanation_ja": "場所の存在を丁重に述べるので「ございます」。「いらっしゃる」は人に使う尊敬語、「おありになる」は相手の所有を高める形で、どちらも自社の所在地には合わない。「ありでございます」は日本語として成立しない。",
+      "explanation_en": "ございます is the courteous form of ある for things and places; いらっしゃる is for people.",
+      "vocab_notes": [
+        {
+          "term": "弊社",
+          "reading": "へいしゃ",
+          "meaning": "our company (humble)"
+        },
+        {
+          "term": "南口",
+          "reading": "みなみぐち",
+          "meaning": "south exit"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "report_document+other_department+conditional_form@J2",
+      "topic": "議事録に条件つきの決定を書く",
+      "channel": "written",
+      "stem": "先方の承認が＿＿＿、来月一日から新しい手順に切り替える。",
+      "options": [
+        {
+          "text": "得られたら",
+          "role": "real_form_wrong_context",
+          "why": "意味は近いが「〜たら」は話し言葉寄りで、議事録の書き言葉としては「〜れば」が据わる。"
+        },
+        {
+          "text": "得られるなら",
+          "role": "opposite_valence",
+          "why": "「〜なら」は相手の発言や前提を受けて述べる形で、これから起こるかどうかの条件を書く文には合わない。"
+        },
+        {
+          "text": "得られるので",
+          "role": "wrong_grammatical_category",
+          "why": "「〜ので」は理由を表し、まだ承認が出ていないのに出たことを前提にしてしまう。"
+        },
+        {
+          "text": "得られれば",
+          "role": "correct",
+          "why": "まだ決まっていない条件が満たされた場合を述べる仮定条件で、議事録の書き方として自然。"
+        }
+      ],
+      "explanation_ja": "承認はまだ出ていないので、仮定の条件を表す「〜れば」を使う。「〜たら」は意味こそ近いが話し言葉寄りで、議事録には向かない。「〜なら」は相手の発言を受ける形、「〜ので」は理由で、どちらも未確定の条件を表さない。",
+      "explanation_en": "〜れば states an as-yet-unmet condition, which is what minutes need here.",
+      "vocab_notes": [
+        {
+          "term": "承認",
+          "reading": "しょうにん",
+          "meaning": "approval"
+        },
+        {
+          "term": "切り替える",
+          "reading": "きりかえる",
+          "meaning": "to switch over"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "client_visit+peer_to_peer+transitive_intransitive@J2",
+      "topic": "訪問先で資料の不足に気づく",
+      "channel": "in_person",
+      "stem": "すみません、資料が一部＿＿＿ようです。すぐに取ってきます。",
+      "options": [
+        {
+          "text": "抜けている",
+          "role": "correct",
+          "why": "自動詞「抜ける」で、資料の状態をそのまま述べており、誰の責任かを言わずに事実だけを伝えられる。"
+        },
+        {
+          "text": "抜いている",
+          "role": "opposite_valence",
+          "why": "他動詞「抜く」で、誰かが意図して抜き取ったことになり、事故を故意に変えてしまう。"
+        },
+        {
+          "text": "抜かれている",
+          "role": "real_form_wrong_context",
+          "why": "受身で、第三者が抜き取ったという含みが出る。訪問先で言えば相手を疑うことになる。"
+        },
+        {
+          "text": "抜けてある",
+          "role": "nonexistent_form",
+          "why": "「〜てある」は他動詞に付いて結果の状態を表す形で、自動詞「抜ける」には接続しない。"
+        }
+      ],
+      "explanation_ja": "資料が足りない状態は自動詞「抜ける」で述べる。他動詞の「抜いている」は誰かが意図して抜いたことになり、受身の「抜かれている」は第三者の仕業という含みが出て、訪問先では相手を疑う言い方になる。「抜けてある」は接続が成立しない。",
+      "explanation_en": "The intransitive 抜ける reports the state without assigning blame.",
+      "vocab_notes": [
+        {
+          "term": "抜ける",
+          "reading": "ぬける",
+          "meaning": "to be missing (intransitive)"
+        },
+        {
+          "term": "一部",
+          "reading": "いちぶ",
+          "meaning": "a part / one copy"
+        }
+      ]
+    }
+  ]
+}

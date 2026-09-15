@@ -1,0 +1,17 @@
+[
+  {
+    "_note": "PLACEHOLDER — paste real official BJT sample items here. They stay in seeds/, which is gitignored; nothing licensed is ever committed.",
+    "stem": "女の人が男の人に話しています。「お約束の一時からでしたね。第二会議室にご案内いたしますので、こちらの札をお付けください。」この人はこのあと何をしますか。",
+    "options": [
+      "来客に入館の札を渡して、会議室まで案内する。",
+      "来客の約束の時間を担当者に電話で確認する。",
+      "来客を第二会議室ではなく応接室に通す。",
+      "打ち合わせが終わった来客を出口まで見送る。"
+    ],
+    "answer": 0,
+    "level": "J2",
+    "explanation_ja": "「ご案内いたします」「札をお付けください」から、これから会議室へ案内する場面だと分かる。時間の確認はすでに終わっており、案内先も「第二会議室」と言われている。見送りは同じ受付でも、打ち合わせが終わったあとの場面である。",
+    "channel": "in_person",
+    "scene_id": "scene_reception_counter"
+  }
+]

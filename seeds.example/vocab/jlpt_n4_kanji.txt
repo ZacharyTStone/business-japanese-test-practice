@@ -1,0 +1,17 @@
+# Sample subset — replace with a complete, authoritative tier list.
+# Any whitespace-separated kanji; non-kanji is ignored.
+#
+# The gate enforces a level's ceiling only when EVERY tier up to it is loaded
+# (J3→N3, J2→N2, J1→N1). A partial file like this one leaves the gate
+# permissive, and `bjt quality` says so rather than claiming a strictness it
+# does not have. That is the point of shipping these at all: the tier-loading
+# logic can be exercised, and the report tells the truth about what is missing.
+安 以 意 医 員 運 駅 屋 歌 画 回 海 界 開 楽 漢 館 帰 起 究
+急 級 去 強 教 業 曲 近 銀 区 苦 具 空 君 兄 計 建 犬 研 県
+庫 湖 向 幸 港 号 合 死 使 始 指 歯 詩 次 事 持 式 室 質 実
+写 者 主 守 取 種 酒 集 住 重 春 所 暑 助 昭 消 商 場 心 深
+真 進 世 正 青 昔 赤 切 説 洗 早 走 送 族 他 打 対 待 代 第
+題 短 談 着 注 昼 朝 町 鳥 通 弟 転 都 度 投 冬 答 頭 動 堂
+働 特 読 内 熱 売 発 飯 病 品 負 部 服 福 物 文 平 返 勉 歩
+母 方 北 味 民 無 明 目 問 夜 野 薬 有 由 遊 予 洋 用 曜 様
+落 利 理 旅 料 両 力 林 練 路 和

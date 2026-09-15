@@ -1,0 +1,38 @@
+[
+  {
+    "_note": "PLACEHOLDER — replace with a real official-style 表現読解 example and its 解説.",
+    "stem": "上司に、自分が書いた報告書を読んでほしいと頼む場面。最も適切な表現はどれか。",
+    "options": [
+      {
+        "text": "報告書に目を通していただけますでしょうか。",
+        "role": "correct",
+        "why": "読むのは上司なので「目を通す」に「〜ていただけますでしょうか」を付けた丁寧な依頼が適切。"
+      },
+      {
+        "text": "報告書を拝読していただけますでしょうか。",
+        "role": "wrong_honorific_direction",
+        "why": "「拝読する」は謙譲語で自分の読む行為に使う語。上司の行為に使うと敬意の方向が逆になる。"
+      },
+      {
+        "text": "報告書、読んどいてくれる？",
+        "role": "register_too_casual",
+        "why": "内容は同じだが、上司に対してタメ口で丁寧さが足りない。"
+      },
+      {
+        "text": "報告書をお読みして差し上げましょうか。",
+        "role": "correct_keigo_wrong_speech_act",
+        "why": "「お読みして差し上げる」は自分が読んでやる意味になり、依頼ではなく恩着せがましい申し出になる。"
+      }
+    ],
+    "topic": "上司への報告書確認の依頼",
+    "explanation_ja": "相手（上司）の読む行為には尊敬語を使う。「目を通していただけますでしょうか」が丁寧な依頼で正解。以下、各誤答の敬意の方向・場面のずれを官製解説の要領で記す。",
+    "explanation_en": "The superior's act of reading takes honorific language; the polite request form is correct.",
+    "vocab_notes": [
+      {
+        "term": "目を通す",
+        "reading": "めをとおす",
+        "meaning": "to look over"
+      }
+    ]
+  }
+]

@@ -1,0 +1,31 @@
+/**
+ * The handoff between the practice screen and the result screen.
+ *
+ * A module-level variable rather than a context or a query param: it exists for
+ * the two seconds between finishing a set and reading the result, and it is
+ * genuinely throwaway. Anything that matters is already in the database —
+ * `attempts` was written as each question was answered, so a crash here costs
+ * the summary screen, not the record.
+ */
+import type { AnsweredItem, PracticeMode } from "./types";
+
+export type SessionSummary = {
+  mode: PracticeMode;
+  answers: AnsweredItem[];
+  startedAt: number;
+  finishedAt: number;
+};
+
+let lastSummary: SessionSummary | null = null;
+
+export function setSummary(summary: SessionSummary) {
+  lastSummary = summary;
+}
+
+export function takeSummary(): SessionSummary | null {
+  return lastSummary;
+}
+
+export function clearSummary() {
+  lastSummary = null;
+}

@@ -1,0 +1,22 @@
+{
+  // The Worker name in the Cloudflare dashboard must match this exactly, or
+  // the build fails. Note it is not "bjt-…": BJT is a registered trademark and
+  // does not go in a product name, slug, or identifier.
+  "name": "business-japanese-test-practice",
+  "compatibility_date": "2026-09-14",
+
+  // Assets only — no Worker script. Everything dynamic is Supabase's job, so
+  // there is nothing to run at the edge and no `main` or `binding` here.
+  "assets": {
+    "directory": "./dist",
+
+    // expo-router exports one HTML file per route, so a miss is a genuine miss
+    // and should say so. `npm run build:web` leaves a 404.html for this to
+    // find — Expo writes the page as +not-found.html, which Workers would not
+    // recognise on its own.
+    "not_found_handling": "404-page",
+
+    // Serves /practice from practice.html without inventing a trailing slash.
+    "html_handling": "auto-trailing-slash"
+  }
+}

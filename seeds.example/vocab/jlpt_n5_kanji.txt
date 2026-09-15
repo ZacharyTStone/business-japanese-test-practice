@@ -1,0 +1,3 @@
+# Sample subset — replace with a complete, authoritative tier list.
+# Any whitespace-separated kanji; non-kanji is ignored.
+日 月 火 水 木 金 土 人 口 手 目 会 社 中 大 小 上 下 前 後 名 時 間 年 今 何 私

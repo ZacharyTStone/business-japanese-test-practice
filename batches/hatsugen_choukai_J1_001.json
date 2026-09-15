@@ -1,0 +1,1132 @@
+{
+  "bundle_version": 2,
+  "item_type": "hatsugen_choukai",
+  "level": "J1",
+  "generated_at": "2026-09-15T17:20:43+00:00",
+  "generator_model": "author-composed",
+  "items": [
+    {
+      "id": "95ef217a86",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "corridor+junior_to_senior+farewell@J1",
+        "setting": "corridor",
+        "relation": "junior_to_senior",
+        "function": "farewell",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "残業中の先輩に声をかけて先に退社する",
+      "stem": "夜九時を過ぎ、自分の担当分は終わりました。先輩はまだ資料の見直しをしています。エレベーターホールで、先に帰る前にひとこと声をかけます。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "お先に失礼します。何かお手伝いできることがあれば、おっしゃってください。",
+          "role": "correct",
+          "why": "退出のひと言を述べたうえで、先輩がまだ作業中であることに配慮し、さりげなく手伝いを申し出ている。短い挨拶として過不足がない。"
+        },
+        {
+          "text": "お先っす。お疲れした。",
+          "role": "register_too_casual",
+          "why": "「お先っす」「お疲れした」は友人どうしで使う略式の言い方で、まだ作業中の先輩に向ける敬意がない。"
+        },
+        {
+          "text": "お先に失礼させていただかせていただきます。何かございましたら、いつでもお申し付けくださいませ。",
+          "role": "over_polite_misfit",
+          "why": "謙譲の「〜させていただく」を不自然に重ねたうえに言葉数も多く、ひとことで済ませるべき退出の挨拶として長く回りくどい。"
+        },
+        {
+          "text": "お先に失礼します。その資料、今日中に終わりそうですか。",
+          "role": "content_mismatch",
+          "why": "退出を告げてはいるが、続けて進捗を尋ねており、先に帰る側が踏み込みすぎている。ひとことの挨拶の場面に合わない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "先に帰るときの挨拶は「お先に失礼します」で完結する短いものが基本で、そこに一言添えるとすれば相手への気遣いであって詮索ではない。正解はその形。「お先っす」は友人どうしの略式表現で、先輩への敬意を欠く。「させていただかせていただきます」は謙譲表現を不自然に重ねた誤りで、短い挨拶には長すぎる。進捗を尋ねる選択肢は、丁寧ではあるが退出の挨拶という場面の役割から外れ、相手の仕事に踏み込みすぎている。",
+      "explanation_en": "A farewell to someone still working stays short: announce you're leaving, and if anything follows it's an offer, not a question about their progress. Doubling a humble form or slipping into slang both miss the mark.",
+      "vocab_notes": [
+        {
+          "term": "お先に失礼します",
+          "reading": "おさきにしつれいします",
+          "meaning": "excuse me for leaving first — the standard phrase for leaving before others"
+        },
+        {
+          "term": "お申し付けください",
+          "reading": "おもうしつけください",
+          "meaning": "please let me know (if you need anything) — a polite offer of help"
+        }
+      ],
+      "audio": {
+        "narration": "98ab48d3e0426f9e",
+        "options": [
+          "e4be594f587fff72",
+          "61c24dc88ae517f2",
+          "fac27328fb6e374e",
+          "48a898c71cf41e7f"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_elevator_hall",
+      "speaker_role": "後輩社員",
+      "listener_role": "残業中の先輩",
+      "channel": "in_person"
+    },
+    {
+      "id": "f82e71e147",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "office_desk+peer_to_peer+decline@J1",
+        "setting": "office_desk",
+        "relation": "peer_to_peer",
+        "function": "decline",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "手伝えない依頼を同僚に断る",
+      "stem": "隣の席の同僚から、来週の発表を代わってもらえないかと頼まれました。その日はすでに外せない打ち合わせが入っています。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "せっかくのお申し出ではございますが、私では役不足でございますので、どうかご容赦くださいませ。",
+          "role": "over_polite_misfit",
+          "why": "取引先に向けるような格式ばった言い方で、隣の席の同僚への返事としては大げさすぎ、かえって距離を感じさせる。"
+        },
+        {
+          "text": "力になりたいんだけど、その日は外せない打ち合わせがあって。他の人に聞いてみてもらえるかな。",
+          "role": "correct",
+          "why": "手伝いたい気持ちを示したうえで断る理由を述べ、代わりの手も提案している。同僚どうしの断り方として過不足がない。"
+        },
+        {
+          "text": "えー、来週ってほんと忙しいんだよねー。",
+          "role": "content_mismatch",
+          "why": "忙しさを訴えるだけで、代わるかどうかの返事になっておらず、頼んだ側は結局どうすればいいか分からない。"
+        },
+        {
+          "text": "無理無理、絶対ムリだから。",
+          "role": "register_too_casual",
+          "why": "同僚どうしでも「無理無理」を繰り返すのは素っ気なく、頼んできた相手への配慮がない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "同僚どうしの断りは、堅苦しい敬語を並べる必要はなく、手伝いたい気持ち・理由・代案の三つが伝われば十分。正解はその形。過剰に丁寧な言い方は同僚には他人行儀すぎ、逆に崩れすぎた言い方は素っ気なく響く。忙しさを述べるだけの返事は、依頼への答えになっていない点が一番の問題で、頼んだ側を宙に浮かせてしまう。",
+      "explanation_en": "Declining a peer needs no formal keigo — just willingness, a reason, and an alternative. Over-formality reads as distant, bare complaint leaves the request unanswered, and curtness ignores the other person.",
+      "vocab_notes": [
+        {
+          "term": "役不足",
+          "reading": "やくぶそく",
+          "meaning": "underqualified for the role (often misused, but here used deliberately as an over-formal excuse)"
+        },
+        {
+          "term": "外せない打ち合わせ",
+          "reading": "はずせないうちあわせ",
+          "meaning": "a meeting that cannot be skipped — a concrete, sufficient reason"
+        }
+      ],
+      "audio": {
+        "narration": "a89c0a9cc89690e7",
+        "options": [
+          "73df19a847bed706",
+          "0720f12472338bac",
+          "5bad3c42bf3b547d",
+          "6dafb1df69f37896"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_office_desk_pair",
+      "speaker_role": "同僚",
+      "listener_role": "同僚",
+      "channel": "in_person"
+    },
+    {
+      "id": "6211b4d620",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "phone_internal+subordinate_to_superior+apologize_report@J1",
+        "setting": "phone_internal",
+        "relation": "subordinate_to_superior",
+        "function": "apologize_report",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "出張中の上司へ電話でメールの誤送信を報告する",
+      "stem": "出張中の課長の携帯に電話をかけました。取引先へ送ったメールで、添付ファイルを間違えてしまったことを伝えます。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "あ、課長？さっきのメール、添付間違えちゃって。",
+          "role": "phone_protocol_violation",
+          "why": "電話ではまず名乗るのが基本だが、名乗らずいきなり用件に入っており、電話の基本の型を欠いている。"
+        },
+        {
+          "text": "課長、大変申し訳ございません。先ほどのメールですが、添付ファイルをお間違えになったようで、至急ご確認いただけますでしょうか。",
+          "role": "wrong_honorific_direction",
+          "why": "間違えたのは自分なのに「お間違えになった」と尊敬語を使い、まるで課長が間違えたかのように聞こえる。自分の非を認めていない。"
+        },
+        {
+          "text": "課長、営業部の田中です。今、少しよろしいでしょうか。取引先へのメールで添付ファイルを間違えてしまいました。至急ご相談したいのですが。",
+          "role": "correct",
+          "why": "名乗り、都合を確認したうえで自分の間違いとして報告し、指示を仰いでいる。電話報告の型として過不足がない。"
+        },
+        {
+          "text": "この度は私の不徳の致すところで、誠に慙愧に堪えない失態を演じてしまいましたこと、幾重にもお詫び申し上げます。",
+          "role": "over_polite_misfit",
+          "why": "始末書や取引先への文書で使うような重い言い回しで、上司への電話報告としては仰々しく、肝心の対応が伝わりにくい。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "電話報告は、名乗り・都合の確認・報告・相談、という順が崩れない。正解はその順で、しかも自分の間違いとして責任を引き受けている。名乗らずに始める選択肢は電話の基本を欠く。「お間違えになった」は尊敬語を自分の失敗に向けてしまい、責任の所在をぼかしている点が二重に問題。文書調の詫び言葉は電話の即応性に合わず、報告の中身が後回しになっている。",
+      "explanation_en": "A phone report to a boss follows a fixed order: identify yourself, check the time is convenient, report, then ask for guidance — owning the mistake as your own. Using respectful language for your own error, or skipping the opening, both break the shape.",
+      "vocab_notes": [
+        {
+          "term": "至急ご相談したいのですが",
+          "reading": "しきゅうごそうだんしたいのですが",
+          "meaning": "I'd like to discuss this urgently — flags both urgency and that guidance is wanted"
+        },
+        {
+          "term": "お間違えになる",
+          "reading": "おまちがえになる",
+          "meaning": "to make a mistake (honorific, of the other party) — wrong when the speaker made the mistake"
+        }
+      ],
+      "audio": {
+        "narration": "3daac35476b7438c",
+        "options": [
+          "b54d9ee9e42c854b",
+          "d8dd1ae0cd6e564d",
+          "fe11e3d08f1e80ee",
+          "2c4f38a35d92f32a"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_phone_desk",
+      "speaker_role": "部下（営業部員）",
+      "listener_role": "出張中の課長",
+      "channel": "phone"
+    },
+    {
+      "id": "23cc36ccc2",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "video_call+staff_to_client+request@J1",
+        "setting": "video_call",
+        "relation": "staff_to_client",
+        "function": "request",
+        "level": "J1",
+        "channel": "video"
+      },
+      "topic": "オンライン商談で見積書の誤りを指摘し修正を依頼する",
+      "stem": "オンライン会議中、取引先から共有された見積書に、数量の桁が一つ多い数字がありました。そのことを伝え、修正版を送ってもらいたいと思います。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "数量のところ、間違っていますよ。直してください。",
+          "role": "register_too_casual",
+          "why": "間違いを直接指摘し「直してください」と命令する形で、取引先に向けるクッション言葉や配慮が欠けている。"
+        },
+        {
+          "text": "実は、弊社の田中さんもこの見積書の数量がおかしいとおっしゃっていました。念のためご確認いただけますか。",
+          "role": "wrong_uchi_soto",
+          "why": "身内の田中に「さん」「おっしゃっていました」と敬語を使っており、社外の取引先に対してウチ・ソトの扱いが逆になっている。"
+        },
+        {
+          "text": "誠に僭越ながら申し上げますが、御見積書の数量表記に些少の齟齬が生じておられるやに拝察いたしますゆえ、ご訂正賜れますと幸甚に存じます。",
+          "role": "over_polite_misfit",
+          "why": "「生じておられる」など、物事に尊敬語を使う不自然な言い回しが重なり、指摘の趣旨がかえって伝わりにくいほど回りくどい。"
+        },
+        {
+          "text": "念のための確認なのですが、数量が一桁多いように見えます。お手数ですが、修正版をいただけますか。",
+          "role": "correct",
+          "why": "断定を避けて「念のための確認」「ように見える」と柔らかく指摘し、修正版の依頼へ丁寧につなげている。取引先への指摘として角が立たない。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "取引先の書類の誤りを指摘するときは、断定せず確認の形をとり、そのうえで修正を依頼するのが基本の運び方。正解はその形。直接的な命令は取引先には強すぎる。身内を敬語で立てる言い方はウチ・ソトが逆で、電話やビデオ会議でも変わらない誤り。物事に尊敬語を使う極端に回りくどい言い方は、丁寧さのつもりが趣旨を分かりにくくしている。",
+      "explanation_en": "Pointing out a client's error works best as a soft confirmation, not an assertion, leading into the request. A direct order is too blunt; honoring one's own colleague to an outsider inverts in-group/out-group; and honorifics applied to things rather than people bury the point in excess formality.",
+      "vocab_notes": [
+        {
+          "term": "念のための確認なのですが",
+          "reading": "ねんのためのかくにんなのですが",
+          "meaning": "just to confirm — softens a correction into a check"
+        },
+        {
+          "term": "ように見える",
+          "reading": "ようにみえる",
+          "meaning": "it appears that — hedges an observation instead of asserting it as fact"
+        }
+      ],
+      "audio": {
+        "narration": "c4c5a2c66b4ca297",
+        "options": [
+          "d6c8b237a0ee6f7a",
+          "38531ca85fbabc09",
+          "303845455141515e",
+          "cfbaf92240106b43"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_video_call_laptop",
+      "speaker_role": "営業担当",
+      "listener_role": "取引先の担当者",
+      "channel": "video"
+    },
+    {
+      "id": "83b4f2db61",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "dining+staff_to_client+ask_permission@J1",
+        "setting": "dining",
+        "relation": "staff_to_client",
+        "function": "ask_permission",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "会食の終わりに次回商談の話を切り出す許可を求める",
+      "stem": "取引先との会食も終わりに近づいてきました。次回の商談について、少しだけ本題の話をしておきたいと思います。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "楽しい時間に水を差すようで恐縮なのですが、次回の商談について少しだけお話ししてもよろしいでしょうか。",
+          "role": "correct",
+          "why": "場の雰囲気を変えることへの断りを先に置いてから許可を求めており、会食の流れを乱さずに本題へ移れる。"
+        },
+        {
+          "text": "今日は本当に楽しい時間でした。またこのお店、来たいですね。",
+          "role": "content_mismatch",
+          "why": "会食の感想を述べているだけで、本題を切り出す許可を求めておらず、頼まれた機能を果たしていない。"
+        },
+        {
+          "text": "せっかくですので、弊社の山田部長からも次回の商談についてお話しさせていただければと存じますが、よろしいでしょうか。",
+          "role": "wrong_uchi_soto",
+          "why": "身内の山田に「部長」という敬称を付けており、社外の取引先に対してウチ・ソトの扱いが逆になっている。"
+        },
+        {
+          "text": "誠に恐縮至極ではございますが、僭越ながら次回の商談の件、少々お時間を頂戴いたしたく、伏してお願い申し上げる次第でございます。",
+          "role": "over_polite_misfit",
+          "why": "「伏してお願い申し上げる」など、儀礼的な文書でも滅多に使わない大げさな言い回しで、和やかな会食の場にそぐわない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "会食の場で本題に移るときは、場の空気を変えることへの断りを添えてから許可を求めるのが要る。正解はその二段構え。感想だけで終わる言い方は、頼まれた機能である「切り出す許可を求める」を果たしていない。身内に役職を付けて話に出すのはウチ・ソトの典型的な誤り。文書のような大げさな言い回しは、和やかな席の空気とかみ合わない。",
+      "explanation_en": "Shifting from a social meal to business needs an acknowledgment that the mood is changing, then a request for permission. Praise alone doesn't do it, a title on one's own colleague inverts in-group/out-group, and archaic formal language clashes with the relaxed setting.",
+      "vocab_notes": [
+        {
+          "term": "水を差すようで恐縮ですが",
+          "reading": "みずをさすようできょうしゅくですが",
+          "meaning": "sorry to break the mood, but — the standard cushion before shifting tone"
+        },
+        {
+          "term": "少々お時間を頂戴したく",
+          "reading": "しょうしょうおじかんをちょうだいしたく",
+          "meaning": "I would like a moment of your time (humble) — a request to speak"
+        }
+      ],
+      "audio": {
+        "narration": "5ee45a78ed3dc8d0",
+        "options": [
+          "1166099fe887a18a",
+          "730c042c813813b3",
+          "adfd66197a21ad9c",
+          "e9bf80df3e37a2e9"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_izakaya_table",
+      "speaker_role": "営業担当",
+      "listener_role": "取引先の担当者",
+      "channel": "in_person"
+    },
+    {
+      "id": "c65c0ca0ee",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "phone_external+staff_to_customer+handle_complaint@J1",
+        "setting": "phone_external",
+        "relation": "staff_to_customer",
+        "function": "handle_complaint",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "電話で届いた商品の破損について苦情に対応する",
+      "stem": "お客様から電話があり、届いた商品が破損していたと、かなり強い口調で苦情を言われました。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "はい、もしもし。破損ですか。今どちらの倉庫から届いた分か、ちょっと確認しますので、そのまま切らずに待っててもらえます?",
+          "role": "phone_protocol_violation",
+          "why": "名乗りやお詫びより先に事務的な確認に入っており、苦情対応の電話としての基本の型を欠いている。"
+        },
+        {
+          "text": "この度はご不便をおかけし、誠に申し訳ございません。すぐに状況を確認し、代わりの品をお送りする手配をいたします。",
+          "role": "correct",
+          "why": "起きたことへの迷惑を先に詫び、すぐに調べて代替品を手配するという具体的な対応を示している。苦情対応の型として過不足がない。"
+        },
+        {
+          "text": "それは大変でしたね。私も以前、似たようなことがあって困った経験があります。",
+          "role": "wrong_speech_act",
+          "why": "共感は示しているが、詫びの言葉も今後の対応も述べておらず、苦情に応じるという役割を果たしていない。"
+        },
+        {
+          "text": "うわ、それはひどいですね。すぐ何とかしますんで、ちょっと待っててくださいね。",
+          "role": "register_too_casual",
+          "why": "「うわ」「〜ですんで」など話し言葉が崩れており、怒っているお客様への対応として丁寧さが足りない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "苦情の電話は、まず迷惑をかけたことへの詫び、次にすぐ動くという具体的な対応、の二つが要る。正解はその二つが順に並んでいる。事務的な確認から入る言い方は詫びが抜けており、電話対応の基本を欠く。共感だけで終わる返事は感じがよくても対応になっていない。崩れた話し方は、内容が正しくても怒っているお客様には通らない。",
+      "explanation_en": "A complaint call needs an apology for the inconvenience first, then a concrete next step. Skipping straight to fact-checking, offering only sympathy, or using casual speech all fail to actually handle the complaint.",
+      "vocab_notes": [
+        {
+          "term": "ご不便をおかけし",
+          "reading": "ごふべんをおかけし",
+          "meaning": "for the inconvenience caused — apologizes for the trouble without yet assigning fault"
+        },
+        {
+          "term": "手配をいたします",
+          "reading": "てはいをいたします",
+          "meaning": "I will arrange it (humble) — commits to a concrete next action"
+        }
+      ],
+      "audio": {
+        "narration": "f280dea2b5514290",
+        "options": [
+          "f2080054a13b4e4a",
+          "14f56d351c6161bc",
+          "bcc1e420e9f9a463",
+          "38852b120076059d"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_phone_mobile_outside",
+      "speaker_role": "サポート担当",
+      "listener_role": "一般のお客様",
+      "channel": "phone"
+    },
+    {
+      "id": "d53d14e60e",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "reception+staff_to_client+follow_up@J1",
+        "setting": "reception",
+        "relation": "staff_to_client",
+        "function": "follow_up",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "来社した取引先を出迎えながら未提出の資料をそれとなく催促する",
+      "stem": "取引先の担当者が来社されました。実は先週お願いした資料がまだ届いていません。受付で出迎えながら、それとなく確認したいと思います。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "いつもお世話になっております。行ってらっしゃいませ。",
+          "role": "set_phrase_wrong_situation",
+          "why": "「行ってらっしゃいませ」は出かける人を送り出す言葉で、到着した来客を迎える場面には合わない。"
+        },
+        {
+          "text": "お待ちしておりました。あ、そういえば先週お願いした資料、まだっすよね?",
+          "role": "register_too_casual",
+          "why": "冒頭は丁寧だが「まだっすよね」と急に崩れており、取引先の担当者への言葉として一貫していない。"
+        },
+        {
+          "text": "お待ちしておりました。恐れ入りますが、先日お願いした資料の件、状況はいかがでしょうか。",
+          "role": "correct",
+          "why": "出迎えの言葉のあとに「状況はいかがでしょうか」と柔らかく尋ねており、催促と分かりつつも角が立たない聞き方になっている。"
+        },
+        {
+          "text": "お待ちしておりました。本日はお足元の悪い中、遠いところをわざわざお越しいただき、誠にありがとうございます。",
+          "role": "content_mismatch",
+          "why": "出迎えの挨拶だけで終わっており、確認したかった資料の件にまったく触れていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "出迎えながらの催促は、まず来訪への礼を述べ、そのあとに「状況はいかがでしょうか」のような柔らかい聞き方で用件へ移るのが要る。正解はその形。実在する送り出しの定型句を出迎えに使うのは場面違い。丁寧に始めても途中で崩れる話し方は一貫性を欠く。挨拶だけで終わる言い方は、催促するという目的そのものを果たしていない。",
+      "explanation_en": "Reminding someone while greeting them needs thanks for coming, then a soft check-in that doubles as the reminder. A send-off phrase used on arrival is the wrong moment for it; slipping into casual speech mid-sentence breaks consistency; and a greeting with no follow-up never raises the point at all.",
+      "vocab_notes": [
+        {
+          "term": "状況はいかがでしょうか",
+          "reading": "じょうきょうはいかがでしょうか",
+          "meaning": "how are things going — a soft way to check on something overdue without demanding it"
+        },
+        {
+          "term": "行ってらっしゃいませ",
+          "reading": "いってらっしゃいませ",
+          "meaning": "have a safe trip — said to someone departing, not arriving"
+        }
+      ],
+      "audio": {
+        "narration": "fbd34e76495cee11",
+        "options": [
+          "5579cc61583e5187",
+          "cc767cfa97c12642",
+          "735d3d120c259455",
+          "c38f37e58b9b6eb4"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_reception_counter",
+      "speaker_role": "受付担当",
+      "listener_role": "取引先の担当者",
+      "channel": "in_person"
+    },
+    {
+      "id": "4aa2abf69f",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "client_office+staff_to_client+small_talk@J1",
+        "setting": "client_office",
+        "relation": "staff_to_client",
+        "function": "small_talk",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "会議開始前に取引先の担当者と世間話をする",
+      "stem": "取引先を訪問し、会議室で担当者と向かい合って座りました。会議の開始までまだ少し時間があります。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "早速なのですが、新製品の価格について今すぐご説明させてください。",
+          "role": "wrong_speech_act",
+          "why": "世間話をする時間なのに、いきなり本題の値段交渉に入ろうとしており、求められている機能と合っていない。"
+        },
+        {
+          "text": "急に涼しくなりましたね。今年は秋が短いと聞きますが、御社の方はいかがですか。",
+          "role": "correct",
+          "why": "天候という当たり障りのない話題から相手にも話を振っており、会議前の世間話として自然に間をつなげている。"
+        },
+        {
+          "text": "先ほど弊社の佐藤部長も、こちらの会議室は本当に素晴らしいですねと申しておりました。",
+          "role": "wrong_uchi_soto",
+          "why": "身内の佐藤に「部長」という敬称を付けており、社外の相手に対してウチ・ソトの扱いが崩れている。"
+        },
+        {
+          "text": "いや〜今日めっちゃ暑くないですか、まいっちゃいますよね。",
+          "role": "register_too_casual",
+          "why": "「めっちゃ」「まいっちゃいますよね」といった友人どうしの話し方で、取引先の会議室にはふさわしくない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "会議前の間をつなぐ話題は、天候のように当たり障りがなく、相手にも話を振り返せるものが向いている。正解はその条件を満たしている。いきなり本題に入るのは世間話という機能から外れる。身内に役職を付けるのはウチ・ソトの典型的な誤り。くだけすぎた話し方は取引先の会議室の場にそぐわない。",
+      "explanation_en": "Small talk before a meeting wants a safe, shared topic like weather that invites a response. Jumping straight to business skips the function entirely; a title on one's own colleague inverts in-group/out-group; and slangy speech doesn't fit a client's meeting room.",
+      "vocab_notes": [
+        {
+          "term": "御社の方はいかがですか",
+          "reading": "おんしゃのほうはいかがですか",
+          "meaning": "how about at your company — turns small talk back to the other party"
+        },
+        {
+          "term": "弊社",
+          "reading": "へいしゃ",
+          "meaning": "our company (humble) — takes no titles on its own people when speaking to outsiders"
+        }
+      ],
+      "audio": {
+        "narration": "c7f067b7ebe20a3c",
+        "options": [
+          "ff4e850209efcc1a",
+          "a2f29df05fdd6c9f",
+          "6f1aae5ed05566b5",
+          "71a51c94d01107e5"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_client_meeting_room",
+      "speaker_role": "営業担当",
+      "listener_role": "取引先の担当者",
+      "channel": "in_person"
+    },
+    {
+      "id": "bc9ff36bff",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "corridor+peer_to_peer+correct_mistake@J1",
+        "setting": "corridor",
+        "relation": "peer_to_peer",
+        "function": "correct_mistake",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "同僚の提案書にある社名の誤字をやんわり指摘する",
+      "stem": "廊下で同僚とすれ違いました。さっき共有された提案書に、取引先の社名を一文字間違えているのに気づきました。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "さっきの提案書なんだけど、A社の「A」の字、一文字違ってたかも。念のため確認してみて。",
+          "role": "correct",
+          "why": "断定を避けて「かも」「念のため」と柔らかく伝えており、同僚の間違いを角を立てずに知らせる言い方になっている。"
+        },
+        {
+          "text": "さっきの提案書、すごく良くできてたね。読みやすかったよ。",
+          "role": "content_mismatch",
+          "why": "提案書を褒めるだけで、気づいた社名の誤りにまったく触れておらず、正すという役割を果たしていない。"
+        },
+        {
+          "text": "大変僭越ながら申し上げますが、貴殿の提案書に誤植が見受けられますので、ご確認いただければ幸いに存じます。",
+          "role": "over_polite_misfit",
+          "why": "「貴殿」「僭越ながら」といった格式ばった言い方で、廊下で交わす同僚への指摘としては他人行儀すぎる。"
+        },
+        {
+          "text": "その提案書、もう一回作り直したほうがいいと思うよ。",
+          "role": "wrong_speech_act",
+          "why": "一文字の誤りを伝えるべき場面で「作り直したほうがいい」と大げさな提案に変えており、指摘という行為になっていない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "同僚の小さな間違いを指摘するときは、断定を避けて柔らかく伝えるのが要る。正解はその形で、伝える内容も的確。褒めるだけで終わる言い方は誤りに触れておらず、指摘の役割を果たしていない。格式ばった言い方は廊下での短いやりとりには他人行儀すぎる。一文字の誤字に対して作り直しを勧めるのは、指摘の大きさが場面に合っていない。",
+      "explanation_en": "Pointing out a peer's small error works best softened, not asserted. Praise alone skips the correction entirely, formal language is too distant for a hallway exchange, and suggesting a full redo overreacts to a one-character typo.",
+      "vocab_notes": [
+        {
+          "term": "念のため確認してみて",
+          "reading": "ねんのためかくにんしてみて",
+          "meaning": "just check it, to be safe — a soft way to flag a possible error to a peer"
+        },
+        {
+          "term": "貴殿",
+          "reading": "きでん",
+          "meaning": "you (very formal, written register) — far too stiff for a spoken hallway exchange"
+        }
+      ],
+      "audio": {
+        "narration": "7080c4e79a25f6b4",
+        "options": [
+          "bd89bb5c6403a543",
+          "714a4da19863e801",
+          "ae7b8b40f3b4251f",
+          "d69942d010196032"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_corridor",
+      "speaker_role": "同僚",
+      "listener_role": "同僚",
+      "channel": "in_person"
+    },
+    {
+      "id": "bee26298b6",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "office_desk+subordinate_to_superior+confirm@J1",
+        "setting": "office_desk",
+        "relation": "subordinate_to_superior",
+        "function": "confirm",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "あいまいな指示について上司に判断の範囲を確認する",
+      "stem": "課長から、取引先の値引き交渉について「うまく対応しておいて」とだけ指示されました。どこまで判断していいのか確認したいと思います。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "私のほうで、今回の値引き幅についてはお決めになってもよろしいでしょうか。",
+          "role": "wrong_honorific_direction",
+          "why": "「お決めになる」は相手を敬う尊敬語で、自分の行為に使うのは方向が逆。正しくは「お決めしても」となる。"
+        },
+        {
+          "text": "確認なのですが、値引き交渉について、どのあたりまで私の判断で進めてよろしいでしょうか。",
+          "role": "correct",
+          "why": "確認だと断ったうえで、判断していい範囲を具体的に尋ねており、あいまいな指示への確認として的確。"
+        },
+        {
+          "text": "課長、値引きってどこまでOKすか?",
+          "role": "register_too_casual",
+          "why": "「OKすか」という略式の言い方で、課長への確認としては崩れすぎている。"
+        },
+        {
+          "text": "承知しました。値引きの件、うまく進めておきます。",
+          "role": "wrong_speech_act",
+          "why": "指示があいまいなまま「承知しました」と引き受けており、確認するべき場面で確認していない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "あいまいな指示への確認は、確認であることを先に示し、判断していい範囲を具体的に尋ねる形が要る。正解はその形。自分の行為に尊敬語を使うのは方向を誤った典型例で、正しくは謙譲語の「お決めしても」。略式の言い方は上司への確認としては崩れすぎている。あいまいなまま引き受ける返事は、確認するべき場面で確認を怠っている。",
+      "explanation_en": "Confirming a vague instruction needs to flag itself as a check and ask for the concrete boundary of discretion. Honorific language pointed at one's own action gets the direction backwards, casual speech is too loose for a superior, and simply agreeing skips the confirmation the ambiguity calls for.",
+      "vocab_notes": [
+        {
+          "term": "どのあたりまで私の判断で",
+          "reading": "どのあたりまでわたしのはんだんで",
+          "meaning": "up to what point at my own discretion — asks for the boundary, not just permission"
+        },
+        {
+          "term": "お決めしても",
+          "reading": "おきめしても",
+          "meaning": "if I may decide (humble, correct for one's own action)"
+        }
+      ],
+      "audio": {
+        "narration": "8c449ba84ac8bdcc",
+        "options": [
+          "8536b2f6816ecde0",
+          "92a8f7a695f94477",
+          "9d7be8360282cbfb",
+          "c4ec8a968c46ef30"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_office_desk_pair",
+      "speaker_role": "部下",
+      "listener_role": "課長",
+      "channel": "in_person"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "98ab48d3e0426f9e",
+      "item_id": "95ef217a86",
+      "kind": "narration",
+      "index": null,
+      "text": "夜九時を過ぎ、自分の担当分は終わりました。先輩はまだ資料の見直しをしています。エレベーターホールで、先に帰る前にひとこと声をかけます。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e4be594f587fff72",
+      "item_id": "95ef217a86",
+      "kind": "option",
+      "index": 0,
+      "text": "お先に失礼します。何かお手伝いできることがあれば、おっしゃってください。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "61c24dc88ae517f2",
+      "item_id": "95ef217a86",
+      "kind": "option",
+      "index": 1,
+      "text": "お先っす。お疲れした。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fac27328fb6e374e",
+      "item_id": "95ef217a86",
+      "kind": "option",
+      "index": 2,
+      "text": "お先に失礼させていただかせていただきます。何かございましたら、いつでもお申し付けくださいませ。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "48a898c71cf41e7f",
+      "item_id": "95ef217a86",
+      "kind": "option",
+      "index": 3,
+      "text": "お先に失礼します。その資料、今日中に終わりそうですか。",
+      "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a89c0a9cc89690e7",
+      "item_id": "f82e71e147",
+      "kind": "narration",
+      "index": null,
+      "text": "隣の席の同僚から、来週の発表を代わってもらえないかと頼まれました。その日はすでに外せない打ち合わせが入っています。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "73df19a847bed706",
+      "item_id": "f82e71e147",
+      "kind": "option",
+      "index": 0,
+      "text": "せっかくのお申し出ではございますが、私では役不足でございますので、どうかご容赦くださいませ。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0720f12472338bac",
+      "item_id": "f82e71e147",
+      "kind": "option",
+      "index": 1,
+      "text": "力になりたいんだけど、その日は外せない打ち合わせがあって。他の人に聞いてみてもらえるかな。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5bad3c42bf3b547d",
+      "item_id": "f82e71e147",
+      "kind": "option",
+      "index": 2,
+      "text": "えー、来週ってほんと忙しいんだよねー。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6dafb1df69f37896",
+      "item_id": "f82e71e147",
+      "kind": "option",
+      "index": 3,
+      "text": "無理無理、絶対ムリだから。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3daac35476b7438c",
+      "item_id": "6211b4d620",
+      "kind": "narration",
+      "index": null,
+      "text": "出張中の課長の携帯に電話をかけました。取引先へ送ったメールで、添付ファイルを間違えてしまったことを伝えます。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b54d9ee9e42c854b",
+      "item_id": "6211b4d620",
+      "kind": "option",
+      "index": 0,
+      "text": "あ、課長？さっきのメール、添付間違えちゃって。",
+      "voice": "staff_junior_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "d8dd1ae0cd6e564d",
+      "item_id": "6211b4d620",
+      "kind": "option",
+      "index": 1,
+      "text": "課長、大変申し訳ございません。先ほどのメールですが、添付ファイルをお間違えになったようで、至急ご確認いただけますでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "fe11e3d08f1e80ee",
+      "item_id": "6211b4d620",
+      "kind": "option",
+      "index": 2,
+      "text": "課長、営業部の田中です。今、少しよろしいでしょうか。取引先へのメールで添付ファイルを間違えてしまいました。至急ご相談したいのですが。",
+      "voice": "staff_junior_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "2c4f38a35d92f32a",
+      "item_id": "6211b4d620",
+      "kind": "option",
+      "index": 3,
+      "text": "この度は私の不徳の致すところで、誠に慙愧に堪えない失態を演じてしまいましたこと、幾重にもお詫び申し上げます。",
+      "voice": "staff_junior_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "c4c5a2c66b4ca297",
+      "item_id": "23cc36ccc2",
+      "kind": "narration",
+      "index": null,
+      "text": "オンライン会議中、取引先から共有された見積書に、数量の桁が一つ多い数字がありました。そのことを伝え、修正版を送ってもらいたいと思います。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d6c8b237a0ee6f7a",
+      "item_id": "23cc36ccc2",
+      "kind": "option",
+      "index": 0,
+      "text": "数量のところ、間違っていますよ。直してください。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "38531ca85fbabc09",
+      "item_id": "23cc36ccc2",
+      "kind": "option",
+      "index": 1,
+      "text": "実は、弊社の田中さんもこの見積書の数量がおかしいとおっしゃっていました。念のためご確認いただけますか。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "303845455141515e",
+      "item_id": "23cc36ccc2",
+      "kind": "option",
+      "index": 2,
+      "text": "誠に僭越ながら申し上げますが、御見積書の数量表記に些少の齟齬が生じておられるやに拝察いたしますゆえ、ご訂正賜れますと幸甚に存じます。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "cfbaf92240106b43",
+      "item_id": "23cc36ccc2",
+      "kind": "option",
+      "index": 3,
+      "text": "念のための確認なのですが、数量が一桁多いように見えます。お手数ですが、修正版をいただけますか。",
+      "voice": "staff_mid_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "5ee45a78ed3dc8d0",
+      "item_id": "83b4f2db61",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先との会食も終わりに近づいてきました。次回の商談について、少しだけ本題の話をしておきたいと思います。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1166099fe887a18a",
+      "item_id": "83b4f2db61",
+      "kind": "option",
+      "index": 0,
+      "text": "楽しい時間に水を差すようで恐縮なのですが、次回の商談について少しだけお話ししてもよろしいでしょうか。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "730c042c813813b3",
+      "item_id": "83b4f2db61",
+      "kind": "option",
+      "index": 1,
+      "text": "今日は本当に楽しい時間でした。またこのお店、来たいですね。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "adfd66197a21ad9c",
+      "item_id": "83b4f2db61",
+      "kind": "option",
+      "index": 2,
+      "text": "せっかくですので、弊社の山田部長からも次回の商談についてお話しさせていただければと存じますが、よろしいでしょうか。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e9bf80df3e37a2e9",
+      "item_id": "83b4f2db61",
+      "kind": "option",
+      "index": 3,
+      "text": "誠に恐縮至極ではございますが、僭越ながら次回の商談の件、少々お時間を頂戴いたしたく、伏してお願い申し上げる次第でございます。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f280dea2b5514290",
+      "item_id": "c65c0ca0ee",
+      "kind": "narration",
+      "index": null,
+      "text": "お客様から電話があり、届いた商品が破損していたと、かなり強い口調で苦情を言われました。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f2080054a13b4e4a",
+      "item_id": "c65c0ca0ee",
+      "kind": "option",
+      "index": 0,
+      "text": "はい、もしもし。破損ですか。今どちらの倉庫から届いた分か、ちょっと確認しますので、そのまま切らずに待っててもらえます?",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "14f56d351c6161bc",
+      "item_id": "c65c0ca0ee",
+      "kind": "option",
+      "index": 1,
+      "text": "この度はご不便をおかけし、誠に申し訳ございません。すぐに状況を確認し、代わりの品をお送りする手配をいたします。",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "bcc1e420e9f9a463",
+      "item_id": "c65c0ca0ee",
+      "kind": "option",
+      "index": 2,
+      "text": "それは大変でしたね。私も以前、似たようなことがあって困った経験があります。",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "38852b120076059d",
+      "item_id": "c65c0ca0ee",
+      "kind": "option",
+      "index": 3,
+      "text": "うわ、それはひどいですね。すぐ何とかしますんで、ちょっと待っててくださいね。",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "fbd34e76495cee11",
+      "item_id": "d53d14e60e",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先の担当者が来社されました。実は先週お願いした資料がまだ届いていません。受付で出迎えながら、それとなく確認したいと思います。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5579cc61583e5187",
+      "item_id": "d53d14e60e",
+      "kind": "option",
+      "index": 0,
+      "text": "いつもお世話になっております。行ってらっしゃいませ。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "cc767cfa97c12642",
+      "item_id": "d53d14e60e",
+      "kind": "option",
+      "index": 1,
+      "text": "お待ちしておりました。あ、そういえば先週お願いした資料、まだっすよね?",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "735d3d120c259455",
+      "item_id": "d53d14e60e",
+      "kind": "option",
+      "index": 2,
+      "text": "お待ちしておりました。恐れ入りますが、先日お願いした資料の件、状況はいかがでしょうか。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c38f37e58b9b6eb4",
+      "item_id": "d53d14e60e",
+      "kind": "option",
+      "index": 3,
+      "text": "お待ちしておりました。本日はお足元の悪い中、遠いところをわざわざお越しいただき、誠にありがとうございます。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c7f067b7ebe20a3c",
+      "item_id": "4aa2abf69f",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先を訪問し、会議室で担当者と向かい合って座りました。会議の開始までまだ少し時間があります。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ff4e850209efcc1a",
+      "item_id": "4aa2abf69f",
+      "kind": "option",
+      "index": 0,
+      "text": "早速なのですが、新製品の価格について今すぐご説明させてください。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a2f29df05fdd6c9f",
+      "item_id": "4aa2abf69f",
+      "kind": "option",
+      "index": 1,
+      "text": "急に涼しくなりましたね。今年は秋が短いと聞きますが、御社の方はいかがですか。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6f1aae5ed05566b5",
+      "item_id": "4aa2abf69f",
+      "kind": "option",
+      "index": 2,
+      "text": "先ほど弊社の佐藤部長も、こちらの会議室は本当に素晴らしいですねと申しておりました。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "71a51c94d01107e5",
+      "item_id": "4aa2abf69f",
+      "kind": "option",
+      "index": 3,
+      "text": "いや〜今日めっちゃ暑くないですか、まいっちゃいますよね。",
+      "voice": "staff_mid_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "7080c4e79a25f6b4",
+      "item_id": "bc9ff36bff",
+      "kind": "narration",
+      "index": null,
+      "text": "廊下で同僚とすれ違いました。さっき共有された提案書に、取引先の社名を一文字間違えているのに気づきました。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "bd89bb5c6403a543",
+      "item_id": "bc9ff36bff",
+      "kind": "option",
+      "index": 0,
+      "text": "さっきの提案書なんだけど、A社の「A」の字、一文字違ってたかも。念のため確認してみて。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "714a4da19863e801",
+      "item_id": "bc9ff36bff",
+      "kind": "option",
+      "index": 1,
+      "text": "さっきの提案書、すごく良くできてたね。読みやすかったよ。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ae7b8b40f3b4251f",
+      "item_id": "bc9ff36bff",
+      "kind": "option",
+      "index": 2,
+      "text": "大変僭越ながら申し上げますが、貴殿の提案書に誤植が見受けられますので、ご確認いただければ幸いに存じます。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d69942d010196032",
+      "item_id": "bc9ff36bff",
+      "kind": "option",
+      "index": 3,
+      "text": "その提案書、もう一回作り直したほうがいいと思うよ。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8c449ba84ac8bdcc",
+      "item_id": "bee26298b6",
+      "kind": "narration",
+      "index": null,
+      "text": "課長から、取引先の値引き交渉について「うまく対応しておいて」とだけ指示されました。どこまで判断していいのか確認したいと思います。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8536b2f6816ecde0",
+      "item_id": "bee26298b6",
+      "kind": "option",
+      "index": 0,
+      "text": "私のほうで、今回の値引き幅についてはお決めになってもよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "92a8f7a695f94477",
+      "item_id": "bee26298b6",
+      "kind": "option",
+      "index": 1,
+      "text": "確認なのですが、値引き交渉について、どのあたりまで私の判断で進めてよろしいでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9d7be8360282cbfb",
+      "item_id": "bee26298b6",
+      "kind": "option",
+      "index": 2,
+      "text": "課長、値引きってどこまでOKすか?",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c4ec8a968c46ef30",
+      "item_id": "bee26298b6",
+      "kind": "option",
+      "index": 3,
+      "text": "承知しました。値引きの件、うまく進めておきます。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_client_meeting_room",
+    "scene_corridor",
+    "scene_elevator_hall",
+    "scene_izakaya_table",
+    "scene_office_desk_pair",
+    "scene_phone_desk",
+    "scene_phone_mobile_outside",
+    "scene_reception_counter",
+    "scene_video_call_laptop"
+  ]
+}

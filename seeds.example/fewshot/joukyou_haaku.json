@@ -1,0 +1,75 @@
+[
+  {
+    "_note": "PLACEHOLDER — replace with 3-5 official-style examples INCLUDING their 解説. The 解説 and the per-option `why` are what teach the model to build a trap for a nameable reason rather than writing three vaguely worse answers. Keep them in seeds/, which is gitignored.",
+    "level": "J2",
+    "topic": "入館手続きの変更",
+    "scene_id": "scene_reception_counter",
+    "channel": "in_person",
+    "document": {
+      "template": "office_sign",
+      "title": "入館手続き変更のお知らせ",
+      "meta": [
+        {
+          "label": "掲示者",
+          "value": "総務部"
+        }
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "四月一日より、来客の入館手続きが変わりました。"
+        },
+        {
+          "type": "numbered",
+          "items": [
+            "受付で来訪先の部署名とお名前をお伝えください。",
+            "入館証をお受け取りのうえ、見える位置にお付けください。",
+            "お帰りの際は、受付の返却箱に入館証をお戻しください。"
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warning",
+          "text": "社員の同行がない場合、三階より上へはお進みいただけません。"
+        }
+      ]
+    },
+    "stem": "受付で、来客の男の人が女の人に話しています。「四階の営業部に伺うことになっているのですが、担当の方はあとから来られるそうで、先に上で待たせていただけますか。」女の人はこのあと、どうすればいいですか。",
+    "options": [
+      {
+        "text": "入館証を渡したうえで、営業部の担当者が来るまで受付で待ってもらう。",
+        "role": "correct",
+        "why": "社員の同行がなければ三階より上へは進めないため、担当者が来るまで受付で待ってもらうほかない。"
+      },
+      {
+        "text": "入館証を渡して、四階の営業部まで一人で上がってもらう。",
+        "role": "ignores_the_document",
+        "why": "来客の希望どおりだが、社員の同行がない場合は三階より上へ進めないという掲示に反する。"
+      },
+      {
+        "text": "入館証は渡さず、担当者が受付に来てから手続きを始める。",
+        "role": "ignores_the_request",
+        "why": "掲示は守れるが、手続きは受付で名前を伝えた時点で進めるもので、来客を待たせる理由がない。"
+      },
+      {
+        "text": "来客に代わって、営業部の担当者に入館証を取りに来るよう伝える。",
+        "role": "wrong_action_owner",
+        "why": "入館証を受け取るのは来客本人で、担当者が代わりに受け取る手続きにはなっていない。"
+      }
+    ],
+    "explanation_ja": "掲示には、社員の同行がない場合は三階より上へ進めないと書かれている。来客は先に四階で待ちたいと希望しているが、そのまま通すことはできない。入館証の手続き自体は受付で進めたうえで、担当者が来るまで受付で待ってもらうのが正しい対応。",
+    "explanation_en": "The notice forbids unaccompanied visitors above the third floor, so the request cannot be granted as asked.",
+    "vocab_notes": [
+      {
+        "term": "入館証",
+        "reading": "にゅうかんしょう",
+        "meaning": "visitor badge"
+      },
+      {
+        "term": "同行",
+        "reading": "どうこう",
+        "meaning": "accompaniment"
+      }
+    ]
+  }
+]
