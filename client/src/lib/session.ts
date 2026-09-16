@@ -7,14 +7,17 @@
  * `attempts` was written as each question was answered, so a crash here costs
  * the summary screen, not the record.
  */
-import type { AnsweredItem, Level } from "./types";
+import type { AnsweredItem, SectionLevel } from "./types";
 
 export type SessionSummary = {
   answers: AnsweredItem[];
   startedAt: number;
   finishedAt: number;
-  /** The level when the set began, so the result can notice it moved. */
-  levelBefore: Level | null;
+  /** The three levels when the set began, so the result can say which section
+   *  moved — which is the useful half of the news. The one-line summary is not
+   *  carried: it only moves when the middle of the three does, and by then the
+   *  section card has already said something more specific. */
+  levelsBefore: SectionLevel[];
 };
 
 let lastSummary: SessionSummary | null = null;

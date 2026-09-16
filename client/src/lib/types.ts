@@ -119,11 +119,24 @@ export type QueuedItem = {
 
 export type VocabNote = { term: string; reading: string; meaning: string };
 
+/** The level being served in one exam section.
+ *
+ *  Three of these, always — the view fills in J2 for a section nobody has
+ *  touched, so a screen never has to branch on a missing row. Moved by
+ *  adjust_level() on the evidence of the answers; the client never writes it,
+ *  and there is nowhere in the app to choose one. */
+export type SectionLevel = {
+  section: Section;
+  level: Level;
+  changed_at: string;
+};
+
 export type Profile = {
   id: string;
   display_name: string | null;
-  /** The level the app is serving right now. Moved by the database as answers
-   *  come in (see adjust_level in the migrations); the client never writes it. */
+  /** The one-line summary: the middle of the three section levels. What decides
+   *  which questions you get is `SectionLevel`, not this. Moved by the database
+   *  as answers come in; the client never writes it. */
   target_level: Level;
   daily_goal: number;
   /** YYYY-MM-DD, or null while they have not said. Drives the countdown. */

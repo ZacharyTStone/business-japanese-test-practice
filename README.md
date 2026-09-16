@@ -22,6 +22,10 @@ Three things are true of the whole system and explain most of its shape:
   the same published library; what is personal is the order. Fixed, readable SQL
   does the sorting, over labels the pipeline attached before the item shipped and
   counts the bank took from everyone's answers.
+* **Good at something means harder questions in it.** The level is held per exam
+  section, so 読解 can be J1 while 聴解 is J3; and inside a level the queue aims
+  at a difficulty that follows how the learner does at that particular problem
+  type. Both directions, automatically, with nothing to set.
 * **Everyone has an account from the first launch, and nobody signs up.** The app
   signs in anonymously before it shows anything, so history is server-side from
   question one; linking Google later keeps the same user id, so nothing merges.
@@ -442,6 +446,28 @@ generation will eventually select on. There is no `update` or `delete` policy on
 `attempts`: an answer already given is history, and rewriting it would quietly
 corrupt the profile built from it.
 
+**The level is per section, and that is the single biggest thing the app does
+for a score.** The exam reports three numbers — 聴解, 聴読解, 読解 — and the total
+is their sum. Almost nobody is the same at all three: reading is studied,
+listening is not, and the gap between somebody's 読解 and their 聴解 is usually
+the largest single fact about them. One level for the whole learner was therefore
+wrong twice for nearly everybody — too easy where they were strong, too hard
+where they were not — and being bored and being drowned are the two ways a drill
+stops raising a score.
+
+`section_levels` holds three levels and `adjust_level()` moves each on the same
+rule, counted inside that section: ten answers to begin with and twenty once
+there is a record, 80% right moves it up, 40% or fewer moves it down. A learner
+can sit at 読解 J1 and 聴解 J3 at once, which describes a great many people
+studying for this exam. Nobody is asked anything; there is still nothing to
+choose. `profiles.target_level` survives as the one-line summary — the middle of
+the three — and no longer decides anything.
+
+Three and not nine, because a nine-way level is unusable: at five items a day a
+single problem type sees about one answer every two days, so it would need a
+month to move once. Three is what the score report uses, and it moves on about a
+week. The finer grain is the pitch, below, which needs no threshold at all.
+
 **`next_items()` is the practice queue, in one round trip — and it takes a size
 and nothing else.** The set is built from the record, because the learner decides
 nothing. Four buckets, in this order:
@@ -449,11 +475,12 @@ nothing. Four buckets, in this order:
 | | | |
 |---|---|---|
 | 0 | **due** | items the spacing ladder says are due today, most overdue first, at any level. Capped at two fifths of the set, so a backlog after a week away cannot crowd out everything new. |
-| 1 | **fresh** | unseen items at their level, weakest ground first, spread across problem types and settings. |
-| 2 | **stretch** | exactly one unseen item from the level above, when the set is five or more. `adjust_level()` ignores it, so it can never cost a promotion. |
+| 1 | **fresh** | unseen items at their section's level, weakest ground first, spread across problem types and settings. |
+| 2 | **stretch** | exactly one unseen item from the level above, taken from the section they are **strongest** in — a probe is worth most where a promotion is closest. `adjust_level()` ignores it, so it can never cost one. |
 | 3 | **the rest** | everything else at their level, then the adjacent levels, so a thin level still fills a set instead of ending it early. |
 
-"Weakest ground" is three things, and all three are arithmetic you can check.
+"Weakest ground" is four things, and every one of them is arithmetic you can
+check by hand.
 
 * **The 機能 tag they score worst on**, smoothed and aged. Smoothed because a
   single miss on a tag used to read as 0% and drag the whole set onto it: the
@@ -466,13 +493,36 @@ nothing. Four buckets, in this order:
   whose role has caught this person before is pulled forward — capped, so one bad
   habit cannot take over a whole set. The correct option is excluded from that
   match, or items would be ranked by how often the learner answered *correctly*.
-* **How hard the item is for everybody else** — see the shared bank below.
+* **Which section is weakest.** A 機能 tag is orthogonal to the score report —
+  依頼 appears in listening and in reading alike — so a weak section was invisible
+  to it. The set now leans toward the weak one by up to a tenth of a point:
+  enough to tilt it, not enough to abandon the other two thirds of the exam.
+* **The pitch — how hard the item should be for *this* learner, at *this* problem
+  type.** The bank knows how often each item is answered correctly by everybody
+  (below); the queue prefers items near a target, and the target slides:
+
+  ```
+  target = 0.85 − (your accuracy at this problem type) × 0.33,  held in [0.50, 0.80]
+  ```
+
+  Someone at 90% on 発言聴解 is handed items the bank answers right 55% of the
+  time. Someone at 30% is handed ones it answers right 75% of the time. **Good at
+  something means harder questions in it; bad at something means gentler ones** —
+  and unlike the level, this needs no threshold and no waiting. It moves on every
+  single answer.
 
 And two nudges for variety, which are the reason a set of five drawn from a
 library that is 40% one problem type is not five of that type: the second item of
 a type in one set is pushed back, the third further, and the same for 場面 at a
 third of the weight. Enough to lose to any other type that is close; not enough
 to serve nothing when only one type is published.
+
+The terms sit in a deliberate order of authority — the 機能 tag dominates, traps
+and the pitch are comparable second, the variety nudges third, and the tie-break
+random is a fiftieth of a point, so it can only ever separate two items that were
+genuinely level. Getting that order wrong is not a style question: with the noise
+at a twelfth of a point, as it briefly was, it outvoted the pitch on exactly the
+early sets where the pitch is the only signal there is.
 
 There used to be a manual mode (`free`, `mock`) that served one chosen type at
 one chosen level. It is gone, along with the screen that asked for it.
@@ -510,14 +560,17 @@ serves as the prior until the bank has counted. It is null for the hand-written
 reference batches, which are the one path that skips the gate, and the queue
 reads null as "no opinion" rather than as "average".
 
-**The level is a trigger too.** Nobody is asked whether they are J2; nobody
-could answer. Everyone starts there, and `adjust_level()` moves
-`profiles.target_level` after each answer, on the last ten at the current
-level to begin with and the last twenty once there is a record: 80% right goes
-up, 40% or fewer goes down. The stretch item is excluded from that count, so it
-can never cost a promotion. Weakness-targeted
-*selection* works today over a fixed library. Weakness-targeted *generation*
-comes later and needs no schema change.
+**Every one of those levels is a trigger.** Nobody is asked whether they are J2;
+nobody could answer. All three sections start there, and `adjust_level()` moves
+the one this answer belongs to, on the last ten answers in that section at that
+section's level to begin with and the last twenty once there is a record. The
+window is counted per section too, so forty answers of listening do not make the
+app more cautious about a learner's reading. The stretch item is at the level
+above, so it is excluded from the count and can never cost a promotion.
+
+Weakness-targeted *selection* works today over a fixed library. Weakness-targeted
+*generation* is the nightly job's business, and it aims at the bank's empty
+shelves rather than at any individual.
 
 ### Checking it
 
@@ -530,10 +583,13 @@ Applies every migration to a throwaway Postgres — no project, no keys, no netw
 history, that a client cannot claim its own answer was right or grant itself the
 paid unlock, that an item whose answer points at no option is rejected, that a
 published bundle applies twice without duplicating, that a client cannot move its
-own review dates or read the bank's raw per-item counts, that a wrong answer drops
-an item to the bottom rung of the ladder and a right one climbs it, and that a
-fresh anonymous user can pull a real set of five — spread across problem types —
-and have it land on the radar.
+own review dates, set its own level, or read the bank's raw per-item counts, that
+a wrong answer drops an item to the bottom rung of the ladder and a right one
+climbs it, that being good at listening moves the 聴解 level and leaves 読解 where
+it was, that two learners with opposite records on the same problem type are
+handed opposite items out of the same pair, and that a fresh anonymous user can
+pull a real set of five — spread across problem types — and have it land on the
+radar.
 
 It finishes by reading every query in `client/src/lib` and asserting each table,
 view, column and function the app names actually exists. TypeScript can only
