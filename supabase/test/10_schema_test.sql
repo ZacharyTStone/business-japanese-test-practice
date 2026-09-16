@@ -525,3 +525,73 @@ begin
     delete from auth.users where id = uid;
 end
 $$;
+
+-- --- level ------------------------------------------------------------------
+
+-- Last, because it writes sixty answers and the counts above would move. The
+-- fixtures from the top were deleted along the way, so it brings its own.
+begin;
+set local role service_role;
+insert into public.bundles (id, item_type, level, generator_model, generated_at) values
+    ('bnd_lvl', 'hatsugen_choukai', 'J2', 'author-composed', now());
+insert into public.items (id, bundle_id, item_type, level, seed_cell_id, setting, relation,
+                          function, channel, topic, stem, correct_index)
+values ('itm_lvl', 'bnd_lvl', 'hatsugen_choukai', 'J2', 'office_desk+peer_to_peer+request@J2',
+        'office_desk', 'peer_to_peer', 'request', 'in_person', '依頼', '同僚に頼む場面です。', 0);
+insert into public.item_options (item_id, position, text, role, why) values
+    ('itm_lvl', 0, '正しい。',   'correct',             '正解。'),
+    ('itm_lvl', 1, '砕けすぎ。', 'register_too_casual', '砕けすぎ。'),
+    ('itm_lvl', 2, '逆。',       'wrong_honorific_direction', '逆。'),
+    ('itm_lvl', 3, '答えない。', 'content_mismatch',    '答えていない。');
+commit;
+
+do $$ begin perform test.become('11111111-1111-1111-1111-111111111111'); end $$;
+set role authenticated;
+
+do $$
+declare
+    i integer;
+begin
+    raise notice 'level';
+    perform test.check((select target_level from public.profiles) = 'J2',
+                       'everyone starts at J2; nobody is asked');
+
+    for i in 1..20 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 0);
+    end loop;
+    perform test.check((select target_level from public.profiles) = 'J1',
+                       'twenty answers with at least sixteen right move the level up');
+
+    for i in 1..20 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
+    end loop;
+    perform test.check((select target_level from public.profiles) = 'J1',
+                       'answers at another level do not count: J2 misses leave a J1 learner alone');
+end
+$$;
+
+reset role;
+
+do $$
+declare
+    i integer;
+begin
+    -- Put them back at J2 the way a service-role tool would, then miss twenty.
+    set local role service_role;
+    update public.profiles
+       set target_level = 'J2', level_changed_at = now()
+     where id = '11111111-1111-1111-1111-111111111111';
+    reset role;
+    set local role authenticated;
+
+    for i in 1..20 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
+    end loop;
+    perform test.check((select target_level from public.profiles) = 'J3',
+                       'twenty answers with eight or fewer right move the level down');
+    reset role;
+end
+$$;
+
+delete from public.items where id = 'itm_lvl';
+delete from public.bundles where id = 'bnd_lvl';

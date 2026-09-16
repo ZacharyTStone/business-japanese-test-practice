@@ -97,6 +97,15 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   toggle: { textDecorationLine: "underline" },
+  listening: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    gap: space.md,
+  },
+  listeningRow: { flexDirection: "row", alignItems: "center", gap: space.md },
+  track: { height: 6, borderRadius: 3, backgroundColor: colors.surface, overflow: "hidden" },
+  trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
 });
 
 
@@ -218,5 +227,119 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
         {at + 1} / {turns.length}
       </Text>
     </Pressable>
+  );
+}
+
+
+/**
+ * The listening stage.
+ *
+ * Every clip of one item, in the order it is met — the turns of a conversation,
+ * then the question — played once without being asked, the way the exam plays
+ * them, and then a button to hear it all again, which the exam does not offer
+ * and practice should. Nothing else is on screen while it runs: the options
+ * appear when it finishes, so the first listen is a real listen and not a
+ * skim of the answers with sound in the background.
+ *
+ * `autoplay` is read once, on mount. The screen mounts this at the listening
+ * stage and keeps it mounted through answering, so the replay button is the
+ * same player, and the item's `id` is the key that resets it.
+ */
+export function AutoPlaylist({
+  urls,
+  autoplay,
+  onFinished,
+}: {
+  urls: string[];
+  autoplay: boolean;
+  onFinished?: () => void;
+}) {
+  const [at, setAt] = React.useState(0);
+  const [running, setRunning] = React.useState(autoplay && urls.length > 0);
+  const [finished, setFinished] = React.useState(!autoplay || urls.length === 0);
+  const player = useAudioPlayer(urls[at] ?? null);
+  const status = useAudioPlayerStatus(player);
+  const reported = React.useRef(false);
+
+  React.useEffect(() => {
+    if (running && urls[at]) {
+      player.seekTo(0);
+      player.play();
+    }
+  }, [at, running]);
+
+  React.useEffect(() => {
+    if (!running || !status.didJustFinish) return;
+    if (at + 1 < urls.length) {
+      setAt(at + 1);
+      return;
+    }
+    setRunning(false);
+    setFinished(true);
+    setAt(0);
+    if (!reported.current) {
+      reported.current = true;
+      onFinished?.();
+    }
+  }, [status.didJustFinish, running, at, urls.length]);
+
+  if (urls.length === 0) return null;
+
+  if (!running && finished) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="もう一回聞く"
+        onPress={() => {
+          setAt(0);
+          setRunning(true);
+        }}
+        style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
+      >
+        <View style={styles.playIcon}>
+          <Icon name="play" size={18} color={colors.onAccent} strokeWidth={2} />
+        </View>
+        <Text style={type.body}>もう一回聞く</Text>
+      </Pressable>
+    );
+  }
+
+  const fraction =
+    status.duration && status.duration > 0 ? Math.min(1, status.currentTime / status.duration) : 0;
+  return (
+    <View style={styles.listening} accessibilityLiveRegion="polite">
+      <View style={styles.listeningRow}>
+        <View style={styles.playIcon}>
+          <Icon name="headphones" size={18} color={colors.onAccent} strokeWidth={2} />
+        </View>
+        <Text style={[type.body, { flex: 1 }]}>聞いています…</Text>
+        {urls.length > 1 ? (
+          <Text style={type.small}>
+            {at + 1} / {urls.length}
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.track}>
+        <View style={[styles.trackFill, { width: `${Math.round(fraction * 100)}%` }]} />
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          // Skipping is allowed — it is practice — but it counts as finished,
+          // so the options appear rather than the screen waiting for ever.
+          player.pause();
+          setRunning(false);
+          setFinished(true);
+          setAt(0);
+          if (!reported.current) {
+            reported.current = true;
+            onFinished?.();
+          }
+        }}
+        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+      >
+        <Text style={[type.small, styles.toggle]}>とばして選択肢へ</Text>
+      </Pressable>
+    </View>
   );
 }

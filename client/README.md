@@ -78,12 +78,12 @@ app/                expo-router screens
   _layout.tsx       providers + the stack the tabs sit inside
   (tabs)/           the four places the app lives, under a bottom bar
     _layout.tsx     the bar itself
-    index.tsx       home — today's set, streak, the weakness nudge
-    choose.tsx      pick a level and a type; the mock run starts here
+    index.tsx       home — one button, today's ring, the level, the countdown
+    choose.tsx      the manual mode: pick a type; the mock run starts here
     progress.tsx    the nine-type radar, traps, weak tags
-    account.tsx     link Google, target level, the honest notes
-  practice.tsx      the session: question, answer, why, 解説
-  result.tsx        count + the trap that caught you most
+    account.tsx     link Google, the level (shown, not chosen), the exam date
+  practice.tsx      the session, one moment at a time: scene, listen, answer, reveal
+  result.tsx        count, the trap that caught you most, the level if it moved
   history.tsx       every answer, wrong ones first
 src/lib/
   supabase.ts       the client (anon key is public by design — RLS is the guard)
@@ -92,7 +92,7 @@ src/lib/
   roles.ts          distractor role → Japanese label + 失礼度メーター values
   types.ts          the shapes the database returns
   session.ts        the practice → result handoff
-src/ui/             theme, shared components, icons, the meter, the radar
+src/ui/             theme, shared components, icons, the meter, the radar, the face
 ```
 
 Practice, its result, and the review screen are pushed *over* the tab bar rather

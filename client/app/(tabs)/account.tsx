@@ -5,37 +5,41 @@
  * literally what it does: the anonymous session already holds everything, and
  * Google is attached to the same user so nothing moves. The honest risk is
  * stated plainly too — an unlinked record lives on one device and goes with it.
+ *
+ * The level is shown, not chosen. The database moves it on the evidence of the
+ * answers (twenty at a level, sixteen right: up; eight or fewer: down), and the
+ * one sentence here says so, because a number that moves by itself should say
+ * why. The exam date is the only thing a person is asked for, and it is asked
+ * here rather than on first launch: a countdown helps, a form on the first
+ * screen does not.
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchItemTypes, fetchProfile, updateProfile } from "../../src/lib/db";
+import { fetchProfile, updateProfile } from "../../src/lib/db";
+import { countdownLine, daysUntil, formatExamDate, monthsFromNow } from "../../src/lib/exam";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Level, Profile } from "../../src/lib/types";
+import type { Profile } from "../../src/lib/types";
 import {
   Button,
   Card,
+  Chip,
   IconBadge,
   Loading,
   Notice,
   ScreenHeader,
   ScreenMessage,
   SectionLabel,
-  Tag,
 } from "../../src/ui/components";
-import { Icon } from "../../src/ui/icons";
-import { colors, radius, shadow, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
+import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
-const LEVELS: Level[] = ["J3", "J2", "J1"];
-const LEVEL_HINT: Record<Level, string> = {
-  J3: "決まった場面の、型どおりのやりとり",
-  J2: "ふつうの業務。相手や立場で敬語が変わる",
-  J1: "遠回しな言い方や、例外的な場面まで",
-};
-
-type Coverage = { types: number; total: number };
+const EXAM_PRESETS: { label: string; months: number }[] = [
+  { label: "1か月後", months: 1 },
+  { label: "3か月後", months: 3 },
+  { label: "6か月後", months: 6 },
+];
 
 export default function Account() {
   const router = useRouter();
@@ -51,7 +55,6 @@ export default function Account() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [coverage, setCoverage] = useState<Record<Level, Coverage> | null>(null);
   const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
@@ -60,35 +63,6 @@ export default function Account() {
       .then(setProfile)
       .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
   }, [isAnonymous, authLoading, authError, reloads]);
-
-  // Coverage is shown, not hidden, for the same reason the type picker shows
-  // "0問": a level with content in one of nine types should say so before
-  // somebody sets it as their target and wonders why daily practice went quiet.
-  useEffect(() => {
-    if (!isConfigured) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const rows = await Promise.all(LEVELS.map((level) => fetchItemTypes(level)));
-        if (cancelled) return;
-        const next = {} as Record<Level, Coverage>;
-        LEVELS.forEach((level, i) => {
-          const types = rows[i];
-          next[level] = {
-            types: types.filter((t) => t.available > 0).length,
-            total: types.reduce((n, t) => n + t.available, 0),
-          };
-        });
-        setCoverage(next);
-      } catch {
-        // A missing count is not worth an error screen: the picker still works,
-        // it just says less. The profile load above is the one that matters.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [reloads]);
 
   async function onLink() {
     setBusy(true);
@@ -103,9 +77,13 @@ export default function Account() {
     }
   }
 
-  async function setLevel(level: Level) {
-    setProfile((p) => (p ? { ...p, target_level: level } : p));
-    await updateProfile({ target_level: level });
+  async function setExamDate(date: string | null) {
+    setProfile((p) => (p ? { ...p, exam_date: date } : p));
+    try {
+      await updateProfile({ exam_date: date });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }
 
   function retry() {
@@ -142,7 +120,8 @@ export default function Account() {
   }
   if (!profile) return <Loading />;
 
-  const here = coverage?.[profile.target_level];
+  const days = daysUntil(profile.exam_date);
+  const countdown = countdownLine(days);
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
@@ -167,7 +146,6 @@ export default function Account() {
             onPress={onLink}
             disabled={busy}
           />
-          {error ? <Text style={[type.small, { color: colors.wrong }]}>{error}</Text> : null}
         </Card>
       ) : (
         <Card style={{ gap: space.md }}>
@@ -183,46 +161,60 @@ export default function Account() {
       )}
 
       <View style={{ gap: space.md }}>
-        <SectionLabel>目標レベル</SectionLabel>
-        {LEVELS.map((level) => {
-          const active = profile.target_level === level;
-          const cov = coverage?.[level];
-          return (
-            <Pressable
-              key={level}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              onPress={() => setLevel(level)}
-              style={({ pressed }) => [
-                styles.levelRow,
-                active && styles.levelRowOn,
-                pressed && { opacity: 0.9 },
-              ]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={type.h2}>{level}</Text>
-                <Text style={type.small}>{LEVEL_HINT[level]}</Text>
-              </View>
-              {cov ? <Tag tone={cov.types === 9 ? "teal" : "amber"}>{`${cov.types}/9種類`}</Tag> : null}
-              {active ? <Icon name="check" size={20} color={colors.accent} strokeWidth={2.4} /> : null}
-            </Pressable>
-          );
-        })}
-        {here && here.types < 9 ? (
-          <Notice
-            tone="warn"
-            title="このレベルはまだ種類がそろっていません"
-            body={`目標レベル「${profile.target_level}」には現在9種類中${here.types}種類・${here.total}問しかありません。今日の練習はその範囲から出ます。`}
-          />
-        ) : null}
+        <SectionLabel>いまのレベル</SectionLabel>
+        <Card style={{ gap: space.md }}>
+          <View style={styles.head}>
+            <IconBadge name="layers" tone="blue" />
+            <View style={{ flex: 1 }}>
+              <Text style={type.h1}>{profile.target_level}</Text>
+              <Text style={type.small}>アプリが決めます。選ぶところはありません。</Text>
+            </View>
+          </View>
+          <Text style={type.small}>
+            直近20問のうち16問以上正解すると、次のレベルに上がります。8問以下なら、少しやさしくします。
+            毎回の練習には、1問だけ上のレベルの問題が入っています。
+          </Text>
+        </Card>
       </View>
+
+      <View style={{ gap: space.md }}>
+        <SectionLabel>試験日</SectionLabel>
+        <Card style={{ gap: space.md }}>
+          <View style={styles.head}>
+            <IconBadge name="clock" tone="amber" />
+            <View style={{ flex: 1 }}>
+              <Text style={type.h2}>
+                {profile.exam_date ? formatExamDate(profile.exam_date) : "まだ決めていません"}
+              </Text>
+              <Text style={type.small}>
+                {countdown ?? "決めると、ホームにカウントダウンが出ます。"}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.chips}>
+            {EXAM_PRESETS.map((preset) => (
+              <Chip
+                key={preset.label}
+                label={preset.label}
+                selected={false}
+                onPress={() => setExamDate(monthsFromNow(preset.months))}
+              />
+            ))}
+            {profile.exam_date ? (
+              <Chip label="消す" selected={false} onPress={() => setExamDate(null)} />
+            ) : null}
+          </View>
+        </Card>
+      </View>
+
+      {error ? <Text style={[type.small, { color: colors.wrong }]}>{error}</Text> : null}
 
       <Notice
         title="スコアを出さない理由"
         body={
           "このアプリは本番の点数を推定しません。生成した問題には本番と同じ尺度がないため、" +
           "「たぶん◯点」と出すと、当たっているように見えて計画を狂わせます。" +
-          "代わりに、種類ごとの正答率と、よく落ちる罠だけを出しています。"
+          "上の「レベル」は点数の予測ではなく、いま出している問題の難しさです。"
         }
       />
 
@@ -251,14 +243,5 @@ export default function Account() {
 const styles = StyleSheet.create({
   page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
   head: { flexDirection: "row", alignItems: "center", gap: space.md },
-  levelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: space.lg,
-    ...shadow.card,
-  },
-  levelRowOn: { backgroundColor: colors.accentSoft },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
 });

@@ -105,6 +105,16 @@ begin
     perform test.check(
         (select count(distinct id) from public.next_items(5)) = 5,
         'a set of five is five distinct items');
+
+    -- The smart set: four at your level and one from the level above, so the
+    -- app is always quietly asking a harder question than it has to.
+    perform test.check(
+        (select count(*) from public.next_items(5) where level = 'J1') = 1
+        and (select count(*) from public.next_items(5) where level = 'J2') = 4,
+        'a daily set of five carries exactly one stretch item from the level above');
+    perform test.check(
+        (select count(*) from public.next_items(5, 'free') where level <> 'J2') = 0,
+        'a manual set stays at the level asked for');
 end
 $$;
 

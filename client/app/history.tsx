@@ -110,7 +110,6 @@ export default function History() {
           >
             <View style={styles.entryHead}>
               <Tag>{entry.label_ja}</Tag>
-              <Tag>{entry.level}</Tag>
               {/* A word, not only a colour: roughly one man in twelve cannot
                   tell the green from the red. */}
               <Text

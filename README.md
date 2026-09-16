@@ -359,12 +359,21 @@ generation will eventually select on. There is no `update` or `delete` policy on
 `attempts`: an answer already given is history, and rewriting it would quietly
 corrupt the profile built from it.
 
-**`next_items()` is the practice queue, in one round trip.** Unseen items first;
-then items you got *wrong*, oldest first, which is deliberate spaced repetition
-rather than a fallback — the second time you meet an item that caught you is when
-it teaches you something; then, in weakness mode, ordered by how badly you do on
-each item's seed-cell tags. Weakness-targeted *selection* works today over a fixed
-library. Weakness-targeted *generation* comes later and needs no schema change.
+**`next_items()` is the practice queue, in one round trip.** The daily set is
+built from the record, so the learner decides nothing: up to two items that
+caught them before and have not been seen for a day; unseen items at their
+level, worst function tag first; exactly one unseen item from the level above;
+then whatever is left, and the adjacent levels if theirs has run thin. The
+manual mode (`free`, `mock`) serves one level, unseen first — someone who chose
+聴読解 for the week before the exam wants 聴読解, not the app's opinion.
+
+**The level is a trigger too.** Nobody is asked whether they are J2; nobody
+could answer. Everyone starts there, and `adjust_level()` moves
+`profiles.target_level` after each answer on the last twenty at the current
+level: sixteen right goes up, eight or fewer goes down. The stretch item is
+excluded from that count, so it can never cost a promotion. Weakness-targeted
+*selection* works today over a fixed library. Weakness-targeted *generation*
+comes later and needs no schema change.
 
 ### Checking it
 

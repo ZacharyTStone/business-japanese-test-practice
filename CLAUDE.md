@@ -50,7 +50,12 @@ accident is not.
 - **No ads during practice.** `AdSlot`'s placement type has exactly two members,
   so this is enforced by the type checker. Do not widen it.
 - **No estimated BJT score, anywhere.** There is no IRT calibration for generated
-  items; an invented number is worse than none.
+  items; an invented number is worse than none. The level shown on screen is
+  the level the app is *serving*, which is a fact, not a prediction.
+- **The level is chosen by the database, never by the learner.** No level
+  picker, anywhere in the UI. `adjust_level()` moves it on the evidence of the
+  answers; the daily set slips in one item from the level above. The owner
+  asked for this (2026-09-16): all the thinking happens behind the scenes.
 - **"BJT" is a registered trademark.** It may describe the exam format in prose.
   It may not appear in the product name, slug, or bundle identifier.
 - **No past-paper text, ever.** Every item is an original composition.
