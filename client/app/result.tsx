@@ -11,9 +11,10 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { hasAdFree } from "../src/lib/db";
+import { fetchProfile, hasAdFree } from "../src/lib/db";
 import { roleInfo, worstTrap } from "../src/lib/roles";
 import { clearSummary, takeSummary } from "../src/lib/session";
+import type { Level } from "../src/lib/types";
 import {
   AdSlot,
   Button,
@@ -26,13 +27,23 @@ import {
 } from "../src/ui/components";
 import { colors, space, type } from "../src/ui/theme";
 
+/** The ladder, for telling up from down. */
+const RANK: Record<Level, number> = { J3: 0, J2: 1, J1: 2 };
+
 export default function Result() {
   const router = useRouter();
   const [summary] = useState(() => takeSummary());
   const [adFree, setAdFree] = useState(true); // assume paid until told otherwise
+  const [levelNow, setLevelNow] = useState<Level | null>(null);
 
   useEffect(() => {
     hasAdFree().then(setAdFree);
+    // The database may have moved the level on one of this set's answers. That
+    // is the one thing worth a card of its own here, and it is read back rather
+    // than computed, because the rule lives in the trigger and nowhere else.
+    fetchProfile()
+      .then((p) => setLevelNow(p?.target_level ?? null))
+      .catch(() => setLevelNow(null));
     return () => clearSummary();
   }, []);
 
@@ -54,8 +65,37 @@ export default function Result() {
       .map((a) => a.item.options[a.chosenIndex]?.role ?? "")
   );
 
+  const before = summary.levelBefore;
+  const moved = before && levelNow && before !== levelNow ? RANK[levelNow] - RANK[before] : 0;
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
+      {moved > 0 ? (
+        <Card style={{ backgroundColor: colors.correctSoft, gap: space.md }}>
+          <View style={styles.trapHead}>
+            <IconBadge name="spark" tone="teal" />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.h2, { color: colors.correct }]}>レベルが上がりました</Text>
+              <Text style={type.small}>
+                {before} → {levelNow}。次からは{levelNow}の問題が出ます。
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ) : moved < 0 ? (
+        <Card style={{ gap: space.md }}>
+          <View style={styles.trapHead}>
+            <IconBadge name="layers" tone="blue" />
+            <View style={{ flex: 1 }}>
+              <Text style={type.h2}>問題を少しやさしくします</Text>
+              <Text style={type.small}>
+                次からは{levelNow}の問題が出ます。正解が続けば、また上がります。
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ) : null}
+
       <GradientCard style={styles.hero}>
         <ProgressRing
           value={total > 0 ? correct / total : 0}

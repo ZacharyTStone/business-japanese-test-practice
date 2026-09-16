@@ -7,13 +7,15 @@
  * `attempts` was written as each question was answered, so a crash here costs
  * the summary screen, not the record.
  */
-import type { AnsweredItem, PracticeMode } from "./types";
+import type { AnsweredItem, Level, PracticeMode } from "./types";
 
 export type SessionSummary = {
   mode: PracticeMode;
   answers: AnsweredItem[];
   startedAt: number;
   finishedAt: number;
+  /** The level when the set began, so the result can notice it moved. */
+  levelBefore: Level | null;
 };
 
 let lastSummary: SessionSummary | null = null;

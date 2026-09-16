@@ -123,8 +123,12 @@ export type VocabNote = { term: string; reading: string; meaning: string };
 export type Profile = {
   id: string;
   display_name: string | null;
+  /** The level the app is serving right now. Moved by the database as answers
+   *  come in (see adjust_level in the migrations); the client never writes it. */
   target_level: Level;
   daily_goal: number;
+  /** YYYY-MM-DD, or null while they have not said. Drives the countdown. */
+  exam_date: string | null;
   /** True until a real identity is linked. Drives the "keep your progress" nudge. */
   is_anonymous: boolean;
   linked_at: string | null;

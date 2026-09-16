@@ -26,20 +26,20 @@ import type {
   TypeStat,
 } from "./types";
 
-/** The practice queue: unseen first, then items that caught you, then weakness
- *  order. The ordering lives in SQL (see next_items) rather than here, because
- *  it needs the whole library and the whole history to decide. */
+/** The practice queue. The composition lives in SQL (see next_items) rather
+ *  than here, because it needs the whole library and the whole history to
+ *  decide: retry, weakness, one stretch item, the rest. No level is passed —
+ *  the database serves the one it has put this person at. */
 export async function fetchQueue(options: {
   limit?: number;
   mode?: PracticeMode;
   itemType?: string | null;
-  level?: string | null;
 }): Promise<QueuedItem[]> {
   const { data, error } = await supabase.rpc("next_items", {
     p_limit: options.limit ?? 5,
     p_mode: options.mode ?? "daily",
     p_item_type: options.itemType ?? null,
-    p_level: options.level ?? null,
+    p_level: null,
   });
   if (error) throw error;
   return (data ?? []) as QueuedItem[];
@@ -94,14 +94,15 @@ export async function recordAttempt(args: {
 export async function fetchProfile(): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, target_level, daily_goal, is_anonymous, linked_at")
+    .select("id, display_name, target_level, daily_goal, exam_date, is_anonymous, linked_at")
     .maybeSingle();
   if (error) throw error;
   return (data as Profile) ?? null;
 }
 
 export async function updateProfile(
-  patch: Partial<Pick<Profile, "target_level" | "daily_goal" | "display_name">>
+  // Not target_level: the database moves that, on the evidence of the answers.
+  patch: Partial<Pick<Profile, "daily_goal" | "display_name" | "exam_date">>
 ) {
   // PostgREST refuses an unfiltered update, and row-level security would narrow
   // it to this row anyway — but saying which row is clearer than relying on a

@@ -36,13 +36,13 @@ function Bar({ label, value, tone }: { label: string; value: number; tone: strin
   );
 }
 
-export function RudenessMeter({ role }: { role: string }) {
+export function RudenessMeter({ role, showLabel = true }: { role: string; showLabel?: boolean }) {
   const info = roleInfo(role);
   if (role === "correct") return null;
 
   return (
     <View style={styles.wrap}>
-      <Text style={type.h2}>{info.label}</Text>
+      {showLabel ? <Text style={type.h2}>{info.label}</Text> : null}
       <Bar label="失礼度" value={info.rudeness} tone={colors.wrong} />
       <Bar label="ずれ" value={info.miss} tone={colors.warn} />
       <Text style={[type.small, { marginTop: space.xs }]}>{info.advice}</Text>

@@ -1,17 +1,16 @@
 /**
  * Home. One decision: start today's set.
  *
- * The hero is the decision and nothing else. Everything under it is a record of
- * what has already happened, which is the right way round — a learner who opens
- * the app to practise should not have to read their own statistics first.
+ * The hero is the decision and nothing else. There is one button, because the
+ * app already knows what to serve — the level, the weak spots, the items to
+ * retry and the one stretch question are all decided in the database from the
+ * record. A person who opens the app to practise should not first have to
+ * choose a level, a type, or a mode. The 選ぶ tab is there for the week before
+ * the exam; most days it is not needed.
  *
- * The weakness card is only offered once there is enough history for it to mean
- * anything. Before that it would just be a second button that does the same
- * thing, which teaches people to ignore both.
- *
- * Accuracy is shown as 「—」 until something has been answered. A zero there
- * would be a lie about a person who has not been asked yet, and it is the exact
- * lie that sends somebody off to drill a weakness they may not have.
+ * Under it is a record of what has already happened, which is the right way
+ * round. Accuracy is shown as 「—」 until something has been answered: a zero
+ * there would be a lie about a person who has not been asked yet.
  */
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -25,6 +24,7 @@ import {
   fetchStreak,
   fetchTypeStats,
 } from "../../src/lib/db";
+import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { roleInfo } from "../../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { Profile, RoleTrap, TypeStat } from "../../src/lib/types";
@@ -108,6 +108,7 @@ export default function Home() {
   const done = Math.min(today, goal);
   const trapTotal = traps.reduce((n, t) => n + t.times_chosen, 0);
   const topTrap = traps[0];
+  const countdown = countdownLine(daysUntil(profile?.exam_date));
 
   const answered = types.reduce((n, t) => n + t.answered, 0);
   const correct = types.reduce((n, t) => n + t.correct, 0);
@@ -117,7 +118,7 @@ export default function Home() {
     <ScrollView contentContainerStyle={styles.page}>
       <ScreenHeader
         title="ホーム"
-        subtitle={`目標レベル ${profile?.target_level ?? "J2"}`}
+        subtitle={`いまのレベル ${profile?.target_level ?? "J2"}・正解が続くと上がります`}
         right={
           streak > 0 ? (
             <View style={styles.streakPill}>
@@ -131,7 +132,7 @@ export default function Home() {
       <GradientCard style={{ gap: space.lg }}>
         <View style={styles.heroRow}>
           <View style={{ flex: 1, gap: space.xs }}>
-            <Text style={styles.heroLabel}>今日</Text>
+            <Text style={styles.heroLabel}>{countdown ?? "今日"}</Text>
             <Text style={styles.heroTitle}>
               {done} / {goal} 問
             </Text>
@@ -150,16 +151,13 @@ export default function Home() {
           />
         </View>
 
-        <View style={{ gap: space.sm }}>
-          <Button
-            label={done >= goal ? "もう一組やる" : "今日の練習をする"}
-            sub={`${goal}問・約3分`}
-            tone="onAccent"
-            icon="play"
-            onPress={() => router.push({ pathname: "/practice", params: { mode: "daily" } })}
-          />
-          <Button label="種類を選ぶ" tone="onAccent" onPress={() => router.push("/choose")} />
-        </View>
+        <Button
+          label={done >= goal ? "もう一組やる" : "今日の練習をする"}
+          sub={`${goal}問・約3分・レベルも弱点もおまかせ`}
+          tone="onAccent"
+          icon="play"
+          onPress={() => router.push({ pathname: "/practice", params: { mode: "daily" } })}
+        />
       </GradientCard>
 
       <View style={{ gap: space.md }}>
@@ -168,7 +166,7 @@ export default function Home() {
           <Card style={{ gap: space.xs }}>
             <Text style={type.body}>まだ記録がありません。</Text>
             <Text style={type.small}>
-              一組やってみると、正答率も、よく落ちる罠も、ここに出てきます。
+              一組やってみると、正答率も、よく落ちるミスも、ここに出てきます。
             </Text>
           </Card>
         ) : (
@@ -191,18 +189,14 @@ export default function Home() {
           <View style={styles.trapHead}>
             <IconBadge name="alert" tone="pink" />
             <View style={{ flex: 1 }}>
-              <Text style={type.small}>いま一番よく落ちる罠</Text>
+              <Text style={type.small}>いま一番多いミス</Text>
               <Text style={type.h2}>{roleInfo(topTrap.role).label}</Text>
             </View>
             <Tag tone="pink">{topTrap.times_chosen}回</Tag>
           </View>
-          <Text style={type.small}>{roleInfo(topTrap.role).advice}</Text>
-          <Button
-            label="この弱点を1つ倒す"
-            tone="secondary"
-            sub="苦手なタグから5問"
-            onPress={() => router.push({ pathname: "/practice", params: { mode: "weakness" } })}
-          />
+          <Text style={type.small}>
+            {roleInfo(topTrap.role).advice} 今日の練習に、自動で入ります。
+          </Text>
         </Card>
       ) : null}
 
