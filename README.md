@@ -369,9 +369,10 @@ manual mode (`free`, `mock`) serves one level, unseen first — someone who chos
 
 **The level is a trigger too.** Nobody is asked whether they are J2; nobody
 could answer. Everyone starts there, and `adjust_level()` moves
-`profiles.target_level` after each answer on the last twenty at the current
-level: sixteen right goes up, eight or fewer goes down. The stretch item is
-excluded from that count, so it can never cost a promotion. Weakness-targeted
+`profiles.target_level` after each answer, on the last ten at the current
+level to begin with and the last twenty once there is a record: 80% right goes
+up, 40% or fewer goes down. The stretch item is excluded from that count, so it
+can never cost a promotion. Weakness-targeted
 *selection* works today over a fixed library. Weakness-targeted *generation*
 comes later and needs no schema change.
 

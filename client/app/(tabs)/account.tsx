@@ -20,6 +20,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "../../src/lib/auth";
 import { fetchProfile, updateProfile } from "../../src/lib/db";
 import { countdownLine, daysUntil, formatExamDate, monthsFromNow } from "../../src/lib/exam";
+import { LANG_NAME, LANGS, useLang, type Key } from "../../src/lib/i18n";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { Profile } from "../../src/lib/types";
 import {
@@ -35,14 +36,15 @@ import {
 } from "../../src/ui/components";
 import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
-const EXAM_PRESETS: { label: string; months: number }[] = [
-  { label: "1か月後", months: 1 },
-  { label: "3か月後", months: 3 },
-  { label: "6か月後", months: 6 },
+const EXAM_PRESETS: { key: Key; months: number }[] = [
+  { key: "preset_1", months: 1 },
+  { key: "preset_3", months: 3 },
+  { key: "preset_6", months: 6 },
 ];
 
 export default function Account() {
   const router = useRouter();
+  const { lang, setLang, t } = useLang();
   const {
     isAnonymous,
     email,
@@ -94,7 +96,7 @@ export default function Account() {
   if (!isConfigured) {
     return (
       <ScreenMessage>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </ScreenMessage>
     );
   }
@@ -102,7 +104,7 @@ export default function Account() {
   if (authError) {
     return (
       <ScreenMessage>
-        <Notice title="接続できません" body={authError} tone="warn" />
+        <Notice title={t("cant_connect")} body={authError} tone="warn" />
       </ScreenMessage>
     );
   }
@@ -110,10 +112,10 @@ export default function Account() {
     return (
       <ScreenMessage>
         <Notice
-          title="読み込めません"
+          title={t("cant_load")}
           body={profileError}
           tone="warn"
-          action={{ label: "もう一度読み込む", onPress: retry }}
+          action={{ label: t("retry"), onPress: retry }}
         />
       </ScreenMessage>
     );
@@ -121,28 +123,22 @@ export default function Account() {
   if (!profile) return <Loading />;
 
   const days = daysUntil(profile.exam_date);
-  const countdown = countdownLine(days);
+  const countdown = countdownLine(days, lang);
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <ScreenHeader title="アカウント" subtitle={isAnonymous ? "ログインなしで使えています" : email ?? undefined} />
+      <ScreenHeader title={t("tab_account")} subtitle={isAnonymous ? t("acc_anon_sub") : email ?? undefined} />
 
       {isAnonymous ? (
         <Card style={{ gap: space.md }}>
           <View style={styles.head}>
             <IconBadge name="user" tone="violet" />
-            <Text style={[type.h2, { flex: 1 }]}>記録はこの端末にだけあります</Text>
+            <Text style={[type.h2, { flex: 1 }]}>{t("acc_anon_title")}</Text>
           </View>
-          <Text style={type.small}>
-            ログインしなくても使えます。ただし、いまの記録はこの端末のアプリの中にある鍵で
-            つながっています。アプリを消したり端末を変えたりすると、戻せません。
-          </Text>
-          <Text style={type.small}>
-            Googleとつなぐと、これまでの解答も連続日数も弱点もそのまま引き継がれます。
-            作り直しにはなりません。
-          </Text>
+          <Text style={type.small}>{t("acc_anon_p1")}</Text>
+          <Text style={type.small}>{t("acc_anon_p2")}</Text>
           <Button
-            label={busy ? "つないでいます…" : "Googleで記録を引き継ぐ"}
+            label={busy ? t("acc_link_busy") : t("acc_link")}
             onPress={onLink}
             disabled={busy}
           />
@@ -152,83 +148,82 @@ export default function Account() {
           <View style={styles.head}>
             <IconBadge name="check" tone="teal" />
             <View style={{ flex: 1 }}>
-              <Text style={type.h2}>ログイン中</Text>
-              <Text style={type.small}>{email ?? "Googleアカウント"}</Text>
+              <Text style={type.h2}>{t("acc_signed_in")}</Text>
+              <Text style={type.small}>{email ?? t("acc_google")}</Text>
             </View>
           </View>
-          <Text style={type.small}>記録はどの端末からでも見られます。</Text>
+          <Text style={type.small}>{t("acc_any_device")}</Text>
         </Card>
       )}
 
       <View style={{ gap: space.md }}>
-        <SectionLabel>いまのレベル</SectionLabel>
+        <SectionLabel>{t("acc_level")}</SectionLabel>
         <Card style={{ gap: space.md }}>
           <View style={styles.head}>
             <IconBadge name="layers" tone="blue" />
             <View style={{ flex: 1 }}>
               <Text style={type.h1}>{profile.target_level}</Text>
-              <Text style={type.small}>アプリが決めます。選ぶところはありません。</Text>
+              <Text style={type.small}>{t("acc_level_sub")}</Text>
             </View>
           </View>
-          <Text style={type.small}>
-            直近20問のうち16問以上正解すると、次のレベルに上がります。8問以下なら、少しやさしくします。
-            毎回の練習には、1問だけ上のレベルの問題が入っています。
-          </Text>
+          <Text style={type.small}>{t("acc_level_rule")}</Text>
         </Card>
       </View>
 
       <View style={{ gap: space.md }}>
-        <SectionLabel>試験日</SectionLabel>
+        <SectionLabel>{t("acc_exam")}</SectionLabel>
         <Card style={{ gap: space.md }}>
           <View style={styles.head}>
             <IconBadge name="clock" tone="amber" />
             <View style={{ flex: 1 }}>
               <Text style={type.h2}>
-                {profile.exam_date ? formatExamDate(profile.exam_date) : "まだ決めていません"}
+                {profile.exam_date ? formatExamDate(profile.exam_date, lang) : t("acc_exam_unset")}
               </Text>
               <Text style={type.small}>
-                {countdown ?? "決めると、ホームにカウントダウンが出ます。"}
+                {countdown ?? t("acc_exam_hint")}
               </Text>
             </View>
           </View>
           <View style={styles.chips}>
             {EXAM_PRESETS.map((preset) => (
               <Chip
-                key={preset.label}
-                label={preset.label}
+                key={preset.key}
+                label={t(preset.key)}
                 selected={false}
                 onPress={() => setExamDate(monthsFromNow(preset.months))}
               />
             ))}
             {profile.exam_date ? (
-              <Chip label="消す" selected={false} onPress={() => setExamDate(null)} />
+              <Chip label={t("clear")} selected={false} onPress={() => setExamDate(null)} />
             ) : null}
           </View>
         </Card>
       </View>
 
+      <View style={{ gap: space.md }}>
+        <SectionLabel>{t("acc_lang")}</SectionLabel>
+        <Card style={{ gap: space.md }}>
+          <View style={styles.chips}>
+            {LANGS.map((candidate) => (
+              <Chip
+                key={candidate}
+                label={LANG_NAME[candidate]}
+                selected={lang === candidate}
+                onPress={() => setLang(candidate)}
+              />
+            ))}
+          </View>
+          <Text style={type.small}>{t("acc_lang_sub")}</Text>
+        </Card>
+      </View>
+
       {error ? <Text style={[type.small, { color: colors.wrong }]}>{error}</Text> : null}
 
-      <Notice
-        title="スコアを出さない理由"
-        body={
-          "このアプリは本番の点数を推定しません。生成した問題には本番と同じ尺度がないため、" +
-          "「たぶん◯点」と出すと、当たっているように見えて計画を狂わせます。" +
-          "上の「レベル」は点数の予測ではなく、いま出している問題の難しさです。"
-        }
-      />
-
-      <Notice
-        title="この試験について"
-        body={
-          "このアプリはBJTビジネス日本語能力テストの形式に合わせた練習問題を出します。" +
-          "問題はすべて独自に作ったもので、過去問は使っていません。試験の運営とは関係ありません。"
-        }
-      />
+      <Notice title={t("acc_noscore_title")} body={t("acc_noscore_body")} />
 
       {!isAnonymous ? (
         <Button
-          label="ログアウト"
+          label={t("logout")}
           tone="secondary"
           onPress={async () => {
             await signOut();

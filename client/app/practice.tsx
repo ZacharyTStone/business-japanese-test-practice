@@ -46,6 +46,7 @@ import {
   sceneUrl,
   startSession,
 } from "../src/lib/db";
+import { useLang, type Key } from "../src/lib/i18n";
 import { verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
@@ -53,7 +54,7 @@ import type { AnsweredItem, Level, PracticeMode, QueuedItem } from "../src/lib/t
 import { AutoPlaylist, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
 import { DocumentView } from "../src/ui/document";
-import { Face, MOOD_LABEL, moodFor } from "../src/ui/face";
+import { Face, moodFor, moodLabel } from "../src/ui/face";
 import { RudenessMeter } from "../src/ui/meters";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
@@ -63,25 +64,25 @@ const LETTERS = ["A", "B", "C", "D"];
  *  sitting still and concentrating, which five questions cannot rehearse. */
 const MOCK_LENGTH = 20;
 
-const CHANNEL_LABEL: Record<string, string> = {
-  in_person: "対面",
-  phone: "電話",
-  video: "オンライン",
-  written: "文書",
+const CHANNEL_KEY: Record<string, Key> = {
+  in_person: "ch_in_person",
+  phone: "ch_phone",
+  video: "ch_video",
+  written: "ch_written",
 };
 
 /** What to tell the learner to do. The act is the same everywhere, but the
  *  instruction is not: "最も適切な言い方" makes no sense for a reading item. */
-const PROMPT_BY_TYPE: Record<string, string> = {
-  hatsugen_choukai: "この場面で最も適切な言い方を選んでください。",
-  hyougen: "この場面で最も適切な表現を選んでください。",
-  goi_bunpou: "空欄に入る最も適切なものを選んでください。",
-  bamen_haaku: "聞いた内容に合うものを選んでください。",
-  sougou_choukai: "会話の内容に合うものを選んでください。",
-  joukyou_haaku: "掲示と依頼の両方をふまえて選んでください。",
-  shiryou_choudokkai: "資料と音声の両方をふまえて選んでください。",
-  sougou_choudokkai: "会話と資料の両方をふまえて選んでください。",
-  sougou_dokkai: "文書から読み取れることを選んでください。",
+const PROMPT_KEY: Record<string, Key> = {
+  hatsugen_choukai: "prompt_hatsugen_choukai",
+  hyougen: "prompt_hyougen",
+  goi_bunpou: "prompt_goi_bunpou",
+  bamen_haaku: "prompt_bamen_haaku",
+  sougou_choukai: "prompt_sougou_choukai",
+  joukyou_haaku: "prompt_joukyou_haaku",
+  shiryou_choudokkai: "prompt_shiryou_choudokkai",
+  sougou_choudokkai: "prompt_sougou_choudokkai",
+  sougou_dokkai: "prompt_sougou_dokkai",
 };
 
 type Stage = "scene" | "listen" | "answer" | "reveal";
@@ -108,6 +109,7 @@ function buzz(pattern: number | number[]) {
 
 export default function Practice() {
   const router = useRouter();
+  const { lang, t } = useLang();
   const { session, loading: authLoading, error: authError } = useAuth();
   const params = useLocalSearchParams<{ mode?: string; itemType?: string }>();
   const mode = (params.mode as PracticeMode) ?? "daily";
@@ -162,19 +164,19 @@ export default function Practice() {
   if (!isConfigured) {
     return (
       <View style={styles.page}>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </View>
     );
   }
-  if (authLoading) return <Loading label="問題を用意しています…" />;
+  if (authLoading) return <Loading label={t("preparing")} />;
   if (authError) {
     return (
       <View style={styles.page}>
         <Notice
-          title="接続できません"
+          title={t("cant_connect")}
           body={authError}
           tone="warn"
-          action={{ label: "戻る", onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: () => router.back() }}
         />
       </View>
     );
@@ -183,24 +185,24 @@ export default function Practice() {
     return (
       <View style={styles.page}>
         <Notice
-          title="問題を読み込めません"
+          title={t("q_load_err")}
           body={error}
           tone="warn"
-          action={{ label: "戻る", onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: () => router.back() }}
         />
       </View>
     );
   }
-  if (!items) return <Loading label="問題を用意しています…" />;
+  if (!items) return <Loading label={t("preparing")} />;
 
   if (items.length === 0) {
     return (
       <View style={styles.page}>
         <Notice
-          title="出せる問題がありません"
-          body="いまのレベルの問題をすべて解いたか、まだ問題が公開されていません。"
+          title={t("no_q_title")}
+          body={t("no_q_body")}
           tone="warn"
-          action={{ label: "戻る", onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: () => router.back() }}
         />
       </View>
     );
@@ -275,6 +277,7 @@ export default function Practice() {
   const correctOption = options[item.correct_index];
   const role = graded?.chosenRole || chosenOption?.role || "";
   const mood = graded ? moodFor(role, graded.isCorrect) : "happy";
+  const explanation = lang === "en" && item.explanation_en ? item.explanation_en : item.explanation_ja;
 
   return (
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
@@ -290,7 +293,7 @@ export default function Practice() {
             ]}
           />
         </View>
-        {item.times_seen > 0 ? <Tag tone="amber">もう一度</Tag> : null}
+        {item.times_seen > 0 ? <Tag tone="amber">{t("again_tag")}</Tag> : null}
       </View>
 
       <SceneStrip item={item} big={stage === "scene"} />
@@ -302,10 +305,14 @@ export default function Practice() {
             <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
           ))}
           <Text style={[type.small, styles.hint]}>
-            {listenable ? "準備ができたら、聞いてください。一回だけ流れます。" : "準備ができたら、問題へ。"}
+            {listenable
+              ? mode === "mock"
+                ? t("scene_hint_mock")
+                : t("scene_hint_listen")
+              : t("scene_hint_read")}
           </Text>
           <Button
-            label={listenable ? "聞く" : "問題へ"}
+            label={listenable ? t("btn_listen") : t("btn_to_q")}
             icon={listenable ? "headphones" : "chevron"}
             onPress={() => go(listenable ? "listen" : "answer")}
           />
@@ -328,6 +335,9 @@ export default function Practice() {
               key={item.id}
               urls={playlist}
               autoplay={stage === "listen"}
+              // The mock is the exam: once, and no second chance. Practice is
+              // not the exam, and the fourth listen is where it teaches.
+              replayable={mode !== "mock"}
               onFinished={() => go("answer")}
             />
           ) : null}
@@ -337,14 +347,14 @@ export default function Practice() {
       )}
 
       {stage === "listen" ? (
-        <Text style={[type.small, styles.hint]}>聞き終わると、選択肢が出ます。</Text>
+        <Text style={[type.small, styles.hint]}>{t("listen_hint")}</Text>
       ) : null}
 
       {stage === "answer" || stage === "reveal" ? (
         <>
           {!revealed ? (
             <Text style={[type.small, styles.hint]}>
-              {PROMPT_BY_TYPE[item.item_type] ?? "最も適切なものを選んでください。"}
+              {t(PROMPT_KEY[item.item_type] ?? "prompt_default")}
             </Text>
           ) : null}
 
@@ -393,7 +403,7 @@ export default function Practice() {
                           { color: isAnswer ? colors.correct : colors.wrong, fontWeight: "700" },
                         ]}
                       >
-                        {isAnswer ? "○ 正解" : "× これを選びました"}
+                        {isAnswer ? t("mark_correct") : t("mark_chosen")}
                       </Text>
                     ) : null}
                   </View>
@@ -417,10 +427,10 @@ export default function Practice() {
               <Face mood={mood} size={68} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[type.h2, graded.isCorrect && { color: colors.correct }]}>
-                  {graded.isCorrect ? "正解です" : verdictFor(role, item.listener_role)}
+                  {graded.isCorrect ? t("correct_title") : verdictFor(role, item.listener_role, lang)}
                 </Text>
                 <Text style={type.small}>
-                  {graded.isCorrect ? correctOption?.why : MOOD_LABEL[mood]}
+                  {graded.isCorrect ? correctOption?.why : moodLabel(mood, lang)}
                 </Text>
               </View>
             </View>
@@ -434,13 +444,13 @@ export default function Practice() {
             style={({ pressed }) => [pressed && { opacity: 0.85 }]}
           >
             <Text style={[type.small, styles.toggle]}>
-              {showDetails ? "解説をとじる" : "解説をくわしく見る"}
+              {showDetails ? t("details_close") : t("details_open")}
             </Text>
           </Pressable>
 
           {showDetails ? (
             <Card style={{ gap: space.md }}>
-              <Text style={type.body}>{item.explanation_ja}</Text>
+              <Text style={type.body}>{explanation}</Text>
               <View style={{ gap: space.sm }}>
                 {options.map((option, i) => (
                   <View key={option.position} style={styles.why}>
@@ -474,7 +484,7 @@ export default function Practice() {
           ) : null}
 
           <Button
-            label={index + 1 >= items.length ? "結果を見る" : "次の問題へ"}
+            label={index + 1 >= items.length ? t("btn_result") : t("btn_next")}
             icon="chevron"
             onPress={next}
           />
@@ -487,10 +497,14 @@ export default function Practice() {
 /** Who you are, who you are talking to, and how. Big while entering the scene,
  *  a quiet row once the question is on screen. */
 function SceneStrip({ item, big }: { item: QueuedItem; big: boolean }) {
+  const { t } = useLang();
   const parts: { k: string; v: string }[] = [];
-  if (item.speaker_role) parts.push({ k: "あなた", v: item.speaker_role });
-  if (item.listener_role) parts.push({ k: "相手", v: item.listener_role });
-  if (item.channel) parts.push({ k: "", v: CHANNEL_LABEL[item.channel] ?? item.channel });
+  if (item.speaker_role) parts.push({ k: t("you"), v: item.speaker_role });
+  if (item.listener_role) parts.push({ k: t("other"), v: item.listener_role });
+  if (item.channel) {
+    const key = CHANNEL_KEY[item.channel];
+    parts.push({ k: "", v: key ? t(key) : item.channel });
+  }
   if (!parts.length) return null;
   return (
     <View style={styles.strip}>

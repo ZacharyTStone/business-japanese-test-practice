@@ -195,5 +195,6 @@ export type HistoryEntry = {
   stem: string;
   correct_index: number;
   explanation_ja: string;
+  explanation_en: string;
   options: ItemOption[];
 };

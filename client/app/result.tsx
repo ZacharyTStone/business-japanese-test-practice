@@ -12,6 +12,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { fetchProfile, hasAdFree } from "../src/lib/db";
+import { useLang } from "../src/lib/i18n";
 import { roleInfo, worstTrap } from "../src/lib/roles";
 import { clearSummary, takeSummary } from "../src/lib/session";
 import type { Level } from "../src/lib/types";
@@ -32,6 +33,7 @@ const RANK: Record<Level, number> = { J3: 0, J2: 1, J1: 2 };
 
 export default function Result() {
   const router = useRouter();
+  const { lang, t } = useLang();
   const [summary] = useState(() => takeSummary());
   const [adFree, setAdFree] = useState(true); // assume paid until told otherwise
   const [levelNow, setLevelNow] = useState<Level | null>(null);
@@ -50,8 +52,8 @@ export default function Result() {
   if (!summary) {
     return (
       <View style={styles.page}>
-        <Notice title="結果がありません" body="練習を始めると、ここに結果が出ます。" />
-        <Button label="ホームへ" onPress={() => router.replace("/")} />
+        <Notice title={t("no_result_title")} body={t("no_result_body")} />
+        <Button label={t("to_home")} onPress={() => router.replace("/")} />
       </View>
     );
   }
@@ -75,10 +77,8 @@ export default function Result() {
           <View style={styles.trapHead}>
             <IconBadge name="spark" tone="teal" />
             <View style={{ flex: 1 }}>
-              <Text style={[type.h2, { color: colors.correct }]}>レベルが上がりました</Text>
-              <Text style={type.small}>
-                {before} → {levelNow}。次からは{levelNow}の問題が出ます。
-              </Text>
+              <Text style={[type.h2, { color: colors.correct }]}>{t("level_up")}</Text>
+              <Text style={type.small}>{t("level_up_body", { a: before ?? "", b: levelNow ?? "" })}</Text>
             </View>
           </View>
         </Card>
@@ -87,10 +87,8 @@ export default function Result() {
           <View style={styles.trapHead}>
             <IconBadge name="layers" tone="blue" />
             <View style={{ flex: 1 }}>
-              <Text style={type.h2}>問題を少しやさしくします</Text>
-              <Text style={type.small}>
-                次からは{levelNow}の問題が出ます。正解が続けば、また上がります。
-              </Text>
+              <Text style={type.h2}>{t("level_down")}</Text>
+              <Text style={type.small}>{t("level_down_body", { b: levelNow ?? "" })}</Text>
             </View>
           </View>
         </Card>
@@ -101,24 +99,19 @@ export default function Result() {
           value={total > 0 ? correct / total : 0}
           size={96}
           label={`${correct}/${total}`}
-          caption="正解"
+          caption={t("ring_correct")}
         />
         <View style={{ flex: 1, gap: space.xs }}>
-          <Text style={styles.heroLabel}>{summary.mode === "mock" ? "模試" : "今回"}</Text>
-          <Text style={styles.heroTitle}>{correct}問 正解</Text>
-          <Text style={styles.heroSub}>
-            {total}問・{minutes}分
-          </Text>
+          <Text style={styles.heroLabel}>{summary.mode === "mock" ? t("mode_mock") : t("mode_this")}</Text>
+          <Text style={styles.heroTitle}>{t("n_correct", { n: correct })}</Text>
+          <Text style={styles.heroSub}>{t("n_min", { total, min: minutes })}</Text>
         </View>
       </GradientCard>
 
       {summary.mode === "mock" ? (
         <Card style={{ gap: space.xs }}>
-          <Text style={type.small}>点数の予測は出していません</Text>
-          <Text style={type.body}>
-            ここにある問題は本番の問題ではなく、何点に当たるかを換算する根拠がありません。
-            正答数と、下に出ている「落ちた罠」のほうが、次に何をすればよいかをはっきり示します。
-          </Text>
+          <Text style={type.small}>{t("mock_noscore_title")}</Text>
+          <Text style={type.body}>{t("mock_noscore_body")}</Text>
         </Card>
       ) : null}
 
@@ -127,26 +120,24 @@ export default function Result() {
           <View style={styles.trapHead}>
             <IconBadge name="alert" tone="pink" />
             <View style={{ flex: 1 }}>
-              <Text style={type.small}>今回よく落ちた罠</Text>
-              <Text style={type.h2}>{roleInfo(trap.role).label}</Text>
+              <Text style={type.small}>{t("top_mistake")}</Text>
+              <Text style={type.h2}>{roleInfo(trap.role, lang).label}</Text>
             </View>
           </View>
-          <Text style={type.small}>{roleInfo(trap.role).advice}</Text>
+          <Text style={type.small}>{roleInfo(trap.role, lang).advice}</Text>
         </Card>
       ) : correct === total ? (
         <Card style={{ backgroundColor: colors.correctSoft }}>
           <View style={styles.trapHead}>
             <IconBadge name="check" tone="teal" />
-            <Text style={[type.h2, { color: colors.correct, flex: 1 }]}>全問正解です</Text>
+            <Text style={[type.h2, { color: colors.correct, flex: 1 }]}>{t("all_correct")}</Text>
           </View>
-          <Text style={[type.small, { marginTop: space.sm }]}>
-            同じ場面でも、相手が変わると答えは変わります。明日も続けましょう。
-          </Text>
+          <Text style={[type.small, { marginTop: space.sm }]}>{t("all_correct_body")}</Text>
         </Card>
       ) : null}
 
       <View style={{ gap: space.sm }}>
-        <SectionLabel>この回の内訳</SectionLabel>
+        <SectionLabel>{t("breakdown")}</SectionLabel>
         <Card style={{ gap: space.md }}>
           {summary.answers.map((a, i) => (
             <View key={a.item.id} style={styles.row}>
@@ -163,6 +154,11 @@ export default function Result() {
               </Text>
             </View>
           ))}
+          {correct < total ? (
+            // The promise the daily set keeps: a miss comes back after a night,
+            // not immediately and not never. See next_items, bucket 0.
+            <Text style={[type.small, { marginTop: space.xs }]}>{t("retry_promise")}</Text>
+          ) : null}
         </Card>
       </View>
 
@@ -171,9 +167,9 @@ export default function Result() {
       <AdSlot placement="session_result" enabled={!adFree} />
 
       <View style={{ gap: space.md }}>
-        <Button label="ホームへ" onPress={() => router.replace("/")} />
+        <Button label={t("to_home")} onPress={() => router.replace("/")} />
         <Button
-          label="まちがえた問題を見返す"
+          label={t("review_wrong")}
           tone="secondary"
           onPress={() => router.replace("/history")}
         />

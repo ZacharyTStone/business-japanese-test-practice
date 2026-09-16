@@ -21,6 +21,7 @@
 import React from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 
+import { useLang, type Key } from "../lib/i18n";
 import type { DocBlock, StimulusDocument } from "../lib/types";
 import { colors, radius, space, type } from "./theme";
 
@@ -28,15 +29,15 @@ import { colors, radius, space, type } from "./theme";
  *  16px need about this much before the cells start breaking mid-word. */
 const TABLE_MIN_WIDTH = 420;
 
-const TEMPLATE_LABEL: Record<string, string> = {
-  email_external: "社外メール",
-  email_thread: "メールのやりとり",
-  memo_notice: "社内通知",
-  meeting_minutes: "議事録",
-  schedule: "予定表",
-  progress_report: "進捗報告書",
-  quote_order: "見積書・注文書",
-  office_sign: "掲示・案内",
+const TEMPLATE_KEY: Record<string, Key> = {
+  email_external: "doc_email_external",
+  email_thread: "doc_email_thread",
+  memo_notice: "doc_memo_notice",
+  meeting_minutes: "doc_meeting_minutes",
+  schedule: "doc_schedule",
+  progress_report: "doc_progress_report",
+  quote_order: "doc_quote_order",
+  office_sign: "doc_office_sign",
 };
 
 const TONE_COLOR: Record<string, string> = {
@@ -152,6 +153,9 @@ function Block({ block, stacked }: { block: DocBlock; stacked: boolean }) {
 }
 
 export function DocumentView({ doc }: { doc: StimulusDocument }) {
+  const { t } = useLang();
+  const kindKey = TEMPLATE_KEY[doc.template];
+  const kind = kindKey ? t(kindKey) : doc.template;
   const { width } = useWindowDimensions();
   const stacked = width < TABLE_MIN_WIDTH;
 
@@ -159,9 +163,9 @@ export function DocumentView({ doc }: { doc: StimulusDocument }) {
     <View
       style={styles.doc}
       accessible={false}
-      accessibilityLabel={TEMPLATE_LABEL[doc.template] ?? doc.template}
+      accessibilityLabel={kind}
     >
-      <Text style={styles.kind}>{TEMPLATE_LABEL[doc.template] ?? doc.template}</Text>
+      <Text style={styles.kind}>{kind}</Text>
       <Text style={styles.title}>{doc.title}</Text>
       {doc.meta?.length ? <Fields pairs={doc.meta} /> : null}
       <View style={styles.body}>

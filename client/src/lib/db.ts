@@ -237,7 +237,7 @@ export async function fetchHistory(limit = 50): Promise<HistoryEntry[]> {
   const [items, options, types] = await Promise.all([
     supabase
       .from("items")
-      .select("id, item_type, level, topic, stem, correct_index, explanation_ja")
+      .select("id, item_type, level, topic, stem, correct_index, explanation_ja, explanation_en")
       .in("id", ids),
     supabase.from("item_options").select("item_id, position, text, role, why").in("item_id", ids),
     supabase.from("item_types").select("id, label_ja"),
@@ -274,6 +274,7 @@ export async function fetchHistory(limit = 50): Promise<HistoryEntry[]> {
       stem: item.stem,
       correct_index: item.correct_index,
       explanation_ja: item.explanation_ja,
+      explanation_en: item.explanation_en ?? "",
       options: (optionsById.get(item.id) ?? []).sort((a, b) => a.position - b.position),
     });
   }
