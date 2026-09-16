@@ -110,6 +110,8 @@ export default function Home() {
   const [review, setReview] = useState<ReviewLoad>({ due_now: 0, tracked: 0, next_due_at: null });
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloads, setReloads] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,6 +138,10 @@ export default function Home() {
           setTypes(ty);
           setReview(rv);
           setLevels(lv);
+        } catch (e) {
+          // Without this the screen sat on its spinner for ever when the record
+          // failed to load, which looks exactly like an app that has hung.
+          if (!cancelled) setError(e instanceof Error ? e.message : String(e));
         } finally {
           if (!cancelled) setLoading(false);
         }
@@ -143,8 +149,14 @@ export default function Home() {
       return () => {
         cancelled = true;
       };
-    }, [authLoading])
+    }, [authLoading, reloads])
   );
+
+  function retry() {
+    setError(null);
+    setLoading(true);
+    setReloads((n) => n + 1);
+  }
 
   if (!isConfigured) {
     return (
@@ -158,6 +170,18 @@ export default function Home() {
     return (
       <ScreenMessage>
         <Notice title={t("cant_connect")} body={authError} tone="warn" />
+      </ScreenMessage>
+    );
+  }
+  if (error) {
+    return (
+      <ScreenMessage>
+        <Notice
+          title={t("cant_load")}
+          body={error}
+          tone="warn"
+          action={{ label: t("retry"), onPress: retry }}
+        />
       </ScreenMessage>
     );
   }
