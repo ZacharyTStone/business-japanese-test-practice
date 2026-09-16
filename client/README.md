@@ -113,7 +113,14 @@ src/lib/
   session.ts        the practice → result handoff
 src/ui/             theme, shared components, icons, the meter, the radar, the face
   welcome.tsx       the first-launch explanation, and the only sign-in prompt
+  keys.ts           answering with 1–4 and Enter, on the one platform with a keyboard
 ```
+
+On the web this is a drill somebody does at a desk between two other tabs, so
+`keys.ts` lets the whole set be answered from the keyboard: `1`–`4` or `a`–`d`
+to choose, Enter or space to go on. Any key it does not use keeps its normal
+behaviour, so Tab still moves focus. On a phone it compiles to nothing, and the
+one line that advertises it only renders where there is a keyboard to press.
 
 Practice, its result, and the review screen are pushed *over* the tab bar rather
 than living in it. A set of five is a thing you finish, and a tab bar under a

@@ -19,6 +19,7 @@ import { useAuth } from "../../src/lib/auth";
 import {
   fetchAnsweredToday,
   fetchProfile,
+  fetchReviewLoad,
   fetchRoleTraps,
   fetchStreak,
   fetchTagStats,
@@ -28,7 +29,7 @@ import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang, type Key, type Lang } from "../../src/lib/i18n";
 import { roleInfo } from "../../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, RoleTrap, TagStat, TypeStat } from "../../src/lib/types";
+import type { Profile, ReviewLoad, RoleTrap, TagStat, TypeStat } from "../../src/lib/types";
 import {
   Button,
   Card,
@@ -62,11 +63,16 @@ function plan(
   lang: Lang,
   t: (key: Key, vars?: Record<string, string | number>) => string,
   answered: number,
+  due: number,
   tags: TagStat[],
   traps: RoleTrap[],
   onStretch: boolean
 ): string {
   if (answered === 0) return t("plan_first");
+  // Above the weakness lines on purpose: due reviews are a fact about today,
+  // and "three are waiting" beats "eight more answers and I will have an
+  // opinion" for somebody deciding whether to open the app now.
+  if (due > 0) return t("plan_due", { n: due });
   if (answered < MIN_ATTEMPTS_FOR_WEAKNESS) {
     return t("plan_watching", { n: MIN_ATTEMPTS_FOR_WEAKNESS - answered });
   }
@@ -92,6 +98,7 @@ export default function Home() {
   const [traps, setTraps] = useState<RoleTrap[]>([]);
   const [tags, setTags] = useState<TagStat[]>([]);
   const [types, setTypes] = useState<TypeStat[]>([]);
+  const [review, setReview] = useState<ReviewLoad>({ due_now: 0, tracked: 0, next_due_at: null });
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -100,13 +107,14 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, t, r, tg, ty] = await Promise.all([
+          const [p, s, t, r, tg, ty, rv] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchAnsweredToday(),
             fetchRoleTraps(),
             fetchTagStats(),
             fetchTypeStats(),
+            fetchReviewLoad(),
           ]);
           if (cancelled) return;
           setProfile(p);
@@ -115,6 +123,7 @@ export default function Home() {
           setTraps(r);
           setTags(tg);
           setTypes(ty);
+          setReview(rv);
         } finally {
           if (!cancelled) setLoading(false);
         }
@@ -181,6 +190,7 @@ export default function Home() {
             value={goal > 0 ? done / goal : 0}
             label={`${Math.round((goal > 0 ? done / goal : 0) * 100)}%`}
             caption={t("today")}
+            accessibilityLabel={t("goal_ring", { done, goal })}
           />
         </View>
 
@@ -199,7 +209,7 @@ export default function Home() {
           <View style={styles.trapHead}>
             <IconBadge name="spark" tone="violet" />
             <Text style={[type.body, { flex: 1 }]}>
-              {plan(lang, t, answered, tags, traps, level !== "J1")}
+              {plan(lang, t, answered, review.due_now, tags, traps, level !== "J1")}
             </Text>
           </View>
         </Card>

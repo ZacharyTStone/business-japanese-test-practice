@@ -147,7 +147,7 @@ def bundle_sql(bundle: dict, bundle_id: str) -> str:
         "id", "bundle_id", "item_type", "level", "seed_cell_id", "setting", "relation",
         "function", "channel", "scene_id", "speaker_role", "listener_role", "topic",
         "stem", "correct_index", "explanation_ja", "explanation_en", "vocab_notes",
-        "documents", "dialogue", "narration_clip_id",
+        "documents", "dialogue", "narration_clip_id", "model_p_correct",
     ]
     item_rows = []
     option_rows = []
@@ -167,6 +167,10 @@ def bundle_sql(bundle: dict, bundle_id: str) -> str:
             it.get("documents", []),
             it.get("dialogue", []),
             (it.get("audio") or {}).get("narration"),
+            # Null for the hand-written batches, which skip the gate. The queue
+            # reads null as "no opinion" rather than as "average", so an
+            # unmeasured item is neither promoted nor buried.
+            it.get("model_p_correct"),
         ])
         clip_ids = (it.get("audio") or {}).get("options") or []
         for pos, opt in enumerate(it["options"]):

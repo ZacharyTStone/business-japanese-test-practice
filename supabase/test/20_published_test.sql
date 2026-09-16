@@ -106,6 +106,15 @@ begin
         (select count(distinct id) from public.next_items(5)) = 5,
         'a set of five is five distinct items');
 
+    -- ...and not five of the same KIND either, which is the failure this
+    -- library invites: 発言聴解 has four times as many items as anything else,
+    -- so a queue that only ranks by weakness would serve it five times over. The
+    -- per-type penalty in next_items is what stops that, and this is the
+    -- assertion that notices if somebody takes it out.
+    perform test.check(
+        (select count(distinct item_type) from public.next_items(5)) >= 4,
+        'a set of five spreads across problem types rather than drilling one');
+
     -- The smart set: four at your level and one from the level above, so the
     -- app is always quietly asking a harder question than it has to.
     perform test.check(

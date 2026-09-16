@@ -18,6 +18,7 @@ import type {
   HistoryEntry,
   Profile,
   QueuedItem,
+  ReviewLoad,
   RoleTrap,
   TagStat,
   TypeStat,
@@ -133,6 +134,21 @@ export async function fetchRoleTraps(): Promise<RoleTrap[]> {
     .order("times_chosen", { ascending: false });
   if (error) throw error;
   return (data ?? []) as RoleTrap[];
+}
+
+/** What the spacing ladder has waiting.
+ *
+ *  Only ever used to let home say one true sentence — "three are due today" —
+ *  and never to let anybody act on it: there is no button that serves the due
+ *  items on their own, because there is no button that serves anything on its
+ *  own. The queue already puts them first. */
+export async function fetchReviewLoad(): Promise<ReviewLoad> {
+  const { data, error } = await supabase
+    .from("v_my_review_load")
+    .select("due_now, tracked, next_due_at")
+    .maybeSingle();
+  if (error) throw error;
+  return (data as ReviewLoad) ?? { due_now: 0, tracked: 0, next_due_at: null };
 }
 
 export async function fetchStreak(): Promise<number> {

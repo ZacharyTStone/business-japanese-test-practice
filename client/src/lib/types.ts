@@ -159,6 +159,19 @@ export type RoleTrap = {
   last_chosen_at: string;
 };
 
+/** What the spacing ladder has waiting. One row, always — a learner who has
+ *  answered nothing gets zeroes rather than no row, which is why home can print
+ *  it without a null check. */
+export type ReviewLoad = {
+  /** Items the ladder says are due now. The queue serves these first. */
+  due_now: number;
+  /** Items with a schedule at all — everything ever answered. */
+  tracked: number;
+  /** When the next one comes due, or null when everything is already due or
+   *  nothing is tracked yet. */
+  next_due_at: string | null;
+};
+
 /** An answered question, held in memory for the duration of one session. */
 export type AnsweredItem = {
   item: QueuedItem;

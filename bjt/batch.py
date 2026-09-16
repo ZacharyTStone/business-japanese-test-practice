@@ -120,6 +120,15 @@ def to_bundle_item(item: dict) -> dict:
     for key in ("scene_id", "speaker_role", "listener_role", "channel"):
         if key in item:
             out[key] = item[key]
+
+    # How often the answerability gate answered this item correctly with the full
+    # stimulus. Absent for hand-written batches, which are the one path that
+    # skips the gate — and absent is the honest value there, not 1.0. The
+    # practice queue reads it as the difficulty prior for an item nobody has met
+    # yet, and replaces it with the measured rate as soon as the shared bank has
+    # one.
+    if item.get("model_p_correct") is not None:
+        out["model_p_correct"] = item["model_p_correct"]
     return out
 
 
@@ -394,6 +403,7 @@ def _as_generator_shape(bundle_item: dict) -> dict:
     it.pop("correct_index", None)
     it.pop("audio", None)
     it.pop("id", None)
+    it.pop("model_p_correct", None)
 
     field = schemas.DOCUMENT_FIELDS.get(it.get("item_type", ""))
     documents = it.pop("documents", None)

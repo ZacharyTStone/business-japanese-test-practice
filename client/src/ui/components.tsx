@@ -9,6 +9,7 @@ import {
   Text,
   View,
   type StyleProp,
+  type ViewProps,
   type ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,8 +19,15 @@ import { Icon, type IconName } from "./icons";
 import { badge, card, colors, radius, shadow, space, type } from "./theme";
 import type { BadgeTone } from "./theme";
 
-export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[card, style]}>{children}</View>;
+/** Anything else a View takes comes through — the accessibility props in
+ *  particular, so a card that appears in response to an answer can announce
+ *  itself without being wrapped in another View to carry the attribute. */
+export function Card({ children, style, ...rest }: ViewProps) {
+  return (
+    <View style={[card, style]} {...rest}>
+      {children}
+    </View>
+  );
 }
 
 /**
@@ -209,6 +217,7 @@ export function ProgressRing({
   label,
   caption,
   labelColor = colors.onAccent,
+  accessibilityLabel,
 }: {
   value: number;
   size?: number;
@@ -218,12 +227,21 @@ export function ProgressRing({
   label: string;
   caption?: string;
   labelColor?: string;
+  /** What the ring means in words. Without it a screen reader reads "3 / 5" and
+   *  "today" as two loose fragments with a circle between them. */
+  accessibilityLabel?: string;
 }) {
   const clamped = Math.max(0, Math.min(1, value));
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
   return (
-    <View style={{ width: size, height: size }}>
+    <View
+      style={{ width: size, height: size }}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={accessibilityLabel ?? (caption ? `${caption} ${label}` : label)}
+      accessibilityValue={{ now: Math.round(clamped * 100), min: 0, max: 100 }}
+    >
       <Svg width={size} height={size}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={stroke} fill="none" />
         <Circle

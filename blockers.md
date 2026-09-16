@@ -179,6 +179,42 @@ ad network account when it is taken.
 
 ---
 
+## 8. The nightly job runs half of itself
+
+**What exists.** `.github/workflows/nightly.yml`, and the two commands behind it.
+`bjt plan` surveys the library shelf by shelf — nine problem types × three levels
+— and prints the work order that would fill the emptiest ones first; `bjt nightly`
+executes it, running every item through the same per-item gate and the same
+whole-batch checks as a hand-run batch, writing bundles and their SQL, and
+leaving a pull request for somebody to read. The survey half runs every night
+already: it needs no key, no network and no project, and it is the thing that
+says out loud that sixteen of the twenty-seven shelves are empty.
+
+**What is blocked.** The writing half needs two secrets, and neither is a code
+problem:
+
+- `ANTHROPIC_API_KEY` — same blocker as entry 1.
+- `SEEDS_TAR_B64` — the licensed few-shot and vocabulary material that lives in
+  the gitignored `seeds/`, as `tar czf - seeds | base64 -w0`. The job refuses to
+  generate without it rather than generating worse items: the few-shot examples
+  are most of what keeps a generated item close to the exam, and a hundred items
+  written without them would fill the bank with the wrong thing, quietly, which
+  is much harder to undo than an empty shelf.
+
+A third secret is optional and unlocks the other half of the night:
+
+- `SUPABASE_DB_URL` — one statement, `select public.refresh_item_stats()`, which
+  recounts how often each item is answered correctly across all learners. That is
+  what the practice queue reads to pitch a set at a difficulty that teaches.
+  Without it the queue falls back to the answerability gate's own estimate, which
+  is what a freshly published item has anyway.
+
+**What unblocks it.** Setting those secrets on the repository. Then check the
+first run's pull request item by item before merging it — the whole design
+assumes a person does, and the budget is small so that a person can.
+
+---
+
 ## What is not blocked
 
 Everything else. The four checks run offline with no key, no project and no
@@ -191,4 +227,6 @@ cd client && npm run typecheck
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json
 ```
 
-CI runs all four on every push.
+CI runs all four on every push. A second workflow, `nightly`, surveys the bank
+every night with the same offline tools — see entry 8 for the half of it that is
+waiting on a key.
