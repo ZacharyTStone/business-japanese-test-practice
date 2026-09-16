@@ -20,15 +20,13 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: colors.bg },
           }}
         >
-          <Stack.Screen name="index" options={{ title: "ビジネス日本語ドリル" }} />
+          {/* The tab bar draws its own headers, so this one gets out of the way. */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           {/* No back gesture mid-session: leaving halfway loses the set, and on
               a phone the swipe is easy to trigger by accident while reading. */}
           <Stack.Screen name="practice" options={{ title: "練習", gestureEnabled: false }} />
           <Stack.Screen name="result" options={{ title: "結果", headerBackVisible: false }} />
-          <Stack.Screen name="choose" options={{ title: "練習を選ぶ" }} />
-          <Stack.Screen name="progress" options={{ title: "記録" }} />
           <Stack.Screen name="history" options={{ title: "解いた問題" }} />
-          <Stack.Screen name="account" options={{ title: "アカウント" }} />
         </Stack>
       </AuthProvider>
     </SafeAreaProvider>

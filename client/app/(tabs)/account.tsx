@@ -8,14 +8,25 @@
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { useAuth } from "../src/lib/auth";
-import { fetchItemTypes, fetchProfile, updateProfile } from "../src/lib/db";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import type { Level, Profile } from "../src/lib/types";
-import { Button, Card, Loading, Notice } from "../src/ui/components";
-import { colors, radius, space, type } from "../src/ui/theme";
+import { useAuth } from "../../src/lib/auth";
+import { fetchItemTypes, fetchProfile, updateProfile } from "../../src/lib/db";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import type { Level, Profile } from "../../src/lib/types";
+import {
+  Button,
+  Card,
+  IconBadge,
+  Loading,
+  Notice,
+  ScreenHeader,
+  ScreenMessage,
+  SectionLabel,
+  Tag,
+} from "../../src/ui/components";
+import { Icon } from "../../src/ui/icons";
+import { colors, radius, shadow, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
 const LEVELS: Level[] = ["J3", "J2", "J1"];
 const LEVEL_HINT: Record<Level, string> = {
@@ -41,13 +52,14 @@ export default function Account() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coverage, setCoverage] = useState<Record<Level, Coverage> | null>(null);
+  const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
     if (!isConfigured || authLoading || authError) return;
     fetchProfile()
       .then(setProfile)
       .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
-  }, [isAnonymous, authLoading, authError]);
+  }, [isAnonymous, authLoading, authError, reloads]);
 
   // Coverage is shown, not hidden, for the same reason the type picker shows
   // "0問": a level with content in one of nine types should say so before
@@ -56,22 +68,27 @@ export default function Account() {
     if (!isConfigured) return;
     let cancelled = false;
     (async () => {
-      const rows = await Promise.all(LEVELS.map((level) => fetchItemTypes(level)));
-      if (cancelled) return;
-      const next = {} as Record<Level, Coverage>;
-      LEVELS.forEach((level, i) => {
-        const types = rows[i];
-        next[level] = {
-          types: types.filter((t) => t.available > 0).length,
-          total: types.reduce((n, t) => n + t.available, 0),
-        };
-      });
-      setCoverage(next);
+      try {
+        const rows = await Promise.all(LEVELS.map((level) => fetchItemTypes(level)));
+        if (cancelled) return;
+        const next = {} as Record<Level, Coverage>;
+        LEVELS.forEach((level, i) => {
+          const types = rows[i];
+          next[level] = {
+            types: types.filter((t) => t.available > 0).length,
+            total: types.reduce((n, t) => n + t.available, 0),
+          };
+        });
+        setCoverage(next);
+      } catch {
+        // A missing count is not worth an error screen: the picker still works,
+        // it just says less. The profile load above is the one that matters.
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloads]);
 
   async function onLink() {
     setBusy(true);
@@ -91,38 +108,52 @@ export default function Account() {
     await updateProfile({ target_level: level });
   }
 
+  function retry() {
+    setProfileError(null);
+    setReloads((n) => n + 1);
+  }
+
   if (!isConfigured) {
     return (
-      <View style={styles.page}>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
-      </View>
+      <ScreenMessage>
+        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+      </ScreenMessage>
     );
   }
   if (authLoading) return <Loading />;
   if (authError) {
     return (
-      <View style={styles.page}>
-        <Notice title="接続できません" body={authError} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
-      </View>
+      <ScreenMessage>
+        <Notice title="接続できません" body={authError} tone="warn" />
+      </ScreenMessage>
     );
   }
   if (profileError) {
     return (
-      <View style={styles.page}>
-        <Notice title="読み込めません" body={profileError} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
-      </View>
+      <ScreenMessage>
+        <Notice
+          title="読み込めません"
+          body={profileError}
+          tone="warn"
+          action={{ label: "もう一度読み込む", onPress: retry }}
+        />
+      </ScreenMessage>
     );
   }
   if (!profile) return <Loading />;
 
+  const here = coverage?.[profile.target_level];
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
+      <ScreenHeader title="アカウント" subtitle={isAnonymous ? "ログインなしで使えています" : email ?? undefined} />
+
       {isAnonymous ? (
         <Card style={{ gap: space.md }}>
-          <Text style={type.h2}>記録はこの端末にだけあります</Text>
+          <View style={styles.head}>
+            <IconBadge name="user" tone="violet" />
+            <Text style={[type.h2, { flex: 1 }]}>記録はこの端末にだけあります</Text>
+          </View>
           <Text style={type.small}>
             ログインしなくても使えます。ただし、いまの記録はこの端末のアプリの中にある鍵で
             つながっています。アプリを消したり端末を変えたりすると、戻せません。
@@ -139,42 +170,52 @@ export default function Account() {
           {error ? <Text style={[type.small, { color: colors.wrong }]}>{error}</Text> : null}
         </Card>
       ) : (
-        <Card style={{ gap: space.sm }}>
-          <Text style={type.h2}>ログイン中</Text>
-          <Text style={type.small}>{email ?? "Googleアカウント"}</Text>
+        <Card style={{ gap: space.md }}>
+          <View style={styles.head}>
+            <IconBadge name="check" tone="teal" />
+            <View style={{ flex: 1 }}>
+              <Text style={type.h2}>ログイン中</Text>
+              <Text style={type.small}>{email ?? "Googleアカウント"}</Text>
+            </View>
+          </View>
           <Text style={type.small}>記録はどの端末からでも見られます。</Text>
         </Card>
       )}
 
-      <Card style={{ gap: space.md }}>
-        <Text style={type.h2}>目標レベル</Text>
-        <Text style={type.small}>出題の難しさが変わります。</Text>
-        <View style={{ gap: space.sm }}>
-          {LEVELS.map((level) => {
-            const active = profile.target_level === level;
-            const cov = coverage?.[level];
-            const sub = cov
-              ? `${LEVEL_HINT[level]}（9種類中${cov.types}種類・${cov.total}問）`
-              : LEVEL_HINT[level];
-            return (
-              <View key={level} style={[styles.level, active && styles.levelActive]}>
-                <Button
-                  label={level}
-                  sub={sub}
-                  tone={active ? "primary" : "secondary"}
-                  onPress={() => setLevel(level)}
-                />
+      <View style={{ gap: space.md }}>
+        <SectionLabel>目標レベル</SectionLabel>
+        {LEVELS.map((level) => {
+          const active = profile.target_level === level;
+          const cov = coverage?.[level];
+          return (
+            <Pressable
+              key={level}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => setLevel(level)}
+              style={({ pressed }) => [
+                styles.levelRow,
+                active && styles.levelRowOn,
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={type.h2}>{level}</Text>
+                <Text style={type.small}>{LEVEL_HINT[level]}</Text>
               </View>
-            );
-          })}
-        </View>
-        {coverage && coverage[profile.target_level].types < 9 ? (
+              {cov ? <Tag tone={cov.types === 9 ? "teal" : "amber"}>{`${cov.types}/9種類`}</Tag> : null}
+              {active ? <Icon name="check" size={20} color={colors.accent} strokeWidth={2.4} /> : null}
+            </Pressable>
+          );
+        })}
+        {here && here.types < 9 ? (
           <Notice
+            tone="warn"
             title="このレベルはまだ種類がそろっていません"
-            body={`目標レベル「${profile.target_level}」には現在9種類中${coverage[profile.target_level].types}種類しか問題がありません。今日の練習はその範囲から出ます。`}
+            body={`目標レベル「${profile.target_level}」には現在9種類中${here.types}種類・${here.total}問しかありません。今日の練習はその範囲から出ます。`}
           />
         ) : null}
-      </Card>
+      </View>
 
       <Notice
         title="スコアを出さない理由"
@@ -208,7 +249,16 @@ export default function Account() {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
-  level: { borderRadius: radius.md },
-  levelActive: { borderRadius: radius.md },
+  page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
+  head: { flexDirection: "row", alignItems: "center", gap: space.md },
+  levelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    ...shadow.card,
+  },
+  levelRowOn: { backgroundColor: colors.accentSoft },
 });

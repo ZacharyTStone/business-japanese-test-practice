@@ -41,7 +41,7 @@ import { ClipButton, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
 import { DocumentView } from "../src/ui/document";
 import { RudenessMeter } from "../src/ui/meters";
-import { colors, radius, space, type } from "../src/ui/theme";
+import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
 const LETTERS = ["A", "B", "C", "D"];
 
@@ -122,8 +122,7 @@ export default function Practice() {
   if (!isConfigured) {
     return (
       <View style={styles.page}>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </View>
     );
   }
@@ -131,16 +130,24 @@ export default function Practice() {
   if (authError) {
     return (
       <View style={styles.page}>
-        <Notice title="接続できません" body={authError} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+        <Notice
+          title="接続できません"
+          body={authError}
+          tone="warn"
+          action={{ label: "戻る", onPress: () => router.back() }}
+        />
       </View>
     );
   }
   if (error) {
     return (
       <View style={styles.page}>
-        <Notice title="問題を読み込めません" body={error} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+        <Notice
+          title="問題を読み込めません"
+          body={error}
+          tone="warn"
+          action={{ label: "戻る", onPress: () => router.back() }}
+        />
       </View>
     );
   }
@@ -152,8 +159,9 @@ export default function Practice() {
         <Notice
           title="出せる問題がありません"
           body="このレベルの問題をすべて解いたか、まだ問題が公開されていません。"
+          tone="warn"
+          action={{ label: "戻る", onPress: () => router.back() }}
         />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
       </View>
     );
   }
@@ -286,11 +294,30 @@ export default function Practice() {
               ]}
             >
               <View style={styles.optionHeader}>
-                <Text style={styles.letter}>{LETTERS[i]}</Text>
+                <View
+                  style={[
+                    styles.letterBadge,
+                    show && (isAnswer ? styles.letterBadgeCorrect : styles.letterBadgeWrong),
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.letter,
+                      show && { color: isAnswer ? colors.correct : colors.wrong },
+                    ]}
+                  >
+                    {LETTERS[i]}
+                  </Text>
+                </View>
                 {show ? (
                   // A word as well as a colour: the marker has to survive being
                   // read by someone who cannot tell the green from the red.
-                  <Text style={[type.small, { color: isAnswer ? colors.correct : colors.wrong }]}>
+                  <Text
+                    style={[
+                      type.small,
+                      { color: isAnswer ? colors.correct : colors.wrong, fontWeight: "700" },
+                    ]}
+                  >
                     {isAnswer ? "○ 正解" : "× これを選びました"}
                   </Text>
                 ) : null}
@@ -344,22 +371,33 @@ export default function Practice() {
 const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   progressRow: { flexDirection: "row", alignItems: "center", gap: space.md },
-  bar: { flex: 1, height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: "hidden" },
-  barFill: { height: 4, backgroundColor: colors.accent },
+  bar: { flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: "hidden" },
+  barFill: { height: 6, backgroundColor: colors.accent, borderRadius: 3 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
-  scene: { width: "100%", aspectRatio: 3 / 2, borderRadius: radius.sm, backgroundColor: colors.accentSoft },
+  scene: { width: "100%", aspectRatio: 3 / 2, borderRadius: radius.md, backgroundColor: colors.accentSoft },
   option: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: "transparent",
+    borderRadius: radius.lg,
     padding: space.lg,
     gap: space.xs,
+    ...shadow.card,
   },
   optionHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
   optionCorrect: { borderColor: colors.correct, backgroundColor: colors.correctSoft },
   optionWrong: { borderColor: colors.wrong, backgroundColor: colors.wrongSoft },
-  letter: { fontSize: 13, fontWeight: "700", color: colors.muted },
+  letterBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.accentSoft,
+  },
+  letterBadgeCorrect: { backgroundColor: "rgba(14,159,110,0.16)" },
+  letterBadgeWrong: { backgroundColor: "rgba(217,58,75,0.16)" },
+  letter: { fontSize: 13, fontWeight: "700", color: colors.accent },
   why: { marginTop: space.xs },
   hint: { textAlign: "center" },
 });

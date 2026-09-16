@@ -75,12 +75,16 @@ a set of five is one request rather than twenty-six.
 
 ```
 app/                expo-router screens
-  _layout.tsx       providers + stack
-  index.tsx         home — today's set, streak, the weakness nudge
+  _layout.tsx       providers + the stack the tabs sit inside
+  (tabs)/           the four places the app lives, under a bottom bar
+    _layout.tsx     the bar itself
+    index.tsx       home — today's set, streak, the weakness nudge
+    choose.tsx      pick a level and a type; the mock run starts here
+    progress.tsx    the nine-type radar, traps, weak tags
+    account.tsx     link Google, target level, the honest notes
   practice.tsx      the session: question, answer, why, 解説
   result.tsx        count + the trap that caught you most
-  progress.tsx      the nine-type radar, traps, weak tags
-  account.tsx       link Google, target level, the honest notes
+  history.tsx       every answer, wrong ones first
 src/lib/
   supabase.ts       the client (anon key is public by design — RLS is the guard)
   auth.tsx          anonymous bootstrap, Google linking, token refresh on resume
@@ -88,8 +92,12 @@ src/lib/
   roles.ts          distractor role → Japanese label + 失礼度メーター values
   types.ts          the shapes the database returns
   session.ts        the practice → result handoff
-src/ui/             theme, shared components, the meter, the radar
+src/ui/             theme, shared components, icons, the meter, the radar
 ```
+
+Practice, its result, and the review screen are pushed *over* the tab bar rather
+than living in it. A set of five is a thing you finish, and a tab bar under a
+listening item is an invitation to leave halfway — which loses the set.
 
 ## Checks
 

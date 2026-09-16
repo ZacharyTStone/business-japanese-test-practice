@@ -1,10 +1,10 @@
 /**
  * Choose what to practise.
  *
- * The home screen deliberately offers one button, because most days the right
- * answer is "the set the app picked". This screen is for the other days — the
- * week before the exam, when somebody knows perfectly well that their 聴読解 is
- * the problem and does not want five items of anything else.
+ * Home deliberately offers one button, because most days the right answer is
+ * "the set the app picked". This screen is for the other days — the week before
+ * the exam, when somebody knows perfectly well that their 聴読解 is the problem
+ * and does not want five items of anything else.
  *
  * Two things it refuses to do:
  *
@@ -21,11 +21,24 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { fetchItemTypes, fetchProfile } from "../src/lib/db";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import type { ItemType, Level, Section } from "../src/lib/types";
-import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
-import { colors, radius, space, type } from "../src/ui/theme";
+import { fetchItemTypes, fetchProfile } from "../../src/lib/db";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import type { ItemType, Level, Section } from "../../src/lib/types";
+import {
+  Button,
+  Card,
+  Chip,
+  IconBadge,
+  Loading,
+  Notice,
+  ScreenHeader,
+  ScreenMessage,
+  SectionLabel,
+  Tag,
+} from "../../src/ui/components";
+import type { IconName } from "../../src/ui/icons";
+import type { BadgeTone } from "../../src/ui/theme";
+import { colors, radius, shadow, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
 const LEVELS: Level[] = ["J3", "J2", "J1"];
 
@@ -35,12 +48,21 @@ const SECTION_LABEL: Record<Section, string> = {
   dokkai: "読解",
 };
 
+/** One tint and one drawing per section, so the three stay apart at a glance:
+ *  what you hear, what you hear *and* read, and what you only read. */
+const SECTION_LOOK: Record<Section, { icon: IconName; tone: BadgeTone }> = {
+  choukai: { icon: "headphones", tone: "violet" },
+  choudokkai: { icon: "layers", tone: "teal" },
+  dokkai: { icon: "doc", tone: "blue" },
+};
+
 export default function Choose() {
   const router = useRouter();
   const [level, setLevel] = useState<Level | null>(null);
   const [types, setTypes] = useState<ItemType[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
     if (!isConfigured) return;
@@ -57,7 +79,7 @@ export default function Choose() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloads]);
 
   useEffect(() => {
     if (!level) return;
@@ -74,22 +96,30 @@ export default function Choose() {
     return () => {
       cancelled = true;
     };
-  }, [level]);
+  }, [level, reloads]);
+
+  function retry() {
+    setError(null);
+    setReloads((n) => n + 1);
+  }
 
   if (!isConfigured) {
     return (
-      <View style={styles.page}>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
-      </View>
+      <ScreenMessage>
+        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+      </ScreenMessage>
     );
   }
   if (error) {
     return (
-      <View style={styles.page}>
-        <Notice title="読み込めません" body={error} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
-      </View>
+      <ScreenMessage>
+        <Notice
+          title="読み込めません"
+          body={error}
+          tone="warn"
+          action={{ label: "もう一度読み込む", onPress: retry }}
+        />
+      </ScreenMessage>
     );
   }
   if (!level) return <Loading />;
@@ -99,24 +129,21 @@ export default function Choose() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
+      <ScreenHeader title="練習を選ぶ" subtitle="種類を選ばなければ、すべての種類から出します" />
+
       <Card style={{ gap: space.md }}>
-        <Text style={type.small}>レベル</Text>
+        <SectionLabel>レベル</SectionLabel>
         <View style={styles.row}>
           {LEVELS.map((candidate) => (
-            <Pressable
+            <Chip
               key={candidate}
-              accessibilityRole="button"
-              accessibilityState={{ selected: level === candidate }}
+              label={candidate}
+              selected={level === candidate}
               onPress={() => {
                 setLevel(candidate);
                 setSelected(null);
               }}
-              style={[styles.chip, level === candidate && styles.chipOn]}
-            >
-              <Text style={[styles.chipText, level === candidate && styles.chipTextOn]}>
-                {candidate}
-              </Text>
-            </Pressable>
+            />
           ))}
         </View>
         <Text style={type.small}>
@@ -130,9 +157,10 @@ export default function Choose() {
         sections.map((section) => {
           const inSection = types.filter((t) => t.section === section);
           if (!inSection.length) return null;
+          const look = SECTION_LOOK[section];
           return (
             <View key={section} style={{ gap: space.sm }}>
-              <Text style={type.small}>{SECTION_LABEL[section]}</Text>
+              <SectionLabel>{SECTION_LABEL[section]}</SectionLabel>
               {inSection.map((itemType) => {
                 const empty = itemType.available === 0;
                 const on = selected === itemType.id;
@@ -143,13 +171,21 @@ export default function Choose() {
                     accessibilityState={{ selected: on, disabled: empty }}
                     disabled={empty}
                     onPress={() => setSelected(on ? null : itemType.id)}
-                    style={[styles.typeRow, on && styles.typeRowOn, empty && styles.typeRowEmpty]}
+                    style={({ pressed }) => [
+                      styles.typeRow,
+                      on && styles.typeRowOn,
+                      empty && styles.typeRowEmpty,
+                      pressed && !empty && { opacity: 0.9 },
+                    ]}
                   >
+                    <IconBadge name={look.icon} tone={empty ? "violet" : look.tone} />
                     <View style={{ flex: 1 }}>
                       <Text style={type.body}>{itemType.label_ja}</Text>
                       <Text style={type.small}>{itemType.label_en}</Text>
                     </View>
-                    <Tag>{empty ? "0問" : `${itemType.available}問`}</Tag>
+                    <Tag tone={empty ? undefined : look.tone}>
+                      {empty ? "0問" : `${itemType.available}問`}
+                    </Tag>
                   </Pressable>
                 );
               })}
@@ -162,12 +198,14 @@ export default function Choose() {
         <Notice
           title="このレベルの問題はまだありません"
           body="別のレベルを選ぶか、公開されるのをお待ちください。"
+          tone="warn"
         />
       ) : null}
 
       <View style={{ gap: space.md }}>
         <Button
           label="この条件で練習する"
+          icon="play"
           sub={selected ? undefined : "種類を選ばない場合は、すべての種類から出します"}
           disabled={total === 0}
           onPress={() =>
@@ -198,30 +236,18 @@ export default function Choose() {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
+  page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
   row: { flexDirection: "row", gap: space.sm },
-  chip: {
-    paddingVertical: space.sm,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { fontSize: 15, fontWeight: "700", color: colors.text },
-  chipTextOn: { color: "#FFFFFF" },
   typeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.md,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: space.lg,
+    ...shadow.card,
   },
-  typeRowOn: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
-  typeRowEmpty: { opacity: 0.45 },
+  typeRowOn: { backgroundColor: colors.accentSoft },
+  typeRowEmpty: { opacity: 0.5 },
   footnote: { textAlign: "center" },
 });

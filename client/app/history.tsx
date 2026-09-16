@@ -19,8 +19,8 @@ import { fetchHistory } from "../src/lib/db";
 import { roleInfo } from "../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { HistoryEntry } from "../src/lib/types";
-import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
-import { colors, radius, space, type } from "../src/ui/theme";
+import { Button, Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
 const LETTERS = ["A", "B", "C", "D"];
 
@@ -50,16 +50,19 @@ export default function History() {
   if (!isConfigured) {
     return (
       <View style={styles.page}>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </View>
     );
   }
   if (error) {
     return (
       <View style={styles.page}>
-        <Notice title="読み込めません" body={error} />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+        <Notice
+          title="読み込めません"
+          body={error}
+          tone="warn"
+          action={{ label: "戻る", onPress: () => router.back() }}
+        />
       </View>
     );
   }
@@ -68,8 +71,11 @@ export default function History() {
   if (entries.length === 0) {
     return (
       <View style={styles.page}>
-        <Notice title="まだ記録がありません" body="一組やってみると、ここに残ります。" />
-        <Button label="戻る" tone="secondary" onPress={() => router.back()} />
+        <Notice
+          title="まだ記録がありません"
+          body="一組やってみると、ここに残ります。"
+          action={{ label: "戻る", onPress: () => router.back() }}
+        />
       </View>
     );
   }
@@ -84,22 +90,8 @@ export default function History() {
       </Card>
 
       <View style={styles.row}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: wrongOnly }}
-          onPress={() => setWrongOnly(true)}
-          style={[styles.chip, wrongOnly && styles.chipOn]}
-        >
-          <Text style={[styles.chipText, wrongOnly && styles.chipTextOn]}>まちがえた問題</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: !wrongOnly }}
-          onPress={() => setWrongOnly(false)}
-          style={[styles.chip, !wrongOnly && styles.chipOn]}
-        >
-          <Text style={[styles.chipText, !wrongOnly && styles.chipTextOn]}>すべて</Text>
-        </Pressable>
+        <Chip label="まちがえた問題" selected={wrongOnly} onPress={() => setWrongOnly(true)} />
+        <Chip label="すべて" selected={!wrongOnly} onPress={() => setWrongOnly(false)} />
       </View>
 
       {shown.length === 0 ? (
@@ -181,31 +173,20 @@ export default function History() {
 const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
   row: { flexDirection: "row", gap: space.sm },
-  chip: {
-    paddingVertical: space.sm,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { fontSize: 14, fontWeight: "700", color: colors.text },
-  chipTextOn: { color: "#FFFFFF" },
   entry: {
     backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: space.lg,
+    gap: space.sm,
+    ...shadow.card,
+  },
+  entryWrong: { backgroundColor: colors.surface },
+  entryHead: { flexDirection: "row", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
+  option: {
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    padding: space.lg,
-    gap: space.sm,
-  },
-  entryWrong: { borderColor: colors.wrongSoft },
-  entryHead: { flexDirection: "row", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
-  option: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
     padding: space.md,
     gap: 2,
   },

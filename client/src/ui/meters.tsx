@@ -53,7 +53,7 @@ export function RudenessMeter({ role }: { role: string }) {
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: colors.wrongSoft,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: space.lg,
     gap: space.sm,
   },
