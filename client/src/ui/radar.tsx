@@ -10,6 +10,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Polygon, Text as SvgText } from "react-native-svg";
 
+import { useLang } from "../lib/i18n";
 import type { TypeStat } from "../lib/types";
 import { colors, space, type } from "./theme";
 
@@ -26,6 +27,7 @@ function point(index: number, count: number, value: number) {
 }
 
 export function TypeRadar({ stats }: { stats: TypeStat[] }) {
+  const { t } = useLang();
   const n = stats.length;
   if (n < 3) return null;
 
@@ -98,11 +100,11 @@ export function TypeRadar({ stats }: { stats: TypeStat[] }) {
 
       {!anyData ? (
         <Text style={[type.small, { marginTop: space.sm }]}>
-          まだ記録がありません。5問解くと形が出ます。
+          {t("radar_empty")}
         </Text>
       ) : (
         <Text style={[type.small, styles.caption]}>
-          白い丸はまだ解いていない種類です（0%ではありません）。
+          {t("radar_caption")}
         </Text>
       )}
     </View>

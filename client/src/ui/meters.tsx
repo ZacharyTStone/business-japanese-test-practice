@@ -10,11 +10,14 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { useLang } from "../lib/i18n";
 import { roleInfo } from "../lib/roles";
 import { colors, radius, space, type } from "./theme";
 
 function Bar({ label, value, tone }: { label: string; value: number; tone: string }) {
+  const { t } = useLang();
   const segments = [0, 1, 2];
+  const levels = [t("lvl_none"), t("lvl_low"), t("lvl_mid"), t("lvl_high")];
   return (
     <View style={styles.barRow}>
       <Text style={[type.small, styles.barLabel]}>{label}</Text>
@@ -31,20 +34,21 @@ function Bar({ label, value, tone }: { label: string; value: number; tone: strin
       </View>
       {/* The level is also written out, so the meter still reads with the
           colours removed or unseen. */}
-      <Text style={[type.small, styles.barValue]}>{["なし", "小", "中", "大"][value] ?? "—"}</Text>
+      <Text style={[type.small, styles.barValue]}>{levels[value] ?? "—"}</Text>
     </View>
   );
 }
 
 export function RudenessMeter({ role, showLabel = true }: { role: string; showLabel?: boolean }) {
-  const info = roleInfo(role);
+  const { lang, t } = useLang();
+  const info = roleInfo(role, lang);
   if (role === "correct") return null;
 
   return (
     <View style={styles.wrap}>
       {showLabel ? <Text style={type.h2}>{info.label}</Text> : null}
-      <Bar label="失礼度" value={info.rudeness} tone={colors.wrong} />
-      <Bar label="ずれ" value={info.miss} tone={colors.warn} />
+      <Bar label={t("rudeness")} value={info.rudeness} tone={colors.wrong} />
+      <Bar label={t("miss")} value={info.miss} tone={colors.warn} />
       <Text style={[type.small, { marginTop: space.xs }]}>{info.advice}</Text>
     </View>
   );
@@ -58,7 +62,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   barRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  barLabel: { width: 48 },
+  barLabel: { width: 72 },
   barValue: { width: 32, textAlign: "right" },
   segments: { flex: 1, flexDirection: "row", gap: 4 },
   segment: { flex: 1, height: 8, borderRadius: 4 },

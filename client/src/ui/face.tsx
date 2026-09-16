@@ -13,6 +13,7 @@
 import React from "react";
 import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 
+import { tr, type Lang } from "../lib/i18n";
 import { roleInfo } from "../lib/roles";
 import { colors } from "./theme";
 
@@ -58,7 +59,7 @@ export function Face({ mood, size = 72 }: { mood: Mood; size?: number }) {
             : "";
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel={MOOD_LABEL[mood]}>
+    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel={moodLabel(mood, "ja")}>
       <Circle cx="50" cy="52" r="42" fill={FACE} />
       {brows.map((d, i) => (
         <Path key={i} d={d} stroke={LINE} strokeWidth={4} strokeLinecap="round" fill="none" />
@@ -85,10 +86,6 @@ export function Face({ mood, size = 72 }: { mood: Mood; size?: number }) {
   );
 }
 
-export const MOOD_LABEL: Record<Mood, string> = {
-  happy: "相手は満足しています",
-  puzzled: "相手は首をかしげています",
-  uneasy: "相手は少し困っています",
-  upset: "相手は気を悪くしています",
-  shocked: "相手は驚いています",
-};
+export function moodLabel(mood: Mood, lang: Lang): string {
+  return tr(lang, `mood_${mood}`);
+}

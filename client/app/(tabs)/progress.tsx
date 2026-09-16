@@ -1,19 +1,22 @@
 /**
- * The record: the nine-type radar, the traps that keep catching you, and the
- * finer tags underneath.
+ * The record, cut the way the exam's own score report cuts it.
  *
- * The tag list is the part that earns its place. Knowing you are at 62% on
- * 発言聴解 is a grade; knowing you are at 30% on the telephone and 85% face to
- * face is a plan for the evening.
+ * Three sections first — 聴解, 聴読解, 読解 — because that is what a person
+ * gets back from the real thing, and it is the shape their study plan has to
+ * take. The nine types sit under a fold for anyone who wants the finer grain;
+ * the tag list is the part that earns its place beneath that. Knowing you are
+ * at 62% on 発言聴解 is a grade; knowing you are at 30% on the telephone and
+ * 85% face to face is a plan for the evening.
  */
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { fetchRoleTraps, fetchTagStats, fetchTypeStats, hasAdFree } from "../../src/lib/db";
+import { useLang, type Key } from "../../src/lib/i18n";
 import { roleInfo } from "../../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { RoleTrap, TagStat, TypeStat } from "../../src/lib/types";
+import type { RoleTrap, Section, TagStat, TypeStat } from "../../src/lib/types";
 import {
   AdSlot,
   Button,
@@ -24,18 +27,25 @@ import {
   ScreenHeader,
   ScreenMessage,
   SectionLabel,
-  StatCard,
   Tag,
 } from "../../src/ui/components";
+import type { IconName } from "../../src/ui/icons";
 import { TypeRadar } from "../../src/ui/radar";
+import type { BadgeTone } from "../../src/ui/theme";
 import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
-const AXIS_LABEL: Record<TagStat["axis"], string> = {
-  function: "何をする場面か",
-  relation: "誰に言うか",
-  setting: "どこでの話か",
-  channel: "どう伝わるか",
+const AXIS_KEY: Record<TagStat["axis"], Key> = {
+  function: "axis_function",
+  relation: "axis_relation",
+  setting: "axis_setting",
+  channel: "axis_channel",
 };
+
+const SECTIONS: { id: Section; key: Key; icon: IconName; tone: BadgeTone }[] = [
+  { id: "choukai", key: "sec_choukai", icon: "headphones", tone: "violet" },
+  { id: "choudokkai", key: "sec_choudokkai", icon: "layers", tone: "teal" },
+  { id: "dokkai", key: "sec_dokkai", icon: "doc", tone: "blue" },
+];
 
 /** Tags seen fewer times than this are not shown: three answers is a mood, not
  *  a weakness, and presenting it as one sends people off to drill noise. */
@@ -43,12 +53,14 @@ const MIN_ANSWERS_PER_TAG = 4;
 
 export default function Progress() {
   const router = useRouter();
+  const { lang, t } = useLang();
   const [types, setTypes] = useState<TypeStat[] | null>(null);
   const [tags, setTags] = useState<TagStat[]>([]);
   const [traps, setTraps] = useState<RoleTrap[]>([]);
   const [adFree, setAdFree] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
+  const [showTypes, setShowTypes] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,7 +94,7 @@ export default function Progress() {
   if (!isConfigured) {
     return (
       <ScreenMessage>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </ScreenMessage>
     );
   }
@@ -90,11 +102,11 @@ export default function Progress() {
     return (
       <ScreenMessage>
         <Notice
-          title="記録を読み込めません"
+          title={t("prog_load_err")}
           body={error}
           tone="warn"
           action={{
-            label: "もう一度読み込む",
+            label: t("retry"),
             onPress: () => {
               setError(null);
               setReloads((n) => n + 1);
@@ -112,40 +124,66 @@ export default function Progress() {
     .slice(0, 6);
 
   const answered = types.reduce((n, t) => n + t.answered, 0);
-  const correct = types.reduce((n, t) => n + t.correct, 0);
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <ScreenHeader title="記録" subtitle="9種類のバランスと、よく落ちる罠" />
+      <ScreenHeader title={t("tab_progress")} subtitle={t("prog_sub")} />
 
-      <View style={styles.grid}>
-        <StatCard name="book" tone="blue" label="解いた問題" value={`${answered}問`} />
-        <StatCard
-          name="target"
-          tone="teal"
-          label="全体の正答率"
-          // 「—」 and not 0%: a type nobody has opened has no accuracy, and
+      <Card style={{ gap: space.lg }}>
+        {SECTIONS.map((section) => {
+          const inSection = types.filter((t) => t.section === section.id);
+          const n = inSection.reduce((a, t) => a + t.answered, 0);
+          const c = inSection.reduce((a, t) => a + t.correct, 0);
+          // 「—」 and not 0%: a section nobody has opened has no accuracy, and
           // printing zero there is the lie that sends people off to drill it.
-          value={answered > 0 ? `${Math.round((correct / answered) * 100)}%` : "—"}
-        />
-      </View>
-
-      <Card style={{ gap: space.md }}>
-        <Text style={type.h2}>9種類のバランス</Text>
-        <TypeRadar stats={types} />
+          const pct = n > 0 ? Math.round((c / n) * 100) : null;
+          return (
+            <View key={section.id} style={{ gap: 6 }}>
+              <View style={styles.row}>
+                <IconBadge name={section.icon} tone={section.tone} size={28} />
+                <Text style={[type.body, { flex: 1, fontWeight: "700" }]}>{t(section.key)}</Text>
+                <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
+                  {pct === null ? "—" : t("pct_n", { pct, n })}
+                </Text>
+              </View>
+              <View style={styles.track}>
+                <View style={[styles.fill, { width: `${pct ?? 0}%` }]} />
+              </View>
+            </View>
+          );
+        })}
+        {answered === 0 ? (
+          <Text style={type.small}>{t("prog_first")}</Text>
+        ) : null}
       </Card>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showTypes }}
+        onPress={() => setShowTypes((v) => !v)}
+        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+      >
+        <Text style={[type.small, styles.toggle]}>
+          {showTypes ? t("prog_types_close") : t("prog_types_open")}
+        </Text>
+      </Pressable>
+      {showTypes ? (
+        <Card style={{ gap: space.md }}>
+          <TypeRadar stats={types} />
+        </Card>
+      ) : null}
 
       {traps.length > 0 ? (
         <Card style={{ gap: space.lg }}>
-          <Text style={type.h2}>よく落ちる罠</Text>
-          {traps.slice(0, 5).map((t) => (
-            <View key={t.role} style={styles.trapRow}>
+          <Text style={type.h2}>{t("prog_mistakes")}</Text>
+          {traps.slice(0, 5).map((trap) => (
+            <View key={trap.role} style={styles.trapRow}>
               <IconBadge name="alert" tone="pink" size={30} />
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={type.body}>{roleInfo(t.role).label}</Text>
-                <Text style={type.small}>{roleInfo(t.role).advice}</Text>
+                <Text style={type.body}>{roleInfo(trap.role, lang).label}</Text>
+                <Text style={type.small}>{roleInfo(trap.role, lang).advice}</Text>
               </View>
-              <Tag tone="pink">{t.times_chosen}回</Tag>
+              <Tag tone="pink">{t("times", { n: trap.times_chosen })}</Tag>
             </View>
           ))}
         </Card>
@@ -153,37 +191,37 @@ export default function Progress() {
 
       {weakTags.length > 0 ? (
         <Card style={{ gap: space.lg }}>
-          <Text style={type.h2}>苦手な場面</Text>
-          {weakTags.map((t) => (
-            <View key={`${t.axis}:${t.tag}`} style={{ gap: 6 }}>
+          <Text style={type.h2}>{t("prog_weak")}</Text>
+          {weakTags.map((tag) => (
+            <View key={`${tag.axis}:${tag.tag}`} style={{ gap: 6 }}>
               <View style={styles.row}>
                 <Text style={[type.small, { flex: 1 }]}>
-                  {AXIS_LABEL[t.axis]} · {t.tag}
+                  {t(AXIS_KEY[tag.axis])} · {tag.tag}
                 </Text>
                 <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
-                  {Math.round(t.accuracy * 100)}%（{t.answered}問）
+                  {t("pct_n", { pct: Math.round(tag.accuracy * 100), n: tag.answered })}
                 </Text>
               </View>
               <View style={styles.track}>
-                <View style={[styles.fill, { width: `${Math.round(t.accuracy * 100)}%` }]} />
+                <View style={[styles.fill, { width: `${Math.round(tag.accuracy * 100)}%` }]} />
               </View>
             </View>
           ))}
-          <Text style={type.small}>{MIN_ANSWERS_PER_TAG}問以上解いた場面だけを出しています。</Text>
+          <Text style={type.small}>{t("prog_min_tags", { n: MIN_ANSWERS_PER_TAG })}</Text>
         </Card>
-      ) : (
+      ) : answered > 0 ? (
         <Card>
-          <Text style={type.small}>もう少し解くと、場面ごとの得意・不得意が出てきます。</Text>
+          <Text style={type.small}>{t("prog_more")}</Text>
         </Card>
-      )}
+      ) : null}
 
       <View style={{ gap: space.md }}>
-        <SectionLabel>見返す</SectionLabel>
+        <SectionLabel>{t("review")}</SectionLabel>
         {/* Right where a wrong answer is most likely to be on somebody's mind. */}
         <Button
-          label="解いた問題を見返す"
+          label={t("review_btn")}
           tone="secondary"
-          sub="まちがえた問題と、その解説"
+          sub={t("review_sub")}
           onPress={() => router.push("/history")}
         />
       </View>
@@ -195,9 +233,9 @@ export default function Progress() {
 
 const styles = StyleSheet.create({
   page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   row: { flexDirection: "row", alignItems: "center", gap: space.sm },
   trapRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   track: { height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: "hidden" },
   fill: { height: 8, backgroundColor: colors.accent, borderRadius: 4 },
+  toggle: { textAlign: "center", textDecorationLine: "underline" },
 });

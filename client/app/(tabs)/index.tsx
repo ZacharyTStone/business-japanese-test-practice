@@ -8,9 +8,8 @@
  * choose a level, a type, or a mode. The 選ぶ tab is there for the week before
  * the exam; most days it is not needed.
  *
- * Under it is a record of what has already happened, which is the right way
- * round. Accuracy is shown as 「—」 until something has been answered: a zero
- * there would be a lie about a person who has not been asked yet.
+ * Under it is one sentence: what the app noticed, and what it is doing about
+ * it. The statistics live on the 記録 tab; home is not a dashboard.
  */
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -22,12 +21,14 @@ import {
   fetchProfile,
   fetchRoleTraps,
   fetchStreak,
+  fetchTagStats,
   fetchTypeStats,
 } from "../../src/lib/db";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
+import { useLang, type Key, type Lang } from "../../src/lib/i18n";
 import { roleInfo } from "../../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, RoleTrap, TypeStat } from "../../src/lib/types";
+import type { Profile, RoleTrap, TagStat, TypeStat } from "../../src/lib/types";
 import {
   Button,
   Card,
@@ -39,23 +40,57 @@ import {
   ScreenHeader,
   ScreenMessage,
   SectionLabel,
-  StatCard,
-  Tag,
 } from "../../src/ui/components";
 import { Icon } from "../../src/ui/icons";
 import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
 /** Below this, "your weakness" is noise rather than a signal. */
 const MIN_ATTEMPTS_FOR_WEAKNESS = 10;
+/** A tag needs this many answers before it is called weak. */
+const MIN_ANSWERS_PER_TAG = 4;
+
+/**
+ * The one sentence the app says about its plan.
+ *
+ * All the thinking happens in the database — the level, the retries, the
+ * weakest tag, the stretch item — and none of it needs a dashboard. What a
+ * person needs is to know that it happened. So: one line, in their words, that
+ * says what the app noticed and what it is doing about it. Nothing here is a
+ * number to plan around; it is the app explaining itself.
+ */
+function plan(
+  lang: Lang,
+  t: (key: Key, vars?: Record<string, string | number>) => string,
+  answered: number,
+  tags: TagStat[],
+  traps: RoleTrap[],
+  onStretch: boolean
+): string {
+  if (answered === 0) return t("plan_first");
+  if (answered < MIN_ATTEMPTS_FOR_WEAKNESS) {
+    return t("plan_watching", { n: MIN_ATTEMPTS_FOR_WEAKNESS - answered });
+  }
+  const weak = tags
+    .filter((x) => x.answered >= MIN_ANSWERS_PER_TAG && x.accuracy < 0.7)
+    .sort((a, b) => a.accuracy - b.accuracy)[0];
+  if (weak) return t("plan_weak", { tag: weak.tag, pct: Math.round(weak.accuracy * 100) });
+  const trap = traps[0];
+  if (trap && trap.times_chosen >= 3) {
+    return t("plan_trap", { label: roleInfo(trap.role, lang).label });
+  }
+  return t(onStretch ? "plan_stretch" : "plan_good");
+}
 
 export default function Home() {
   const router = useRouter();
+  const { lang, t } = useLang();
   const { loading: authLoading, isAnonymous, error: authError } = useAuth();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
   const [today, setToday] = useState(0);
   const [traps, setTraps] = useState<RoleTrap[]>([]);
+  const [tags, setTags] = useState<TagStat[]>([]);
   const [types, setTypes] = useState<TypeStat[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,11 +100,12 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, t, r, ty] = await Promise.all([
+          const [p, s, t, r, tg, ty] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchAnsweredToday(),
             fetchRoleTraps(),
+            fetchTagStats(),
             fetchTypeStats(),
           ]);
           if (cancelled) return;
@@ -77,6 +113,7 @@ export default function Home() {
           setStreak(s);
           setToday(t);
           setTraps(r);
+          setTags(tg);
           setTypes(ty);
         } finally {
           if (!cancelled) setLoading(false);
@@ -91,39 +128,35 @@ export default function Home() {
   if (!isConfigured) {
     return (
       <ScreenMessage>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </ScreenMessage>
     );
   }
-  if (authLoading || loading) return <Loading label="読み込み中…" />;
+  if (authLoading || loading) return <Loading label={t("loading")} />;
   if (authError) {
     return (
       <ScreenMessage>
-        <Notice title="接続できません" body={authError} tone="warn" />
+        <Notice title={t("cant_connect")} body={authError} tone="warn" />
       </ScreenMessage>
     );
   }
 
   const goal = profile?.daily_goal ?? 5;
   const done = Math.min(today, goal);
-  const trapTotal = traps.reduce((n, t) => n + t.times_chosen, 0);
-  const topTrap = traps[0];
-  const countdown = countdownLine(daysUntil(profile?.exam_date));
-
+  const countdown = countdownLine(daysUntil(profile?.exam_date), lang);
   const answered = types.reduce((n, t) => n + t.answered, 0);
-  const correct = types.reduce((n, t) => n + t.correct, 0);
-  const started = types.filter((t) => t.answered > 0).length;
+  const level = profile?.target_level ?? "J2";
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <ScreenHeader
-        title="ホーム"
-        subtitle={`いまのレベル ${profile?.target_level ?? "J2"}・正解が続くと上がります`}
+        title={t("tab_home")}
+        subtitle={t("level_line", { level })}
         right={
           streak > 0 ? (
             <View style={styles.streakPill}>
               <Icon name="flame" size={16} color={colors.warn} strokeWidth={2} />
-              <Text style={styles.streakText}>{streak}日</Text>
+              <Text style={styles.streakText}>{t("streak_days", { n: streak })}</Text>
             </View>
           ) : undefined
         }
@@ -132,28 +165,28 @@ export default function Home() {
       <GradientCard style={{ gap: space.lg }}>
         <View style={styles.heroRow}>
           <View style={{ flex: 1, gap: space.xs }}>
-            <Text style={styles.heroLabel}>{countdown ?? "今日"}</Text>
+            <Text style={styles.heroLabel}>{countdown ?? t("today")}</Text>
             <Text style={styles.heroTitle}>
-              {done} / {goal} 問
+              {done} / {goal}
             </Text>
             <Text style={styles.heroSub}>
               {done >= goal
-                ? "今日のぶんは終わりました"
+                ? t("today_done")
                 : streak > 0
-                  ? `${streak}日つづいています`
-                  : "今日から始めましょう"}
+                  ? t("streak_going", { n: streak })
+                  : t("start_today")}
             </Text>
           </View>
           <ProgressRing
             value={goal > 0 ? done / goal : 0}
             label={`${Math.round((goal > 0 ? done / goal : 0) * 100)}%`}
-            caption="今日"
+            caption={t("today")}
           />
         </View>
 
         <Button
-          label={done >= goal ? "もう一組やる" : "今日の練習をする"}
-          sub={`${goal}問・約3分・レベルも弱点もおまかせ`}
+          label={done >= goal ? t("btn_more") : t("btn_today")}
+          sub={t("btn_today_sub", { goal })}
           tone="onAccent"
           icon="play"
           onPress={() => router.push({ pathname: "/practice", params: { mode: "daily" } })}
@@ -161,55 +194,27 @@ export default function Home() {
       </GradientCard>
 
       <View style={{ gap: space.md }}>
-        <SectionLabel>これまでの記録</SectionLabel>
-        {answered === 0 ? (
-          <Card style={{ gap: space.xs }}>
-            <Text style={type.body}>まだ記録がありません。</Text>
-            <Text style={type.small}>
-              一組やってみると、正答率も、よく落ちるミスも、ここに出てきます。
-            </Text>
-          </Card>
-        ) : (
-          <View style={styles.grid}>
-            <StatCard name="flame" tone="amber" label="連続日数" value={`${streak}日`} />
-            <StatCard name="book" tone="blue" label="解いた問題" value={`${answered}問`} />
-            <StatCard
-              name="target"
-              tone="teal"
-              label="全体の正答率"
-              value={`${Math.round((correct / answered) * 100)}%`}
-            />
-            <StatCard name="grid" tone="pink" label="取り組んだ種類" value={`${started} / 9`} />
-          </View>
-        )}
-      </View>
-
-      {trapTotal >= MIN_ATTEMPTS_FOR_WEAKNESS && topTrap ? (
+        <SectionLabel>{t("thinking")}</SectionLabel>
         <Card style={{ gap: space.md }}>
           <View style={styles.trapHead}>
-            <IconBadge name="alert" tone="pink" />
-            <View style={{ flex: 1 }}>
-              <Text style={type.small}>いま一番多いミス</Text>
-              <Text style={type.h2}>{roleInfo(topTrap.role).label}</Text>
-            </View>
-            <Tag tone="pink">{topTrap.times_chosen}回</Tag>
+            <IconBadge name="spark" tone="violet" />
+            <Text style={[type.body, { flex: 1 }]}>
+              {plan(lang, t, answered, tags, traps, level !== "J1")}
+            </Text>
           </View>
-          <Text style={type.small}>
-            {roleInfo(topTrap.role).advice} 今日の練習に、自動で入ります。
-          </Text>
         </Card>
-      ) : null}
+      </View>
 
       {isAnonymous ? (
         <Card style={{ gap: space.md }}>
           <View style={styles.trapHead}>
             <IconBadge name="user" tone="violet" />
             <View style={{ flex: 1 }}>
-              <Text style={type.h2}>記録はこの端末だけ</Text>
-              <Text style={type.small}>ログインなしで使えています。</Text>
+              <Text style={type.h2}>{t("anon_title")}</Text>
+              <Text style={type.small}>{t("anon_sub")}</Text>
             </View>
           </View>
-          <Button label="記録を引き継ぐ" tone="secondary" onPress={() => router.push("/account")} />
+          <Button label={t("anon_btn")} tone="secondary" onPress={() => router.push("/account")} />
         </Card>
       ) : null}
     </ScrollView>
@@ -222,7 +227,6 @@ const styles = StyleSheet.create({
   heroLabel: { color: colors.onAccentMuted, fontSize: 13, fontWeight: "700", letterSpacing: 0.6 },
   heroTitle: { color: colors.onAccent, fontSize: 30, fontWeight: "700", lineHeight: 40 },
   heroSub: { color: colors.onAccentMuted, fontSize: 13, lineHeight: 21 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   trapHead: { flexDirection: "row", alignItems: "center", gap: space.md },
   streakPill: {
     flexDirection: "row",

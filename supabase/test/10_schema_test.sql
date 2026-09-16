@@ -556,11 +556,18 @@ begin
     perform test.check((select target_level from public.profiles) = 'J2',
                        'everyone starts at J2; nobody is asked');
 
-    for i in 1..20 loop
+    -- The record so far is a handful of answers, so the first window is ten.
+    for i in 1..9 loop
         insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 0);
     end loop;
+    perform test.check((select target_level from public.profiles) = 'J2',
+                       'nine right answers are not yet a decision');
+    insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 0);
     perform test.check((select target_level from public.profiles) = 'J1',
-                       'twenty answers with at least sixteen right move the level up');
+                       'the tenth moves the level up: the first window is ten, not twenty');
+    for i in 1..10 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 0);
+    end loop;
 
     for i in 1..20 loop
         insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
@@ -584,9 +591,12 @@ begin
     reset role;
     set local role authenticated;
 
-    for i in 1..20 loop
+    for i in 1..19 loop
         insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
     end loop;
+    perform test.check((select target_level from public.profiles) = 'J2',
+                       'with a record behind them the window is twenty, so nineteen misses wait');
+    insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
     perform test.check((select target_level from public.profiles) = 'J3',
                        'twenty answers with eight or fewer right move the level down');
     reset role;

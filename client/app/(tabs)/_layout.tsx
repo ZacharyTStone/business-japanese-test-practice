@@ -14,6 +14,7 @@ import { Tabs } from "expo-router/js-tabs";
 import React from "react";
 import type { ColorValue } from "react-native";
 
+import { useLang } from "../../src/lib/i18n";
 import { Icon, type IconName } from "../../src/ui/icons";
 import { colors, shadow, space } from "../../src/ui/theme";
 
@@ -24,6 +25,7 @@ function tabIcon(name: IconName) {
 }
 
 export default function TabsLayout() {
+  const { t } = useLang();
   return (
     <Tabs
       screenOptions={{
@@ -41,10 +43,10 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700", marginTop: 2 },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "ホーム", tabBarIcon: tabIcon("home") }} />
-      <Tabs.Screen name="choose" options={{ title: "選ぶ", tabBarIcon: tabIcon("grid") }} />
-      <Tabs.Screen name="progress" options={{ title: "記録", tabBarIcon: tabIcon("chart") }} />
-      <Tabs.Screen name="account" options={{ title: "アカウント", tabBarIcon: tabIcon("user") }} />
+      <Tabs.Screen name="index" options={{ title: t("tab_home"), tabBarIcon: tabIcon("home") }} />
+      <Tabs.Screen name="choose" options={{ title: t("tab_choose"), tabBarIcon: tabIcon("grid") }} />
+      <Tabs.Screen name="progress" options={{ title: t("tab_progress"), tabBarIcon: tabIcon("chart") }} />
+      <Tabs.Screen name="account" options={{ title: t("tab_account"), tabBarIcon: tabIcon("user") }} />
     </Tabs>
   );
 }

@@ -25,6 +25,7 @@ import React, { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { fetchItemTypes, fetchProfile } from "../../src/lib/db";
+import { useLang, type Key } from "../../src/lib/i18n";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { ItemType, Level, Section } from "../../src/lib/types";
 import {
@@ -41,10 +42,10 @@ import type { IconName } from "../../src/ui/icons";
 import type { BadgeTone } from "../../src/ui/theme";
 import { colors, radius, shadow, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
-const SECTION_LABEL: Record<Section, string> = {
-  choukai: "聴解",
-  choudokkai: "聴読解",
-  dokkai: "読解",
+const SECTION_KEY: Record<Section, Key> = {
+  choukai: "sec_choukai",
+  choudokkai: "sec_choudokkai",
+  dokkai: "sec_dokkai",
 };
 
 /** One tint and one drawing per section, so the three stay apart at a glance:
@@ -57,6 +58,7 @@ const SECTION_LOOK: Record<Section, { icon: IconName; tone: BadgeTone }> = {
 
 export default function Choose() {
   const router = useRouter();
+  const { lang, t } = useLang();
   const [level, setLevel] = useState<Level | null>(null);
   const [types, setTypes] = useState<ItemType[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export default function Choose() {
   if (!isConfigured) {
     return (
       <ScreenMessage>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </ScreenMessage>
     );
   }
@@ -103,10 +105,10 @@ export default function Choose() {
     return (
       <ScreenMessage>
         <Notice
-          title="読み込めません"
+          title={t("cant_load")}
           body={error}
           tone="warn"
-          action={{ label: "もう一度読み込む", onPress: retry }}
+          action={{ label: t("retry"), onPress: retry }}
         />
       </ScreenMessage>
     );
@@ -119,8 +121,8 @@ export default function Choose() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <ScreenHeader
-        title="自分で選ぶ"
-        subtitle={`ふだんは「今日の練習」で十分です。種類をしぼりたいときに。いまのレベル ${level}`}
+        title={t("choose_title")}
+        subtitle={t("choose_sub", { level })}
       />
 
       {sections.map((section) => {
@@ -129,7 +131,7 @@ export default function Choose() {
         const look = SECTION_LOOK[section];
         return (
           <View key={section} style={{ gap: space.sm }}>
-            <SectionLabel>{SECTION_LABEL[section]}</SectionLabel>
+            <SectionLabel>{t(SECTION_KEY[section])}</SectionLabel>
             {inSection.map((itemType) => {
               const empty = itemType.available === 0;
               const on = selected === itemType.id;
@@ -149,11 +151,11 @@ export default function Choose() {
                 >
                   <IconBadge name={look.icon} tone={empty ? "violet" : look.tone} />
                   <View style={{ flex: 1 }}>
-                    <Text style={type.body}>{itemType.label_ja}</Text>
-                    <Text style={type.small}>{itemType.label_en}</Text>
+                    <Text style={type.body}>{lang === "ja" ? itemType.label_ja : itemType.label_en}</Text>
+                    <Text style={type.small}>{lang === "ja" ? itemType.label_en : itemType.label_ja}</Text>
                   </View>
                   <Tag tone={empty ? undefined : look.tone}>
-                    {empty ? "近日公開" : `${itemType.available}問`}
+                    {empty ? t("coming_soon") : t("n_items", { n: itemType.available })}
                   </Tag>
                 </Pressable>
               );
@@ -164,17 +166,17 @@ export default function Choose() {
 
       {total === 0 ? (
         <Notice
-          title="いまのレベルの問題はまだありません"
-          body="公開されるのをお待ちください。「今日の練習」は隣のレベルからも出します。"
+          title={t("no_items_title")}
+          body={t("no_items_body")}
           tone="warn"
         />
       ) : null}
 
       <View style={{ gap: space.md }}>
         <Button
-          label="この種類で練習する"
+          label={t("btn_type")}
           icon="play"
-          sub={selected ? undefined : "種類を選ばない場合は、すべての種類から出します"}
+          sub={selected ? undefined : t("btn_type_sub")}
           disabled={total === 0}
           onPress={() =>
             router.push({
@@ -184,9 +186,9 @@ export default function Choose() {
           }
         />
         <Button
-          label="模試をやる"
+          label={t("btn_mock")}
           tone="secondary"
-          sub="20問・途中でやめずに最後まで"
+          sub={t("btn_mock_sub")}
           disabled={total === 0}
           onPress={() =>
             router.push({
@@ -196,7 +198,7 @@ export default function Choose() {
           }
         />
         <Text style={[type.small, styles.footnote]}>
-          模試でも点数の予測は出しません。生成した問題に対する換算の根拠がないからです。
+          {t("mock_note")}
         </Text>
       </View>
     </ScrollView>

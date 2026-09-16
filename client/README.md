@@ -78,14 +78,15 @@ app/                expo-router screens
   _layout.tsx       providers + the stack the tabs sit inside
   (tabs)/           the four places the app lives, under a bottom bar
     _layout.tsx     the bar itself
-    index.tsx       home — one button, today's ring, the level, the countdown
+    index.tsx       home — one button, today's ring, and the app's one sentence
     choose.tsx      the manual mode: pick a type; the mock run starts here
-    progress.tsx    the nine-type radar, traps, weak tags
+    progress.tsx    three sections like the real score report; nine types under a fold
     account.tsx     link Google, the level (shown, not chosen), the exam date
   practice.tsx      the session, one moment at a time: scene, listen, answer, reveal
   result.tsx        count, the trap that caught you most, the level if it moved
   history.tsx       every answer, wrong ones first
 src/lib/
+  i18n.tsx          the words on the furniture, ja/en; questions stay Japanese
   supabase.ts       the client (anon key is public by design — RLS is the guard)
   auth.tsx          anonymous bootstrap, Google linking, token refresh on resume
   db.ts             every query the app makes, in one file

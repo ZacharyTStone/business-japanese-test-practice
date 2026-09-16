@@ -15,6 +15,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { clipUrl } from "../lib/db";
+import { useLang } from "../lib/i18n";
 import type { DialogueTurn } from "../lib/types";
 import { Icon } from "./icons";
 import { colors, radius, space, type } from "./theme";
@@ -28,6 +29,7 @@ export function ClipButton({
   text: string;
   label: string;
 }) {
+  const { t } = useLang();
   const url = clipUrl(path);
   const player = useAudioPlayer(url ?? null);
   const status = useAudioPlayerStatus(player);
@@ -37,7 +39,7 @@ export function ClipButton({
     // nothing — a control that silently fails is worse than no control.
     return (
       <View style={styles.fallback}>
-        <Text style={type.small}>{label}（音声は準備中）</Text>
+        <Text style={type.small}>{t("audio_pending", { label })}</Text>
         <Text style={type.body}>{text}</Text>
       </View>
     );
@@ -47,7 +49,7 @@ export function ClipButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${label}を再生`}
+      accessibilityLabel={t("play_label", { label })}
       onPress={() => {
         if (playing) {
           player.pause();
@@ -124,8 +126,9 @@ const styles = StyleSheet.create({
  * 伺います and not 参ります.
  */
 export function DialoguePlayer({ turns }: { turns: DialogueTurn[] }) {
+  const { t } = useLang();
   const [showText, setShowText] = React.useState(false);
-  const paths = turns.map((t) => clipUrl(t.audio_path));
+  const paths = turns.map((turn) => clipUrl(turn.audio_path));
   const playable = paths.filter(Boolean).length;
 
   // Nothing synthesised yet: the whole exchange is a script on the page, which
@@ -133,7 +136,7 @@ export function DialoguePlayer({ turns }: { turns: DialogueTurn[] }) {
   if (playable === 0) {
     return (
       <View style={styles.transcript}>
-        <Text style={type.small}>会話（音声は準備中）</Text>
+        <Text style={type.small}>{t("dialogue_pending")}</Text>
         {turns.map((turn, i) => (
           <Turn key={i} turn={turn} />
         ))}
@@ -150,7 +153,7 @@ export function DialoguePlayer({ turns }: { turns: DialogueTurn[] }) {
         style={({ pressed }) => [pressed && { opacity: 0.85 }]}
       >
         <Text style={[type.small, styles.toggle]}>
-          {showText ? "本文を隠す" : "本文を見る"}
+          {showText ? t("hide_text") : t("show_text")}
         </Text>
       </Pressable>
       {showText ? (
@@ -175,6 +178,7 @@ function Turn({ turn }: { turn: DialogueTurn }) {
 
 /** Plays each turn in order, advancing when one finishes. */
 function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string | null)[] }) {
+  const { t } = useLang();
   const [at, setAt] = React.useState(0);
   const [running, setRunning] = React.useState(false);
   const player = useAudioPlayer(paths[at] ?? null);
@@ -205,7 +209,7 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={running ? "会話を止める" : "会話を再生する"}
+      accessibilityLabel={running ? t("stop_dialogue") : t("listen_dialogue")}
       onPress={() => {
         if (running) {
           player.pause();
@@ -222,7 +226,7 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
       <View style={styles.playIcon}>
         <Icon name={running ? "stop" : "play"} size={18} color={colors.onAccent} strokeWidth={2} />
       </View>
-      <Text style={[type.body, { flex: 1 }]}>会話を聞く</Text>
+      <Text style={[type.body, { flex: 1 }]}>{t("listen_dialogue")}</Text>
       <Text style={type.small}>
         {at + 1} / {turns.length}
       </Text>
@@ -248,12 +252,16 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
 export function AutoPlaylist({
   urls,
   autoplay,
+  replayable = true,
   onFinished,
 }: {
   urls: string[];
   autoplay: boolean;
+  /** False in the mock: the exam plays once, and so does the rehearsal of it. */
+  replayable?: boolean;
   onFinished?: () => void;
 }) {
+  const { t } = useLang();
   const [at, setAt] = React.useState(0);
   const [running, setRunning] = React.useState(autoplay && urls.length > 0);
   const [finished, setFinished] = React.useState(!autoplay || urls.length === 0);
@@ -286,10 +294,17 @@ export function AutoPlaylist({
   if (urls.length === 0) return null;
 
   if (!running && finished) {
+    if (!replayable) {
+      return (
+        <View style={styles.fallback}>
+          <Text style={type.small}>{t("once_only")}</Text>
+        </View>
+      );
+    }
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="もう一回聞く"
+        accessibilityLabel={t("listen_again")}
         onPress={() => {
           setAt(0);
           setRunning(true);
@@ -299,7 +314,7 @@ export function AutoPlaylist({
         <View style={styles.playIcon}>
           <Icon name="play" size={18} color={colors.onAccent} strokeWidth={2} />
         </View>
-        <Text style={type.body}>もう一回聞く</Text>
+        <Text style={type.body}>{t("listen_again")}</Text>
       </Pressable>
     );
   }
@@ -312,7 +327,7 @@ export function AutoPlaylist({
         <View style={styles.playIcon}>
           <Icon name="headphones" size={18} color={colors.onAccent} strokeWidth={2} />
         </View>
-        <Text style={[type.body, { flex: 1 }]}>聞いています…</Text>
+        <Text style={[type.body, { flex: 1 }]}>{t("listening")}</Text>
         {urls.length > 1 ? (
           <Text style={type.small}>
             {at + 1} / {urls.length}
@@ -338,7 +353,7 @@ export function AutoPlaylist({
         }}
         style={({ pressed }) => [pressed && { opacity: 0.85 }]}
       >
-        <Text style={[type.small, styles.toggle]}>とばして選択肢へ</Text>
+        <Text style={[type.small, styles.toggle]}>{t("skip")}</Text>
       </Pressable>
     </View>
   );

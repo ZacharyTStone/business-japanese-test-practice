@@ -16,6 +16,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { fetchHistory } from "../src/lib/db";
+import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { HistoryEntry } from "../src/lib/types";
@@ -26,6 +27,7 @@ const LETTERS = ["A", "B", "C", "D"];
 
 export default function History() {
   const router = useRouter();
+  const { lang, t } = useLang();
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wrongOnly, setWrongOnly] = useState(true);
@@ -50,7 +52,7 @@ export default function History() {
   if (!isConfigured) {
     return (
       <View style={styles.page}>
-        <Notice title="設定が必要です" body={MISSING_CONFIG_MESSAGE} tone="warn" />
+        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </View>
     );
   }
@@ -58,23 +60,23 @@ export default function History() {
     return (
       <View style={styles.page}>
         <Notice
-          title="読み込めません"
+          title={t("cant_load")}
           body={error}
           tone="warn"
-          action={{ label: "戻る", onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: () => router.back() }}
         />
       </View>
     );
   }
-  if (!entries) return <Loading label="記録を読み込んでいます…" />;
+  if (!entries) return <Loading label={t("hist_loading")} />;
 
   if (entries.length === 0) {
     return (
       <View style={styles.page}>
         <Notice
-          title="まだ記録がありません"
-          body="一組やってみると、ここに残ります。"
-          action={{ label: "戻る", onPress: () => router.back() }}
+          title={t("hist_empty_title")}
+          body={t("hist_empty_body")}
+          action={{ label: t("back"), onPress: () => router.back() }}
         />
       </View>
     );
@@ -85,17 +87,17 @@ export default function History() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Card style={{ gap: space.sm }}>
-        <Text style={type.small}>直近 {entries.length} 問</Text>
-        <Text style={type.h2}>まちがえたのは {wrong} 問</Text>
+        <Text style={type.small}>{t("hist_recent", { n: entries.length })}</Text>
+        <Text style={type.h2}>{t("hist_wrong_n", { n: wrong })}</Text>
       </Card>
 
       <View style={styles.row}>
-        <Chip label="まちがえた問題" selected={wrongOnly} onPress={() => setWrongOnly(true)} />
-        <Chip label="すべて" selected={!wrongOnly} onPress={() => setWrongOnly(false)} />
+        <Chip label={t("hist_wrong_chip")} selected={wrongOnly} onPress={() => setWrongOnly(true)} />
+        <Chip label={t("hist_all")} selected={!wrongOnly} onPress={() => setWrongOnly(false)} />
       </View>
 
       {shown.length === 0 ? (
-        <Notice title="まちがえた問題はありません" body="この調子で続けましょう。" />
+        <Notice title={t("hist_none_wrong")} body={t("hist_keep")} />
       ) : null}
 
       {shown.map((entry) => {
@@ -118,7 +120,7 @@ export default function History() {
                   { color: entry.is_correct ? colors.correct : colors.wrong, fontWeight: "700" },
                 ]}
               >
-                {entry.is_correct ? "○ 正解" : "× 不正解"}
+                {entry.is_correct ? t("mark_correct") : t("mark_wrong")}
               </Text>
             </View>
 
@@ -127,7 +129,7 @@ export default function History() {
             </Text>
 
             {!entry.is_correct && entry.chosen_role ? (
-              <Text style={type.small}>落ちた罠：{roleInfo(entry.chosen_role).label}</Text>
+              <Text style={type.small}>{t("mistake_label", { label: roleInfo(entry.chosen_role, lang).label })}</Text>
             ) : null}
 
             {expanded ? (
@@ -146,8 +148,8 @@ export default function History() {
                     >
                       <Text style={type.small}>
                         {LETTERS[i]}
-                        {isAnswer ? " · ○ 正解" : ""}
-                        {isChosen && !isAnswer ? " · × これを選びました" : ""}
+                        {isAnswer ? ` · ${t("mark_correct")}` : ""}
+                        {isChosen && !isAnswer ? ` · ${t("mark_chosen")}` : ""}
                       </Text>
                       <Text style={type.option}>{option.text}</Text>
                       <Text style={type.small}>{option.why}</Text>
@@ -155,12 +157,14 @@ export default function History() {
                   );
                 })}
                 <Card style={{ gap: space.xs }}>
-                  <Text style={type.small}>解説</Text>
-                  <Text style={type.body}>{entry.explanation_ja}</Text>
+                  <Text style={type.small}>{t("explanation")}</Text>
+                  <Text style={type.body}>
+                    {lang === "en" && entry.explanation_en ? entry.explanation_en : entry.explanation_ja}
+                  </Text>
                 </Card>
               </View>
             ) : (
-              <Text style={type.small}>タップすると解説を見られます</Text>
+              <Text style={type.small}>{t("tap_explain")}</Text>
             )}
           </Pressable>
         );
