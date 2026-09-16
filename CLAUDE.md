@@ -51,6 +51,22 @@ accident is not.
 - **The database grades answers, not the app.** The client posts `item_id` and
   `chosen_index`; a trigger fills in who, whether it was right, and which
   distractor role caught them. Never add client-side grading that writes.
+- **The level is per exam section, and it is three levels, not one.**
+  `section_levels` holds 聴解 / 聴読解 / 読解 separately and `adjust_level()` moves
+  the one an answer belongs to, on a window counted inside that section. A
+  learner can be 読解 J1 and 聴解 J3 at once, which is most people.
+  `profiles.target_level` is only the one-line summary (the middle of the three)
+  and must never be what decides which questions are served.
+- **Good at something means harder questions in it, and vice versa.** Inside a
+  level the queue aims at `target = 0.85 − (accuracy at this problem type) ×
+  0.33`, held in [0.50, 0.80], against the bank's measured success rate. This is
+  the fine grain the three-way level cannot give; it moves on every answer.
+- **The ranking terms have an order of authority, and it matters.** The 機能 tag
+  dominates; traps and the difficulty pitch are comparable second; the
+  type/場面 variety nudges are third; the tie-break random is a fiftieth of a
+  point and may only separate genuine ties. Raising the noise above the pitch
+  silently disables the pitch on exactly the early sets where it is the only
+  signal there is.
 - **One bank, shared by everybody; fixed SQL does the sorting.** Every learner
   draws from the same published library — what is personal is the order, and it
   is decided by arithmetic in `next_items()` that a person can read and check.

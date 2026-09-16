@@ -12,11 +12,18 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { fetchRoleTraps, fetchTagStats, fetchTypeStats, hasAdFree } from "../../src/lib/db";
+import {
+  fetchRoleTraps,
+  fetchSectionLevels,
+  fetchTagStats,
+  fetchTypeStats,
+  hasAdFree,
+} from "../../src/lib/db";
 import { useLang, type Key } from "../../src/lib/i18n";
+import { levelOf } from "../../src/lib/levels";
 import { roleInfo } from "../../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { RoleTrap, Section, TagStat, TypeStat } from "../../src/lib/types";
+import type { RoleTrap, Section, SectionLevel, TagStat, TypeStat } from "../../src/lib/types";
 import {
   AdSlot,
   Button,
@@ -57,6 +64,7 @@ export default function Progress() {
   const [types, setTypes] = useState<TypeStat[] | null>(null);
   const [tags, setTags] = useState<TagStat[]>([]);
   const [traps, setTraps] = useState<RoleTrap[]>([]);
+  const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [adFree, setAdFree] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -68,17 +76,19 @@ export default function Progress() {
       let cancelled = false;
       (async () => {
         try {
-          const [ty, tg, tr, ad] = await Promise.all([
+          const [ty, tg, tr, ad, lv] = await Promise.all([
             fetchTypeStats(),
             fetchTagStats(),
             fetchRoleTraps(),
             hasAdFree(),
+            fetchSectionLevels(),
           ]);
           if (cancelled) return;
           setTypes(ty);
           setTags(tg);
           setTraps(tr);
           setAdFree(ad);
+          setLevels(lv);
         } catch (e) {
           // Without this the screen sat on its spinner for ever when the record
           // failed to load, which looks exactly like an app that has hung.
@@ -137,11 +147,16 @@ export default function Progress() {
           // 「—」 and not 0%: a section nobody has opened has no accuracy, and
           // printing zero there is the lie that sends people off to drill it.
           const pct = n > 0 ? Math.round((c / n) * 100) : null;
+          // The level being served here, beside the accuracy that earned it.
+          // This is the whole per-section design in one glance: 読解 J1 next to
+          // 聴解 J3 says more than either number does alone.
+          const level = levelOf(levels, section.id);
           return (
             <View key={section.id} style={{ gap: 6 }}>
               <View style={styles.row}>
                 <IconBadge name={section.icon} tone={section.tone} size={28} />
                 <Text style={[type.body, { flex: 1, fontWeight: "700" }]}>{t(section.key)}</Text>
+                {level ? <Tag tone={section.tone}>{level}</Tag> : null}
                 <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
                   {pct === null ? "—" : t("pct_n", { pct, n })}
                 </Text>
@@ -152,9 +167,9 @@ export default function Progress() {
             </View>
           );
         })}
-        {answered === 0 ? (
-          <Text style={type.small}>{t("prog_first")}</Text>
-        ) : null}
+        <Text style={type.small}>
+          {answered === 0 ? t("prog_first") : t("prog_level_note")}
+        </Text>
       </Card>
 
       <Pressable

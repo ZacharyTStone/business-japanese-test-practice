@@ -11,11 +11,12 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { fetchProfile, hasAdFree } from "../src/lib/db";
+import { fetchSectionLevels, hasAdFree } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
+import { levelMove, SECTION_NAME } from "../src/lib/levels";
 import { roleInfo, worstTrap } from "../src/lib/roles";
 import { clearSummary, takeSummary } from "../src/lib/session";
-import type { Level } from "../src/lib/types";
+import type { SectionLevel } from "../src/lib/types";
 import {
   AdSlot,
   Button,
@@ -28,24 +29,22 @@ import {
 } from "../src/ui/components";
 import { colors, space, type } from "../src/ui/theme";
 
-/** The ladder, for telling up from down. */
-const RANK: Record<Level, number> = { J3: 0, J2: 1, J1: 2 };
-
 export default function Result() {
   const router = useRouter();
   const { lang, t } = useLang();
   const [summary] = useState(() => takeSummary());
   const [adFree, setAdFree] = useState(true); // assume paid until told otherwise
-  const [levelNow, setLevelNow] = useState<Level | null>(null);
+  const [levelsNow, setLevelsNow] = useState<SectionLevel[]>([]);
 
   useEffect(() => {
     hasAdFree().then(setAdFree);
-    // The database may have moved the level on one of this set's answers. That
-    // is the one thing worth a card of its own here, and it is read back rather
-    // than computed, because the rule lives in the trigger and nowhere else.
-    fetchProfile()
-      .then((p) => setLevelNow(p?.target_level ?? null))
-      .catch(() => setLevelNow(null));
+    // The database may have moved a section's level on one of this set's
+    // answers. That is the one thing worth a card of its own here, and it is
+    // read back rather than computed, because the rule lives in the trigger and
+    // nowhere else.
+    fetchSectionLevels()
+      .then(setLevelsNow)
+      .catch(() => setLevelsNow([]));
     return () => clearSummary();
   }, []);
 
@@ -67,28 +66,41 @@ export default function Result() {
       .map((a) => a.item.options[a.chosenIndex]?.role ?? "")
   );
 
-  const before = summary.levelBefore;
-  const moved = before && levelNow && before !== levelNow ? RANK[levelNow] - RANK[before] : 0;
+  // Which SECTION moved, not merely that something did. "聴解のレベルが上がりま
+  // した" is a fact somebody can act on; "レベルが上がりました" leaves them
+  // guessing which third of the exam it was about.
+  const move = levelsNow.length ? levelMove(summary.levelsBefore, levelsNow) : null;
+  const sectionName = move ? t(SECTION_NAME[move.section]) : "";
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      {moved > 0 ? (
+      {move && move.direction > 0 ? (
         <Card style={{ backgroundColor: colors.correctSoft, gap: space.md }}>
           <View style={styles.trapHead}>
             <IconBadge name="spark" tone="teal" />
             <View style={{ flex: 1 }}>
-              <Text style={[type.h2, { color: colors.correct }]}>{t("level_up")}</Text>
-              <Text style={type.small}>{t("level_up_body", { a: before ?? "", b: levelNow ?? "" })}</Text>
+              <Text style={[type.h2, { color: colors.correct }]}>
+                {t("level_up_sec", { section: sectionName })}
+              </Text>
+              <Text style={type.small}>
+                {t("level_up_sec_body", {
+                  section: sectionName,
+                  a: move.from,
+                  b: move.to,
+                })}
+              </Text>
             </View>
           </View>
         </Card>
-      ) : moved < 0 ? (
+      ) : move ? (
         <Card style={{ gap: space.md }}>
           <View style={styles.trapHead}>
             <IconBadge name="layers" tone="blue" />
             <View style={{ flex: 1 }}>
-              <Text style={type.h2}>{t("level_down")}</Text>
-              <Text style={type.small}>{t("level_down_body", { b: levelNow ?? "" })}</Text>
+              <Text style={type.h2}>{t("level_down_sec", { section: sectionName })}</Text>
+              <Text style={type.small}>
+                {t("level_down_sec_body", { section: sectionName, b: move.to })}
+              </Text>
             </View>
           </View>
         </Card>

@@ -20,6 +20,7 @@ import type {
   QueuedItem,
   ReviewLoad,
   RoleTrap,
+  SectionLevel,
   TagStat,
   TypeStat,
 } from "./types";
@@ -81,6 +82,19 @@ export async function recordAttempt(args: {
     .single();
   if (error) throw error;
   return { isCorrect: data.is_correct, chosenRole: data.chosen_role };
+}
+
+/** The three levels being served, one per exam section.
+ *
+ *  Always three rows: the view fills in J2 for a section nobody has answered in
+ *  yet. Shown, never chosen — there is no screen in this app where a level is a
+ *  control, and `v_my_levels` has no write path to be one. */
+export async function fetchSectionLevels(): Promise<SectionLevel[]> {
+  const { data, error } = await supabase
+    .from("v_my_levels")
+    .select("section, level, changed_at");
+  if (error) throw error;
+  return (data ?? []) as SectionLevel[];
 }
 
 export async function fetchProfile(): Promise<Profile | null> {

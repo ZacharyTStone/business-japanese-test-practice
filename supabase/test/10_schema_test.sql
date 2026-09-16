@@ -528,23 +528,33 @@ begin
 end
 $$;
 
--- --- level ------------------------------------------------------------------
+-- --- level, per section ----------------------------------------------------
 
--- Last, because it writes sixty answers and the counts above would move. The
--- fixtures from the top were deleted along the way, so it brings its own.
+-- Last, because it writes well over a hundred answers and every count above
+-- would move. The fixtures from the top were deleted along the way, so it brings
+-- its own: one 聴解 item and one 読解 item, which is the whole point — the two
+-- sections have to move independently or a strong reader is still being drowned
+-- in listening.
 begin;
 set local role service_role;
 insert into public.bundles (id, item_type, level, generator_model, generated_at) values
-    ('bnd_lvl', 'hatsugen_choukai', 'J2', 'author-composed', now());
+    ('bnd_lvl', 'hatsugen_choukai', 'J2', 'author-composed', now()),
+    ('bnd_dok', 'sougou_dokkai',    'J2', 'author-composed', now());
 insert into public.items (id, bundle_id, item_type, level, seed_cell_id, setting, relation,
                           function, channel, topic, stem, correct_index)
 values ('itm_lvl', 'bnd_lvl', 'hatsugen_choukai', 'J2', 'office_desk+peer_to_peer+request@J2',
-        'office_desk', 'peer_to_peer', 'request', 'in_person', '依頼', '同僚に頼む場面です。', 0);
+        'office_desk', 'peer_to_peer', 'request', 'in_person', '依頼', '同僚に頼む場面です。', 0),
+       ('itm_dok', 'bnd_dok', 'sougou_dokkai', 'J2', 'report_document+other_department+summarise@J2',
+        'report_document', 'other_department', 'summarise', 'written', '読解', '文書から読み取れることは。', 0);
 insert into public.item_options (item_id, position, text, role, why) values
     ('itm_lvl', 0, '正しい。',   'correct',             '正解。'),
     ('itm_lvl', 1, '砕けすぎ。', 'register_too_casual', '砕けすぎ。'),
     ('itm_lvl', 2, '逆。',       'wrong_honorific_direction', '逆。'),
-    ('itm_lvl', 3, '答えない。', 'content_mismatch',    '答えていない。');
+    ('itm_lvl', 3, '答えない。', 'content_mismatch',    '答えていない。'),
+    ('itm_dok', 0, '書いてある。',   'correct',          '正解。'),
+    ('itm_dok', 1, '書いていない。', 'not_in_document',  '本文にない。'),
+    ('itm_dok', 2, '言いすぎ。',     'overgeneralised',  '広げすぎ。'),
+    ('itm_dok', 3, '別の話。',       'wrong_paragraph',  '別の段落。');
 commit;
 
 do $$ begin perform test.become('11111111-1111-1111-1111-111111111111'); end $$;
@@ -554,59 +564,100 @@ do $$
 declare
     i integer;
 begin
-    raise notice 'level';
-    perform test.check((select target_level from public.profiles) = 'J2',
-                       'everyone starts at J2; nobody is asked');
+    raise notice 'level, per section';
+    perform test.check(
+        (select count(*) from public.v_my_levels where level = 'J2') = 3,
+        'all three sections start at J2; nobody is asked about any of them');
 
     -- The record so far is a handful of answers, so the first window is ten.
     for i in 1..9 loop
         insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 0);
     end loop;
-    perform test.check((select target_level from public.profiles) = 'J2',
-                       'nine right answers are not yet a decision');
+    perform test.check(
+        (select level from public.v_my_levels where section = 'choukai') = 'J2',
+        'nine right answers are not yet a decision');
     insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 0);
-    perform test.check((select target_level from public.profiles) = 'J1',
-                       'the tenth moves the level up: the first window is ten, not twenty');
+    perform test.check(
+        (select level from public.v_my_levels where section = 'choukai') = 'J1',
+        'the tenth moves 聴解 up: the first window is ten, not twenty');
+
+    -- The headline. One section moving must not drag the other two with it.
+    perform test.check(
+        (select level from public.v_my_levels where section = 'dokkai') = 'J2'
+        and (select level from public.v_my_levels where section = 'choudokkai') = 'J2',
+        'and leaves the other two where they were: being good at listening says '
+        'nothing about your reading');
+    perform test.check((select target_level from public.profiles) = 'J2',
+        'the one-line summary is the middle of the three, so one strong section '
+        'does not claim the whole learner');
+
     for i in 1..10 loop
         insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 0);
     end loop;
-
     for i in 1..20 loop
         insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
     end loop;
-    perform test.check((select target_level from public.profiles) = 'J1',
-                       'answers at another level do not count: J2 misses leave a J1 learner alone');
+    perform test.check(
+        (select level from public.v_my_levels where section = 'choukai') = 'J1',
+        'answers at another level do not count: J2 misses leave a J1 section alone');
+
+    -- The other direction, in the other section, on the same rule — and on the
+    -- fast window, because the window is counted PER SECTION. Forty answers of
+    -- listening are not a record of this person's reading, so 読解 is still being
+    -- placed and gets the ten-answer window a beginner gets.
+    for i in 1..9 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_dok', 1);
+    end loop;
+    perform test.check(
+        (select level from public.v_my_levels where section = 'dokkai') = 'J2',
+        'nine misses are not yet a decision either');
+    insert into public.attempts (item_id, chosen_index) values ('itm_dok', 1);
+    perform test.check(
+        (select level from public.v_my_levels where section = 'dokkai') = 'J3',
+        'the tenth moves 読解 down: a section still being placed gets the fast '
+        'window, however long the record in another section is');
+    perform test.check(
+        (select level from public.v_my_levels where section = 'choukai') = 'J1',
+        'while the section they are good at stays where it climbed to');
+    perform test.check((select target_level from public.profiles) = 'J2',
+        'and the summary is still the middle: J1 listening, J2 in between, J3 reading');
 end
 $$;
 
 reset role;
 
+-- A client that could set its own level would set it to whatever felt
+-- comfortable, which is the opposite of what raises a score — and is why there
+-- is no level picker in the app either.
 do $$
 declare
-    i integer;
+    denied boolean := false;
 begin
-    -- Put them back at J2 the way a service-role tool would, then miss twenty.
-    set local role service_role;
-    update public.profiles
-       set target_level = 'J2', level_changed_at = now()
-     where id = '11111111-1111-1111-1111-111111111111';
-    reset role;
+    raise notice 'nobody sets their own level';
     set local role authenticated;
+    begin
+        update public.section_levels set level = 'J3' where section = 'choukai';
+        denied := (select level from public.v_my_levels where section = 'choukai') = 'J1';
+    exception when others then
+        denied := true;
+    end;
+    perform test.check(denied, 'a client cannot move its own section level');
 
-    for i in 1..19 loop
-        insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
-    end loop;
-    perform test.check((select target_level from public.profiles) = 'J2',
-                       'with a record behind them the window is twenty, so nineteen misses wait');
-    insert into public.attempts (item_id, chosen_index) values ('itm_lvl', 1);
-    perform test.check((select target_level from public.profiles) = 'J3',
-                       'twenty answers with eight or fewer right move the level down');
+    denied := false;
+    begin
+        insert into public.section_levels (user_id, section, level)
+        values ((select auth.uid()), 'dokkai', 'J1');
+        denied := false;
+    exception when others then
+        denied := true;
+    end;
+    perform test.check(denied, 'nor write a new one');
     reset role;
 end
 $$;
 
-delete from public.items where id = 'itm_lvl';
-delete from public.bundles where id = 'bnd_lvl';
+delete from public.items where id in ('itm_lvl', 'itm_dok');
+delete from public.bundles where id in ('bnd_lvl', 'bnd_dok');
 
 -- ---------------------------------------------------------------------------
 -- The spacing ladder, and the shared bank.
@@ -781,3 +832,106 @@ delete from public.bundles where id = 'bnd_bank';
 delete from auth.users where id = '44444444-4444-4444-4444-444444444444';
 
 \echo 'ALL LADDER AND BANK TESTS PASSED'
+
+-- ---------------------------------------------------------------------------
+-- The pitch: harder questions where you are already good.
+--
+-- The level moves in three big steps on a week of answers. This is the other
+-- half, and the half that moves every time: inside a level, WHICH item of a
+-- given problem type the queue reaches for depends on how this learner does at
+-- that type. Two learners, the same two unseen items, opposite records — and the
+-- queue should hand them opposite items. If it does not, "push harder where they
+-- are strong" is a comment rather than a behaviour.
+
+begin;
+insert into auth.users (id, is_anonymous) values
+    ('55555555-5555-5555-5555-555555555555', true),
+    ('66666666-6666-6666-6666-666666666666', true);
+set local role service_role;
+insert into public.bundles (id, item_type, level, generator_model, generated_at) values
+    ('bnd_pitch', 'goi_bunpou', 'J2', 'author-composed', now());
+-- Three items of one type at one level, sharing a 機能 tag so the weakness term
+-- is identical for the two candidates and the only thing left to separate them
+-- is difficulty. Different settings, so neither picks up the variety nudge.
+insert into public.items (id, bundle_id, item_type, level, setting, function, topic, stem,
+                          correct_index, model_p_correct)
+values ('itm_drv',  'bnd_pitch', 'goi_bunpou', 'J2', 'set_a', 'request', '練習台', '空欄は。', 0, 0.70),
+       ('itm_hard', 'bnd_pitch', 'goi_bunpou', 'J2', 'set_b', 'request', '難しい', '空欄は。', 0, 0.45),
+       ('itm_soft', 'bnd_pitch', 'goi_bunpou', 'J2', 'set_c', 'request', 'やさしい', '空欄は。', 0, 0.95);
+insert into public.item_options (item_id, position, text, role, why)
+select v.id, p.pos, v.id || p.pos, p.role, 'せ'
+from (values ('itm_drv'), ('itm_hard'), ('itm_soft')) as v(id)
+cross join (values (0, 'correct'), (1, 'register_too_casual'),
+                   (2, 'grammar_form_error'), (3, 'collocation_error')) as p(pos, role);
+commit;
+
+do $$
+declare
+    i integer;
+begin
+    raise notice 'the pitch follows how good you are at the type';
+
+    -- A learner who is good at 語彙・文法. Six answers, all right: enough to move
+    -- the accuracy well above the prior, and safely short of the ten that would
+    -- promote the section and take the J2 candidates out of the pool.
+    perform test.become('55555555-5555-5555-5555-555555555555');
+    set local role authenticated;
+    for i in 1..6 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_drv', 0);
+    end loop;
+    perform test.check(
+        (select level from public.v_my_levels where section = 'dokkai') = 'J2',
+        'six right answers have not moved the section yet, so both candidates '
+        'are still in the pool');
+    perform test.check((select id from public.next_items(1)) = 'itm_hard',
+        'strong at this type: the queue reaches for the item the bank finds hard');
+    reset role;
+
+    -- And the same two items, to somebody who keeps getting this type wrong.
+    perform test.become('66666666-6666-6666-6666-666666666666');
+    set local role authenticated;
+    for i in 1..6 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_drv', 1);
+    end loop;
+    perform test.check((select id from public.next_items(1)) = 'itm_soft',
+        'weak at this type: the same two items, and the gentler one comes first');
+    reset role;
+end
+$$;
+
+-- Run it again from scratch a few times. The ranking carries a tie-break random
+-- and the whole point of rebalancing its weight was that it must not be able to
+-- outvote the pitch; an assertion that passes four times in a row is how that
+-- claim stays true rather than merely intended.
+do $$
+declare
+    i integer;
+    j integer;
+begin
+    raise notice 'and it is not the random number talking';
+    perform test.become('55555555-5555-5555-5555-555555555555');
+    set local role authenticated;
+    for j in 1..8 loop
+        perform test.check((select id from public.next_items(1)) = 'itm_hard',
+            'strong learner still gets the harder item on repeat draw ' || j);
+    end loop;
+    reset role;
+
+    perform test.become('66666666-6666-6666-6666-666666666666');
+    set local role authenticated;
+    for j in 1..8 loop
+        perform test.check((select id from public.next_items(1)) = 'itm_soft',
+            'weak learner still gets the gentler item on repeat draw ' || j);
+    end loop;
+    reset role;
+end
+$$;
+
+reset role;
+
+delete from public.items where bundle_id = 'bnd_pitch';
+delete from public.bundles where id = 'bnd_pitch';
+delete from auth.users where id in ('55555555-5555-5555-5555-555555555555',
+                                    '66666666-6666-6666-6666-666666666666');
+
+\echo 'ALL PITCH TESTS PASSED'

@@ -46,6 +46,7 @@ import {
   clipUrl,
   fetchProfile,
   fetchQueue,
+  fetchSectionLevels,
   finishSession,
   recordAttempt,
   sceneUrl,
@@ -55,7 +56,7 @@ import { useLang, type Key } from "../src/lib/i18n";
 import { verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import type { AnsweredItem, Level, QueuedItem } from "../src/lib/types";
+import type { AnsweredItem, QueuedItem, SectionLevel } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
 import { DocumentView } from "../src/ui/document";
@@ -127,7 +128,7 @@ export default function Practice() {
 
   const startedAt = useRef(Date.now());
   const questionShownAt = useRef(Date.now());
-  const levelBefore = useRef<Level | null>(null);
+  const levelsBefore = useRef<SectionLevel[]>([]);
   // Answering a question near the bottom of a long item used to change nothing
   // a phone could see: the option turned green under the thumb and the verdict
   // appeared below the fold. This puts it on screen.
@@ -142,8 +143,10 @@ export default function Practice() {
     let cancelled = false;
     (async () => {
       try {
-        const profile = await fetchProfile();
-        levelBefore.current = profile?.target_level ?? null;
+        const [profile, levels] = await Promise.all([fetchProfile(), fetchSectionLevels()]);
+        // Read before the first answer, so the result screen can name the
+        // section whose level moved rather than just that something did.
+        levelsBefore.current = levels;
         const queue = await fetchQueue(profile?.daily_goal ?? 5);
         if (cancelled) return;
         setItems(queue);
@@ -263,7 +266,7 @@ export default function Practice() {
         answers,
         startedAt: startedAt.current,
         finishedAt: Date.now(),
-        levelBefore: levelBefore.current,
+        levelsBefore: levelsBefore.current,
       });
       router.replace("/result");
       return;

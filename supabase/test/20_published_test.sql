@@ -133,6 +133,7 @@ do $$
 declare
     r record;
     sess uuid;
+    n integer;
 begin
     raise notice 'a full session';
     insert into public.practice_sessions (user_id)
@@ -140,11 +141,17 @@ begin
 
     -- A real set: whatever the queue serves at this user's level, across
     -- however many types have content there.
+    --
+    -- Three right and two wrong, and this time actually deterministically. It
+    -- used to flip a coin per item, which meant roughly one run in thirty-two
+    -- answered all five correctly, left no trap on the record, and failed the
+    -- last assertion in this file for no reason anybody could reproduce.
+    n := 0;
     for r in select id, correct_index from public.next_items(5) loop
-        -- Get three right and two wrong, deterministically.
+        n := n + 1;
         insert into public.attempts (session_id, item_id, chosen_index)
         values (sess, r.id,
-                case when random() < 0.5 then r.correct_index
+                case when n <= 3 then r.correct_index
                      else (r.correct_index + 1) % 4 end);
     end loop;
 

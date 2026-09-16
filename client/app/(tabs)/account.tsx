@@ -6,23 +6,25 @@
  * Google is attached to the same user so nothing moves. The honest risk is
  * stated plainly too — an unlinked record lives on one device and goes with it.
  *
- * The level is shown, not chosen. The database moves it on the evidence of the
- * answers (twenty at a level, sixteen right: up; eight or fewer: down), and the
- * one sentence here says so, because a number that moves by itself should say
- * why. The exam date is the only thing a person is asked for, and it is asked
- * here rather than on first launch: a countdown helps, a form on the first
- * screen does not.
+ * The levels are shown, not chosen — three of them, one per exam section,
+ * because almost nobody is the same at listening and at reading. The database
+ * moves each on the evidence of the answers in that section (twenty there, 80%
+ * right: up; 40% or fewer: down), and the one sentence here says so, because a
+ * number that moves by itself should say why. The exam date is the only thing a
+ * person is asked for, and it is asked here rather than on first launch: a
+ * countdown helps, a form on the first screen does not.
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchProfile, updateProfile } from "../../src/lib/db";
+import { fetchProfile, fetchSectionLevels, updateProfile } from "../../src/lib/db";
 import { countdownLine, daysUntil, formatExamDate, monthsFromNow } from "../../src/lib/exam";
 import { LANG_NAME, LANGS, useLang, type Key } from "../../src/lib/i18n";
+import { SECTION_NAME, SECTION_ORDER, levelOf } from "../../src/lib/levels";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile } from "../../src/lib/types";
+import type { Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   Card,
@@ -54,6 +56,7 @@ export default function Account() {
     error: authError,
   } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,11 @@ export default function Account() {
     fetchProfile()
       .then(setProfile)
       .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
+    // Not fatal if it fails: the card falls back to the one-line summary, which
+    // is a worse answer rather than a broken screen.
+    fetchSectionLevels()
+      .then(setLevels)
+      .catch(() => setLevels([]));
   }, [isAnonymous, authLoading, authError, reloads]);
 
   async function onLink() {
@@ -161,8 +169,13 @@ export default function Account() {
         <Card style={{ gap: space.md }}>
           <View style={styles.head}>
             <IconBadge name="layers" tone="blue" />
-            <View style={{ flex: 1 }}>
-              <Text style={type.h1}>{profile.target_level}</Text>
+            <View style={{ flex: 1, gap: space.xs }}>
+              {SECTION_ORDER.map((section) => (
+                <View key={section} style={styles.levelRow}>
+                  <Text style={[type.body, { flex: 1 }]}>{t(SECTION_NAME[section])}</Text>
+                  <Text style={type.stat}>{levelOf(levels, section) ?? profile.target_level}</Text>
+                </View>
+              ))}
               <Text style={type.small}>{t("acc_level_sub")}</Text>
             </View>
           </View>
@@ -236,6 +249,7 @@ export default function Account() {
 }
 
 const styles = StyleSheet.create({
+  levelRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
   head: { flexDirection: "row", alignItems: "center", gap: space.md },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },

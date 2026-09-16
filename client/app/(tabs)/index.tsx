@@ -20,6 +20,7 @@ import {
   fetchAnsweredToday,
   fetchProfile,
   fetchReviewLoad,
+  fetchSectionLevels,
   fetchRoleTraps,
   fetchStreak,
   fetchTagStats,
@@ -27,9 +28,17 @@ import {
 } from "../../src/lib/db";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang, type Key, type Lang } from "../../src/lib/i18n";
+import { levelsAgree, SECTION_SHORT, sortLevels } from "../../src/lib/levels";
 import { roleInfo } from "../../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, ReviewLoad, RoleTrap, TagStat, TypeStat } from "../../src/lib/types";
+import type {
+  Profile,
+  ReviewLoad,
+  RoleTrap,
+  SectionLevel,
+  TagStat,
+  TypeStat,
+} from "../../src/lib/types";
 import {
   Button,
   Card,
@@ -99,6 +108,7 @@ export default function Home() {
   const [tags, setTags] = useState<TagStat[]>([]);
   const [types, setTypes] = useState<TypeStat[]>([]);
   const [review, setReview] = useState<ReviewLoad>({ due_now: 0, tracked: 0, next_due_at: null });
+  const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -107,7 +117,7 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, t, r, tg, ty, rv] = await Promise.all([
+          const [p, s, t, r, tg, ty, rv, lv] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchAnsweredToday(),
@@ -115,6 +125,7 @@ export default function Home() {
             fetchTagStats(),
             fetchTypeStats(),
             fetchReviewLoad(),
+            fetchSectionLevels(),
           ]);
           if (cancelled) return;
           setProfile(p);
@@ -124,6 +135,7 @@ export default function Home() {
           setTags(tg);
           setTypes(ty);
           setReview(rv);
+          setLevels(lv);
         } finally {
           if (!cancelled) setLoading(false);
         }
@@ -155,12 +167,23 @@ export default function Home() {
   const countdown = countdownLine(daysUntil(profile?.exam_date), lang);
   const answered = types.reduce((n, t) => n + t.answered, 0);
   const level = profile?.target_level ?? "J2";
+  // One number while the three agree, which is how everybody starts; the three
+  // the moment they diverge, because by then the split IS the news — "聴解 J3 ・
+  // 読解 J1" is the single most useful sentence the app can put on this screen.
+  const levelLine =
+    levels.length === 3 && !levelsAgree(levels)
+      ? t("level_split", {
+          levels: sortLevels(levels)
+            .map((l) => `${t(SECTION_SHORT[l.section])} ${l.level}`)
+            .join("・"),
+        })
+      : t("level_line", { level });
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <ScreenHeader
         title={t("tab_home")}
-        subtitle={t("level_line", { level })}
+        subtitle={levelLine}
         right={
           streak > 0 ? (
             <View style={styles.streakPill}>

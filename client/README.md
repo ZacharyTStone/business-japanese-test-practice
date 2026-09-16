@@ -98,8 +98,9 @@ app/                expo-router screens
   (tabs)/           the three places the app lives, under a bottom bar
     _layout.tsx     the bar itself
     index.tsx       home — one button, today's ring, and the app's one sentence
-    progress.tsx    three sections like the real score report; nine types under a fold
-    account.tsx     link Google, the level (shown, not chosen), the exam date
+    progress.tsx    three sections like the real score report, each with the level
+                    being served in it; nine types under a fold
+    account.tsx     link Google, the three levels (shown, not chosen), the exam date
   practice.tsx      the session, one moment at a time: scene, listen, answer, reveal
   result.tsx        count, the trap that caught you most, the level if it moved
   history.tsx       every answer, wrong ones first
@@ -108,6 +109,7 @@ src/lib/
   supabase.ts       the client (anon key is public by design — RLS is the guard)
   auth.tsx          anonymous bootstrap, Google linking, token refresh on resume
   db.ts             every query the app makes, in one file
+  levels.ts         the three section levels: order, names, and what moved
   roles.ts          distractor role → Japanese label + 失礼度メーター values
   types.ts          the shapes the database returns
   session.ts        the practice → result handoff
@@ -125,6 +127,13 @@ one line that advertises it only renders where there is a keyboard to press.
 Practice, its result, and the review screen are pushed *over* the tab bar rather
 than living in it. A set of five is a thing you finish, and a tab bar under a
 listening item is an invitation to leave halfway — which loses the set.
+
+Three screens show a level and none of them lets anybody set one. Home prints a
+single number while the three sections agree, and all three the moment they do
+not — by then the split is the news. 記録 puts each section's level beside the
+accuracy that earned it. 結果 names the section that just moved, because
+「聴解のレベルが上がりました」 is something a person can act on and
+「レベルが上がりました」 leaves them guessing which third of the exam it meant.
 
 ## Checks
 
