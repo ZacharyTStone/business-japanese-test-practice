@@ -16,6 +16,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { clipUrl } from "../lib/db";
 import type { DialogueTurn } from "../lib/types";
+import { Icon } from "./icons";
 import { colors, radius, space, type } from "./theme";
 
 export function ClipButton({
@@ -57,7 +58,9 @@ export function ClipButton({
       }}
       style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
     >
-      <Text style={styles.playIcon}>{playing ? "■" : "▶"}</Text>
+      <View style={styles.playIcon}>
+        <Icon name={playing ? "stop" : "play"} size={18} color={colors.onAccent} strokeWidth={2} />
+      </View>
       <Text style={type.body}>{label}</Text>
     </Pressable>
   );
@@ -75,10 +78,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: space.md,
     backgroundColor: colors.accentSoft,
-    borderRadius: radius.md,
-    padding: space.lg,
+    borderRadius: radius.lg,
+    padding: space.md,
+    paddingRight: space.lg,
   },
-  playIcon: { fontSize: 16, color: colors.accent },
+  playIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.accent,
+  },
   transcript: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.md,
@@ -199,8 +210,10 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
       }}
       style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
     >
-      <Text style={styles.playIcon}>{running ? "■" : "▶"}</Text>
-      <Text style={type.body}>会話を聞く</Text>
+      <View style={styles.playIcon}>
+        <Icon name={running ? "stop" : "play"} size={18} color={colors.onAccent} strokeWidth={2} />
+      </View>
+      <Text style={[type.body, { flex: 1 }]}>会話を聞く</Text>
       <Text style={type.small}>
         {at + 1} / {turns.length}
       </Text>
