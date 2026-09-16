@@ -1,0 +1,207 @@
+# The nightly job: measure the bank, then grow it where it is thinnest.
+#
+# It has two halves, and the first one needs nothing at all.
+#
+#   survey    — count the library shelf by shelf (nine problem types × three
+#               levels) and print the work order `bjt nightly` would execute.
+#               Offline, no key, runs every night whatever else is configured.
+#               This is the half that tells you the practice queue cannot
+#               interleave across types because sixteen of the shelves are empty.
+#   write     — actually generate, gate, check and commit those items, and open a
+#               pull request for a person to read. Runs only when the secrets it
+#               needs are present.
+#
+# Splitting it that way is deliberate. A job that does nothing until somebody
+# buys an API key is a job nobody notices has rotted; this one produces a true,
+# useful report from the first night, and grows teeth when the key arrives.
+#
+# **Why a pull request, in a repository whose rule is "work on main".** That rule
+# is about people writing code with no gate in front of them. This is a machine
+# writing exam content, and the roadmap is explicit that it must be drafts only,
+# with a reviewer publishing (docs/content-media-and-auth-roadmap.md). A branch
+# that exists to be read before it lands is the gate, not a way around one.
+# Nothing here touches the database: it writes bundles and the SQL for them, and
+# applying that SQL stays a deliberate act somebody takes.
+#
+# Secrets, all optional, each unlocking one thing:
+#
+#   ANTHROPIC_API_KEY  the generator. Without it only the survey runs.
+#   SEEDS_TAR_B64      the licensed few-shot and vocabulary material that lives
+#                      in the gitignored seeds/. Produce it with
+#                        tar czf - seeds | base64 -w0
+#                      Generation is NOT run without it: the few-shot examples
+#                      are most of what keeps generated items close to the exam,
+#                      and writing a hundred items without them would fill the
+#                      bank with the wrong thing, quietly.
+#   SUPABASE_DB_URL    a connection string for the production database. Used for
+#                      one statement — refresh_item_stats() — which recounts how
+#                      often each item is answered correctly across all learners.
+#                      That is what the practice queue reads to pitch a set at a
+#                      difficulty that teaches.
+name: nightly
+
+on:
+  schedule:
+    # 18:00 UTC = 03:00 JST. Cron here is UTC and the learners are in Japan, so
+    # this is stated in both: it should land while nobody is practising, and it
+    # must not drift into the evening when the clocks change.
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "Most items this run may write"
+        required: false
+        default: "24"
+      per_slot:
+        description: "Most items into any one (type, level)"
+        required: false
+        default: "6"
+      dry_run:
+        description: "Print the work order and stop"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  nightly:
+    name: survey the bank, and fill it if the keys are there
+    runs-on: ubuntu-latest
+    env:
+      BUDGET: ${{ github.event.inputs.budget || '24' }}
+      PER_SLOT: ${{ github.event.inputs.per_slot || '6' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e ".[dev]"
+
+      # ---------------------------------------------------------- the survey
+
+      - name: what the bank needs next
+        run: |
+          {
+            echo '## The bank tonight'
+            echo
+            echo '```'
+            python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT" --json > plan.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: work-order
+          path: plan.json
+
+      # --------------------------------------------------- which half can run
+
+      # A step's own `env:` is not visible to its own `if:`, so the secrets are
+      # turned into plain outputs here and every conditional below reads those.
+      # Only the presence of each secret ever leaves this step.
+      - name: which of tonight's work is unlocked
+        id: keys
+        env:
+          HAVE_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAVE_SEEDS: ${{ secrets.SEEDS_TAR_B64 != '' }}
+          HAVE_DB: ${{ secrets.SUPABASE_DB_URL != '' }}
+        run: |
+          echo "db=$HAVE_DB" >> "$GITHUB_OUTPUT"
+          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_SEEDS" = "true" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            {
+              echo
+              echo '### Nothing written'
+              echo
+              echo "Generation needs both \`ANTHROPIC_API_KEY\` (present: $HAVE_API_KEY)"
+              echo "and \`SEEDS_TAR_B64\` (present: $HAVE_SEEDS). See blockers.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # ------------------------------------------------ recount the shared bank
+
+      # Aggregate over every learner, and the only thing in this repository that
+      # gets better with scale: the more people answer an item, the better the
+      # queue knows how hard it is. One statement, as the service role, out of
+      # hours — never on the path of somebody waiting for five questions.
+      - name: recount how hard each item is
+        if: steps.keys.outputs.db == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+            -c "select public.refresh_item_stats() as items_recounted;"
+
+      # --------------------------------------------------------- the generation
+
+      - name: unpack the licensed seeds
+        if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          SEEDS_TAR_B64: ${{ secrets.SEEDS_TAR_B64 }}
+        run: |
+          # seeds/ is gitignored on purpose — it is licensed material. It arrives
+          # as a secret, is unpacked into the workspace, and never reaches a
+          # commit: .gitignore already covers it, and the commit below adds only
+          # batches/.
+          echo "$SEEDS_TAR_B64" | base64 -d | tar xzf -
+          python -m bjt seeds
+
+      - name: write tonight's items
+        if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --summary summary.md
+
+      # The same sweep the `checks` workflow runs, over the whole of batches/ and
+      # not only tonight's. A new bundle that breaks an old one's dedupe distance
+      # is exactly the failure this catches, and it is invisible to a per-batch
+      # check.
+      - name: check every bundle, old and new
+        if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        run: |
+          shopt -s nullglob
+          for f in batches/*.json; do
+            case "$f" in *.source.json) continue ;; esac
+            echo "::group::$f"
+            python -m bjt checkbatch "$f"
+            echo "::endgroup::"
+          done
+
+      - name: open a pull request for somebody to read
+        if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain batches)" ]; then
+            echo "nothing new in batches/; no pull request" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          branch="content/nightly-$(date -u +%Y%m%d)"
+          git config user.name  "bjt nightly"
+          git config user.email "noreply@github.com"
+          git checkout -b "$branch"
+          git add batches
+          git commit \
+            -m "Fill the emptiest shelves of the bank ($(date -u +%Y-%m-%d))" \
+            -m "Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied."
+          git push -u origin "$branch" --force-with-lease
+          gh pr create \
+            --title "Nightly content: $(date -u +%Y-%m-%d)" \
+            --body-file summary.md \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$branch"
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"

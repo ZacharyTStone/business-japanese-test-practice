@@ -15,9 +15,13 @@ blockers.md  what is finished up to the point it needs a key
 Three things are true of the whole system and explain most of its shape:
 
 * **Nothing is generated while somebody is practising.** Generation is a batch
-  job run on a laptop; what ships is checked JSON, published as reviewable SQL.
-  That is why the running cost is zero and why the quality gates can afford to be
-  slow.
+  job — on a laptop, or nightly on a schedule that opens a pull request — and
+  what ships is checked JSON, published as reviewable SQL. That is why the
+  running cost is zero and why the quality gates can afford to be slow.
+* **One bank, shared by everybody, sorted per person.** Every learner draws from
+  the same published library; what is personal is the order. Fixed, readable SQL
+  does the sorting, over labels the pipeline attached before the item shipped and
+  counts the bank took from everyone's answers.
 * **Everyone has an account from the first launch, and nobody signs up.** The app
   signs in anonymously before it shows anything, so history is server-side from
   question one; linking Google later keeps the same user id, so nothing merges.
@@ -68,6 +72,7 @@ project:
 pip install -e ".[dev]"
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json --show   # read the reference batch
 python -m bjt seedtable --sample 5                                     # what would be written next
+python -m bjt plan                                                     # which shelves of the bank are empty
 pytest                                                                 # the pipeline
 supabase/test/run.sh                                                   # the schema, on a throwaway Postgres
 cd client && npm install && npm run typecheck                          # the app
@@ -104,6 +109,8 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt selftest` | Offline check of schema/role validation and the DB (no key). |
 | `bjt gen --type T --level J2` | Generate one item, gate it, store it, print it. |
 | `bjt batch --type T --level J2 -n 10` | **The main path.** Generate a batch offline, gate each item, run the whole-batch checks, write a bundle. |
+| `bjt plan` | What the bank needs next: nine types × three levels, emptiest shelf first. No key. |
+| `bjt nightly [--budget N]` | Run that work order — generate, gate, check, and write the SQL. What the nightly job calls. |
 | `bjt importbatch <file.source.json>` | Same checks, same bundle, for items written by hand. |
 | `bjt checkbatch <bundle.json> [--show]` | Re-run every offline check over an existing bundle. No key needed. |
 | `bjt smoke --type T -n 10` | Headless acceptance run: generate N, assert nothing crashes or fails validation. |
@@ -252,6 +259,7 @@ the clip ids its audio files will be named after.
   "items": [ { "id": "...", "stem": "...", "scene_id": "...", "channel": "phone",
                "options": [{ "text": "...", "role": "...", "why": "..." }],
                "correct_index": 0,
+               "model_p_correct": 0.67,
                "audio": { "narration": "<clip id>", "options": ["<clip id>", ...] } } ],
   "audio_manifest": [ { "clip_id": "...", "text": "...", "voice": "...", "channel": "phone" } ],
   "scenes": ["scene_phone_desk", ...]
@@ -342,9 +350,80 @@ is ever copied into this repository.
 
 ---
 
+## The nightly job
+
+The practice queue promises to spread a set across problem types, to serve three
+levels, and to slip in one item from the level above. Every one of those promises
+is empty when the library is 40 items of one type at one level and six of
+everything else: **a queue cannot interleave what is not there.** So the bank has
+27 shelves — nine problem types × three levels — and the nightly job's whole
+objective is to fill the emptiest one first.
+
+```
+$ bjt plan
+The bank, shelf by shelf (items published / seed cells left)
+
+  bamen_haaku         J3   0 / 335     J2   6 / 329     J1   0 / 335    ←thin
+  goi_bunpou          J3   0 / 451     J2   6 / 445     J1   0 / 451    ←thin
+  hatsugen_choukai    J3  20 / 390     J2  10 / 400     J1  10 / 400    ←thin
+  ...
+
+  88 item(s) published; 16 empty shelf/shelves, 26 below 12; 7439 seed cell(s) left.
+
+Work order — 24 item(s), emptiest shelf first
+
+   2 × bamen_haaku J1   (has 0, 335 cell(s) left)
+   2 × bamen_haaku J3   (has 0, 335 cell(s) left)
+   ...
+```
+
+The algorithm is one sentence — *give the next item to the shelf with the fewest
+items, skipping any shelf that is out of seed cells or has had its share of this
+run* — and it is plain on purpose. It is **deterministic**, so a night's work can
+be reviewed before it is made; it **converges**, levelling the shelves instead of
+deepening whichever type is easiest to generate; and it **stops**, because a
+shelf whose seed table is exhausted drops out. "Will we run out of questions?"
+becomes a number this command prints.
+
+Two caps keep a night reviewable by a person: `--budget` for the whole run, and
+`--per-slot` for any one shelf. Without the second, a single run can write thirty
+items of one type — one big risk instead of four small ones, and a diff nobody
+finishes.
+
+What the planner deliberately does **not** do is look at individual learners.
+Targeting one person with a generation run costs money per person, puts a profile
+into a prompt, and cannot be reviewed before it is served. Weakness targeting
+happens in the *queue*, over a bank that is already published, where it is free
+and reversible. The nightly job only makes sure the queue has something to choose
+from.
+
+### What runs, and when
+
+`.github/workflows/nightly.yml` has two halves, and the first needs nothing:
+
+* **the survey** — `bjt plan` into the run summary, every night, offline. This is
+  the half that tells you sixteen shelves are empty.
+* **the writing** — `bjt nightly`, then the whole-bundle sweep, then a pull
+  request. It runs only when `ANTHROPIC_API_KEY` and `SEEDS_TAR_B64` are both
+  set. Generation without the licensed few-shot material would fill the bank with
+  the wrong thing, quietly, so the absence of seeds stops it rather than
+  degrading it.
+
+It also runs one statement against the production database when
+`SUPABASE_DB_URL` is set: `refresh_item_stats()`, which recounts how often each
+item is answered correctly across all learners. That is the other half of the
+night — measure the bank, then grow it where it is thin.
+
+**Nothing here publishes.** The job writes bundles and the SQL for them and opens
+a pull request; applying that SQL stays a deliberate act somebody takes. A branch
+that exists to be read before it lands is the review gate the roadmap asks for,
+not a way around the repository's work-on-`main` rule.
+
+---
+
 ## The database
 
-`supabase/migrations/` holds the whole schema. Three things in it are worth
+`supabase/migrations/` holds the whole schema. A few things in it are worth
 knowing before reading the SQL.
 
 **Content is world-readable; everything personal is owner-only.** The item
@@ -364,22 +443,72 @@ generation will eventually select on. There is no `update` or `delete` policy on
 corrupt the profile built from it.
 
 **`next_items()` is the practice queue, in one round trip — and it takes a size
-and nothing else.** The set is built from the record, because the learner
-decides nothing: up to two items that caught them before and have not been seen
-for a day; unseen items at their level, weakest ground first; exactly one unseen
-item from the level above; then whatever is left, and the adjacent levels if
-theirs has run thin.
+and nothing else.** The set is built from the record, because the learner decides
+nothing. Four buckets, in this order:
 
-"Weakest ground" is two things. The 機能 tag they score worst on is the main
-axis, and a blunt one — it says 依頼 is weak without saying *how* they go wrong.
-`attempts.chosen_role` knows how, so an unseen item that contains a distractor
-whose role has caught this person before is pulled forward as well, capped so
-that one bad habit cannot take over a whole set. The correct option is excluded
-from that match, or items would be ranked by how often the learner has answered
-*correctly*.
+| | | |
+|---|---|---|
+| 0 | **due** | items the spacing ladder says are due today, most overdue first, at any level. Capped at two fifths of the set, so a backlog after a week away cannot crowd out everything new. |
+| 1 | **fresh** | unseen items at their level, weakest ground first, spread across problem types and settings. |
+| 2 | **stretch** | exactly one unseen item from the level above, when the set is five or more. `adjust_level()` ignores it, so it can never cost a promotion. |
+| 3 | **the rest** | everything else at their level, then the adjacent levels, so a thin level still fills a set instead of ending it early. |
+
+"Weakest ground" is three things, and all three are arithmetic you can check.
+
+* **The 機能 tag they score worst on**, smoothed and aged. Smoothed because a
+  single miss on a tag used to read as 0% and drag the whole set onto it: the
+  rate is `(right + 1) / (answered + 2)`, which starts a new tag at 50% and needs
+  real evidence to move. Aged because a habit broken in March is not today's
+  weakness — every answer carries a 30-day half-life, so last week counts about
+  five times what last quarter does.
+* **The traps that keep catching them.** `attempts.chosen_role` knows *how* they
+  go wrong, not just that they do, so an unseen item containing a distractor
+  whose role has caught this person before is pulled forward — capped, so one bad
+  habit cannot take over a whole set. The correct option is excluded from that
+  match, or items would be ranked by how often the learner answered *correctly*.
+* **How hard the item is for everybody else** — see the shared bank below.
+
+And two nudges for variety, which are the reason a set of five drawn from a
+library that is 40% one problem type is not five of that type: the second item of
+a type in one set is pushed back, the third further, and the same for 場面 at a
+third of the weight. Enough to lose to any other type that is close; not enough
+to serve nothing when only one type is published.
 
 There used to be a manual mode (`free`, `mock`) that served one chosen type at
 one chosen level. It is gone, along with the screen that asked for it.
+
+**The spacing ladder is a trigger.** `review_schedule` holds one row per
+(learner, item): when it is next worth meeting, and which rung of a five-rung
+ladder it is on — 20 hours, 3 days, 1 week, 3 weeks, 2 months. A right answer
+climbs a rung; a wrong one drops all the way to the bottom, because a trap you
+still fall for after three weeks is a trap you have not learned. It is a fixed
+table of intervals rather than a fitted forgetting curve on purpose: a curve
+needs calibration these items do not have, and "tomorrow, then in three days,
+then in a week" is a promise a learner can hold the app to. The client cannot
+write it — same rule as `attempts`, for the same reason.
+
+**The bank is shared, and it gets better as people use it.** `item_stats` counts
+how often each item is answered correctly across *every* learner;
+`refresh_item_stats()` recomputes it out of hours, as the service role, never on
+the path of somebody waiting for five questions. The queue prefers items near a
+target success rate, because too easy teaches nothing and so does too hard.
+
+Two things guard that, and both matter:
+
+* **It is a property of the question, not of a person.** There is no IRT model
+  behind it, nothing is derived from it about anybody's ability, and it is never
+  displayed. The rule stands: no estimated BJT score, anywhere.
+* **The raw counts are not readable by a client.** With a handful of users,
+  "answered 1, correct 0" is a statement about a person. `item_stats` has RLS on
+  and no policy; what clients can read is `v_item_difficulty`, which only exists
+  above eight answers.
+
+An item nobody has answered yet has no measured rate, and that is the common case
+the day a batch ships. So the answerability gate's own full-view success rate
+travels with the item — `items.model_p_correct`, written by `bjt publish` — and
+serves as the prior until the bank has counted. It is null for the hand-written
+reference batches, which are the one path that skips the gate, and the queue
+reads null as "no opinion" rather than as "average".
 
 **The level is a trigger too.** Nobody is asked whether they are J2; nobody
 could answer. Everyone starts there, and `adjust_level()` moves
@@ -400,8 +529,11 @@ Applies every migration to a throwaway Postgres — no project, no keys, no netw
 — and asserts what the schema promises: that one user cannot read another's
 history, that a client cannot claim its own answer was right or grant itself the
 paid unlock, that an item whose answer points at no option is rejected, that a
-published bundle applies twice without duplicating, and that a fresh anonymous
-user can pull a real set of five and have it land on the radar.
+published bundle applies twice without duplicating, that a client cannot move its
+own review dates or read the bank's raw per-item counts, that a wrong answer drops
+an item to the bottom rung of the ladder and a right one climbs it, and that a
+fresh anonymous user can pull a real set of five — spread across problem types —
+and have it land on the radar.
 
 It finishes by reading every query in `client/src/lib` and asserting each table,
 view, column and function the app names actually exists. TypeScript can only
@@ -448,6 +580,8 @@ bjt/
   render/        document data → semantic HTML, and the eight templates
   db/            SQLite store + schema
   seedtable.py   場面×関係×機能×レベル → cells
+  plan.py        which shelf of the bank is emptiest, and tonight's work order
+                 (not tts/plan.py, which decides what to synthesise)
   batch.py       batch runs, the bundle format, the whole-batch checks
   schemas.py     item JSON schema + validation
   levels.py      CAN-DO descriptors (loadable from seeds)

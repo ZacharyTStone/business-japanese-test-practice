@@ -300,13 +300,15 @@ begin
     perform test.check(ok, 'an item whose correct_index points at no option is rejected');
 end
 $$;
--- --- the trigger functions are not an API -----------------------------------
+-- --- the definer functions are not an API -----------------------------------
 
 -- They are `security definer` because they write rows the caller has no policy
--- for. Living in `public` also publishes them at /rest/v1/rpc/<name>, so the
--- grant is revoked in 20260914000100. Assert both halves of that: the door is
--- shut, and the triggers behind it still fire — which the grading tests above
--- have already demonstrated on this very connection.
+-- for — or, in refresh_item_stats's case, because it reads every attempt in the
+-- database, which is exactly what no client may do. Living in `public` also
+-- publishes them at /rest/v1/rpc/<name>, so the grant is revoked where each is
+-- defined. Assert both halves of that: the door is shut, and the triggers behind
+-- it still fire — which the grading tests above have already demonstrated on
+-- this very connection.
 reset role;
 
 do $$
@@ -314,7 +316,8 @@ declare
     f text;
 begin
     raise notice 'definer functions are not reachable over the API';
-    foreach f in array array['handle_new_user()', 'sync_profile_identity()', 'grade_attempt()']
+    foreach f in array array['handle_new_user()', 'sync_profile_identity()', 'grade_attempt()',
+                             'schedule_review()', 'refresh_item_stats()']
     loop
         perform test.check(
             not has_function_privilege('anon', 'public.' || f, 'execute'),
@@ -604,3 +607,177 @@ $$;
 
 delete from public.items where id = 'itm_lvl';
 delete from public.bundles where id = 'bnd_lvl';
+
+-- ---------------------------------------------------------------------------
+-- The spacing ladder, and the shared bank.
+--
+-- Two mechanisms in one section because they meet in next_items: the ladder
+-- decides WHEN an item comes back, and the bank's counts decide which of the
+-- unseen ones is worth meeting at all. Both are new surfaces that the wrong
+-- party could read or write, so most of what follows is about who cannot.
+--
+-- Its own user and its own items, deleted at the end. 20_published_test.sql
+-- draws from the same J2 pool, and a fixture left behind would turn up in its
+-- "first practice set" and fail on a stem that is four characters long.
+
+begin;
+-- auth.users belongs to Supabase, not to us: `service_role` has no grant on it
+-- here any more than it does in the real project, so the fixture user is
+-- created before the role is dropped, exactly as the entitlement test does.
+insert into auth.users (id, is_anonymous) values
+    ('44444444-4444-4444-4444-444444444444', true);
+set local role service_role;
+insert into public.bundles (id, item_type, level, generator_model, generated_at) values
+    ('bnd_bank', 'goi_bunpou', 'J2', 'author-composed', now());
+-- One item the gate found trivial and one it found about right. Nobody has
+-- answered either, so model_p_correct is all the queue has to go on — which is
+-- exactly the cold-start case it exists for.
+insert into public.items (id, bundle_id, item_type, level, topic, stem, correct_index,
+                          model_p_correct)
+values ('itm_easy', 'bnd_bank', 'goi_bunpou', 'J2', '易しすぎ', '空欄に入るものは。', 0, 1.0),
+       ('itm_fit',  'bnd_bank', 'goi_bunpou', 'J2', 'ちょうど', '空欄に入るものは。', 0, 0.7);
+insert into public.item_options (item_id, position, text, role, why) values
+    ('itm_easy', 0, 'あ', 'correct',              '正解。'),
+    ('itm_easy', 1, 'い', 'register_too_casual',  '砕けすぎ。'),
+    ('itm_easy', 2, 'う', 'grammar_form_error',   '形が誤り。'),
+    ('itm_easy', 3, 'え', 'collocation_error',    '結びつかない。'),
+    ('itm_fit',  0, 'か', 'correct',              '正解。'),
+    ('itm_fit',  1, 'き', 'register_too_casual',  '砕けすぎ。'),
+    ('itm_fit',  2, 'く', 'grammar_form_error',   '形が誤り。'),
+    ('itm_fit',  3, 'け', 'collocation_error',    '結びつかない。');
+commit;
+
+do $$ begin perform test.become('44444444-4444-4444-4444-444444444444'); end $$;
+set role authenticated;
+
+do $$
+declare
+    r record;
+    n integer;
+    denied boolean := false;
+begin
+    raise notice 'difficulty, before anybody has answered';
+    -- Both unseen and equally weak, so the only thing separating them is how
+    -- hard the gate found them. A giveaway teaches nothing and goes second.
+    perform test.check((select id from public.next_items(1)) = 'itm_fit',
+        'an unseen set is pitched at the difficulty that teaches, not at the easiest item');
+
+    raise notice 'the spacing ladder';
+    insert into public.attempts (item_id, chosen_index) values ('itm_fit', 1);   -- wrong
+    select * into r from public.review_schedule where item_id = 'itm_fit';
+    perform test.check(r.step = 0, 'a wrong answer puts the item on the bottom rung');
+    perform test.check(r.due_at between now() + interval '19 hours'
+                                    and now() + interval '21 hours',
+        'and brings it back after a night, not immediately and not never');
+
+    insert into public.attempts (item_id, chosen_index) values ('itm_fit', 0);   -- right
+    select * into r from public.review_schedule where item_id = 'itm_fit';
+    perform test.check(r.step = 1, 'a right answer climbs a rung');
+    perform test.check(r.due_at > now() + interval '2 days',
+        'so an answer you got right on Tuesday is checked on Friday');
+
+    insert into public.attempts (item_id, chosen_index) values ('itm_fit', 0);   -- right
+    select * into r from public.review_schedule where item_id = 'itm_fit';
+    perform test.check(r.step = 2, 'and again, further out each time');
+
+    insert into public.attempts (item_id, chosen_index) values ('itm_fit', 2);   -- wrong
+    select * into r from public.review_schedule where item_id = 'itm_fit';
+    perform test.check(r.step = 0,
+        'one wrong answer drops it all the way back rather than one rung — a trap '
+        'you still fall for after three weeks is a trap you have not learned');
+
+    begin
+        insert into public.review_schedule (user_id, item_id, due_at)
+        values ((select auth.uid()), 'itm_easy', now() + interval '10 years');
+        denied := false;
+    exception when others then
+        denied := true;
+    end;
+    perform test.check(denied, 'a client cannot write its own review schedule');
+
+    denied := false;
+    begin
+        update public.review_schedule set due_at = now() + interval '10 years';
+        denied := (select count(*) from public.review_schedule
+                    where due_at > now() + interval '1 year') = 0;
+    exception when others then
+        denied := true;
+    end;
+    perform test.check(denied, 'nor push away a due date it does not fancy');
+
+    select count(*) into n from public.v_my_review_load;
+    perform test.check(n = 1, 'home gets exactly one row to print, always');
+    perform test.check((select tracked from public.v_my_review_load) = 1,
+        'and it says how much the ladder is tracking');
+end
+$$;
+
+do $$
+declare
+    due_id text;
+begin
+    raise notice 'a due item comes first';
+    set local role service_role;
+    update public.review_schedule set due_at = now() - interval '1 hour'
+     where user_id = '44444444-4444-4444-4444-444444444444' and item_id = 'itm_fit';
+    reset role;
+    set local role authenticated;
+    perform test.check((select due_now from public.v_my_review_load) = 1,
+        'the count home prints follows the ladder');
+    select id into due_id from public.next_items(1);
+    perform test.check(due_id = 'itm_fit',
+        'and the item the ladder says is due beats an unseen one');
+    reset role;
+end
+$$;
+
+do $$
+declare
+    r record;
+    denied boolean := false;
+begin
+    raise notice 'the shared bank';
+
+    set local role service_role;
+    perform public.refresh_item_stats();
+    select * into r from public.item_stats where item_id = 'itm_fit';
+    perform test.check(r.answered = 4, 'the bank counts every answer, from everybody');
+    perform test.check(r.correct = 2 and r.p_correct = 0.5,
+        'and the rate is what those answers say, not what anybody hoped');
+    reset role;
+
+    set local role authenticated;
+    perform test.check(
+        (select count(*) from public.v_item_difficulty where item_id = 'itm_fit') = 0,
+        'four answers is one person, and an item that thin has no published difficulty');
+    reset role;
+
+    set local role service_role;
+    update public.item_stats set answered = 12, correct = 9, p_correct = 0.75
+     where item_id = 'itm_fit';
+    reset role;
+
+    set local role authenticated;
+    select * into r from public.v_item_difficulty where item_id = 'itm_fit';
+    perform test.check(r.p_correct = 0.75,
+        'above the floor it is published — an average over at least eight sittings');
+
+    begin
+        perform count(*) from public.item_stats;
+        denied := false;
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied,
+        'but the raw counts behind it stay shut: at this scale they are a person');
+    reset role;
+end
+$$;
+
+reset role;
+
+delete from public.items where id in ('itm_easy', 'itm_fit');
+delete from public.bundles where id = 'bnd_bank';
+delete from auth.users where id = '44444444-4444-4444-4444-444444444444';
+
+\echo 'ALL LADDER AND BANK TESTS PASSED'

@@ -60,6 +60,7 @@ import { AutoPlaylist, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
 import { DocumentView } from "../src/ui/document";
 import { Face, moodFor, moodLabel } from "../src/ui/face";
+import { HAS_KEYBOARD, optionForKey, useKeys } from "../src/ui/keys";
 import { RudenessMeter } from "../src/ui/meters";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
@@ -127,6 +128,14 @@ export default function Practice() {
   const startedAt = useRef(Date.now());
   const questionShownAt = useRef(Date.now());
   const levelBefore = useRef<Level | null>(null);
+  // Answering a question near the bottom of a long item used to change nothing
+  // a phone could see: the option turned green under the thumb and the verdict
+  // appeared below the fold. This puts it on screen.
+  const scroller = useRef<ScrollView>(null);
+  // Which question has already been scrolled to its verdict. onLayout fires
+  // again when the explanation is unfolded, and without this the screen would
+  // snap back to the top just as somebody started reading it.
+  const scrolledFor = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isConfigured || !session?.user) return;
@@ -263,6 +272,7 @@ export default function Practice() {
     setChosen(null);
     setGraded(null);
     setShowDetails(false);
+    scrolledFor.current = null;
     questionShownAt.current = Date.now();
   }
 
@@ -273,9 +283,41 @@ export default function Practice() {
   const mood = graded ? moodFor(role, graded.isCorrect) : "happy";
   const explanation = lang === "en" && item.explanation_en ? item.explanation_en : item.explanation_ja;
 
+  /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
+  function onKey(key: string): boolean | void {
+    if (!revealed && stage === "answer" && chosen === null && !busy) {
+      const pick = optionForKey(key, options.length);
+      if (pick >= 0) {
+        void choose(pick);
+        return;
+      }
+    }
+    if (key === "Enter" || key === " ") {
+      if (revealed) {
+        void next();
+        return;
+      }
+      if (stage === "scene") {
+        go(listenable ? "listen" : "answer");
+        return;
+      }
+    }
+    return false;
+  }
+
   return (
-    <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-      <View style={styles.progressRow}>
+    <ScrollView
+      ref={scroller}
+      contentContainerStyle={styles.page}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Keys onKey={onKey} />
+      <View
+        style={styles.progressRow}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={t("q_of_n", { i: index + 1, n: items.length })}
+      >
         <Text style={type.small}>
           {index + 1} / {items.length}
         </Text>
@@ -345,6 +387,13 @@ export default function Practice() {
             </Text>
           ) : null}
 
+          {/* A shortcut nobody is told about is a shortcut nobody uses. One
+              quiet line, only where there is a keyboard to press, and naming the
+              key that works at this moment rather than both. */}
+          {HAS_KEYBOARD && !revealed ? (
+            <Text style={[type.mono, styles.hint]}>{t("key_hint_answer")}</Text>
+          ) : null}
+
           <View style={{ gap: space.md }}>
             {options.map((option, i) => {
               const isChosen = chosen === i;
@@ -355,6 +404,15 @@ export default function Practice() {
                 <Pressable
                   key={option.position}
                   accessibilityRole="button"
+                  // One label for the whole option, so a screen reader says
+                  // "A. 承知いたしました" rather than reading a lone letter and
+                  // then a sentence with nothing tying them together — and, once
+                  // answered, says which one this was.
+                  accessibilityLabel={
+                    `${LETTERS[i]}. ${option.text}` +
+                    (show ? ` — ${isAnswer ? t("mark_correct") : t("mark_chosen")}` : "")
+                  }
+                  accessibilityState={{ disabled: revealed || busy || chosen !== null }}
                   disabled={revealed || busy || chosen !== null}
                   onPress={() => choose(i)}
                   style={({ pressed }) => [
@@ -403,8 +461,22 @@ export default function Practice() {
       ) : null}
 
       {revealed && graded ? (
-        <View style={{ gap: space.lg }}>
+        <View
+          style={{ gap: space.lg }}
+          // Put the verdict at the top of the screen rather than wherever the
+          // option happened to be. onLayout fires with the y it lands at, which
+          // is the only number that is right on every item length.
+          onLayout={(e) => {
+            if (scrolledFor.current === index) return;
+            scrolledFor.current = index;
+            const y = e.nativeEvent.layout.y;
+            scroller.current?.scrollTo({ y: Math.max(0, y - space.lg), animated: true });
+          }}
+        >
           <Card
+            // Said out loud the moment it appears: without this, answering with
+            // a screen reader on changes the colours and announces nothing.
+            accessibilityLiveRegion="polite"
             style={{
               gap: space.md,
               backgroundColor: graded.isCorrect ? colors.correctSoft : colors.wrongSoft,
@@ -472,6 +544,9 @@ export default function Practice() {
 
           <Button
             label={index + 1 >= items.length ? t("btn_result") : t("btn_next")}
+            // The other half of the keyboard hint, where the key it names is
+            // the one that does something.
+            sub={HAS_KEYBOARD ? t("key_hint_next") : undefined}
             icon="chevron"
             onPress={next}
           />
@@ -479,6 +554,19 @@ export default function Practice() {
       ) : null}
     </ScrollView>
   );
+}
+
+/**
+ * The keyboard listener, as a component that renders nothing.
+ *
+ * It exists so the hook can live below this screen's early returns — a loading
+ * state, a missing setting, an empty queue — without breaking the rule that
+ * hooks run in the same order every render. The parent builds the handler where
+ * everything is in scope; this puts it on the document.
+ */
+function Keys({ onKey }: { onKey: (key: string) => boolean | void }) {
+  useKeys(onKey);
+  return null;
 }
 
 /** Who you are, who you are talking to, and how. Big while entering the scene,

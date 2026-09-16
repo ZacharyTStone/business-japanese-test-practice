@@ -21,3 +21,8 @@ dist/
 # Generated media, before it is uploaded. Large, regenerable, and its home is
 # object storage — `bjt synth` and `bjt scenes` write here.
 media/
+
+# What `bjt nightly` leaves behind on a local run. The bundles it writes are the
+# deliverable and are committed; the run's own notes are not.
+/plan.json
+/summary.md

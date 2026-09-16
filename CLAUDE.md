@@ -27,6 +27,10 @@ cd client && npm run typecheck          # the app
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json   # the reference batch
 ```
 
+`python -m bjt plan` is not a check, but run it after anything that touches the
+library: it says in one screen whether the bank is still the shape the practice
+queue needs.
+
 `supabase/test/run.sh` starts its own Postgres if `PGHOST` is unset. It also
 reads every query in `client/src/lib` and asserts each table, view, column and
 function the app names actually exists — that check is what catches a schema
@@ -38,13 +42,35 @@ These are decisions, not accidents. Changing one is fine; changing one by
 accident is not.
 
 - **Nothing is generated while somebody is practising.** Generation is a batch
-  job (`bjt batch`); content ships as reviewable SQL (`bjt publish`). This is why
-  the running cost is zero.
+  job (`bjt batch`, or `bjt nightly` on a schedule); content ships as reviewable
+  SQL (`bjt publish`). This is why the running cost is zero. The nightly job
+  opens a pull request and never publishes — that branch is the review gate the
+  roadmap asks for, and it is the one exception to the rule above.
 - **Variety comes from `seedtable/`, never from prompt wording.** 発言聴解 refuses
   to generate without a seed cell (`requires_cell`).
 - **The database grades answers, not the app.** The client posts `item_id` and
   `chosen_index`; a trigger fills in who, whether it was right, and which
   distractor role caught them. Never add client-side grading that writes.
+- **One bank, shared by everybody; fixed SQL does the sorting.** Every learner
+  draws from the same published library — what is personal is the order, and it
+  is decided by arithmetic in `next_items()` that a person can read and check.
+  The model's contribution is attached to the item *before* it ships (the seed
+  cell's tags, the distractor roles, `model_p_correct`); it is never consulted at
+  practice time, and never per learner.
+- **The spacing ladder is fixed and stated.** Five rungs — 20 hours, 3 days, 1
+  week, 3 weeks, 2 months. Right climbs one; wrong drops to the bottom. A fitted
+  forgetting curve needs calibration these items do not have, and the app tells
+  the learner the intervals on the start screen, so they are a promise rather
+  than an implementation detail.
+- **`item_stats` is not readable by a client, and `review_schedule` is not
+  writable by one.** The first because raw per-item counts over a handful of
+  users are a statement about a person (`v_item_difficulty` is the k-anonymous
+  surface, floor of eight); the second for the same reason `attempts` has no
+  update policy.
+- **`items.model_p_correct` is a property of the question, never of a person.**
+  It is how often the answerability gate answered the item correctly. It is not
+  an ability estimate, nothing about anybody is derived from it, and it is never
+  displayed.
 - **`attempts` has no update or delete policy.** An answer already given is
   history.
 - **No ads during practice.** `AdSlot`'s placement type has exactly two members,

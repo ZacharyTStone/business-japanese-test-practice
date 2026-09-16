@@ -5,6 +5,8 @@ Commands
     selftest      offline check of validation + DB (no API key needed)
     seedtable     inspect the 場面×関係×機能×レベル table and how much of it is spent
     batch         generate a batch offline into a shippable JSON bundle
+    plan          which shelf of the bank is emptiest, and tonight's work order
+    nightly       run that work order: generate, gate, check, write the SQL
     checkbatch    run every offline quality check over an existing bundle
     publish       turn a checked bundle into idempotent SQL for the database
     gen           generate one item, gate it, store it, print it
@@ -22,7 +24,17 @@ import sys
 import textwrap
 
 from . import batch as batchmod
-from . import config, fixtures, levels, publish, render, schemas, scenes as scenemod, seedtable
+from . import (
+    config,
+    fixtures,
+    levels,
+    plan,
+    publish,
+    render,
+    schemas,
+    scenes as scenemod,
+    seedtable,
+)
 from .llm import LLMError
 from .db import Store
 from .fidelity import answerability, dedupe, discriminator, roles, vocab
@@ -104,6 +116,15 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, cell=No
     if gate:
         for t in gres.trials:
             store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
+
+    # The full-view rate is a difficulty estimate, and until now it lived only in
+    # the local SQLite database and died there. It travels with the item from
+    # here on: the bundle carries it, `bjt publish` writes it, and the practice
+    # queue uses it as the prior for an item nobody has answered yet. See
+    # supabase/migrations/20260916000500 — it is a property of the question and
+    # is never shown to anybody.
+    if full is not None:
+        item["model_p_correct"] = full
 
     kept = gate_verdict in ("kept", "skipped")
     detail = _gate_detail(cold, full, gate_verdict, vres)
@@ -615,6 +636,66 @@ def cmd_seedtable(args) -> int:
     return 0
 
 
+def run_batch(
+    store,
+    item_type: str,
+    level: str,
+    n: int,
+    *,
+    gate: bool = True,
+    force: bool = False,
+    out: "pathlib.Path | None" = None,
+) -> tuple["pathlib.Path | None", int]:
+    """Generate, gate and bundle one batch. Returns (bundle path, items kept).
+
+    Split out of `cmd_batch` so the nightly run can write several batches in one
+    process against one open store — reopening it per shelf would re-read the
+    spent-cell ledger each time and, worse, would let two shelves in the same run
+    spend the same cell.
+    """
+    kept_items: list[dict] = []
+    cells = _sample_cells(store, item_type, level, n)
+    attempts = 0
+    budget = n * 3
+    idx = 0
+    while len(kept_items) < n and attempts < budget:
+        attempts += 1
+        cell = cells[idx % len(cells)] if cells else None
+        idx += 1
+        try:
+            item, iid, kept, detail = _generate_and_gate(
+                store, item_type, level, gate=gate, cell=cell
+            )
+        except LLMError as e:
+            print(f"  [{len(kept_items)}/{n}] generation failed: {e}")
+            continue
+        if not kept:
+            print(f"  [{len(kept_items)}/{n}] dropped — {detail}")
+            continue
+        close = dedupe.max_similarity(item, kept_items)
+        if close >= dedupe.DEFAULT_THRESHOLD:
+            print(f"  [{len(kept_items)}/{n}] dropped — near-duplicate "
+                  f"of an item already in this batch ({close:.2f})")
+            continue
+        kept_items.append(item)
+        print(f"  [{len(kept_items)}/{n}] kept  {item.get('topic','')!r}  {detail}")
+
+    if not kept_items:
+        print("\nNothing passed the gates; no bundle written.", file=sys.stderr)
+        return None, 0
+
+    bundle = batchmod.build_bundle(item_type, level, kept_items, config.GEN_MODEL)
+    report = batchmod.check_bundle(bundle)
+    _print_bundle_report(bundle, report)
+    if not report.ok and not force:
+        print("\nBundle NOT written — fix the failures above or pass --force.",
+              file=sys.stderr)
+        return None, 0
+    path = batchmod.save(bundle, out)
+    print(f"\nWrote {len(kept_items)} item(s) to {path}")
+    return path, len(kept_items)
+
+
 def cmd_batch(args) -> int:
     """Generate a batch offline and write a shippable bundle.
 
@@ -622,52 +703,109 @@ def cmd_batch(args) -> int:
     waiting happen: gate each item, drop the ones that fail, then run the
     whole-batch checks that a per-item gate cannot see."""
     store = Store()
-    kept_items: list[dict] = []
     try:
-        cells = _sample_cells(store, args.type, args.level, args.n)
-        attempts = 0
-        budget = args.n * 3
-        idx = 0
-        while len(kept_items) < args.n and attempts < budget:
-            attempts += 1
-            cell = cells[idx % len(cells)] if cells else None
-            idx += 1
-            try:
-                item, iid, kept, detail = _generate_and_gate(
-                    store, args.type, args.level, gate=not args.no_gate, cell=cell
-                )
-            except LLMError as e:
-                print(f"  [{len(kept_items)}/{args.n}] generation failed: {e}")
-                continue
-            if not kept:
-                print(f"  [{len(kept_items)}/{args.n}] dropped — {detail}")
-                continue
-            close = dedupe.max_similarity(item, kept_items)
-            if close >= dedupe.DEFAULT_THRESHOLD:
-                print(f"  [{len(kept_items)}/{args.n}] dropped — near-duplicate "
-                      f"of an item already in this batch ({close:.2f})")
-                continue
-            kept_items.append(item)
-            print(f"  [{len(kept_items)}/{args.n}] kept  {item.get('topic','')!r}  {detail}")
-
-        if not kept_items:
-            print("\nNothing passed the gates; no bundle written.", file=sys.stderr)
+        path, kept = run_batch(
+            store, args.type, args.level, args.n,
+            gate=not args.no_gate, force=args.force, out=args.out,
+        )
+        if path is None:
             return 1
-
-        bundle = batchmod.build_bundle(args.type, args.level, kept_items, config.GEN_MODEL)
-        report = batchmod.check_bundle(bundle)
-        _print_bundle_report(bundle, report)
-        if not report.ok and not args.force:
-            print("\nBundle NOT written — fix the failures above or pass --force.",
-                  file=sys.stderr)
-            return 1
-        path = batchmod.save(bundle, args.out)
-        print(f"\nWrote {len(kept_items)} item(s) to {path}")
+        bundle = batchmod.load(path)
         print(f"Next: synthesise the {len(bundle['audio_manifest'])} clip(s) in "
               "audio_manifest, then eyeball the items once.")
     finally:
         store.close()
     return 0
+
+
+def cmd_plan(args) -> int:
+    """What the bank needs next, counted rather than guessed.
+
+    Needs no API key and no network: it reads the committed bundles and the seed
+    tables, and prints the work order the nightly run would execute. Run it
+    before approving a night's spend, or just to see whether the library is the
+    shape the practice queue needs it to be."""
+    state = plan.survey()
+    order = plan.work_order(state, budget=args.budget, per_slot=args.per_slot)
+    if args.json:
+        print(json.dumps(plan.to_json(state, order), ensure_ascii=False, indent=2))
+    else:
+        print(plan.render(state, order))
+    return 0
+
+
+def cmd_nightly(args) -> int:
+    """The nightly run: fill the emptiest shelves, check everything, stop.
+
+    This is `bjt plan` followed by one `bjt batch` per line of the work order,
+    inside one process so that the cells spent by the first shelf are already
+    spent by the time the second one samples. Every item still goes through the
+    same per-item gate and the same whole-batch checks as a hand-run batch —
+    there is no fast path for being a robot.
+
+    Nothing here publishes to a database. It writes bundles and their SQL into
+    the tree, and a person reads the diff. That is the roadmap's rule, and it is
+    the only reason a job that writes exam content unattended is a safe thing to
+    have."""
+    state = plan.survey()
+    order = plan.work_order(state, budget=args.budget, per_slot=args.per_slot)
+    print(plan.render(state, order))
+    if args.dry_run or not order:
+        return 0
+
+    store = Store()
+    written: list[tuple[str, str, int, pathlib.Path]] = []
+    failures: list[str] = []
+    try:
+        for w in order:
+            print(f"\n--- {w.n} × {w.item_type} {w.level} " + "-" * 32)
+            try:
+                path, kept = run_batch(
+                    store, w.item_type, w.level, w.n, gate=not args.no_gate, force=False
+                )
+            except (LLMError, FileNotFoundError) as e:
+                # One shelf failing is not the run failing. A key that ran out of
+                # quota halfway through should still leave the batches it already
+                # wrote, checked and reviewable.
+                print(f"  skipped: {e}", file=sys.stderr)
+                failures.append(f"{w.item_type} {w.level}: {e}")
+                continue
+            if path is None:
+                failures.append(f"{w.item_type} {w.level}: nothing passed the gates")
+                continue
+            sql, _ = publish.publish_bundle(path)
+            print(f"  SQL → {sql}")
+            written.append((w.item_type, w.level, kept, path))
+    finally:
+        store.close()
+
+    summary = _nightly_summary(written, failures)
+    print()
+    print(summary)
+    if args.summary:
+        pathlib.Path(args.summary).write_text(summary + "\n", encoding="utf-8")
+    # Nothing written at all is worth a red run; a partial night is not.
+    return 0 if written else 1
+
+
+def _nightly_summary(
+    written: list[tuple[str, str, int, "pathlib.Path"]], failures: list[str]
+) -> str:
+    """The run, as something that can be pasted into a pull request."""
+    total = sum(kept for _, _, kept, _ in written)
+    lines = [f"Wrote {total} item(s) across {len(written)} shelf/shelves.", ""]
+    for item_type, level, kept, path in written:
+        lines.append(f"- **{kept} × {item_type} {level}** — `{path.name}`")
+    if failures:
+        lines += ["", "Not written:"]
+        lines += [f"- {f}" for f in failures]
+    lines += [
+        "",
+        "Every item passed the per-item answerability gate and the whole-batch "
+        "checks. Nothing is published until somebody merges this and applies the "
+        "SQL — read a few of the items before you do.",
+    ]
+    return "\n".join(lines)
 
 
 def cmd_importbatch(args) -> int:
@@ -1001,6 +1139,24 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--out", type=__import__("pathlib").Path, default=None, help="bundle path")
     b.add_argument("--force", action="store_true", help="write the bundle even if checks fail")
     b.set_defaults(func=cmd_batch)
+
+    pl = sub.add_parser("plan", help="what the bank needs next, emptiest shelf first")
+    pl.add_argument("--budget", type=int, default=plan.DEFAULT_BUDGET,
+                    help="most items one run may write")
+    pl.add_argument("--per-slot", type=int, default=plan.DEFAULT_PER_SLOT,
+                    help="most items one run may write into one (type, level)")
+    pl.add_argument("--json", action="store_true", help="machine-readable work order")
+    pl.set_defaults(func=cmd_plan)
+
+    ni = sub.add_parser("nightly", help="run the work order: generate, gate, check, publish SQL")
+    ni.add_argument("--budget", type=int, default=plan.DEFAULT_BUDGET,
+                    help="most items this run may write")
+    ni.add_argument("--per-slot", type=int, default=plan.DEFAULT_PER_SLOT,
+                    help="most items this run may write into one (type, level)")
+    ni.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    ni.add_argument("--dry-run", action="store_true", help="print the work order and stop")
+    ni.add_argument("--summary", default=None, help="write a markdown summary here")
+    ni.set_defaults(func=cmd_nightly)
 
     ib = sub.add_parser("importbatch", help="validate a hand-written source file into a bundle")
     ib.add_argument("path")
