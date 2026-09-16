@@ -11,7 +11,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../src/lib/auth";
-import { fetchProfile, updateProfile } from "../src/lib/db";
+import { fetchItemTypes, fetchProfile, updateProfile } from "../src/lib/db";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { Level, Profile } from "../src/lib/types";
 import { Button, Card, Loading, Notice } from "../src/ui/components";
@@ -23,6 +23,8 @@ const LEVEL_HINT: Record<Level, string> = {
   J2: "ふつうの業務。相手や立場で敬語が変わる",
   J1: "遠回しな言い方や、例外的な場面まで",
 };
+
+type Coverage = { types: number; total: number };
 
 export default function Account() {
   const router = useRouter();
@@ -38,6 +40,7 @@ export default function Account() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coverage, setCoverage] = useState<Record<Level, Coverage> | null>(null);
 
   useEffect(() => {
     if (!isConfigured || authLoading || authError) return;
@@ -45,6 +48,30 @@ export default function Account() {
       .then(setProfile)
       .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
   }, [isAnonymous, authLoading, authError]);
+
+  // Coverage is shown, not hidden, for the same reason the type picker shows
+  // "0問": a level with content in one of nine types should say so before
+  // somebody sets it as their target and wonders why daily practice went quiet.
+  useEffect(() => {
+    if (!isConfigured) return;
+    let cancelled = false;
+    (async () => {
+      const rows = await Promise.all(LEVELS.map((level) => fetchItemTypes(level)));
+      if (cancelled) return;
+      const next = {} as Record<Level, Coverage>;
+      LEVELS.forEach((level, i) => {
+        const types = rows[i];
+        next[level] = {
+          types: types.filter((t) => t.available > 0).length,
+          total: types.reduce((n, t) => n + t.available, 0),
+        };
+      });
+      setCoverage(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onLink() {
     setBusy(true);
@@ -125,11 +152,15 @@ export default function Account() {
         <View style={{ gap: space.sm }}>
           {LEVELS.map((level) => {
             const active = profile.target_level === level;
+            const cov = coverage?.[level];
+            const sub = cov
+              ? `${LEVEL_HINT[level]}（9種類中${cov.types}種類・${cov.total}問）`
+              : LEVEL_HINT[level];
             return (
               <View key={level} style={[styles.level, active && styles.levelActive]}>
                 <Button
                   label={level}
-                  sub={LEVEL_HINT[level]}
+                  sub={sub}
                   tone={active ? "primary" : "secondary"}
                   onPress={() => setLevel(level)}
                 />
@@ -137,6 +168,12 @@ export default function Account() {
             );
           })}
         </View>
+        {coverage && coverage[profile.target_level].types < 9 ? (
+          <Notice
+            title="このレベルはまだ種類がそろっていません"
+            body={`目標レベル「${profile.target_level}」には現在9種類中${coverage[profile.target_level].types}種類しか問題がありません。今日の練習はその範囲から出ます。`}
+          />
+        ) : null}
       </Card>
 
       <Notice
