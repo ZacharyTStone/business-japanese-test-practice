@@ -14,6 +14,25 @@ npm run typecheck
 Without a `.env` the app still starts and tells you what is missing rather than
 crashing, so a fresh clone is never a puzzle.
 
+## Nothing to choose
+
+There is no level picker, no section picker, no problem-type picker, no
+difficulty and no mode. There is one button, and it starts the set the database
+built out of this person's answers.
+
+That is the product, not a stage of it. A picker beside a claim like "we work
+out what you need next" is an invitation to overrule the one thing the app is
+for, and what people overrule it with is whatever feels comfortable — which is
+the opposite of what raises a score.
+
+The cost of hiding all of it is that the app's intelligence becomes invisible.
+That is what `src/ui/welcome.tsx` is for: shown once, on first launch, it says
+the three true things (your answers set the level; the questions aim at how you
+go wrong; your part is to answer) and then never appears again. It is also the
+only sign-in prompt — Google first, because a linked record survives a lost
+phone, with "start without signing in" right under it, because the anonymous
+session already exists by then.
+
 ## Anonymous first
 
 The app signs in anonymously before it shows anything. There is no sign-up
@@ -75,11 +94,10 @@ a set of five is one request rather than twenty-six.
 
 ```
 app/                expo-router screens
-  _layout.tsx       providers + the stack the tabs sit inside
-  (tabs)/           the four places the app lives, under a bottom bar
+  _layout.tsx       providers, the welcome gate, and the stack the tabs sit inside
+  (tabs)/           the three places the app lives, under a bottom bar
     _layout.tsx     the bar itself
     index.tsx       home — one button, today's ring, and the app's one sentence
-    choose.tsx      the manual mode: pick a type; the mock run starts here
     progress.tsx    three sections like the real score report; nine types under a fold
     account.tsx     link Google, the level (shown, not chosen), the exam date
   practice.tsx      the session, one moment at a time: scene, listen, answer, reveal
@@ -94,6 +112,7 @@ src/lib/
   types.ts          the shapes the database returns
   session.ts        the practice → result handoff
 src/ui/             theme, shared components, icons, the meter, the radar, the face
+  welcome.tsx       the first-launch explanation, and the only sign-in prompt
 ```
 
 Practice, its result, and the review screen are pushed *over* the tab bar rather

@@ -235,11 +235,11 @@ begin
             = (select count(*) from public.attempts where item_id = 'itm_phone'),
         'the queue says how often you have met this item');
 
-    perform test.check((select count(*) from public.next_items(10, 'weakness')) = 2,
-                       'weakness mode returns the same pool, ordered differently');
-
-    perform test.check((select count(*) from public.next_items(10, 'daily', 'goi_bunpou')) = 0,
-                       'asking for a type with no published items returns nothing, not an error');
+    -- Size is the only thing the queue can be asked for. If a mode, a type or a
+    -- level ever comes back as an argument, this stops compiling.
+    perform test.check((select count(*) from pg_proc where oid = 'public.next_items'::regproc
+                          and pronargs = 1) = 1,
+                       'the queue takes a size and nothing else');
 
     perform test.check(public.my_streak() = 1, 'answering today makes the streak 1');
 end
@@ -329,8 +329,7 @@ begin
         has_function_privilege('authenticated', 'public.my_streak()', 'execute'),
         'my_streak stays callable — it is the app''s own RPC');
     perform test.check(
-        has_function_privilege('authenticated',
-                               'public.next_items(integer, text, text, text)', 'execute'),
+        has_function_privilege('authenticated', 'public.next_items(integer)', 'execute'),
         'next_items stays callable — it is the app''s own RPC');
 
     -- ...with a pinned search_path, so a caller cannot shadow what they read.

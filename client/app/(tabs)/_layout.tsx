@@ -1,14 +1,21 @@
 /**
- * The four places the app lives, on a bar that is always there.
+ * The three places the app lives, on a bar that is always there.
  *
- * Four and not five: every tab has to be somewhere a learner goes back to on
- * purpose, and 解いた問題 is somewhere they go *from* 記録, on the way to one
- * particular question. It sits under 記録 rather than taking a fifth of the bar.
+ * Three and not four: there used to be a 選ぶ tab, where a person picked a
+ * problem type or sat a mock. It is gone on purpose. The app's whole claim is
+ * that it decides what you practise next from what you have answered, and a
+ * picker beside that claim is an invitation to overrule the one thing the app is
+ * for — usually in favour of whatever feels comfortable, which is the opposite
+ * of what raises a score.
  *
- * Practice, its result, and the review screen are deliberately **not** tabs. They
- * are pushed on top of this bar and cover it, because a set of five is a thing
- * you finish: a tab bar under a listening item is an invitation to leave halfway,
- * and leaving halfway loses the set.
+ * 解いた問題 is not a tab either: it is somewhere a learner goes *from* 記録, on
+ * the way to one particular question, so it sits under 記録 rather than taking a
+ * third of the bar.
+ *
+ * Practice and its result are deliberately **not** tabs. They are pushed on top
+ * of this bar and cover it, because a set of five is a thing you finish: a tab
+ * bar under a listening item is an invitation to leave halfway, and leaving
+ * halfway loses the set.
  */
 import { Tabs } from "expo-router/js-tabs";
 import React from "react";
@@ -44,7 +51,6 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: t("tab_home"), tabBarIcon: tabIcon("home") }} />
-      <Tabs.Screen name="choose" options={{ title: t("tab_choose"), tabBarIcon: tabIcon("grid") }} />
       <Tabs.Screen name="progress" options={{ title: t("tab_progress"), tabBarIcon: tabIcon("chart") }} />
       <Tabs.Screen name="account" options={{ title: t("tab_account"), tabBarIcon: tabIcon("user") }} />
     </Tabs>

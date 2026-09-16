@@ -52,10 +52,17 @@ accident is not.
 - **No estimated BJT score, anywhere.** There is no IRT calibration for generated
   items; an invented number is worse than none. The level shown on screen is
   the level the app is *serving*, which is a fact, not a prediction.
-- **The level is chosen by the database, never by the learner.** No level
-  picker, anywhere in the UI. `adjust_level()` moves it on the evidence of the
-  answers; the daily set slips in one item from the level above. The owner
-  asked for this (2026-09-16): all the thinking happens behind the scenes.
+- **The learner chooses nothing about the questions.** No level picker, no
+  section or problem-type picker, no difficulty, no mode, no mock — anywhere in
+  the UI. `next_items()` takes a size and reads everything else from the record;
+  `adjust_level()` moves the level on the evidence of the answers, and the set
+  slips in one item from the level above. The owner asked for this (2026-09-16):
+  all the thinking happens behind the scenes, and the app's whole job is to
+  raise a score rather than to offer a study menu.
+- **The one screen that explains any of this is the start screen**
+  (`client/src/ui/welcome.tsx`), shown once on first launch. Everything else
+  gets on with serving questions. If a feature needs explaining somewhere else
+  in the UI, that is evidence the feature does not belong.
 - **"BJT" is a registered trademark.** It may describe the exam format in prose.
   It may not appear in the product name, slug, or bundle identifier.
 - **No past-paper text, ever.** Every item is an original composition.

@@ -1,6 +1,11 @@
 /**
  * The practice screen. Everything else in the app exists to get someone here.
  *
+ * It takes no arguments. There is one kind of practice run — the set the
+ * database built from this learner's record — because every parameter this
+ * screen used to accept (a mode, a problem type, a level) was a way for somebody
+ * to overrule the only thing the app is for.
+ *
  * One question is four moments, met in order, and the screen shows one at a
  * time:
  *
@@ -32,7 +37,7 @@
  * **No ads here, ever.** Not in a break, not between the narration and the
  * options. See AdSlot: the placement type has no member for this screen.
  */
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 
@@ -50,7 +55,7 @@ import { useLang, type Key } from "../src/lib/i18n";
 import { verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import type { AnsweredItem, Level, PracticeMode, QueuedItem } from "../src/lib/types";
+import type { AnsweredItem, Level, QueuedItem } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
 import { DocumentView } from "../src/ui/document";
@@ -59,10 +64,6 @@ import { RudenessMeter } from "../src/ui/meters";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
 const LETTERS = ["A", "B", "C", "D"];
-
-/** A mock run is longer than a daily set on purpose: the thing it simulates is
- *  sitting still and concentrating, which five questions cannot rehearse. */
-const MOCK_LENGTH = 20;
 
 const CHANNEL_KEY: Record<string, Key> = {
   in_person: "ch_in_person",
@@ -111,11 +112,6 @@ export default function Practice() {
   const router = useRouter();
   const { lang, t } = useLang();
   const { session, loading: authLoading, error: authError } = useAuth();
-  const params = useLocalSearchParams<{ mode?: string; itemType?: string }>();
-  const mode = (params.mode as PracticeMode) ?? "daily";
-  // A manual run names a type. The daily set does not: the whole point of it is
-  // that the app chooses, including the level.
-  const itemType = params.itemType || null;
 
   const [items, setItems] = useState<QueuedItem[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -139,11 +135,10 @@ export default function Practice() {
       try {
         const profile = await fetchProfile();
         levelBefore.current = profile?.target_level ?? null;
-        const limit = mode === "mock" ? MOCK_LENGTH : (profile?.daily_goal ?? 5);
-        const queue = await fetchQueue({ limit, mode, itemType });
+        const queue = await fetchQueue(profile?.daily_goal ?? 5);
         if (cancelled) return;
         setItems(queue);
-        setSessionId(await startSession(mode, session.user.id));
+        setSessionId(await startSession(session.user.id));
         questionShownAt.current = Date.now();
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
@@ -152,7 +147,7 @@ export default function Practice() {
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id, mode, itemType]);
+  }, [session?.user?.id]);
 
   const item = items?.[index];
   const options = useMemo(
@@ -256,7 +251,6 @@ export default function Practice() {
     if (last) {
       if (sessionId) await finishSession(sessionId);
       setSummary({
-        mode,
         answers,
         startedAt: startedAt.current,
         finishedAt: Date.now(),
@@ -305,11 +299,7 @@ export default function Practice() {
             <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
           ))}
           <Text style={[type.small, styles.hint]}>
-            {listenable
-              ? mode === "mock"
-                ? t("scene_hint_mock")
-                : t("scene_hint_listen")
-              : t("scene_hint_read")}
+            {listenable ? t("scene_hint_listen") : t("scene_hint_read")}
           </Text>
           <Button
             label={listenable ? t("btn_listen") : t("btn_to_q")}
@@ -335,9 +325,6 @@ export default function Practice() {
               key={item.id}
               urls={playlist}
               autoplay={stage === "listen"}
-              // The mock is the exam: once, and no second chance. Practice is
-              // not the exam, and the fourth listen is where it teaches.
-              replayable={mode !== "mock"}
               onFinished={() => go("answer")}
             />
           ) : null}

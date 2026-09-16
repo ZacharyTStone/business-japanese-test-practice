@@ -21,6 +21,10 @@ Three things are true of the whole system and explain most of its shape:
 * **Everyone has an account from the first launch, and nobody signs up.** The app
   signs in anonymously before it shows anything, so history is server-side from
   question one; linking Google later keeps the same user id, so nothing merges.
+* **The learner chooses nothing.** No level, no section, no problem type, no
+  difficulty, no mode — one button, and the database decides what is behind it
+  from what they have answered. The app says so once, on a start screen, and
+  then never asks again.
 * **The database grades answers, not the app.** The client posts which option was
   touched; a trigger decides correctness and records which trap caught them.
 
@@ -359,13 +363,23 @@ generation will eventually select on. There is no `update` or `delete` policy on
 `attempts`: an answer already given is history, and rewriting it would quietly
 corrupt the profile built from it.
 
-**`next_items()` is the practice queue, in one round trip.** The daily set is
-built from the record, so the learner decides nothing: up to two items that
-caught them before and have not been seen for a day; unseen items at their
-level, worst function tag first; exactly one unseen item from the level above;
-then whatever is left, and the adjacent levels if theirs has run thin. The
-manual mode (`free`, `mock`) serves one level, unseen first — someone who chose
-聴読解 for the week before the exam wants 聴読解, not the app's opinion.
+**`next_items()` is the practice queue, in one round trip — and it takes a size
+and nothing else.** The set is built from the record, because the learner
+decides nothing: up to two items that caught them before and have not been seen
+for a day; unseen items at their level, weakest ground first; exactly one unseen
+item from the level above; then whatever is left, and the adjacent levels if
+theirs has run thin.
+
+"Weakest ground" is two things. The 機能 tag they score worst on is the main
+axis, and a blunt one — it says 依頼 is weak without saying *how* they go wrong.
+`attempts.chosen_role` knows how, so an unseen item that contains a distractor
+whose role has caught this person before is pulled forward as well, capped so
+that one bad habit cannot take over a whole set. The correct option is excluded
+from that match, or items would be ranked by how often the learner has answered
+*correctly*.
+
+There used to be a manual mode (`free`, `mock`) that served one chosen type at
+one chosen level. It is gone, along with the screen that asked for it.
 
 **The level is a trigger too.** Nobody is asked whether they are J2; nobody
 could answer. Everyone starts there, and `adjust_level()` moves

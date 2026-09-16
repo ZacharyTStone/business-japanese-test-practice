@@ -5,8 +5,8 @@
  * app already knows what to serve — the level, the weak spots, the items to
  * retry and the one stretch question are all decided in the database from the
  * record. A person who opens the app to practise should not first have to
- * choose a level, a type, or a mode. The 選ぶ tab is there for the week before
- * the exam; most days it is not needed.
+ * choose a level, a type, or a mode, and in this app there is nowhere they
+ * could: this button is the only way to a question.
  *
  * Under it is one sentence: what the app noticed, and what it is doing about
  * it. The statistics live on the 記録 tab; home is not a dashboard.
@@ -189,7 +189,7 @@ export default function Home() {
           sub={t("btn_today_sub", { goal })}
           tone="onAccent"
           icon="play"
-          onPress={() => router.push({ pathname: "/practice", params: { mode: "daily" } })}
+          onPress={() => router.push("/practice")}
         />
       </GradientCard>
 

@@ -16,9 +16,6 @@
 import { supabase } from "./supabase";
 import type {
   HistoryEntry,
-  ItemType,
-  Level,
-  PracticeMode,
   Profile,
   QueuedItem,
   RoleTrap,
@@ -26,29 +23,23 @@ import type {
   TypeStat,
 } from "./types";
 
-/** The practice queue. The composition lives in SQL (see next_items) rather
- *  than here, because it needs the whole library and the whole history to
- *  decide: retry, weakness, one stretch item, the rest. No level is passed —
- *  the database serves the one it has put this person at. */
-export async function fetchQueue(options: {
-  limit?: number;
-  mode?: PracticeMode;
-  itemType?: string | null;
-}): Promise<QueuedItem[]> {
-  const { data, error } = await supabase.rpc("next_items", {
-    p_limit: options.limit ?? 5,
-    p_mode: options.mode ?? "daily",
-    p_item_type: options.itemType ?? null,
-    p_level: null,
-  });
+/** The practice queue — the only way this app asks for questions.
+ *
+ *  How many, and nothing else. The composition lives in SQL (see next_items)
+ *  because it needs the whole library and the whole history to decide: the
+ *  items that caught you before, the unseen ones aimed at your weakest ground,
+ *  one from the level above. There is no level, type or mode to pass, because
+ *  there is no screen where anybody chooses one. */
+export async function fetchQueue(limit = 5): Promise<QueuedItem[]> {
+  const { data, error } = await supabase.rpc("next_items", { p_limit: limit });
   if (error) throw error;
   return (data ?? []) as QueuedItem[];
 }
 
-export async function startSession(mode: PracticeMode, userId: string): Promise<string | null> {
+export async function startSession(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from("practice_sessions")
-    .insert({ user_id: userId, mode })
+    .insert({ user_id: userId })
     .select("id")
     .single();
   // A session is only a grouping label. If creating it fails we still want the
@@ -191,29 +182,6 @@ export function clipUrl(audioPath: string | null): string | null {
 export function sceneUrl(imagePath: string | null): string | null {
   if (!imagePath) return null;
   return supabase.storage.from("scenes").getPublicUrl(imagePath).data.publicUrl;
-}
-
-/**
- * The nine problem types, with how many published items each has at a level.
- *
- * The count is the point. A picker that silently hid the empty types would make
- * the app look smaller than it is and would leave someone wondering why 総合読解
- * never appears; saying "0問" is honest and costs nothing.
- */
-export async function fetchItemTypes(level: Level): Promise<ItemType[]> {
-  const [types, counts] = await Promise.all([
-    supabase.from("item_types").select("id, label_ja, label_en, section, sort_order"),
-    supabase.from("items").select("item_type").eq("level", level).eq("is_published", true),
-  ]);
-  if (types.error) throw types.error;
-
-  const available = new Map<string, number>();
-  for (const row of counts.data ?? []) {
-    available.set(row.item_type, (available.get(row.item_type) ?? 0) + 1);
-  }
-  return (types.data ?? [])
-    .map((t) => ({ ...t, available: available.get(t.id) ?? 0 }) as ItemType)
-    .sort((a, b) => a.sort_order - b.sort_order);
 }
 
 /**
