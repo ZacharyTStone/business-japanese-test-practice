@@ -102,18 +102,11 @@ export default function Result() {
           caption={t("ring_correct")}
         />
         <View style={{ flex: 1, gap: space.xs }}>
-          <Text style={styles.heroLabel}>{summary.mode === "mock" ? t("mode_mock") : t("mode_this")}</Text>
+          <Text style={styles.heroLabel}>{t("mode_this")}</Text>
           <Text style={styles.heroTitle}>{t("n_correct", { n: correct })}</Text>
           <Text style={styles.heroSub}>{t("n_min", { total, min: minutes })}</Text>
         </View>
       </GradientCard>
-
-      {summary.mode === "mock" ? (
-        <Card style={{ gap: space.xs }}>
-          <Text style={type.small}>{t("mock_noscore_title")}</Text>
-          <Text style={type.body}>{t("mock_noscore_body")}</Text>
-        </Card>
-      ) : null}
 
       {trap ? (
         <Card style={{ gap: space.md }}>

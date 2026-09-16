@@ -11,7 +11,6 @@ export type Level = "J3" | "J2" | "J1";
 /** `written` is a tag, never an audio treatment — a 総合読解 item is read, and
  *  nothing about it is ever synthesised. */
 export type Channel = "in_person" | "phone" | "video" | "written";
-export type PracticeMode = "daily" | "weakness" | "mock" | "free";
 
 /** The nine BJT problem types, as ids. Kept as a string because the database
  *  owns the list; this alias only documents what the string means. */
@@ -165,19 +164,6 @@ export type AnsweredItem = {
   item: QueuedItem;
   chosenIndex: number;
   isCorrect: boolean;
-};
-
-/** One of the nine problem types, as the practice picker offers it. */
-export type ItemType = {
-  id: ItemTypeId;
-  label_ja: string;
-  label_en: string;
-  section: Section;
-  sort_order: number;
-  /** How many published items exist at the learner's level. Zero is worth
-   *  showing rather than hiding: "not written yet" is honest, and a picker that
-   *  silently drops the empty types makes the app look smaller than it is. */
-  available: number;
 };
 
 /** A past answer, for the review screen. */

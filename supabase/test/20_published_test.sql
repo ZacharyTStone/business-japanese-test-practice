@@ -113,8 +113,8 @@ begin
         and (select count(*) from public.next_items(5) where level = 'J2') = 4,
         'a daily set of five carries exactly one stretch item from the level above');
     perform test.check(
-        (select count(*) from public.next_items(5, 'free') where level <> 'J2') = 0,
-        'a manual set stays at the level asked for');
+        (select count(*) from public.next_items(5) where level = 'J3') = 0,
+        'and never reaches down a level while there is unseen content at this one');
 end
 $$;
 
@@ -126,8 +126,8 @@ declare
     sess uuid;
 begin
     raise notice 'a full session';
-    insert into public.practice_sessions (user_id, mode)
-    values ((select auth.uid()), 'daily') returning id into sess;
+    insert into public.practice_sessions (user_id)
+    values ((select auth.uid())) returning id into sess;
 
     -- A real set: whatever the queue serves at this user's level, across
     -- however many types have content there.
@@ -160,10 +160,18 @@ begin
         (select count(*) from public.v_my_tag_stats where axis = 'function') > 0,
         'the finer tags are populated too, from the seed cell the item came from');
 
-    -- The point of all of it: after one session, weakness mode has an opinion.
+    -- The point of all of it: after one session the queue has an opinion, and it
+    -- is aimed at the traps that just caught this person rather than at random
+    -- unseen content.
     perform test.check(
-        (select count(*) from public.next_items(5, 'weakness')) > 0,
-        'weakness mode has something to serve');
+        (select count(*) from public.next_items(5)) > 0,
+        'the queue still has something to serve after a full set');
+    perform test.check(
+        (select count(*) from public.next_items(50) n
+          join public.item_options o on o.item_id = n.id and o.position <> n.correct_index
+         where o.role in (select chosen_role from public.attempts
+                           where not is_correct and chosen_role <> '')) > 0,
+        'and it serves items carrying the traps that have caught them');
 end
 $$;
 

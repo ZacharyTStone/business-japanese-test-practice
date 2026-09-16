@@ -7,10 +7,9 @@
  * `attempts` was written as each question was answered, so a crash here costs
  * the summary screen, not the record.
  */
-import type { AnsweredItem, Level, PracticeMode } from "./types";
+import type { AnsweredItem, Level } from "./types";
 
 export type SessionSummary = {
-  mode: PracticeMode;
   answers: AnsweredItem[];
   startedAt: number;
   finishedAt: number;

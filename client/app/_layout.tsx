@@ -5,7 +5,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "../src/lib/auth";
 import { LangProvider, useLang } from "../src/lib/i18n";
+import { Loading } from "../src/ui/components";
 import { colors } from "../src/ui/theme";
+import { WelcomeScreen, useWelcome } from "../src/ui/welcome";
 
 export default function RootLayout() {
   return (
@@ -23,6 +25,13 @@ export default function RootLayout() {
 /** Its own component so the titles can follow the language. */
 function Navigator() {
   const { t } = useLang();
+  // The introduction comes before the router, not as a route inside it. A route
+  // would mount the tab bar and then push over it, which on a cold start shows a
+  // flash of an app nobody has been introduced to yet.
+  const welcome = useWelcome();
+  if (!welcome.ready) return <Loading />;
+  if (!welcome.seen) return <WelcomeScreen onStart={welcome.dismiss} />;
+
   return (
     <Stack
           screenOptions={{

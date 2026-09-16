@@ -252,13 +252,10 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
 export function AutoPlaylist({
   urls,
   autoplay,
-  replayable = true,
   onFinished,
 }: {
   urls: string[];
   autoplay: boolean;
-  /** False in the mock: the exam plays once, and so does the rehearsal of it. */
-  replayable?: boolean;
   onFinished?: () => void;
 }) {
   const { t } = useLang();
@@ -294,13 +291,9 @@ export function AutoPlaylist({
   if (urls.length === 0) return null;
 
   if (!running && finished) {
-    if (!replayable) {
-      return (
-        <View style={styles.fallback}>
-          <Text style={type.small}>{t("once_only")}</Text>
-        </View>
-      );
-    }
+    // Always replayable. The exam plays a clip once; practice is not the exam,
+    // and the fourth listen is where a learner finally hears that it was
+    // 伺います and not 参ります.
     return (
       <Pressable
         accessibilityRole="button"
