@@ -58,8 +58,7 @@ const S = {
   wel_p3_body: ["1日5問、3分ほど。続けるほど、出る問題があなたに合っていきます。", "Five questions a day, about three minutes. The longer you keep at it, the better the questions fit you."],
   wel_google: ["Googleでログインして始める", "Sign in with Google to start"],
   wel_google_busy: ["つないでいます…", "Signing in…"],
-  wel_anon: ["ログインせずに始める", "Start without signing in"],
-  wel_anon_note: ["あとからログインしても、記録はそのまま引き継げます。", "Sign in later and your record carries over as it is."],
+  wel_testers_note: ["いまはテスト中です。登録されたGoogleアカウントでのみ使えます。", "The app is in testing and opens only to registered Google accounts."],
   wel_honesty: ["問題はすべて独自に作ったものです。過去問は使っていません。点数の予測は出しません。", "Every question is an original composition — no past papers. The app never predicts a score."],
 
   // home
@@ -82,17 +81,14 @@ const S = {
   plan_trap: ["いちばん多いミスは「{label}」。同じ型の問題を、今日の練習に入れます。", "Your most common mistake is “{label}”. Today's set includes more of that pattern."],
   plan_stretch: ["いい調子です。今日は、少し上のレベルも1問入れます。", "Good pace. Today includes one question from the level above."],
   plan_good: ["いい調子です。このまま毎日つづけましょう。", "Good pace. Keep going every day."],
-  anon_title: ["記録はこの端末だけ", "Your record lives on this device only"],
-  anon_sub: ["ログインなしで使えています。", "You're using the app without signing in."],
-  anon_btn: ["記録を引き継ぐ", "Keep my record"],
+
+  // the door, while the app is in testing
+  gate_title: ["ログインしてください", "Sign in to continue"],
+  gate_body: ["いまはテスト中のため、登録されたGoogleアカウントでのみ使えます。", "The app is in testing and opens only to registered Google accounts."],
+  closed_title: ["まだ公開していません", "Not open yet"],
+  closed_body: ["{email} はテスト参加者に登録されていません。別のアカウントで入る場合は、いったんログアウトしてください。", "{email} is not on the tester list. To use another account, sign out first."],
 
   // account
-  acc_anon_sub: ["ログインなしで使えています", "Using without signing in"],
-  acc_anon_title: ["記録はこの端末にだけあります", "Your record is only on this device"],
-  acc_anon_p1: ["ログインしなくても使えます。ただし、いまの記録はこの端末のアプリの中にある鍵でつながっています。アプリを消したり端末を変えたりすると、戻せません。", "You can use the app without signing in. But your record is tied to a key inside this app, on this device. Delete the app or change phones and it cannot be recovered."],
-  acc_anon_p2: ["Googleとつなぐと、これまでの解答も連続日数も弱点もそのまま引き継がれます。作り直しにはなりません。", "Link Google and your answers, streak and weak spots carry over as they are. Nothing is rebuilt."],
-  acc_link_busy: ["つないでいます…", "Linking…"],
-  acc_link: ["Googleで記録を引き継ぐ", "Keep my record with Google"],
   acc_signed_in: ["ログイン中", "Signed in"],
   acc_google: ["Googleアカウント", "Google account"],
   acc_any_device: ["記録はどの端末からでも見られます。", "Your record is available from any device."],
