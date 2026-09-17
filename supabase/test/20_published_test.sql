@@ -2,14 +2,15 @@
 --
 -- The bundle checks prove the items are good. This proves the *publish* is good:
 -- that `bjt publish` output applies, that re-applying it does not duplicate
--- anything, and that a brand-new anonymous user can pull a real practice set out
--- of the database in one call and get everything the screen needs.
+-- anything, and that a brand-new tester can pull a real practice set out of the
+-- database in one call and get everything the screen needs.
 
 \set ON_ERROR_STOP on
 \set QUIET on
 
-insert into auth.users (id, is_anonymous) values
-    ('33333333-3333-3333-3333-333333333333', true);
+insert into auth.users (id, email, is_anonymous) values
+    ('33333333-3333-3333-3333-333333333333', 'c@example.com', false);
+insert into public.testers (email) values ('c@example.com');
 
 do $$ begin perform test.become('33333333-3333-3333-3333-333333333333'); end $$;
 set role authenticated;

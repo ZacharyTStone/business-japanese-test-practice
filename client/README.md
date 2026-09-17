@@ -29,16 +29,25 @@ The cost of hiding all of it is that the app's intelligence becomes invisible.
 That is what `src/ui/welcome.tsx` is for: shown once, on first launch, it says
 the three true things (your answers set the level; the questions aim at how you
 go wrong; your part is to answer) and then never appears again. It is also the
-only sign-in prompt — Google first, because a linked record survives a lost
-phone, with "start without signing in" right under it, because the anonymous
-session already exists by then.
+only sign-in prompt — Google, and nothing else, while the app is in testing.
 
-## Anonymous first
+## Testers only, for now
 
-The app signs in anonymously before it shows anything. There is no sign-up
-screen, no "continue as guest", no local-storage-then-migrate dance — from the
-first question there is a real row in the database, and history, streak and
-weakness profile are server-side.
+The app opens only to a Google account whose email is on the tester list
+(`public.testers`), and it is the database that decides: every row-level policy
+requires it, and the anon role can read nothing at all. `src/ui/gate.tsx` is the
+two screens that say so — sign in, or "not open yet" with the account named —
+and `src/lib/auth.tsx` asks the one RPC, `is_tester()`, that answers. Neither is
+what keeps anybody out; a client that skipped both would see an empty app.
+
+## Anonymous first, switched off
+
+The schema was built for the app to sign everybody in anonymously before it
+showed anything: no sign-up screen, no "continue as guest", no
+local-storage-then-migrate dance — from the first question a real row in the
+database. That is the right shape for a public app and it is still the shape of
+the schema; it is only the client that no longer does it. Opening the app later
+means putting the anonymous sign-in back in front of the door.
 
 Linking Google later attaches an identity to the **same user id**, so nothing is
 copied or merged. That is the whole reason for doing it in this order: the
@@ -107,7 +116,7 @@ app/                expo-router screens
 src/lib/
   i18n.tsx          the words on the furniture, ja/en; questions stay Japanese
   supabase.ts       the client (anon key is public by design — RLS is the guard)
-  auth.tsx          anonymous bootstrap, Google linking, token refresh on resume
+  auth.tsx          Google sign-in, the tester check, token refresh on resume
   db.ts             every query the app makes, in one file
   levels.ts         the three section levels: order, names, and what moved
   roles.ts          distractor role → Japanese label + 失礼度メーター values
@@ -161,7 +170,8 @@ Cloudflare's current flow is **Workers**, not the legacy Pages one. Dashboard �
 Build-time environment variables: `EXPO_PUBLIC_SUPABASE_URL`,
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `NODE_VERSION=22`. The first two are baked
 into the bundle — that is what `EXPO_PUBLIC_` means, and it is safe, because the
-anon key only reaches what an anonymous visitor is allowed to reach. **The
+anon key only reaches what row-level security allows — which, while the app is
+in testing, is nothing until a listed Google account signs in. **The
 service_role key must never be set here.**
 
 `build:web` is `expo export` plus one copy: Expo writes the not-found page as

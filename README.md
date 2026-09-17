@@ -26,9 +26,11 @@ Three things are true of the whole system and explain most of its shape:
   section, so 読解 can be J1 while 聴解 is J3; and inside a level the queue aims
   at a difficulty that follows how the learner does at that particular problem
   type. Both directions, automatically, with nothing to set.
-* **Everyone has an account from the first launch, and nobody signs up.** The app
-  signs in anonymously before it shows anything, so history is server-side from
-  question one; linking Google later keeps the same user id, so nothing merges.
+* **Testers only, for now.** The app opens only to a Google account whose email
+  is in `public.testers`, and it is the database that says so: every row-level
+  policy requires it, the anon role can read nothing, and `bjt tester <email>`
+  prints the one statement that lets somebody in. The anonymous-first sign-in
+  the schema was built for is switched off, not removed, until the app opens.
 * **The learner chooses nothing.** No level, no section, no problem type, no
   difficulty, no mode — one button, and the database decides what is behind it
   from what they have answered. The app says so once, on a start screen, and
@@ -126,6 +128,7 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt scenes` | What the scene bank needs, most-wanted first. `--generate` draws the missing ones and has a judge model review each draft against the brief; `--upload` puts approved art in the bucket; `--sql` points the database at it. |
 | `bjt render <bundle.json>` | Render a document stimulus to HTML, to look at while writing one. |
 | `bjt grant <user-id>` | SQL granting or revoking the ad-free unlock, as the service role. |
+| `bjt tester <email>` | SQL letting one Google account use the app while it is in testing; `--remove` takes them off. |
 | `bjt calibrate --type T` | Sit the official sample items; compare your accuracy there to your accuracy on generated items. |
 
 Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,

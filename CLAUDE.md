@@ -101,6 +101,15 @@ accident is not.
   slips in one item from the level above. The owner asked for this (2026-09-16):
   all the thinking happens behind the scenes, and the app's whole job is to
   raise a score rather than to offer a study menu.
+- **Testers only, for now, and the database is the door.** `public.testers`
+  lists who may use the app by Google account email; `is_tester()` reads the
+  JWT; every row-level policy in `public` requires it and the anon role holds
+  nothing. A schema test asserts every policy names it, so a policy added
+  without it fails CI. The client's gate screens only say so politely. The
+  owner asked for this (2026-09-17); opening the app later is one migration
+  that drops the conjunct, and the anonymous-first client path comes back in
+  front of the door. Never add a policy, view or RPC that answers a
+  non-tester while this holds.
 - **The one screen that explains any of this is the start screen**
   (`client/src/ui/welcome.tsx`), shown once on first launch. Everything else
   gets on with serving questions. If a feature needs explaining somewhere else

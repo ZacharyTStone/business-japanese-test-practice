@@ -3,9 +3,11 @@ import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { AuthProvider } from "../src/lib/auth";
+import { AuthProvider, useAuth } from "../src/lib/auth";
 import { LangProvider, useLang } from "../src/lib/i18n";
+import { isConfigured } from "../src/lib/supabase";
 import { Loading } from "../src/ui/components";
+import { ClosedScreen, SignInScreen } from "../src/ui/gate";
 import { colors } from "../src/ui/theme";
 import { WelcomeScreen, useWelcome } from "../src/ui/welcome";
 
@@ -29,8 +31,20 @@ function Navigator() {
   // would mount the tab bar and then push over it, which on a cold start shows a
   // flash of an app nobody has been introduced to yet.
   const welcome = useWelcome();
+  const auth = useAuth();
   if (!welcome.ready) return <Loading />;
   if (!welcome.seen) return <WelcomeScreen onStart={welcome.dismiss} />;
+
+  // The door. Testers only, for now: no session means sign in, and a session
+  // the database does not recognise means a closed sign. Without a configured
+  // project the screens inside show the setup notice instead, so the door
+  // stands aside for them.
+  if (isConfigured) {
+    if (auth.loading) return <Loading />;
+    if (!auth.session) return <SignInScreen />;
+    if (auth.isTester === null && !auth.error) return <Loading />;
+    if (auth.isTester !== true) return <ClosedScreen />;
+  }
 
   return (
     <Stack

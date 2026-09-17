@@ -22,10 +22,21 @@ $$;
 -- Act as a signed-in user with this id. Session-scoped rather than
 -- transaction-scoped, because psql commits after every statement and a
 -- transaction-local claim would be gone by the next one.
+--
+-- The claims carry what Supabase's JWT carries: the user's email and whether
+-- the session is anonymous, read from auth.users so a test that links an
+-- identity is seen as linked from then on. is_tester() reads both.
 create or replace function test.become(p_user uuid)
-returns void language plpgsql as $$
+returns void language plpgsql security definer as $$
+declare
+    claims json;
 begin
-    perform set_config('request.jwt.claims', json_build_object('sub', p_user)::text, false);
+    select json_build_object('sub', p_user, 'email', u.email, 'is_anonymous', u.is_anonymous)
+      into claims
+      from auth.users u
+     where u.id = p_user;
+    perform set_config('request.jwt.claims',
+                       coalesce(claims, json_build_object('sub', p_user))::text, false);
 end;
 $$;
 
@@ -70,10 +81,16 @@ insert into public.item_options (item_id, position, text, role, why) values
 
 commit;
 
--- Two users, as the app creates them: anonymous first, identity later.
-insert into auth.users (id, is_anonymous) values
-    ('11111111-1111-1111-1111-111111111111', true),
-    ('22222222-2222-2222-2222-222222222222', true);
+-- Two users. A starts anonymous and links Google below, as the app once let
+-- people do; B is already linked. Both are on the tester list, because while
+-- the app is in testing nobody else can read anything at all — and the
+-- isolation tests below are about what one *tester* can see of another.
+insert into auth.users (id, email, is_anonymous) values
+    ('11111111-1111-1111-1111-111111111111', null, true),
+    ('22222222-2222-2222-2222-222222222222', 'b@example.com', false);
+insert into public.testers (email, note) values
+    ('zach@example.com', 'test fixture: user A, once linked'),
+    ('b@example.com',    'test fixture: user B');
 
 -- ------------------------------------------------------------------- tests
 
@@ -187,7 +204,7 @@ begin
     perform test.check((select count(*) from public.v_my_type_stats where answered > 0) = 0,
                        'the stats views inherit that isolation (security_invoker)');
     perform test.check((select count(*) from public.items) = 2,
-                       'but the item library is readable by everyone');
+                       'but the item library is readable by every tester');
 end
 $$;
 
@@ -349,6 +366,131 @@ end
 $$;
 
 rollback;
+
+-- --- testers only -----------------------------------------------------------
+
+-- While the app is in testing the database, not the client, is what keeps
+-- everybody else out. Four things are asserted: the shape of the schema (every
+-- policy requires is_tester(), anon has nothing), and then three people at the
+-- door — an anonymous session, a Google account that is not on the list, and a
+-- tester — each seen exactly as a request would see them.
+
+reset role;
+
+do $$
+begin
+    raise notice 'testers only: the shape';
+    perform test.check(
+        not exists (
+            select 1 from pg_policies
+             where schemaname = 'public'
+               and coalesce(qual, '') not like '%is_tester()%'
+               and coalesce(with_check, '') not like '%is_tester()%'),
+        'every policy in public requires is_tester()');
+    perform test.check(
+        not exists (select 1 from pg_policies
+                     where schemaname = 'public' and 'anon'::name = any(roles)),
+        'no policy in public names the anon role');
+    perform test.check(
+        not exists (select 1 from information_schema.role_table_grants
+                     where grantee = 'anon' and table_schema = 'public'),
+        'anon holds no privilege on any table or view in public');
+    perform test.check(
+        not has_function_privilege('anon', 'public.next_items(integer)', 'execute')
+        and not has_function_privilege('anon', 'public.my_streak()', 'execute')
+        and not has_function_privilege('anon', 'public.is_tester()', 'execute'),
+        'anon cannot call any RPC');
+    perform test.check(
+        has_function_privilege('authenticated', 'public.is_tester()', 'execute')
+        and not has_table_privilege('authenticated', 'public.testers', 'select'),
+        'a signed-in user may ask whether they are a tester, and nothing more');
+end
+$$;
+
+insert into auth.users (id, email, is_anonymous) values
+    ('77777777-7777-7777-7777-777777777777', null, true),
+    ('88888888-8888-8888-8888-888888888888', 'stranger@example.com', false);
+
+do $$
+declare
+    ok boolean;
+begin
+    raise notice 'testers only: an anonymous session';
+    perform test.become('77777777-7777-7777-7777-777777777777');
+    set local role authenticated;
+    perform test.check(not public.is_tester(), 'is not a tester');
+    perform test.check((select count(*) from public.items) = 0, 'sees no items');
+    perform test.check((select count(*) from public.item_types) = 0, 'sees no problem types');
+    perform test.check((select count(*) from public.profiles) = 0,
+                       'sees no profile, not even the one the trigger made');
+    perform test.check((select count(*) from public.next_items(5)) = 0, 'gets no practice set');
+    perform test.check((select count(*) from public.v_item_difficulty) = 0,
+                       'sees no difficulty figures');
+    ok := false;
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_phone', 0);
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'cannot write an attempt');
+end
+$$;
+
+do $$
+declare
+    ok boolean;
+begin
+    raise notice 'testers only: a Google account that is not on the list';
+    perform test.become('88888888-8888-8888-8888-888888888888');
+    set local role authenticated;
+    perform test.check(not public.is_tester(), 'is not a tester');
+    perform test.check((select count(*) from public.items) = 0, 'sees no items');
+    perform test.check((select count(*) from public.profiles) = 0, 'sees no profile');
+    perform test.check((select count(*) from public.next_items(5)) = 0, 'gets no practice set');
+    ok := false;
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_phone', 0);
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'cannot write an attempt');
+    ok := false;
+    begin
+        insert into public.testers (email) values ('stranger@example.com');
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'cannot add themselves to the list');
+end
+$$;
+
+do $$
+begin
+    raise notice 'testers only: somebody on the list';
+    perform test.become('11111111-1111-1111-1111-111111111111');
+    set local role authenticated;
+    perform test.check(public.is_tester(), 'is a tester');
+    -- The fixture items were cleaned up by the tests above; the nine problem
+    -- types and the scene are content that is always there.
+    perform test.check((select count(*) from public.item_types) = 9, 'sees the content');
+    perform test.check((select count(*) from public.scenes) > 0, 'sees the scenes');
+    perform test.check((select count(*) from public.profiles) = 1, 'sees their own profile');
+end
+$$;
+
+-- The list is matched case-insensitively, because Google reports the address
+-- the person typed and people type their own address in every case there is.
+do $$
+begin
+    update auth.users set email = 'Zach@Example.com' where id = '11111111-1111-1111-1111-111111111111';
+    perform test.become('11111111-1111-1111-1111-111111111111');
+    set local role authenticated;
+    perform test.check(public.is_tester(), 'the email is matched whatever its case');
+end
+$$;
+update auth.users set email = 'zach@example.com' where id = '11111111-1111-1111-1111-111111111111';
+
+reset role;
 
 \echo 'ALL SCHEMA TESTS PASSED'
 
@@ -675,8 +817,9 @@ begin;
 -- auth.users belongs to Supabase, not to us: `service_role` has no grant on it
 -- here any more than it does in the real project, so the fixture user is
 -- created before the role is dropped, exactly as the entitlement test does.
-insert into auth.users (id, is_anonymous) values
-    ('44444444-4444-4444-4444-444444444444', true);
+insert into auth.users (id, email, is_anonymous) values
+    ('44444444-4444-4444-4444-444444444444', 'd@example.com', false);
+insert into public.testers (email) values ('d@example.com');
 set local role service_role;
 insert into public.bundles (id, item_type, level, generator_model, generated_at) values
     ('bnd_bank', 'goi_bunpou', 'J2', 'author-composed', now());
@@ -844,9 +987,10 @@ delete from auth.users where id = '44444444-4444-4444-4444-444444444444';
 -- are strong" is a comment rather than a behaviour.
 
 begin;
-insert into auth.users (id, is_anonymous) values
-    ('55555555-5555-5555-5555-555555555555', true),
-    ('66666666-6666-6666-6666-666666666666', true);
+insert into auth.users (id, email, is_anonymous) values
+    ('55555555-5555-5555-5555-555555555555', 'e@example.com', false),
+    ('66666666-6666-6666-6666-666666666666', 'f@example.com', false);
+insert into public.testers (email) values ('e@example.com'), ('f@example.com');
 set local role service_role;
 insert into public.bundles (id, item_type, level, generator_model, generated_at) values
     ('bnd_pitch', 'goi_bunpou', 'J2', 'author-composed', now());
