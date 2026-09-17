@@ -245,8 +245,9 @@ A third secret is optional and unlocks the other half of the night:
 - `SUPABASE_DB_URL` — one statement, `select public.refresh_item_stats()`, which
   recounts how often each item is answered correctly across all learners. That is
   what the practice queue reads to pitch a set at a difficulty that teaches.
-  Without it the queue falls back to the answerability gate's own estimate, which
-  is what a freshly published item has anyway.
+  Without it the queue falls back to the estimate that shipped with the item —
+  the difficulty probe's pass rate, or the answerability gate's own when the
+  probe did not run — which is what a freshly published item has anyway.
 
 **What unblocks it.** Setting those secrets on the repository. Then check the
 first run's pull request item by item before merging it — the whole design

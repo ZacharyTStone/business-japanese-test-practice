@@ -129,6 +129,12 @@ export type SectionLevel = {
   section: Section;
   level: Level;
   changed_at: string;
+  /** Whether the database has enough of its own evidence to call this a level
+   *  rather than a starting point: the section has moved at least once, or has
+   *  the answers adjust_level() would judge its first move on. Computed on the
+   *  database's terms, so a screen cannot name a level before it could have
+   *  been moved. */
+  placed: boolean;
 };
 
 export type Profile = {
@@ -156,6 +162,11 @@ export type TypeStat = {
   /** Null when nothing has been answered — "no data" is not the same as 0%. */
   accuracy: number | null;
   last_answered_at: string | null;
+  /** Answers in the last 30 days. */
+  recent_answered: number;
+  /** Accuracy over every answer, weighted by the queue's own 30-day half-life —
+   *  the number the queue actually ranks on. Null when nothing has been answered. */
+  recent_accuracy: number | null;
 };
 
 export type TagStat = {
@@ -164,12 +175,19 @@ export type TagStat = {
   answered: number;
   correct: number;
   accuracy: number;
+  /** Answers in the last 30 days. */
+  recent_answered: number;
+  /** Accuracy over every answer, weighted by the queue's own 30-day half-life —
+   *  the number the queue actually ranks on. Null when nothing has been answered. */
+  recent_accuracy: number | null;
 };
 
 export type RoleTrap = {
   role: string;
   times_chosen: number;
   last_chosen_at: string;
+  /** Times this trap caught them in the last 30 days — the window the queue weighs. */
+  recent_times: number;
 };
 
 /** What the spacing ladder has waiting. One row, always — a learner who has

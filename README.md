@@ -207,6 +207,15 @@ can see in `bjt quality`.
    separate passage, so cold withholds the *stem* instead — same mechanic, same
    reading of a cold success.
 
+   **Difficulty is measured separately** (`bjt/fidelity/difficulty.py`), after
+   the gate and only on the items it kept. The gate's full-view rate used to
+   double as the difficulty prior and was almost always 1.0 — a strong model
+   with the whole stimulus answers nearly everything, which is the gate working
+   and a prior failing. So a weaker model (the proofreader's, `BJT_DIFFICULTY_MODEL`)
+   sits the same full view `BJT_DIFFICULTY_TRIALS` times, and its pass rate is
+   what ships as `model_p_correct`. A probe that could not run leaves the item on
+   the gate's rate rather than on a made-up one. `BJT_DIFFICULTY=0` turns it off.
+
 3. **Discriminator loop** (`bjt/fidelity/discriminator.py`). Mix official sample
    items with generated ones and ask a judge to label each. Above-chance
    discrimination means there's a tell; the judge is asked *why*, and its reasons
@@ -579,11 +588,13 @@ Two things guard that, and both matter:
   above eight answers.
 
 An item nobody has answered yet has no measured rate, and that is the common case
-the day a batch ships. So the answerability gate's own full-view success rate
-travels with the item — `items.model_p_correct`, written by `bjt publish` — and
-serves as the prior until the bank has counted. It is null for the hand-written
-reference batches, which are the one path that skips the gate, and the queue
-reads null as "no opinion" rather than as "average".
+the day a batch ships. So a rate measured at generation time travels with the
+item — `items.model_p_correct`, written by `bjt publish` — and serves as the
+prior until the bank has counted. It is the difficulty probe's pass rate (a
+weak model sitting the full view several times; `bjt/fidelity/difficulty.py`)
+when the probe ran, and the answerability gate's own full-view rate otherwise.
+It is null for the hand-written reference batches, which are the one path that
+skips both, and the queue reads null as "no opinion" rather than as "average".
 
 **Every one of those levels is a trigger.** Nobody is asked whether they are J2;
 nobody could answer. All three sections start there, and `adjust_level()` moves
@@ -654,7 +665,7 @@ licensed text, and is the thing you edit to grow the library.
 bjt/
   generators/    one module, prompt, and schema per item type
   publish.py     bundle → idempotent SQL
-  fidelity/      roles, sanity check, answerability gate, discriminator loop, vocab gate, dedupe
+  fidelity/      roles, sanity check, answerability gate, difficulty probe, discriminator loop, vocab gate, dedupe
   tts/           what to synthesise, in which voice, over which channel — and the
                  offline job that does it (plan.py, synth.py, channel.py, providers.py)
   scenes.py      what the scene bank needs, and what exists

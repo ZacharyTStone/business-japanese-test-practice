@@ -9,7 +9,14 @@
  * that — knowing you are at 62% on 発言聴解 is a grade; knowing you are at 30%
  * on the telephone and 85% face to face is a plan for the evening.
  *
- * A section's level is printed only once the answers have earned it. Before
+ * Two windows on one screen, deliberately. The bars and the radar are the
+ * record, all-time. The two cards under them — the traps, the weak tags — are
+ * what the queue is about to do something about, and the queue weighs the
+ * last 30 days, so those two rank on the same window. Before this they were
+ * all-time too, and a person could be told they were weak somewhere the queue
+ * had long since stopped aiming at.
+ *
+ * A section's level is printed only once the database has placed it. Before
  * that the app is serving a neutral starting level, and a "J2" beside a section
  * with two answers in it reads as a verdict on the learner rather than as the
  * placeholder it is.
@@ -61,7 +68,8 @@ const SECTIONS: { id: Section; key: Key; icon: IconName; tone: BadgeTone }[] = [
 ];
 
 /** Tags seen fewer times than this are not shown: three answers is a mood, not
- *  a weakness, and presenting it as one sends people off to drill noise. */
+ *  a weakness, and presenting it as one sends people off to drill noise.
+ *  Counted over the last 30 days, the window the queue weighs. */
 const MIN_ANSWERS_PER_TAG = 4;
 
 export default function Progress() {
@@ -133,10 +141,35 @@ export default function Progress() {
   }
   if (!types) return <Loading />;
 
-  const weakTags = tags
-    .filter((t) => t.answered >= MIN_ANSWERS_PER_TAG)
-    .sort((a, b) => a.accuracy - b.accuracy)
+  // The queue's window, unless there is nothing in it. Somebody back from a
+  // month away has answered nothing in 30 days, and an empty card there says
+  // less than the record does, so the whole list falls back to all-time and
+  // drops the "last 30 days" label. It is the whole list or none of it: a
+  // per-tag fallback would rank a tag last touched in spring against one
+  // answered yesterday on two different scales, which is not a ranking.
+  const tagsRecent = tags.some((t) => t.recent_answered > 0);
+  const weakTags = (
+    tagsRecent
+      ? tags
+          .filter((t) => t.recent_answered >= MIN_ANSWERS_PER_TAG && t.recent_accuracy !== null)
+          .map((t) => ({ ...t, n: t.recent_answered, acc: t.recent_accuracy ?? 0 }))
+      : tags
+          .filter((t) => t.answered >= MIN_ANSWERS_PER_TAG)
+          .map((t) => ({ ...t, n: t.answered, acc: t.accuracy }))
+  )
+    .sort((a, b) => a.acc - b.acc)
     .slice(0, 6);
+
+  // Same rule for the traps: the ones that caught them in the last 30 days,
+  // ranked by how often, or the all-time list when none did.
+  const trapsRecent = traps.some((t) => t.recent_times > 0);
+  const topTraps = (
+    trapsRecent
+      ? traps.filter((t) => t.recent_times > 0).map((t) => ({ ...t, n: t.recent_times }))
+      : traps.map((t) => ({ ...t, n: t.times_chosen }))
+  )
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 5);
 
   const answered = types.reduce((n, t) => n + t.answered, 0);
 
@@ -155,7 +188,7 @@ export default function Progress() {
           // The level being served here, beside the accuracy that earned it.
           // This is the whole per-section design in one glance: 読解 J1 next to
           // 聴解 J3 says more than either number does alone.
-          const level = placedLevel(levels, types, section.id);
+          const level = placedLevel(levels, section.id);
           return (
             <View key={section.id} style={{ gap: 6 }}>
               <View style={styles.row}>
@@ -179,17 +212,20 @@ export default function Progress() {
         <TypeRadar stats={types} />
       </Card>
 
-      {traps.length > 0 ? (
+      {topTraps.length > 0 ? (
         <Card style={{ gap: space.lg }}>
-          <Text style={type.h2}>{t("prog_mistakes")}</Text>
-          {traps.slice(0, 5).map((trap) => (
+          <View style={styles.row}>
+            <Text style={[type.h2, { flex: 1 }]}>{t("prog_mistakes")}</Text>
+            {trapsRecent ? <Text style={type.small}>{t("prog_recent")}</Text> : null}
+          </View>
+          {topTraps.map((trap) => (
             <View key={trap.role} style={styles.trapRow}>
               <IconBadge name="alert" tone="pink" size={30} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={type.body}>{roleInfo(trap.role, lang).label}</Text>
                 <Text style={type.small}>{roleInfo(trap.role, lang).advice}</Text>
               </View>
-              <Tag tone="pink">{t("times", { n: trap.times_chosen })}</Tag>
+              <Tag tone="pink">{t("times", { n: trap.n })}</Tag>
             </View>
           ))}
         </Card>
@@ -197,7 +233,10 @@ export default function Progress() {
 
       {weakTags.length > 0 ? (
         <Card style={{ gap: space.lg }}>
-          <Text style={type.h2}>{t("prog_weak")}</Text>
+          <View style={styles.row}>
+            <Text style={[type.h2, { flex: 1 }]}>{t("prog_weak")}</Text>
+            {tagsRecent ? <Text style={type.small}>{t("prog_recent")}</Text> : null}
+          </View>
           {weakTags.map((tag) => (
             <View key={`${tag.axis}:${tag.tag}`} style={{ gap: 6 }}>
               <View style={styles.row}>
@@ -205,11 +244,11 @@ export default function Progress() {
                   {t(AXIS_KEY[tag.axis])} · {tag.tag}
                 </Text>
                 <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
-                  {t("pct_n", { pct: Math.round(tag.accuracy * 100), n: tag.answered })}
+                  {t("pct_n", { pct: Math.round(tag.acc * 100), n: tag.n })}
                 </Text>
               </View>
               <View style={styles.track}>
-                <View style={[styles.fill, { width: `${Math.round(tag.accuracy * 100)}%` }]} />
+                <View style={[styles.fill, { width: `${Math.round(tag.acc * 100)}%` }]} />
               </View>
             </View>
           ))}

@@ -1,2 +1,2 @@
-"""Fidelity mechanisms: distractor roles, the answerability gate, the
-discriminator loop, and vocabulary gating."""
+"""Fidelity mechanisms: distractor roles, the sanity check, the answerability
+gate, the difficulty probe, the discriminator loop, and vocabulary gating."""
