@@ -74,8 +74,9 @@ accident is not.
   cell's tags, the distractor roles, `model_p_correct`); it is never consulted at
   practice time, and never per learner.
 - **The spacing ladder is fixed and stated.** Five rungs — 20 hours, 3 days, 1
-  week, 3 weeks, 2 months. Right climbs one; wrong drops to the bottom. A fitted
-  forgetting curve needs calibration these items do not have, and the app tells
+  week, 3 weeks, 2 months. Right climbs one; wrong drops to the bottom. A right
+  answer that took more than two minutes holds its rung rather than climbing. A
+  fitted forgetting curve needs calibration these items do not have, and the app tells
   the learner the intervals on the start screen, so they are a promise rather
   than an implementation detail.
 - **`item_stats` is not readable by a client, and `review_schedule` is not
@@ -84,9 +85,10 @@ accident is not.
   surface, floor of eight); the second for the same reason `attempts` has no
   update policy.
 - **`items.model_p_correct` is a property of the question, never of a person.**
-  It is how often the answerability gate answered the item correctly. It is not
-  an ability estimate, nothing about anybody is derived from it, and it is never
-  displayed.
+  It is how often a model answered the item correctly at generation time: the
+  difficulty probe (a weaker model, `BJT_DIFFICULTY_MODEL`) when it ran, else
+  the answerability gate. It is not an ability estimate, nothing about anybody
+  is derived from it, and it is never displayed.
 - **`attempts` has no update or delete policy.** An answer already given is
   history.
 - **No ads during practice.** `AdSlot`'s placement type has exactly two members,
