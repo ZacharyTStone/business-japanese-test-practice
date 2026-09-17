@@ -70,24 +70,43 @@ carelessly is one every future item inherits.
 ## 3. No scene artwork exists
 
 **What exists.** `bjt scenes` surveys the sixteen-scene bank across all nine
-types and prints it most-wanted first, which makes it a commissioning order: one
-reception counter serves 場面把握, 状況把握 and 発言聴解. `--prompt <scene_id>`
-prints the brief. `--sql` points the database at approved files.
-`next_items` returns `scene_image_path`, the `scenes` storage bucket exists, and
-the app renders the picture when there is one.
+types and prints it most-wanted first. `bjt scenes --generate` draws whichever
+scenes have no picture: an image model drafts from the brief, a judge model
+looks at each draft and checks it against the brief's rules one by one (readable
+text, a logo, a likeness, a picture that gives the scenario away, malformed
+anatomy, the wrong setting), and only a draft that breaks none is kept under
+the scene's name. Rejected drafts are kept in `media/scenes/rejected/` with the
+reason. `--upload` puts approved files in the `scenes` bucket and `--sql`
+points the database at them; the nightly job runs all of it and, because it
+lists the bucket first, draws each scene once and then finds nothing to do.
 
-**What is blocked.** Somebody has to generate or commission the images, and
-somebody has to approve each one against the brief.
+**What is blocked.** Two keys. Nothing else: the review that used to need a
+person is done by the judge model, on the owner's instruction (2026-09-17).
 
-**What unblocks it.** An image API account or an illustrator, plus a reviewer
-willing to say no. Put approved files in `media/scenes/<scene_id>.webp` and run
-`bjt scenes --sql`.
+**What unblocks it.** Set these as repository secrets (Settings → Secrets and
+variables → Actions), and the next nightly run draws the bank:
 
-**The review gate, which is the part that will be tempting to skip.** An image
-must contain no readable text, no logo, no recognisable likeness, and nothing
-that fixes the situation more tightly than the setting does. That last one is not
-an aesthetic preference: the bank is shared, so a picture specific enough to give
-the scenario away would make the listening optional.
+| Secret | What it is |
+|---|---|
+| `OPENAI_API_KEY` | the image model |
+| `ANTHROPIC_API_KEY` | the reviewer (the same key entry 1 needs) |
+| `SUPABASE_URL` | the project URL, so approved files reach the `scenes` bucket |
+| `SUPABASE_SERVICE_ROLE_KEY` | the key that may write to that bucket. Never in `client/`, never in a commit. |
+| `SUPABASE_DB_URL` | already listed under entry 8; with it the job also applies `batches/scenes.sql` |
+
+With only the first two, the job draws and reviews, and leaves the pictures in
+the run's `scene-artwork` artifact for somebody to upload. The same command
+runs on a laptop with the same names in `.env`. `bjt scenes --generate
+<scene_id> --force` redraws one you do not like.
+
+**The review gate, which is the part that will be tempting to skip.** It is now
+a model rather than a person, and the rules are the same: no readable text, no
+logo, no recognisable likeness, and nothing that fixes the situation more
+tightly than the setting does. That last one is not an aesthetic preference:
+the bank is shared, so a picture specific enough to give the scenario away
+would make the listening optional. Every rejection is kept with its reason so
+the gate can be audited afterwards, and a scene that fails every attempt ships
+without a picture, which the app allows.
 
 ---
 
