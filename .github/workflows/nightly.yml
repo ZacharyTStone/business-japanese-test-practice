@@ -37,7 +37,27 @@
 #                      one statement — refresh_item_stats() — which recounts how
 #                      often each item is answered correctly across all learners.
 #                      That is what the practice queue reads to pitch a set at a
-#                      difficulty that teaches.
+#                      difficulty that teaches. Also applies batches/scenes.sql
+#                      once artwork has been uploaded (below).
+#   OPENAI_API_KEY     the image model that draws the scene bank. With it (and
+#                      ANTHROPIC_API_KEY, which reviews every draft against the
+#                      brief) the job draws whichever of the sixteen scenes has
+#                      no picture yet. Sixteen pictures, drawn once: after the
+#                      first successful night this step finds nothing to do.
+#   SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
+#                      the project URL and the service-role key, which together
+#                      let the job put approved artwork in the `scenes` bucket
+#                      and see what is already there. The service-role key is
+#                      the one that bypasses row-level security: it lives here
+#                      and in nobody's .env, and never in client/.
+#
+# The scene step is the one place in this file a machine's judgement ships
+# something without a person reading it first. The owner asked for that
+# (2026-09-17). What stands in for the person is a second model checking each
+# draft against the same four rules a human reviewer would apply, and every
+# rejected draft is kept in the run's artifact with its reason, so the gate
+# can be audited after the fact. A scene that fails every attempt ships with
+# no picture, which the app has always allowed.
 name: nightly
 
 on:
@@ -114,8 +134,23 @@ jobs:
           HAVE_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
           HAVE_SEEDS: ${{ secrets.SEEDS_TAR_B64 != '' }}
           HAVE_DB: ${{ secrets.SUPABASE_DB_URL != '' }}
+          HAVE_IMAGES: ${{ secrets.OPENAI_API_KEY != '' }}
+          HAVE_STORAGE: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
         run: |
           echo "db=$HAVE_DB" >> "$GITHUB_OUTPUT"
+          echo "storage=$HAVE_STORAGE" >> "$GITHUB_OUTPUT"
+          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
+            echo "art=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "art=false" >> "$GITHUB_OUTPUT"
+            {
+              echo
+              echo '### No scenes drawn'
+              echo
+              echo "Drawing the scene bank needs both \`ANTHROPIC_API_KEY\` (present: $HAVE_API_KEY)"
+              echo "and \`OPENAI_API_KEY\` (present: $HAVE_IMAGES). See blockers.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_SEEDS" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
@@ -135,15 +170,54 @@ jobs:
       # gets better with scale: the more people answer an item, the better the
       # queue knows how hard it is. One statement, as the service role, out of
       # hours — never on the path of somebody waiting for five questions.
+      - name: install psql
+        if: steps.keys.outputs.db == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
       - name: recount how hard each item is
         if: steps.keys.outputs.db == 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client
           psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
             -c "select public.refresh_item_stats() as items_recounted;"
+
+      # ------------------------------------------------------- the scene bank
+
+      # Draw whichever scenes have no picture, review each draft, upload what
+      # passed. The bucket listing is what makes this idempotent: on a fresh
+      # runner media/ is empty, and the bucket is the only record of what was
+      # drawn on an earlier night. Without the storage secrets the pictures are
+      # drawn and kept only in the run's artifact, for a person to upload.
+      - name: draw the scenes the bank is missing
+        if: steps.keys.outputs.art == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          upload=""
+          if [ "${{ steps.keys.outputs.storage }}" = "true" ]; then upload="--upload --sql"; fi
+          # A scene that fails every attempt is reported, not fatal: the app
+          # ships items without pictures, and the next night tries again.
+          python -m bjt scenes --generate --provider openai $upload --summary scenes.md || true
+          cat scenes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.keys.outputs.art == 'true' && github.event.inputs.dry_run != 'true'
+        with:
+          name: scene-artwork
+          path: media/scenes
+          if-no-files-found: ignore
+
+      - name: point the database at the artwork
+        if: steps.keys.outputs.art == 'true' && steps.keys.outputs.storage == 'true' && steps.keys.outputs.db == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f batches/scenes.sql
 
       # --------------------------------------------------------- the generation
 
@@ -180,8 +254,10 @@ jobs:
             echo "::endgroup::"
           done
 
+      # batches/scenes.sql is included when the scene step wrote it, so the
+      # pull request also records which pictures the database was pointed at.
       - name: open a pull request for somebody to read
-        if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        if: (steps.keys.outputs.go == 'true' || steps.keys.outputs.art == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -197,8 +273,10 @@ jobs:
           git add batches
           git commit \
             -m "Fill the emptiest shelves of the bank ($(date -u +%Y-%m-%d))" \
-            -m "Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied."
+            -m "Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied. Scene artwork, if any, passed the review gate and is already in the bucket."
           git push -u origin "$branch" --force-with-lease
+          [ -f summary.md ] || echo "Nightly run: scene artwork only." > summary.md
+          [ -f scenes.md ] && { echo; cat scenes.md; } >> summary.md
           gh pr create \
             --title "Nightly content: $(date -u +%Y-%m-%d)" \
             --body-file summary.md \
