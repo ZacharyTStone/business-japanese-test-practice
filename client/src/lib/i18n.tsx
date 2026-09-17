@@ -109,6 +109,9 @@ const S = {
   prog_first: ["一組やってみると、ここに出てきます。", "Do one set and it shows up here."],
   prog_mistakes: ["よくあるミス", "Common mistakes"],
   prog_weak: ["苦手な場面", "Weak situations"],
+  // On the two "what to work on" cards, and only when they are showing the
+  // queue's window rather than the whole record.
+  prog_recent: ["この30日", "Last 30 days"],
   axis_function: ["何をする場面か", "What you're doing"],
   axis_relation: ["誰に言うか", "Who you're talking to"],
   axis_setting: ["どこでの話か", "Where"],

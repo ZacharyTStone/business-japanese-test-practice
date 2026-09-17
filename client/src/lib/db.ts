@@ -88,11 +88,13 @@ export async function recordAttempt(args: {
  *
  *  Always three rows: the view fills in J2 for a section nobody has answered in
  *  yet. Shown, never chosen — there is no screen in this app where a level is a
- *  control, and `v_my_levels` has no write path to be one. */
+ *  control, and `v_my_levels` has no write path to be one. `placed` comes from
+ *  the same view, so whether a level is worth printing is the database's call
+ *  and not a count the app keeps on its own. */
 export async function fetchSectionLevels(): Promise<SectionLevel[]> {
   const { data, error } = await supabase
     .from("v_my_levels")
-    .select("section, level, changed_at");
+    .select("section, level, changed_at, placed");
   if (error) throw error;
   return (data ?? []) as SectionLevel[];
 }
