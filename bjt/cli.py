@@ -313,9 +313,18 @@ def cmd_smoke(args) -> int:
 
 def cmd_seeds(args) -> int:
     """Validate and report what's in seeds/ so seeding is guided, not guesswork."""
+    from . import seeds as seedsmod
     from .generators.base import load_seed_json
 
-    print(f"Seeds directory: {config.SEEDS_DIR}\n")
+    if getattr(args, "bootstrap", False):
+        result = seedsmod.bootstrap(force=getattr(args, "force", False))
+        print(result.summary())
+        print()
+
+    print(f"Seeds directory: {config.SEEDS_DIR}"
+          + ("  (bootstrapped from batches/, not licensed material)"
+             if (config.SEEDS_DIR / seedsmod.MARKER).exists() else "")
+          + "\n")
     problems = 0
     for t in sorted(GENERATORS):
         fs = load_seed_json("fewshot", t)
@@ -1212,7 +1221,12 @@ def build_parser() -> argparse.ArgumentParser:
     sm.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
     sm.set_defaults(func=cmd_smoke)
 
-    sub.add_parser("seeds", help="validate and report what's in seeds/").set_defaults(func=cmd_seeds)
+    se = sub.add_parser("seeds", help="validate and report what's in seeds/")
+    se.add_argument("--bootstrap", action="store_true",
+                    help="build seeds/ from the reference batches when there is no licensed material")
+    se.add_argument("--force", action="store_true",
+                    help="with --bootstrap: overwrite a seeds/ that holds real material")
+    se.set_defaults(func=cmd_seeds)
 
     st = sub.add_parser("seedtable", help="inspect the 場面×関係×機能×レベル table")
     st.add_argument("--type", choices=seedtable.available() or None)

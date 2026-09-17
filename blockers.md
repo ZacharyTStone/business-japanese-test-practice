@@ -220,16 +220,18 @@ leaving a pull request for somebody to read. The survey half runs every night
 already: it needs no key, no network and no project, and it is the thing that
 says out loud that sixteen of the twenty-seven shelves are empty.
 
-**What is blocked.** The writing half needs two secrets, and neither is a code
-problem:
+**What is blocked.** The writing half needs one secret:
 
 - `ANTHROPIC_API_KEY` — same blocker as entry 1.
-- `SEEDS_TAR_B64` — the licensed few-shot and vocabulary material that lives in
-  the gitignored `seeds/`, as `tar czf - seeds | base64 -w0`. The job refuses to
-  generate without it rather than generating worse items: the few-shot examples
-  are most of what keeps a generated item close to the exam, and a hundred items
-  written without them would fill the bank with the wrong thing, quietly, which
-  is much harder to undo than an empty shelf.
+
+A second is optional. `SEEDS_TAR_B64` is the licensed few-shot and vocabulary
+material that lives in the gitignored `seeds/`, as `tar czf - seeds | base64
+-w0`. Without it the job builds `seeds/` from the reference batches
+(`bjt seeds --bootstrap`): the bank's own hand-written, owner-reviewed items
+become the few-shot examples, and the run summary and the pull request say so.
+That is weaker than official material and stronger than nothing. Only a real
+`seeds/` carries official items, kanji tiers and level descriptors; the
+bootstrap never invents them.
 
 A third secret is optional and unlocks the other half of the night:
 
