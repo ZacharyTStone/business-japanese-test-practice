@@ -6,7 +6,7 @@
  *
  * The levels are shown, not chosen — three of them, one per exam section,
  * because almost nobody is the same at listening and at reading. A section
- * reads 「—」 until there are ten answers behind it: the database has to serve
+ * reads 「—」 until the database says it has placed it: it has to serve
  * something from the first question, but a starting level is a placeholder and
  * printing it as a level says the app has concluded something it has not.
  *
@@ -19,12 +19,12 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchProfile, fetchSectionLevels, fetchTypeStats, updateProfile } from "../../src/lib/db";
+import { fetchProfile, fetchSectionLevels, updateProfile } from "../../src/lib/db";
 import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/lib/exam";
 import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
 import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, SectionLevel, TypeStat } from "../../src/lib/types";
+import type { Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   Card,
@@ -45,7 +45,6 @@ export default function Account() {
   const { email, signOut, loading: authLoading, error: authError } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
-  const [types, setTypes] = useState<TypeStat[]>([]);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -55,15 +54,12 @@ export default function Account() {
     fetchProfile()
       .then(setProfile)
       .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
-    // Neither is fatal if it fails: with no levels and no counts every section
-    // reads 「—」, which is a worse answer rather than a broken screen — and a
-    // safe one, since 「—」 is exactly what an unplaced section says anyway.
+    // Not fatal if it fails: with no levels every section reads 「—」, which is
+    // a worse answer rather than a broken screen — and a safe one, since 「—」
+    // is exactly what an unplaced section says anyway.
     fetchSectionLevels()
       .then(setLevels)
       .catch(() => setLevels([]));
-    fetchTypeStats()
-      .then(setTypes)
-      .catch(() => setTypes([]));
   }, [authLoading, authError, reloads]);
 
   async function setExamDate(date: string | null) {
@@ -135,7 +131,7 @@ export default function Account() {
               {SECTION_ORDER.map((section) => (
                 <View key={section} style={styles.levelRow}>
                   <Text style={[type.body, { flex: 1 }]}>{t(SECTION_NAME[section])}</Text>
-                  <Text style={type.stat}>{placedLevel(levels, types, section) ?? "—"}</Text>
+                  <Text style={type.stat}>{placedLevel(levels, section) ?? "—"}</Text>
                 </View>
               ))}
             </View>
