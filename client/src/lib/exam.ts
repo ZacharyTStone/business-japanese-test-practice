@@ -25,11 +25,18 @@ export function daysUntil(examDate: string | null | undefined): number | null {
   return Math.round((then - now) / DAY);
 }
 
-/** A date n months from today, as the profile stores it. */
-export function monthsFromNow(n: number): string {
-  const d = new Date(Date.now() + JST);
-  d.setUTCMonth(d.getUTCMonth() + n);
-  return d.toISOString().slice(0, 10);
+/** Today in JST, as the profile stores a date. The floor of the date field:
+ *  an exam you are revising for is not one that has already happened. */
+export function todayIso(): string {
+  return todayJst();
+}
+
+/** YYYY-MM-DD, and a day that exists. `2026-02-31` parses in JavaScript and
+ *  comes back as 3 March, so the round trip is the check. */
+export function isIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
 /** 「12月1日」 / "1 Dec" — the exam date as a person would say it. */

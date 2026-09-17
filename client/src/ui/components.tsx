@@ -4,9 +4,11 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
   type StyleProp,
   type ViewProps,
@@ -15,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
+import { isIsoDate } from "../lib/exam";
 import { Icon, type IconName } from "./icons";
 import { badge, card, colors, radius, shadow, space, type } from "./theme";
 import type { BadgeTone } from "./theme";
@@ -333,6 +336,88 @@ export function Chip({
 }
 
 /**
+ * A date somebody actually picks.
+ *
+ * It replaced three chips — "in 1 month", "in 3 months", "in 6 months" — which
+ * were never anybody's exam date. The exam is on a published day; rounding it
+ * to a month makes the countdown that hangs off it wrong by up to a fortnight,
+ * which is the difference between two more weekends of revision and none.
+ *
+ * On the web this is the browser's own date control, because that is the best
+ * picker already on the device and it costs nothing to use. Everywhere else it
+ * is a plain YYYY-MM-DD field: a wheel picker means a native module, and one
+ * date on one screen does not earn a dependency. Either way the value is only
+ * handed up once it is a real day, so a half-typed date never reaches the
+ * profile.
+ */
+export function DateField({
+  value,
+  onChange,
+  placeholder,
+  min,
+  accessibilityLabel,
+}: {
+  value: string | null;
+  onChange: (date: string | null) => void;
+  placeholder: string;
+  /** The earliest day worth offering, as YYYY-MM-DD. */
+  min?: string;
+  accessibilityLabel: string;
+}) {
+  const [text, setText] = React.useState(value ?? "");
+  // Follows the profile when it is loaded or cleared from elsewhere on the
+  // screen, without fighting what is being typed here.
+  React.useEffect(() => setText(value ?? ""), [value]);
+
+  function commit(next: string) {
+    setText(next);
+    if (next === "") {
+      if (value !== null) onChange(null);
+      return;
+    }
+    if (isIsoDate(next) && next !== value) onChange(next);
+  }
+
+  if (Platform.OS === "web") {
+    return (
+      <input
+        type="date"
+        value={text}
+        min={min}
+        aria-label={accessibilityLabel}
+        onChange={(e) => commit(e.target.value)}
+        style={{
+          fontFamily: "inherit",
+          fontSize: 16,
+          color: colors.text,
+          backgroundColor: colors.surfaceAlt,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radius.md,
+          padding: `${space.md}px ${space.lg}px`,
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      />
+    );
+  }
+
+  return (
+    <TextInput
+      value={text}
+      onChangeText={commit}
+      placeholder={placeholder}
+      placeholderTextColor={colors.muted}
+      accessibilityLabel={accessibilityLabel}
+      autoCapitalize="none"
+      autoCorrect={false}
+      inputMode="numeric"
+      maxLength={10}
+      style={styles.dateInput}
+    />
+  );
+}
+
+/**
  * Where an ad may go — and, more importantly, where one may not.
  *
  * The placement type has exactly two members, so putting an ad on the practice
@@ -417,6 +502,16 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   chipOn: { backgroundColor: colors.accent },
+  dateInput: {
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+  },
   chipText: { fontSize: 14, fontWeight: "700", color: colors.text },
   chipTextOn: { color: colors.onAccent },
   adSlot: {

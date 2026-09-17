@@ -61,25 +61,17 @@ const S = {
   wel_honesty: ["問題はすべて独自に作ったものです。過去問は使っていません。点数の予測は出しません。", "Every question is an original composition — no past papers. The app never predicts a score."],
 
   // home
-  level_line: ["いまのレベル {level}・正解が続くと上がります", "Level {level} · rises as you keep answering right"],
+  level_line: ["いまのレベル {level}", "Level {level}"],
   level_split: ["分野ごとのレベル：{levels}", "By section: {levels}"],
-  streak_days: ["{n}日", "{n} days"],
+  streak_days: ["{n}日", "{n} day|{n} days"],
   today: ["今日", "Today"],
   goal_ring: ["今日の目標{goal}問のうち{done}問", "{done} of today's {goal} questions"],
   today_done: ["今日のぶんは終わりました", "Today's set is done"],
-  streak_going: ["{n}日つづいています", "{n} days in a row"],
+  streak_going: ["{n}日つづいています", "{n} day in a row|{n} days in a row"],
   start_today: ["今日から始めましょう", "Start today"],
   btn_more: ["もう一組やる", "One more set"],
   btn_today: ["今日の練習をする", "Practice today"],
-  btn_today_sub: ["{goal}問・約3分・レベルも弱点もおまかせ", "{goal} questions · about 3 min · level and weak spots handled for you"],
-  thinking: ["アプリが考えていること", "What the app is thinking"],
-  plan_first: ["まずは5問。ここから、あなたに合わせて出します。", "Five questions to start. From here on, it adapts to you."],
-  plan_watching: ["まだ様子を見ています。あと{n}問で、弱点が見えてきます。", "Still watching. {n} more answers and your weak spots will show."],
-  plan_due: ["今日は復習が{n}問たまっています。最初にそこから出します。", "{n} question(s) are due for review. Today's set starts with them."],
-  plan_weak: ["「{tag}」が弱め（{pct}%）。今日の練習に、自動で入れます。", "“{tag}” is weak ({pct}%). It goes into today's set automatically."],
-  plan_trap: ["いちばん多いミスは「{label}」。同じ型の問題を、今日の練習に入れます。", "Your most common mistake is “{label}”. Today's set includes more of that pattern."],
-  plan_stretch: ["いい調子です。今日は、少し上のレベルも1問入れます。", "Good pace. Today includes one question from the level above."],
-  plan_good: ["いい調子です。このまま毎日つづけましょう。", "Good pace. Keep going every day."],
+  btn_today_sub: ["{goal}問・約3分", "{goal} questions · about 3 min"],
 
   // the door, while the app is in testing
   gate_title: ["ログインしてください", "Sign in to continue"],
@@ -97,16 +89,10 @@ const S = {
   // account
   acc_signed_in: ["ログイン中", "Signed in"],
   acc_google: ["Googleアカウント", "Google account"],
-  acc_any_device: ["記録はどの端末からでも見られます。", "Your record is available from any device."],
   acc_level: ["分野ごとのレベル", "Level by section"],
-  acc_level_sub: ["アプリが決めます。選ぶところはありません。", "The app decides. There is nothing to choose."],
-  acc_level_rule: ["3つの分野は別々に動きます。その分野で最初は10問、そのあとは直近20問を見て、8割正解なら上げ、4割以下なら少しやさしくします。得意な分野はどんどん難しく、苦手な分野はやさしくなります。毎回の練習には、いちばん得意な分野から1問だけ上のレベルの問題が入っています。", "The three sections move independently. Within a section: judged on your first 10 answers there, then on your last 20 — 80% right moves it up, 40% or less eases it off. What you are good at gets harder; what you struggle with gets gentler. Every set includes one question from the level above, taken from your strongest section."],
   acc_exam: ["試験日", "Exam date"],
   acc_exam_unset: ["まだ決めていません", "Not set yet"],
-  acc_exam_hint: ["決めると、ホームにカウントダウンが出ます。", "Set it and a countdown appears on home."],
-  preset_1: ["1か月後", "In 1 month"],
-  preset_3: ["3か月後", "In 3 months"],
-  preset_6: ["6か月後", "In 6 months"],
+  acc_exam_placeholder: ["2026-12-01", "2026-12-01"],
   clear: ["消す", "Clear"],
   acc_lang: ["言語", "Language"],
   acc_lang_sub: ["問題は日本語のままです。", "Questions stay in Japanese."],
@@ -117,13 +103,10 @@ const S = {
   // countdown
   countdown_past: ["試験はもう終わりました", "The exam has passed"],
   countdown_today: ["試験は今日です", "The exam is today"],
-  countdown_days: ["試験まであと{n}日", "{n} days to the exam"],
+  countdown_days: ["試験まであと{n}日", "{n} day to the exam|{n} days to the exam"],
 
   // progress
-  prog_sub: ["本番の成績表と同じ、3つの分け方で", "Cut the way the real score report is: three sections"],
   prog_first: ["一組やってみると、ここに出てきます。", "Do one set and it shows up here."],
-  prog_types_open: ["9種類のバランスを見る", "Show all nine types"],
-  prog_types_close: ["9種類をとじる", "Hide the nine types"],
   prog_mistakes: ["よくあるミス", "Common mistakes"],
   prog_weak: ["苦手な場面", "Weak situations"],
   axis_function: ["何をする場面か", "What you're doing"],
@@ -131,9 +114,6 @@ const S = {
   axis_setting: ["どこでの話か", "Where"],
   axis_channel: ["どう伝わるか", "How (in person, phone…)"],
   pct_n: ["{pct}%（{n}問）", "{pct}% ({n})"],
-  prog_min_tags: ["{n}問以上解いた場面だけを出しています。", "Only situations with {n}+ answers are shown."],
-  prog_level_note: ["各行のJ3・J2・J1は、いまその分野で出している問題の難しさです。得意な分野ほど難しくなります。", "The J3/J2/J1 on each row is the difficulty being served in that section. The better you get, the harder it goes."],
-  prog_more: ["もう少し解くと、場面ごとの得意・不得意が出てきます。", "A few more answers and your strong and weak situations will show."],
   review: ["見返す", "Review"],
   review_btn: ["解いた問題を見返す", "Review answered questions"],
   review_sub: ["まちがえた問題と、その解説", "The ones you missed, with explanations"],
@@ -182,9 +162,9 @@ const S = {
   no_result_body: ["練習を始めると、ここに結果が出ます。", "Start practising and results show here."],
   to_home: ["ホームへ", "Home"],
   level_up_sec: ["{section}のレベルが上がりました", "{section}: level up"],
-  level_up_sec_body: ["{a} → {b}。得意なので、{section}はここから難しくします。他の分野はそのままです。", "{a} → {b}. You're strong here, so {section} gets harder from now on. The other sections are unchanged."],
+  level_up_sec_body: ["{a} → {b}。ここから{section}は難しくなります。", "{a} → {b}. {section} gets harder from now on."],
   level_down_sec: ["{section}を少しやさしくします", "{section}: easing off"],
-  level_down_sec_body: ["次から{section}は{b}の問題にします。正解が続けば、また上がります。他の分野はそのままです。", "From now on {section} comes at {b}. Keep answering right and it rises again. The other sections are unchanged."],
+  level_down_sec_body: ["次から{section}は{b}の問題にします。正解が続けば、また上がります。", "From now on {section} comes at {b}. Keep answering right and it rises again."],
   mode_this: ["今回", "This set"],
   n_correct: ["{n}問 正解", "{n} correct"],
   n_min: ["{total}問・{min}分", "{total} questions · {min} min"],
@@ -249,8 +229,20 @@ const S = {
 
 export type Key = keyof typeof S;
 
+/**
+ * A string, in the chosen language, with `{name}` filled in.
+ *
+ * English counts and Japanese does not, so a string may carry two forms
+ * separated by a pipe — `"{n} day|{n} days"` — and `n` picks between them.
+ * Japanese sides never need it and never have it; a string with no pipe is
+ * used as written, which is nearly all of them.
+ */
 export function tr(lang: Lang, key: Key, vars?: Record<string, string | number>): string {
   let out: string = S[key][lang === "ja" ? 0 : 1];
+  if (out.includes("|")) {
+    const [one, many] = out.split("|");
+    out = Number(vars?.n) === 1 ? one : many;
+  }
   if (vars) {
     for (const [k, v] of Object.entries(vars)) out = out.split(`{${k}}`).join(String(v));
   }
