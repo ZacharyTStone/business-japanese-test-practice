@@ -355,6 +355,24 @@ DIALOGUE_MIN_TURNS, DIALOGUE_MAX_TURNS = 3, 10
 MAX_DOCUMENTS = 2
 
 
+def documents_of(item: dict) -> list[dict]:
+    """An item's document stimulus, always as a list.
+
+    The generator's schema calls it `document` for the three types that have one
+    and `documents` for the one type that has two. Everything that reads a
+    document rather than validating it — the bundle, the sanity check — would
+    rather deal with one shape than with that distinction, so the translation
+    lives here once instead of in each of them.
+    """
+    field = DOCUMENT_FIELDS.get(item.get("item_type", ""))
+    if field is None:
+        return []
+    value = item.get(field)
+    if isinstance(value, list):
+        return [d for d in value if isinstance(d, dict)]
+    return [value] if isinstance(value, dict) else []
+
+
 def _document_errors(item_type: str, item: dict) -> list[str]:
     """Validate whatever documents this item type carries.
 

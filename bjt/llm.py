@@ -1,12 +1,13 @@
 """Thin wrapper over the Anthropic Messages API.
 
-Four call shapes are used across the tool:
+Five call shapes are used across the tool:
   * generate_structured  — the generators, constrained to an item JSON schema
+  * sanity_check         — the proofreader (one flag per rule, on a small model)
   * answer_choice        — the answerability gate / calibration (pick 1 of N)
   * judge_synthetic      — the discriminator loop (real vs synthetic + why)
   * review_scene_image   — the scene art gate (one flag per rule in the brief)
 
-All four use structured output (`output_config.format`) so we never parse free
+All five use structured output (`output_config.format`) so we never parse free
 text. The SDK is imported lazily so the offline commands (selftest, demo) run
 with neither the package nor an API key present.
 """
@@ -75,6 +76,49 @@ def _structured(
 
 def generate_structured(system: str, user: str, schema: dict, model: Optional[str] = None) -> dict:
     return _structured(system, user, schema, model or config.GEN_MODEL, max_tokens=8000, effort="high")
+
+
+# ----- the proofreader --------------------------------------------------
+
+def sanity_check(rendered_item: str, rules: dict[str, str], model: Optional[str] = None) -> dict:
+    """Read one finished item and say which of the rules it breaks.
+
+    Returns {rule: bool, ..., "notes": str}; a true flag means the fault is
+    present. Same shape as `review_scene_image`, for the same reason: the caller
+    owns the rule list (`sanity.RULES`, key → fault in words) so the schema and
+    the wording the model is judged against cannot drift apart.
+
+    Small model, low effort, small ceiling — this is the cheap pass that runs on
+    every item before the expensive one runs on any of them. Deliberately NOT
+    asked to re-answer the question: an item is meant to be hard, and a cheap
+    model's disagreement about which 敬語 form fits is not evidence of a defect.
+    """
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [*rules, "notes"],
+        "properties": {
+            **{rule: {"type": "boolean", "description": f"true if this fault is present: {fault}"}
+               for rule, fault in rules.items()},
+            "notes": {"type": "string", "description": "one sentence on anything you flagged"},
+        },
+    }
+    user = (
+        "Proofread the finished test item below. It is meant to be difficult, and a "
+        "hard item is not a broken one — flag a rule only when the fault is actually "
+        "there, not when you would have written the item differently. The distractors "
+        "are wrong on purpose. Set every flag you are unsure about to false.\n\n"
+        + rendered_item
+    )
+    system = (
+        "You are the proofreader for a business-Japanese test bank. You are a native "
+        "reader of Japanese and you check finished items for defects: a marked answer "
+        "that cannot be right, a second answer that is just as right, an explanation "
+        "that does not match the marked answer, broken Japanese, options that do not "
+        "answer the question. You report faults, not preferences."
+    )
+    return _structured(system, user, schema, model or config.SANITY_MODEL,
+                       max_tokens=1200, effort="low")
 
 
 # ----- answering (gate + calibration) -----------------------------------
