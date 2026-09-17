@@ -102,8 +102,8 @@ accident is not.
   all the thinking happens behind the scenes, and the app's whole job is to
   raise a score rather than to offer a study menu.
 - **Testers only, for now, and the database is the door.** `public.testers`
-  lists who may use the app by Google account email; `is_tester()` reads the
-  JWT; every row-level policy in `public` requires it and the anon role holds
+  lists who may use the app by the email they sign in with (email and password
+  today; Google later, matched on the same email); `is_tester()` reads the JWT; every row-level policy in `public` requires it and the anon role holds
   nothing. A schema test asserts every policy names it, so a policy added
   without it fails CI. The client's gate screens only say so politely. The
   owner asked for this (2026-09-17); opening the app later is one migration
