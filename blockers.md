@@ -158,22 +158,26 @@ Then the acceptance checks, which are the point:
 ## 5. No production Supabase project
 
 **What exists.** Every migration, every RLS policy, the selection RPC, the
-storage buckets and the entitlement functions — all of it proved against a
-throwaway Postgres by `supabase/test/run.sh`, including the assertion that one
-user cannot read another's history and that a client cannot grant itself the
-paid unlock.
+storage buckets, the entitlement functions and the tester gate — all of it
+proved against a throwaway Postgres by `supabase/test/run.sh`, including the
+assertion that one user cannot read another's history, that a client cannot
+grant itself the paid unlock, and that nobody off the tester list reads a row.
 
-**What is blocked.** Applying it to a real project, and publishing the 88
+**What is blocked.** Applying it to a real project, and publishing the
 committed items into it.
 
-**What unblocks it.** A Supabase project, then:
+**What unblocks it.** A Supabase project and its `SUPABASE_DB_URL` secret.
+Then, from the Actions tab, run **deploy database**: it applies the
+migrations with the Supabase CLI, publishes every `batches/*.sql`, and adds
+the Google account typed into the form to the tester list. Every step is
+idempotent, so running it again after a new migration or a new batch is the
+whole deployment story. No laptop needed. The same three commands by hand:
 
 ```bash
-supabase db push
+supabase db push --db-url "$SUPABASE_DB_URL"
 for f in batches/*.sql; do psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"; done
+python -m bjt tester you@gmail.com | psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f -
 ```
-
-Every statement is an upsert, so re-running is safe.
 
 ---
 
@@ -259,6 +263,8 @@ cd client && npm run typecheck
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json
 ```
 
-CI runs all four on every push. A second workflow, `nightly`, surveys the bank
+CI runs all four on every push. A third workflow, **deploy database**, is run by
+hand from the Actions tab and is the whole deployment story — see entry 5. A
+second workflow, `nightly`, surveys the bank
 every night with the same offline tools — see entry 8 for the half of it that is
 waiting on a key.
