@@ -26,13 +26,16 @@
 # Secrets, all optional, each unlocking one thing:
 #
 #   ANTHROPIC_API_KEY  the generator. Without it only the survey runs.
-#   SEEDS_TAR_B64      the licensed few-shot and vocabulary material that lives
-#                      in the gitignored seeds/. Produce it with
+#   SEEDS_TAR_B64      optional: the licensed few-shot and vocabulary material
+#                      that lives in the gitignored seeds/. Produce it with
 #                        tar czf - seeds | base64 -w0
-#                      Generation is NOT run without it: the few-shot examples
-#                      are most of what keeps generated items close to the exam,
-#                      and writing a hundred items without them would fill the
-#                      bank with the wrong thing, quietly.
+#                      Without it the job builds seeds/ from the reference
+#                      batches instead (`bjt seeds --bootstrap`): the bank's own
+#                      hand-written, owner-reviewed items become the few-shot
+#                      examples. That is a weaker signal than official material
+#                      and the run summary says which one was used; it is a much
+#                      stronger one than no examples, which is what a job that
+#                      refused to run would leave the bank with.
 #   SUPABASE_DB_URL    a connection string for the production database. Used for
 #                      one statement — refresh_item_stats() — which recounts how
 #                      often each item is answered correctly across all learners.
@@ -151,7 +154,8 @@ jobs:
               echo "and \`OPENAI_API_KEY\` (present: $HAVE_IMAGES). See blockers.md."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
-          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_SEEDS" = "true" ]; then
+          echo "seeds=$HAVE_SEEDS" >> "$GITHUB_OUTPUT"
+          if [ "$HAVE_API_KEY" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
             echo "go=false" >> "$GITHUB_OUTPUT"
@@ -159,8 +163,7 @@ jobs:
               echo
               echo '### Nothing written'
               echo
-              echo "Generation needs both \`ANTHROPIC_API_KEY\` (present: $HAVE_API_KEY)"
-              echo "and \`SEEDS_TAR_B64\` (present: $HAVE_SEEDS). See blockers.md."
+              echo "Generation needs \`ANTHROPIC_API_KEY\` (present: $HAVE_API_KEY). See blockers.md."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
@@ -222,7 +225,7 @@ jobs:
       # --------------------------------------------------------- the generation
 
       - name: unpack the licensed seeds
-        if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        if: steps.keys.outputs.go == 'true' && steps.keys.outputs.seeds == 'true' && github.event.inputs.dry_run != 'true'
         env:
           SEEDS_TAR_B64: ${{ secrets.SEEDS_TAR_B64 }}
         run: |
@@ -232,6 +235,22 @@ jobs:
           # batches/.
           echo "$SEEDS_TAR_B64" | base64 -d | tar xzf -
           python -m bjt seeds
+
+      - name: build seeds from the reference batches
+        if: steps.keys.outputs.go == 'true' && steps.keys.outputs.seeds != 'true' && github.event.inputs.dry_run != 'true'
+        run: |
+          # No licensed material tonight. The bank's own hand-written items are
+          # the few-shot examples instead; the summary says so, so a reader of
+          # the pull request knows what the model was shown.
+          python -m bjt seeds --bootstrap
+          {
+            echo
+            echo '### Seeds'
+            echo
+            echo 'No `SEEDS_TAR_B64` secret: few-shot examples were taken from the reference'
+            echo 'batches in `batches/` (`bjt seeds --bootstrap`). No official items, kanji'
+            echo 'tiers or level descriptors were available to the generator.'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: write tonight's items
         if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'

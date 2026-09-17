@@ -136,7 +136,9 @@ Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
 `BJT_BATCH_DIR`, `BJT_GATE_TRIALS`, `BJT_IMAGE_MODEL`, `BJT_IMAGE_QUALITY`,
 `BJT_SCENE_ATTEMPTS`. Secrets, each read only by the step that needs it:
 `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (scene art), `SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` (uploading it).
+`SUPABASE_SERVICE_ROLE_KEY` (uploading it). `bjt seeds --bootstrap` builds a
+`seeds/` from the reference batches when there is no licensed material, which is
+what the nightly job does without a `SEEDS_TAR_B64` secret.
 
 ---
 

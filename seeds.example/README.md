@@ -6,6 +6,13 @@ is **gitignored**. Nothing copyrighted is committed. Copy this directory to
 
     cp -r seeds.example seeds
 
+If you have no licensed material to hand, `bjt seeds --bootstrap` builds a
+`seeds/` from the reference batches in `batches/` instead: the bank's own
+hand-written items become the few-shot examples. It leaves a `BOOTSTRAPPED`
+marker, invents no official items, kanji tiers or level descriptors, and never
+overwrites a real `seeds/`. The nightly job does this when no `SEEDS_TAR_B64`
+secret is set.
+
 ## What goes where
 
 | Path | What | Used by |
