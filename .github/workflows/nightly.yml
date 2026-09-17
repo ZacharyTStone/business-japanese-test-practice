@@ -65,10 +65,16 @@ name: nightly
 
 on:
   schedule:
-    # 18:00 UTC = 03:00 JST. Cron here is UTC and the learners are in Japan, so
-    # this is stated in both: it should land while nobody is practising, and it
-    # must not drift into the evening when the clocks change.
-    - cron: "0 18 * * *"
+    # 12:00 UTC = 21:00 JST. Cron here is UTC and the learners are in Japan, so
+    # this is stated in both; Japan keeps no summer time, so the pair never
+    # drifts. The owner asked for the evening (2026-09-17), which is practice
+    # time rather than the quiet hours this used to aim at. What that costs is
+    # small, and worth stating: generation is invisible to a learner — it writes
+    # a branch and a pull request, never the database — but the item_stats
+    # recount and the scene upload do reach the running app. Both are idempotent,
+    # and the worst a learner sees is a set pitched on counts that moved a minute
+    # ago, or a picture that was not there last night.
+    - cron: "0 12 * * *"
   workflow_dispatch:
     inputs:
       budget:
