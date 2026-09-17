@@ -37,7 +37,7 @@ from . import (
 )
 from .llm import LLMError
 from .db import Store
-from .fidelity import answerability, dedupe, discriminator, roles, vocab
+from .fidelity import answerability, dedupe, discriminator, roles, sanity, vocab
 from .generators import GENERATORS, get_generator
 
 
@@ -89,18 +89,32 @@ def _print_item_answer(item: dict) -> None:
 
 # ----- generation + gating -----------------------------------------------
 
-def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, cell=None):
-    """Generate one item, run vocab + answerability checks, persist with metrics.
-    Returns (item, item_id, kept: bool, detail: str)."""
+def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_check: bool = True,
+                       cell=None):
+    """Generate one item, run every per-item check, persist with metrics.
+    Returns (item, item_id, kept: bool, detail: str).
+
+    The order is cheapest-first, and that is the point. The offline vocab check
+    costs nothing. The proofreader is one small call. The answerability gate is
+    six large ones, and it only runs on an item the first two did not already
+    condemn — so a generation that came out broken costs a Haiku call instead of
+    six Opus calls, and the gate's budget is spent on items that might survive it.
+    """
     gen = get_generator(item_type, store)
     if cell is None and gen.requires_cell:
         cell = _next_cell(store, item_type, level)
     item = gen.generate(level, cell=cell)
 
     vres = vocab.check_item(item, level)
+    sres = sanity.run_check(item) if sanity_check else sanity.SanityResult(checked=False)
     gate_verdict = "skipped"
     cold = full = None
-    if gate:
+    if not sres.ok:
+        # No gate for an item with a fault a proofreader can see. Six calls to a
+        # strong model cannot repair an explanation that names the wrong option,
+        # and this is the whole saving.
+        gate_verdict = "discarded:sanity"
+    elif gate:
         gres = answerability.run_gate(item)
         cold, full, gate_verdict = gres.cold_success_rate, gres.full_success_rate, gres.verdict
     # A vocab violation (when enforced) is an independent discard reason — it can
@@ -113,7 +127,7 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, cell=No
         cold_success_rate=cold, full_success_rate=full,
         gate_verdict=gate_verdict, vocab_violations=vres.violations,
     )
-    if gate:
+    if gate and gate_verdict != "discarded:sanity":
         for t in gres.trials:
             store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
 
@@ -127,7 +141,7 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, cell=No
         item["model_p_correct"] = full
 
     kept = gate_verdict in ("kept", "skipped")
-    detail = _gate_detail(cold, full, gate_verdict, vres)
+    detail = _gate_detail(cold, full, gate_verdict, vres, sres)
     return item, item_id, kept, detail
 
 
@@ -174,13 +188,17 @@ def _sample_cells(store, item_type: str, level: str, n: int) -> list:
     return cells
 
 
-def _gate_detail(cold, full, verdict, vres) -> str:
+def _gate_detail(cold, full, verdict, vres, sres=None) -> str:
     bits = []
+    if sres is not None and (not sres.ok or not sres.checked):
+        bits.append(sres.detail())
     if cold is not None:
         bits.append(f"cold={cold:.0%} full={full:.0%}")
     bits.append(f"verdict={verdict}")
     if vres.enforced and vres.violations:
         bits.append(f"above-band kanji: {' '.join(vres.violations)}")
+    if sres is not None and not sres.ok and sres.notes:
+        bits.append(f"({sres.notes})")
     return "  ".join(bits)
 
 
@@ -254,7 +272,8 @@ def cmd_gen(args) -> int:
     store = Store()
     try:
         item, iid, kept, detail = _generate_and_gate(
-            store, args.type, args.level, gate=not args.no_gate
+            store, args.type, args.level, gate=not args.no_gate,
+            sanity_check=not args.no_sanity,
         )
         if args.json:
             print(json.dumps(item, ensure_ascii=False, indent=2))
@@ -479,7 +498,14 @@ def cmd_quality(args) -> int:
 
         print("\n[4 · genre templates] phase 2 (総合読解) — not built yet.")
 
-        print("\n[5 · vocabulary gating] loaded seed data:")
+        print("\n[5 · sanity check] items the proofreader stopped before the gate:")
+        stopped = sum(row["n"] for row in vc if row["gate_verdict"] == "discarded:sanity")
+        print(f"  discarded:sanity × {stopped}"
+              + ("" if stopped else "  (nothing has been flagged yet)"))
+        print(f"  model: {config.SANITY_MODEL}"
+              + ("" if config.SANITY_ENABLED else "  — DISABLED (BJT_SANITY=0)"))
+
+        print("\n[6 · vocabulary gating] loaded seed data:")
         vs = vocab.status_summary()
         print(f"  JLPT kanji tiers loaded: {vs['tiers_loaded'] or 'none'}")
         print(f"  business terms loaded: {vs['business_terms']}")
@@ -652,6 +678,7 @@ def run_batch(
     n: int,
     *,
     gate: bool = True,
+    sanity_check: bool = True,
     force: bool = False,
     out: "pathlib.Path | None" = None,
 ) -> tuple["pathlib.Path | None", int]:
@@ -673,7 +700,7 @@ def run_batch(
         idx += 1
         try:
             item, iid, kept, detail = _generate_and_gate(
-                store, item_type, level, gate=gate, cell=cell
+                store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell
             )
         except LLMError as e:
             print(f"  [{len(kept_items)}/{n}] generation failed: {e}")
@@ -715,7 +742,8 @@ def cmd_batch(args) -> int:
     try:
         path, kept = run_batch(
             store, args.type, args.level, args.n,
-            gate=not args.no_gate, force=args.force, out=args.out,
+            gate=not args.no_gate, sanity_check=not args.no_sanity,
+            force=args.force, out=args.out,
         )
         if path is None:
             return 1
@@ -770,7 +798,8 @@ def cmd_nightly(args) -> int:
             print(f"\n--- {w.n} × {w.item_type} {w.level} " + "-" * 32)
             try:
                 path, kept = run_batch(
-                    store, w.item_type, w.level, w.n, gate=not args.no_gate, force=False
+                    store, w.item_type, w.level, w.n, gate=not args.no_gate,
+                    sanity_check=not args.no_sanity, force=False,
                 )
             except (LLMError, FileNotFoundError) as e:
                 # One shelf failing is not the run failing. A key that ran out of
@@ -1207,10 +1236,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("init", help="create the DB and print seed setup instructions").set_defaults(func=cmd_init)
     sub.add_parser("selftest", help="offline validation + DB test (no API key)").set_defaults(func=cmd_selftest)
 
-    g = sub.add_parser("gen", help="generate, gate, store, and print one item")
+    g = sub.add_parser("gen", help="generate, proofread, gate, store, and print one item")
     g.add_argument("--type", required=True, choices=types)
     g.add_argument("--level", default="J2", choices=levels.LEVELS)
     g.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    g.add_argument("--no-sanity", action="store_true",
+                   help="skip the cheap proofreading pass before the gate")
     g.add_argument("--json", action="store_true", help="print the item as JSON (verdict on stderr)")
     g.set_defaults(func=cmd_gen)
 
@@ -1240,6 +1271,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--level", default="J2", choices=levels.LEVELS)
     b.add_argument("-n", type=int, default=10, help="how many items to keep")
     b.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    b.add_argument("--no-sanity", action="store_true", help="skip the cheap proofreading pass before the gate")
     b.add_argument("--out", type=__import__("pathlib").Path, default=None, help="bundle path")
     b.add_argument("--force", action="store_true", help="write the bundle even if checks fail")
     b.set_defaults(func=cmd_batch)
@@ -1258,6 +1290,7 @@ def build_parser() -> argparse.ArgumentParser:
     ni.add_argument("--per-slot", type=int, default=plan.DEFAULT_PER_SLOT,
                     help="most items this run may write into one (type, level)")
     ni.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
+    ni.add_argument("--no-sanity", action="store_true", help="skip the cheap proofreading pass before the gate")
     ni.add_argument("--dry-run", action="store_true", help="print the work order and stop")
     ni.add_argument("--summary", default=None, help="write a markdown summary here")
     ni.set_defaults(func=cmd_nightly)

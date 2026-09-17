@@ -113,15 +113,15 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt seeds` | Validate and report what's in `seeds/` (few-shot, official, vocab, levels). |
 | `bjt seedtable [--sample N]` | Inspect the 場面×関係×機能×レベル table: how many cells exist, how many are spent, and what would be written next. |
 | `bjt selftest` | Offline check of schema/role validation and the DB (no key). |
-| `bjt gen --type T --level J2` | Generate one item, gate it, store it, print it. |
-| `bjt batch --type T --level J2 -n 10` | **The main path.** Generate a batch offline, gate each item, run the whole-batch checks, write a bundle. |
+| `bjt gen --type T --level J2` | Generate one item, proofread and gate it, store it, print it. |
+| `bjt batch --type T --level J2 -n 10` | **The main path.** Generate a batch offline, proofread and gate each item, run the whole-batch checks, write a bundle. |
 | `bjt plan` | What the bank needs next: nine types × three levels, emptiest shelf first. No key. |
 | `bjt nightly [--budget N]` | Run that work order — generate, gate, check, and write the SQL. What the nightly job calls. |
 | `bjt importbatch <file.source.json>` | Same checks, same bundle, for items written by hand. |
 | `bjt checkbatch <bundle.json> [--show]` | Re-run every offline check over an existing bundle. No key needed. |
 | `bjt smoke --type T -n 10` | Headless acceptance run: generate N, assert nothing crashes or fails validation. |
 | `bjt practice --type T -n 10 [--demo]` | Answer a run of items interactively. `--demo` needs no key. |
-| `bjt quality` | The fidelity report — all five mechanisms plus raw per-item-type accuracy. |
+| `bjt quality` | The fidelity report — all six mechanisms plus raw per-item-type accuracy. |
 | `bjt discriminate --type T` | Mix official + generated items, ask a judge which are synthetic, report the rate and the tells — then auto-fold those tells into the generator prompt. |
 | `bjt publish <bundle.json>` | Turn a checked bundle into idempotent SQL for the database. |
 | `bjt synth <bundle.json>` | Synthesise the bundle's audio offline and write the SQL that points at it. `--provider silent` runs with no vendor account. |
@@ -173,9 +173,9 @@ prompting one.
 
 ---
 
-## The five fidelity mechanisms
+## The six fidelity mechanisms
 
-Closeness to the real exam is treated as measurable. All five produce numbers you
+Closeness to the real exam is treated as measurable. All six produce numbers you
 can see in `bjt quality`.
 
 1. **Distractor roles** (`bjt/fidelity/roles.py`). Every option carries a role
@@ -223,7 +223,24 @@ can see in `bjt quality`.
    spell 御中. The template is assigned by the seed cell exactly as a scene id is,
    and an item that substitutes a different one is rejected.
 
-5. **Vocabulary gating** (`bjt/fidelity/vocab.py`). A JLPT-kanji-tier ceiling for
+5. **Sanity check** (`bjt/fidelity/sanity.py`). One small call (Haiku by default,
+   `BJT_SANITY_MODEL`) the moment an item exists, before anything expensive
+   touches it. It proofreads: is the marked answer impossible, is a second option
+   just as right, does the 解説 justify a different option, is the Japanese broken,
+   do the options answer the question the stem asks. Any flag discards the item as
+   `discarded:sanity`.
+
+   **It runs first because it is cheap.** The answerability gate is six calls to a
+   strong model; a generation that came out with its explanation pointing at the
+   wrong option now costs one small call instead of six large ones, and the gate's
+   budget is spent only on items that might survive it. It is deliberately *not*
+   asked to re-answer the question — an item is meant to be hard, and a cheap
+   model disagreeing about which 敬語 form fits is the item working, not a defect.
+   Judging that is the gate's job and stays there. An item the checker could not
+   reach (outage, no key) is recorded as unchecked, never as clean, and goes on to
+   the gate anyway. `BJT_SANITY=0`, or `--no-sanity`, turns it off.
+
+6. **Vocabulary gating** (`bjt/fidelity/vocab.py`). A JLPT-kanji-tier ceiling for
    level control, plus a business-term list. The ceiling is enforced for a level
    **only when the tier data up to that ceiling is loaded** (J3→N3, J2→N2,
    J1→N1); with partial data the gate is permissive and says so.
@@ -637,7 +654,7 @@ licensed text, and is the thing you edit to grow the library.
 bjt/
   generators/    one module, prompt, and schema per item type
   publish.py     bundle → idempotent SQL
-  fidelity/      roles, answerability gate, discriminator loop, vocab gate, dedupe
+  fidelity/      roles, sanity check, answerability gate, discriminator loop, vocab gate, dedupe
   tts/           what to synthesise, in which voice, over which channel — and the
                  offline job that does it (plan.py, synth.py, channel.py, providers.py)
   scenes.py      what the scene bank needs, and what exists

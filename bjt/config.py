@@ -41,6 +41,19 @@ GEN_MODEL = _env("BJT_MODEL", "claude-opus-5")
 # it is genuinely capable ("a strong model should fail cold, succeed full").
 JUDGE_MODEL = _env("BJT_JUDGE_MODEL", GEN_MODEL)
 
+# The proofreader. It runs once per item the moment the item exists, before the
+# expensive gate, and it is deliberately the cheapest model in the family: what
+# it looks for — an explanation that names the wrong option, two options that say
+# the same thing, a dropped particle — needs care, not expertise. Anything that
+# needs expertise is the answerability gate's job and stays there. One small call
+# per item, against six large ones, is why this saves money rather than costing
+# it: a broken item never reaches the gate.
+SANITY_MODEL = _env("BJT_SANITY_MODEL", "claude-haiku-4-5")
+
+# Set BJT_SANITY=0 to skip it. An item that is not checked is recorded as not
+# checked rather than as clean — see bjt/fidelity/sanity.py.
+SANITY_ENABLED = _env("BJT_SANITY", "1").strip().lower() not in ("0", "false", "no", "off")
+
 DB_PATH = Path(_env("BJT_DB_PATH", str(ROOT / "bjt.db")))
 
 # Licensed few-shot examples, official sample items, vocab lists, and level

@@ -71,7 +71,9 @@ def test_gen_json_emits_valid_item(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("bjt.config.DB_PATH", tmp_path / "gen.db")
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("hyougen"))
-    rc = cli.cmd_gen(SimpleNamespace(type="hyougen", level="J2", no_gate=True, json=True))
+    rc = cli.cmd_gen(
+        SimpleNamespace(type="hyougen", level="J2", no_gate=True, no_sanity=True, json=True)
+    )
     assert rc == 0
     out = capsys.readouterr().out
     item = json.loads(out)  # stdout is pure JSON (verdict goes to stderr)

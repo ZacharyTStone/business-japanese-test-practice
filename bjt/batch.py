@@ -48,24 +48,6 @@ def item_id(item: dict) -> str:
     return hashlib.sha1(f"{item.get('item_type','')}|{key}".encode("utf-8")).hexdigest()[:10]
 
 
-def _documents_of(item: dict) -> list[dict]:
-    """A type's documents, always as a list.
-
-    The schema calls it `document` for the three types that have one and
-    `documents` for the one type that has two. Everything downstream — the
-    database column, the app's renderer — would rather deal with one shape than
-    with that distinction, so the bundle normalises it here and the singular
-    never leaves the generator.
-    """
-    field = schemas.DOCUMENT_FIELDS.get(item.get("item_type", ""))
-    if field is None:
-        return []
-    value = item.get(field)
-    if isinstance(value, list):
-        return [d for d in value if isinstance(d, dict)]
-    return [value] if isinstance(value, dict) else []
-
-
 def to_bundle_item(item: dict) -> dict:
     """One item in app-facing shape: answer resolved to an index, audio clip ids
     attached, documents normalised to a list, our internal metrics left out."""
@@ -101,7 +83,7 @@ def to_bundle_item(item: dict) -> dict:
         },
     }
 
-    documents = _documents_of(item)
+    documents = schemas.documents_of(item)
     if documents:
         out["documents"] = documents
 
