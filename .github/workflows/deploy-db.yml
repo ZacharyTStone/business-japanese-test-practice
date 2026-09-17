@@ -1,0 +1,102 @@
+# Deploy the database: migrations, the committed bank, and who may use it.
+#
+# Everything the schema needs to reach the real project, from the Actions tab,
+# so that nobody needs the repository on a laptop to bring a project up. Each
+# step is idempotent — re-running the workflow on a project that is already
+# current changes nothing and says so — which is what makes "run it again" the
+# safe answer to any doubt about whether it ran.
+#
+#   migrations   `supabase db push` against SUPABASE_DB_URL. The CLI records
+#                what it applied in supabase_migrations.schema_migrations and
+#                applies only what is new next time.
+#   the bank     every batches/*.sql, which `bjt publish` wrote as upserts.
+#                Includes scenes.sql once the nightly job has drawn artwork.
+#   a tester     optional: the Google account email typed into the run form,
+#                added to public.testers with `bjt tester`. The app admits
+#                nobody who is not in that table.
+#
+# Needs one secret: SUPABASE_DB_URL, the session-pooler connection string with
+# the database password in it. Nothing here reads a service-role key.
+name: deploy database
+
+on:
+  workflow_dispatch:
+    inputs:
+      tester_email:
+        description: "Google account to let into the app (leave blank to add nobody)"
+        required: false
+        default: ""
+      tester_note:
+        description: "Who that is (goes in the row)"
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-db
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: migrate, publish, admit
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e .
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: install psql
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: the one secret this needs
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL is not set. Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: apply migrations
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --yes
+
+      - name: publish the committed bank
+        run: |
+          shopt -s nullglob
+          for f in batches/*.sql; do
+            echo "::group::$f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+            echo "::endgroup::"
+          done
+
+      - name: let a tester in
+        if: github.event.inputs.tester_email != ''
+        env:
+          EMAIL: ${{ github.event.inputs.tester_email }}
+          NOTE: ${{ github.event.inputs.tester_note }}
+        run: |
+          python -m bjt tester "$EMAIL" --note "$NOTE" > tester.sql
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f tester.sql
+
+      - name: what the project holds now
+        run: |
+          {
+            echo '## The database after this run'
+            echo
+            echo '```'
+            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "
+              select (select count(*) from supabase_migrations.schema_migrations) as migrations,
+                     (select count(*) from public.items where is_published)     as published_items,
+                     (select count(*) from public.scenes where image_path is not null) as scenes_with_art,
+                     (select count(*) from public.testers)                       as testers;"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
