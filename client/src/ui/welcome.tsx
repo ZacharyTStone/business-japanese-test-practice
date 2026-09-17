@@ -17,11 +17,10 @@
  * not about who is holding it, and a person who reinstalls has forgotten the
  * explanation anyway.
  *
- * Google is the primary button because a linked record survives a lost phone,
- * and because the owner's framing of the app is "log in and answer". It is not
- * a wall: the anonymous session already exists by the time this screen renders
- * — AuthProvider signs in before anything is shown — so the second button is a
- * real way in, and linking later keeps the same user id and the same history.
+ * Google is the only button, because while the app is in testing the database
+ * admits nobody else (see lib/auth.tsx). The screen is marked seen before the
+ * sign-in starts: on web the sign-in leaves the page, and a person coming back
+ * from Google should land in the app, not on this explanation a second time.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useState } from "react";
@@ -87,7 +86,7 @@ export function useWelcome(): Welcome {
 export function WelcomeScreen({ onStart }: { onStart: () => void }) {
   const { t } = useLang();
   const insets = useSafeAreaInsets();
-  const { linkGoogle } = useAuth();
+  const { signInWithGoogle } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,12 +94,11 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await linkGoogle();
       onStart();
+      await signInWithGoogle();
     } catch (e) {
-      // Staying on this screen is deliberate: the other button still works, and
-      // a failed link must never be the thing standing between them and a
-      // question.
+      // A failed sign-in lands on the sign-in screen, which has the same
+      // button; the explanation above does not need reading twice.
       setError(e instanceof Error ? e.message : String(e));
       setBusy(false);
     }
@@ -138,9 +136,8 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
           disabled={busy}
           onPress={withGoogle}
         />
-        <Button label={t("wel_anon")} tone="secondary" disabled={busy} onPress={onStart} />
         {error ? <Text style={[type.small, { color: colors.wrong }]}>{error}</Text> : null}
-        <Text style={[type.small, styles.footnote]}>{t("wel_anon_note")}</Text>
+        <Text style={[type.small, styles.footnote]}>{t("wel_testers_note")}</Text>
         <Text style={[type.small, styles.footnote]}>{t("wel_honesty")}</Text>
       </View>
     </ScrollView>

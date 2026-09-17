@@ -1143,6 +1143,35 @@ def cmd_grant(args) -> int:
     return 0
 
 
+def cmd_tester(args) -> int:
+    """SQL adding (or removing) somebody on the tester list.
+
+    While the app is in testing, `public.testers` is the only door: every
+    row-level policy requires the signed-in Google account's email to be in it.
+    SQL rather than a live call, for the same reason `bjt grant` is: what
+    reaches the database is a statement somebody can read first, and no key
+    that can write it has to live near this process.
+    """
+    email = args.email.strip().lower()
+    if "@" not in email:
+        print(f"not an email address: {args.email!r}", file=sys.stderr)
+        return 2
+    if args.remove:
+        print(f"-- Remove {email} from the tester list. Their history stays; they cannot read it.")
+        print("-- Runs as the service role; a client cannot touch this table.")
+        print()
+        print(f"delete from public.testers where email = {publish.lit(email)};")
+    else:
+        print(f"-- Let {email} use the app while it is in testing.")
+        print("-- Runs as the service role; a client cannot touch this table.")
+        print("-- Idempotent: re-running updates the note and nothing else.")
+        print()
+        print("insert into public.testers (email, note)")
+        print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')})")
+        print("on conflict (email) do update set note = excluded.note;")
+    return 0
+
+
 def _print_bundle_report(bundle: dict, report) -> None:
     marks = {"pass": "OK  ", "warn": "WARN", "fail": "FAIL"}
     print("\n" + "=" * 62)
@@ -1298,6 +1327,12 @@ def build_parser() -> argparse.ArgumentParser:
     gr.add_argument("--revoke", action="store_true",
                     help="withdraw it instead, keeping the record that it existed")
     gr.set_defaults(func=cmd_grant)
+
+    te = sub.add_parser("tester", help="SQL adding or removing somebody on the tester list")
+    te.add_argument("email", help="the Google account email they sign in with")
+    te.add_argument("--note", help="who this is — shows up in the row")
+    te.add_argument("--remove", action="store_true", help="take them off the list instead")
+    te.set_defaults(func=cmd_tester)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")
