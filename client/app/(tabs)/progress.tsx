@@ -35,7 +35,7 @@ import {
 import { useLang, type Key } from "../../src/lib/i18n";
 import { placedLevel } from "../../src/lib/levels";
 import { roleInfo } from "../../src/lib/roles";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { RoleTrap, Section, SectionLevel, TagStat, TypeStat } from "../../src/lib/types";
 import {
   AdSlot,
@@ -105,7 +105,7 @@ export default function Progress() {
         } catch (e) {
           // Without this the screen sat on its spinner for ever when the record
           // failed to load, which looks exactly like an app that has hung.
-          if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+          if (!cancelled) setError(errorText(e));
         }
       })();
       return () => {

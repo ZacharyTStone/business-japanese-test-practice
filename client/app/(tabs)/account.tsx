@@ -23,7 +23,7 @@ import { fetchProfile, fetchSectionLevels, updateProfile } from "../../src/lib/d
 import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/lib/exam";
 import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
 import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
@@ -53,7 +53,7 @@ export default function Account() {
     if (!isConfigured || authLoading || authError) return;
     fetchProfile()
       .then(setProfile)
-      .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => setProfileError(errorText(e)));
     // Not fatal if it fails: with no levels every section reads 「—」, which is
     // a worse answer rather than a broken screen — and a safe one, since 「—」
     // is exactly what an unplaced section says anyway.
@@ -67,7 +67,7 @@ export default function Account() {
     try {
       await updateProfile({ exam_date: date });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e));
     }
   }
 

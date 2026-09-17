@@ -30,7 +30,7 @@ import {
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
@@ -77,7 +77,7 @@ export default function Home() {
         } catch (e) {
           // Without this the screen sat on its spinner for ever when the record
           // failed to load, which looks exactly like an app that has hung.
-          if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+          if (!cancelled) setError(errorText(e));
         } finally {
           if (!cancelled) setLoading(false);
         }

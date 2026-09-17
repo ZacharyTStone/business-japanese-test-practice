@@ -18,7 +18,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchHistory } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
+import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { HistoryEntry } from "../src/lib/types";
 import { Button, Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
@@ -43,7 +43,7 @@ export default function History() {
     let cancelled = false;
     fetchHistory()
       .then((rows) => !cancelled && setEntries(rows))
-      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => !cancelled && setError(errorText(e)));
     return () => {
       cancelled = true;
     };

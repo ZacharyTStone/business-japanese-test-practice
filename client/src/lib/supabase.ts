@@ -34,3 +34,32 @@ export const supabase = createClient(url ?? "http://localhost:54321", anonKey ??
 
 export const MISSING_CONFIG_MESSAGE =
   "EXPO_PUBLIC_SUPABASE_URL と EXPO_PUBLIC_SUPABASE_ANON_KEY が設定されていません。client/.env.example を .env にコピーしてください。";
+
+/**
+ * What went wrong, in words somebody can act on.
+ *
+ * Every screen used to write `e instanceof Error ? e.message : String(e)`, and
+ * a supabase-js failure is not an `Error` — it is a plain object carrying
+ * `message`, `details`, `hint` and a Postgres `code`. So `String(e)` rendered
+ * the one line the user was shown as "[object Object]", for every failure in
+ * the app, and a real one (the app asking a view for a column the database did
+ * not have yet) was invisible until somebody went and read the server's logs.
+ *
+ * The `code` is kept because it is the part worth searching for: `42703` is
+ * "undefined column", which says "this client is newer than this database"
+ * far more precisely than any wording of ours would.
+ */
+export function errorText(e: unknown): string {
+  if (typeof e === "string") return e;
+  if (e && typeof e === "object") {
+    const { message, details, hint, code } = e as Record<string, unknown>;
+    const said = [message, details, hint].filter(
+      (part): part is string => typeof part === "string" && part.trim() !== ""
+    );
+    if (said.length > 0) {
+      const text = said.join(" — ");
+      return typeof code === "string" && code !== "" ? `${text} (${code})` : text;
+    }
+  }
+  return String(e);
+}
