@@ -48,11 +48,12 @@ CREATE TABLE IF NOT EXISTS responses (
     answered_at REAL NOT NULL
 );
 
--- One row per cold/full trial, for auditing gate consistency.
+-- One row per trial: the gate's cold/full sides, for auditing consistency, and
+-- the difficulty probe's, so the prior a batch shipped with can be re-derived.
 CREATE TABLE IF NOT EXISTS gate_trials (
     id          INTEGER PRIMARY KEY,
     item_id     INTEGER REFERENCES items(id),
-    side        TEXT NOT NULL,           -- 'cold' | 'full'
+    side        TEXT NOT NULL,           -- 'cold' | 'full' | 'difficulty'
     trial       INTEGER NOT NULL,
     chosen_index INTEGER,
     correct     INTEGER NOT NULL,        -- 0/1
@@ -240,6 +241,20 @@ class Store:
                       COUNT(*)               AS n
                FROM items
                WHERE cold_success_rate IS NOT NULL
+               GROUP BY item_type ORDER BY item_type"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def difficulty_summary(self) -> list[dict]:
+        """Per type: how many items the difficulty probe measured and the mean
+        of their per-item pass rates. Derived from the trials, which is the one
+        place the probe's answers are kept."""
+        rows = self.conn.execute(
+            """SELECT item_type, AVG(rate) AS avg_rate, COUNT(*) AS n
+               FROM (SELECT i.item_type, AVG(g.correct) AS rate
+                     FROM gate_trials g JOIN items i ON i.id = g.item_id
+                     WHERE g.side = 'difficulty'
+                     GROUP BY g.item_id)
                GROUP BY item_type ORDER BY item_type"""
         ).fetchall()
         return [dict(r) for r in rows]

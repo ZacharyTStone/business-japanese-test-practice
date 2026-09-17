@@ -103,12 +103,14 @@ def to_bundle_item(item: dict) -> dict:
         if key in item:
             out[key] = item[key]
 
-    # How often the answerability gate answered this item correctly with the full
-    # stimulus. Absent for hand-written batches, which are the one path that
-    # skips the gate — and absent is the honest value there, not 1.0. The
-    # practice queue reads it as the difficulty prior for an item nobody has met
-    # yet, and replaces it with the measured rate as soon as the shared bank has
-    # one.
+    # The difficulty prior: how often the difficulty model (a deliberately weak
+    # one, bjt/fidelity/difficulty.py) answered this item correctly with the
+    # full stimulus — or, when that probe did not run, how often the
+    # answerability gate's strong model did, which is the older and coarser
+    # number. Absent for hand-written batches, which are the one path that
+    # skips both — and absent is the honest value there, not 1.0. The practice
+    # queue reads it as the difficulty prior for an item nobody has met yet,
+    # and replaces it with the measured rate as soon as the shared bank has one.
     if item.get("model_p_correct") is not None:
         out["model_p_correct"] = item["model_p_correct"]
     return out

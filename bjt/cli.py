@@ -37,7 +37,7 @@ from . import (
 )
 from .llm import LLMError
 from .db import Store
-from .fidelity import answerability, dedupe, discriminator, roles, sanity, vocab
+from .fidelity import answerability, dedupe, difficulty, discriminator, roles, sanity, vocab
 from .generators import GENERATORS, get_generator
 
 
@@ -99,6 +99,8 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_
     six large ones, and it only runs on an item the first two did not already
     condemn — so a generation that came out broken costs a Haiku call instead of
     six Opus calls, and the gate's budget is spent on items that might survive it.
+    The difficulty probe comes last, a few small calls, and only for an item that
+    is going to ship: measuring the difficulty of a discarded item buys nothing.
     """
     gen = get_generator(item_type, store)
     if cell is None and gen.requires_cell:
@@ -121,6 +123,14 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_
     # fail an item the answerability gate passed or skipped.
     if vres.enforced and not vres.ok and not gate_verdict.startswith("discarded"):
         gate_verdict = "discarded:vocab"
+    kept = gate_verdict in ("kept", "skipped")
+
+    # The difficulty probe: a weaker model sits the full view a few times, and
+    # its pass rate is the difficulty prior. Only for an item that is going to
+    # ship — a discarded item's difficulty is nobody's business — and skipped
+    # entirely when switched off, which the result says rather than hides.
+    dres = difficulty.measure(item) if kept else difficulty.DifficultyResult(
+        measured=False, notes="not probed: item discarded")
 
     item_id = store.insert_item(
         item_type, level, item, config.GEN_MODEL,
@@ -130,18 +140,24 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_
     if gate and gate_verdict != "discarded:sanity":
         for t in gres.trials:
             store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
+    if dres.measured:
+        # Only a measurement is worth keeping: the trials of a probe that could
+        # not reach its model would read, later, as an item nobody could answer.
+        for t in dres.trials:
+            store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
 
-    # The full-view rate is a difficulty estimate, and until now it lived only in
-    # the local SQLite database and died there. It travels with the item from
-    # here on: the bundle carries it, `bjt publish` writes it, and the practice
-    # queue uses it as the prior for an item nobody has answered yet. See
-    # supabase/migrations/20260916000500 — it is a property of the question and
-    # is never shown to anybody.
-    if full is not None:
+    # The difficulty prior travels with the item from here: the bundle carries
+    # it, `bjt publish` writes it, and the practice queue uses it as the prior
+    # for an item nobody has answered yet. It is the probe's rate when the probe
+    # ran, and the gate's full-view rate otherwise — the older, coarser number,
+    # which is still an honest one. See supabase/migrations/20260916000500 — it
+    # is a property of the question and is never shown to anybody.
+    if dres.measured:
+        item["model_p_correct"] = dres.rate
+    elif full is not None:
         item["model_p_correct"] = full
 
-    kept = gate_verdict in ("kept", "skipped")
-    detail = _gate_detail(cold, full, gate_verdict, vres, sres)
+    detail = _gate_detail(cold, full, gate_verdict, vres, sres, dres)
     return item, item_id, kept, detail
 
 
@@ -188,12 +204,16 @@ def _sample_cells(store, item_type: str, level: str, n: int) -> list:
     return cells
 
 
-def _gate_detail(cold, full, verdict, vres, sres=None) -> str:
+def _gate_detail(cold, full, verdict, vres, sres=None, dres=None) -> str:
     bits = []
     if sres is not None and (not sres.ok or not sres.checked):
         bits.append(sres.detail())
     if cold is not None:
         bits.append(f"cold={cold:.0%} full={full:.0%}")
+    if dres is not None and (dres.measured or dres.trials):
+        # Say which model measured it: a rate from the gate's strong model and a
+        # rate from the probe's weak one are not comparable numbers.
+        bits.append(dres.detail())
     bits.append(f"verdict={verdict}")
     if vres.enforced and vres.violations:
         bits.append(f"above-band kanji: {' '.join(vres.violations)}")
@@ -485,6 +505,15 @@ def cmd_quality(args) -> int:
             print("  (gate not run on any items yet)")
         for row in gs:
             print(f"  {row['item_type']}: cold={row['avg_cold']:.0%}  full={row['avg_full']:.0%}  (n={row['n']})")
+
+        print("\n[2b · difficulty probe] average pass rate of the difficulty model on kept items:")
+        ds = store.difficulty_summary()
+        if not ds:
+            print("  (probe not run on any items yet)")
+        for row in ds:
+            print(f"  {row['item_type']}: p_correct={row['avg_rate']:.0%}  (n={row['n']})")
+        print(f"  model: {config.DIFFICULTY_MODEL}  trials: {config.DIFFICULTY_TRIALS}"
+              + ("" if config.DIFFICULTY_ENABLED else "  — DISABLED (BJT_DIFFICULTY=0)"))
 
         print("\n[3 · discriminator] latest discrimination rate (→ 50% is the goal):")
         dr = store.latest_discriminator_runs()
