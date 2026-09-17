@@ -79,6 +79,26 @@ RECENT_TOPICS_WINDOW = int(_env("BJT_RECENT_TOPICS_WINDOW", "25"))
 # Answerability gate: run each side this many times and require consistency.
 GATE_TRIALS = int(_env("BJT_GATE_TRIALS", "3"))
 
+# The difficulty probe. The gate's full-view rate was the difficulty prior the
+# practice queue used for an item nobody had answered yet, and it was a poor
+# one: a strong model with the whole stimulus answers nearly everything, so the
+# number was 0.67 or 1.0 and almost always 1.0. That is the gate doing its job
+# — "is this answerable at all?" is a question a strong reader should say yes
+# to — but a rate that never moves carries no information about how hard the
+# item is. A weaker model is the better instrument here precisely because it
+# fails sometimes: its pass rate spreads across items in roughly the order a
+# learner would find them hard, which is all a prior needs to do. The proofreader's
+# model is the natural pick — the cheapest in the family, already in use. The
+# probe runs after the gate and only on items the gate kept, so it costs
+# DIFFICULTY_TRIALS small calls per shipped item and nothing per discarded one.
+DIFFICULTY_MODEL = _env("BJT_DIFFICULTY_MODEL", SANITY_MODEL)
+DIFFICULTY_TRIALS = int(_env("BJT_DIFFICULTY_TRIALS", "5"))
+
+# Set BJT_DIFFICULTY=0 to skip it. An item that was not probed carries the
+# gate's full-view rate as before, which is the honest fallback rather than a
+# made-up number — see bjt/fidelity/difficulty.py.
+DIFFICULTY_ENABLED = _env("BJT_DIFFICULTY", "1").strip().lower() not in ("0", "false", "no", "off")
+
 # The image model that draws the scene bank, and how hard it tries. The bank is
 # sixteen pictures drawn once, so quality is cheap here; attempts is how many
 # drafts the review gate may reject before a scene ships without a picture.
