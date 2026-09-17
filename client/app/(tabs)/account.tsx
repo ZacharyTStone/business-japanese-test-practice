@@ -1,10 +1,8 @@
 /**
- * The account screen, which mostly exists to explain why there isn't one yet.
- *
- * Linking is framed as "keep your record", not "sign up", because that is
- * literally what it does: the anonymous session already holds everything, and
- * Google is attached to the same user so nothing moves. The honest risk is
- * stated plainly too — an unlinked record lives on one device and goes with it.
+ * The account screen: who is signed in, the three levels, the exam date, the
+ * language. While the app is in testing everybody here is signed in with
+ * Google and on the tester list, or they would not have got past the door
+ * (ui/gate.tsx), so there is nothing to link and nothing to explain about it.
  *
  * The levels are shown, not chosen — three of them, one per exam section,
  * because almost nobody is the same at listening and at reading. The database
@@ -47,18 +45,10 @@ const EXAM_PRESETS: { key: Key; months: number }[] = [
 export default function Account() {
   const router = useRouter();
   const { lang, setLang, t } = useLang();
-  const {
-    isAnonymous,
-    email,
-    linkGoogle,
-    signOut,
-    loading: authLoading,
-    error: authError,
-  } = useAuth();
+  const { email, signOut, loading: authLoading, error: authError } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
 
@@ -72,20 +62,7 @@ export default function Account() {
     fetchSectionLevels()
       .then(setLevels)
       .catch(() => setLevels([]));
-  }, [isAnonymous, authLoading, authError, reloads]);
-
-  async function onLink() {
-    setBusy(true);
-    setError(null);
-    try {
-      await linkGoogle();
-      setProfile(await fetchProfile());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  }, [authLoading, authError, reloads]);
 
   async function setExamDate(date: string | null) {
     setProfile((p) => (p ? { ...p, exam_date: date } : p));
@@ -135,34 +112,18 @@ export default function Account() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <ScreenHeader title={t("tab_account")} subtitle={isAnonymous ? t("acc_anon_sub") : email ?? undefined} />
+      <ScreenHeader title={t("tab_account")} subtitle={email ?? undefined} />
 
-      {isAnonymous ? (
-        <Card style={{ gap: space.md }}>
-          <View style={styles.head}>
-            <IconBadge name="user" tone="violet" />
-            <Text style={[type.h2, { flex: 1 }]}>{t("acc_anon_title")}</Text>
+      <Card style={{ gap: space.md }}>
+        <View style={styles.head}>
+          <IconBadge name="check" tone="teal" />
+          <View style={{ flex: 1 }}>
+            <Text style={type.h2}>{t("acc_signed_in")}</Text>
+            <Text style={type.small}>{email ?? t("acc_google")}</Text>
           </View>
-          <Text style={type.small}>{t("acc_anon_p1")}</Text>
-          <Text style={type.small}>{t("acc_anon_p2")}</Text>
-          <Button
-            label={busy ? t("acc_link_busy") : t("acc_link")}
-            onPress={onLink}
-            disabled={busy}
-          />
-        </Card>
-      ) : (
-        <Card style={{ gap: space.md }}>
-          <View style={styles.head}>
-            <IconBadge name="check" tone="teal" />
-            <View style={{ flex: 1 }}>
-              <Text style={type.h2}>{t("acc_signed_in")}</Text>
-              <Text style={type.small}>{email ?? t("acc_google")}</Text>
-            </View>
-          </View>
-          <Text style={type.small}>{t("acc_any_device")}</Text>
-        </Card>
-      )}
+        </View>
+        <Text style={type.small}>{t("acc_any_device")}</Text>
+      </Card>
 
       <View style={{ gap: space.md }}>
         <SectionLabel>{t("acc_level")}</SectionLabel>
@@ -234,16 +195,14 @@ export default function Account() {
 
       <Notice title={t("acc_noscore_title")} body={t("acc_noscore_body")} />
 
-      {!isAnonymous ? (
-        <Button
-          label={t("logout")}
-          tone="secondary"
-          onPress={async () => {
-            await signOut();
-            router.replace("/");
-          }}
-        />
-      ) : null}
+      <Button
+        label={t("logout")}
+        tone="secondary"
+        onPress={async () => {
+          await signOut();
+          router.replace("/");
+        }}
+      />
     </ScrollView>
   );
 }

@@ -99,7 +99,7 @@ function plan(
 export default function Home() {
   const router = useRouter();
   const { lang, t } = useLang();
-  const { loading: authLoading, isAnonymous, error: authError } = useAuth();
+  const { loading: authLoading, error: authError } = useAuth();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
@@ -262,18 +262,6 @@ export default function Home() {
         </Card>
       </View>
 
-      {isAnonymous ? (
-        <Card style={{ gap: space.md }}>
-          <View style={styles.trapHead}>
-            <IconBadge name="user" tone="violet" />
-            <View style={{ flex: 1 }}>
-              <Text style={type.h2}>{t("anon_title")}</Text>
-              <Text style={type.small}>{t("anon_sub")}</Text>
-            </View>
-          </View>
-          <Button label={t("anon_btn")} tone="secondary" onPress={() => router.push("/account")} />
-        </Card>
-      ) : null}
     </ScrollView>
   );
 }

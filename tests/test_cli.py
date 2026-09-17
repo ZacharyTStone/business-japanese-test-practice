@@ -62,3 +62,19 @@ def test_practice_requires_type_without_demo():
 
 def test_selftest_passes():
     assert cli.main(["selftest"]) == 0
+
+
+# ----- the tester list -----------------------------------------------------
+
+def test_tester_sql_is_lowercased_and_idempotent(capsys):
+    assert cli.main(["tester", " Zach@Example.com ", "--note", "owner"]) == 0
+    out = capsys.readouterr().out
+    assert "insert into public.testers" in out
+    assert "'zach@example.com'" in out and "Zach" not in out.split("--")[-1]
+    assert "on conflict (email) do update" in out
+
+
+def test_tester_remove_and_bad_input(capsys):
+    assert cli.main(["tester", "b@example.com", "--remove"]) == 0
+    assert "delete from public.testers where email = 'b@example.com'" in capsys.readouterr().out
+    assert cli.main(["tester", "not-an-email"]) == 2

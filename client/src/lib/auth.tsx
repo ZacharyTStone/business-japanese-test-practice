@@ -1,16 +1,19 @@
 /**
- * Who the user is — which, at first launch, is nobody in particular.
+ * Who the user is — and, while the app is in testing, whether they are allowed
+ * in at all.
  *
- * The app signs in anonymously before it shows anything. That gives every
- * visitor a real row in the database from the first question, so history,
- * streak and weakness profile are server-side from the start, and nobody is
- * stopped at a login wall to try five questions. Linking Google later keeps the
- * SAME user id, so nothing needs merging — that is the entire reason to do it
- * in this order rather than storing progress locally and reconciling it after.
+ * The app used to sign everybody in anonymously before it showed anything, so
+ * that nobody was stopped at a login wall to try five questions. That is the
+ * right shape for a public app and the wrong one for an app that is not open
+ * yet: the owner asked (2026-09-17) that only the people testing it can use it.
+ * So now there is a wall, and it is Google: sign in, and the database says
+ * whether that account is on the tester list. The database, not this file —
+ * every row-level policy requires it, so a client that skipped this check would
+ * simply see nothing. `isTester` here exists to say so politely.
  *
- * The one thing that must not happen is losing an anonymous session: until it
- * is linked, that session token is the only key to the person's history. It
- * lives in AsyncStorage (localStorage on web) and is refreshed on resume.
+ * Opening the app later means putting the anonymous sign-in back in front of
+ * this wall, and the linking path that came with it. The schema still supports
+ * both; nothing about a user id changes.
  */
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
@@ -26,11 +29,13 @@ type AuthState = {
   session: Session | null;
   /** True while we are still working out who this is. Screens wait on it. */
   loading: boolean;
-  /** Set when even anonymous sign-in failed — offline, or no project configured. */
+  /** Set when the session or the tester check could not be read — offline, or
+   *  no project configured. */
   error: string | null;
-  isAnonymous: boolean;
+  /** Whether the signed-in account is on the tester list. null until asked. */
+  isTester: boolean | null;
   email: string | null;
-  linkGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -40,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTester, setIsTester] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!isConfigured) {
@@ -50,20 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     (async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data, error: sessionError } = await supabase.auth.getSession();
       if (cancelled) return;
-
-      if (data.session) {
-        setSession(data.session);
-        setLoading(false);
-        return;
-      }
-
-      // First launch on this device: become somebody, quietly.
-      const { data: anon, error: anonError } = await supabase.auth.signInAnonymously();
-      if (cancelled) return;
-      if (anonError) setError(anonError.message);
-      setSession(anon.session ?? null);
+      if (sessionError) setError(sessionError.message);
+      setSession(data.session);
       setLoading(false);
     })();
 
@@ -72,8 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Supabase's auto-refresh timer does not run while the app is backgrounded;
-    // without this, coming back after a long pause can mean a dead token and,
-    // for an anonymous user, a silently lost history.
+    // without this, coming back after a long pause can mean a dead token.
     const appState = AppState.addEventListener("change", (state) => {
       if (state === "active") supabase.auth.startAutoRefresh();
       else supabase.auth.stopAutoRefresh();
@@ -86,26 +81,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Ask the database whether this account may use the app. It is one RPC and
+  // it is asked once per session, because the answer is a property of the
+  // tester list, not of anything the client does.
+  useEffect(() => {
+    if (!session) {
+      setIsTester(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .rpc("is_tester")
+      .then(({ data, error: rpcError }) => {
+        if (cancelled) return;
+        if (rpcError) setError(rpcError.message);
+        else setIsTester(data === true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
   const value = useMemo<AuthState>(() => {
     const user = session?.user;
     return {
       session,
       loading,
       error,
-      // A user with no identities is still anonymous. Supabase also exposes
-      // is_anonymous on the JWT; either works, and the profile row mirrors it.
-      isAnonymous: user ? user.is_anonymous !== false : true,
+      isTester,
       email: user?.email ?? null,
 
-      async linkGoogle() {
-        // linkIdentity attaches Google to the CURRENT user rather than creating
-        // a new one — this is what carries the anonymous history across.
+      async signInWithGoogle() {
         const redirectTo = AuthSession.makeRedirectUri({ scheme: "bizjadrill" });
-        const { data, error: linkError } = await supabase.auth.linkIdentity({
+        const { data, error: signInError } = await supabase.auth.signInWithOAuth({
           provider: "google",
           options: { redirectTo, skipBrowserRedirect: Platform.OS !== "web" },
         });
-        if (linkError) throw linkError;
+        if (signInError) throw signInError;
         if (Platform.OS === "web" || !data?.url) return; // the browser handles it
 
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
@@ -125,13 +137,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       async signOut() {
         await supabase.auth.signOut();
-        // Never leave the app without a user: sign straight back in as a new
-        // anonymous one, so the next screen has somewhere to write.
-        const { data: anon } = await supabase.auth.signInAnonymously();
-        setSession(anon.session ?? null);
+        setSession(null);
+        setIsTester(null);
       },
     };
-  }, [session, loading, error]);
+  }, [session, loading, error, isTester]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

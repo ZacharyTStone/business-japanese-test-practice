@@ -110,34 +110,45 @@ without a picture, which the app allows.
 
 ---
 
-## 4. Google identity linking has never been tested end to end
+## 4. Google sign-in has never been tested end to end
 
-**What exists.** The client signs in anonymously before it shows anything, and
-`linkGoogle` calls `linkIdentity`. The account screen has a recoverable error
-state. The schema keeps the same user id across linking, so nothing merges.
+**What exists.** The app opens only to a Google account on the tester list.
+The client shows a sign-in screen, calls `signInWithOAuth`, and asks one RPC
+(`is_tester()`) whether the account is allowed; the database enforces the same
+check in every row-level policy, so the client is not what keeps anybody out.
+The anonymous-first path the schema was built for is switched off in the client
+until the app opens.
 
 **What is blocked.** All of it is configuration in two dashboards, and none of it
 can be verified from here.
 
 **What unblocks it.**
 
-1. Enable anonymous sign-ins and Google as an Auth provider in Supabase.
-2. Enable **manual identity linking** — the explicit `linkIdentity` path the
-   client uses requires it.
-3. Register the Supabase callback URL in Google Cloud Console. The Google client
-   secret goes in Supabase and nowhere else.
-4. In Supabase Auth URL Configuration, allow the production Cloudflare hostname,
-   the local development URLs, and the `bizjadrill` scheme.
-5. Set only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in
+1. In Supabase → Authentication → Providers, enable **Google**. Leave
+   anonymous sign-ins **off**; the client no longer uses them.
+2. In Google Cloud Console, create an OAuth client and register the Supabase
+   callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`). The
+   Google client id and secret go in the Supabase provider settings and
+   nowhere else.
+3. In Supabase → Authentication → URL Configuration, allow the production
+   Cloudflare hostname, the local development URLs, and the `bizjadrill`
+   scheme.
+4. Set only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in
    the Cloudflare build variables. **Never a service-role key.**
+5. Put yourself on the tester list. `bjt tester you@gmail.com --note owner`
+   prints the statement; apply it with
+   `psql "$SUPABASE_DB_URL" -c "<statement>"`.
 
-Then the acceptance tests, which are the point:
+Then the acceptance checks, which are the point:
 
-- Fresh browser: anonymous sign-in creates exactly one profile.
-- Answer some items anonymously; attempts and weakness metrics change.
-- Link Google; the user id, profile, attempts and streak are **unchanged**.
-- Refresh, and open on a second device; the linked history is there.
-- Sign out; a new anonymous user cannot read the linked user's data.
+- Fresh browser: the sign-in screen, and nothing behind it without signing in.
+- Sign in with a Google account that is **not** on the list: the "not open
+  yet" screen names the account; the network tab shows every query returning
+  nothing.
+- Sign in with the listed account: one profile is created; answering items
+  writes attempts and moves the weakness metrics.
+- Refresh, and open on a second device: the same history is there.
+- Sign out: the sign-in screen again, and no data readable.
 - Denied consent, cancelled consent, an unapproved redirect URL, and a missing
   build variable each fail in a way the app explains.
 - Repeat on the deployed hostname, not only on localhost.
