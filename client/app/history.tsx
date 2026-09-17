@@ -27,6 +27,11 @@ const LETTERS = ["A", "B", "C", "D"];
 
 export default function History() {
   const router = useRouter();
+  // 記録 pushes this screen, but the result screen replaces itself with it, and
+  // a replaced screen has nothing underneath to go back to. Every way out of
+  // here goes through this, so none of them can be a dead end.
+  const leave = () =>
+    router.canGoBack() ? router.back() : router.replace("/progress");
   const { lang, t } = useLang();
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +68,7 @@ export default function History() {
           title={t("cant_load")}
           body={error}
           tone="warn"
-          action={{ label: t("back"), onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: leave }}
         />
       </View>
     );
@@ -76,7 +81,7 @@ export default function History() {
         <Notice
           title={t("hist_empty_title")}
           body={t("hist_empty_body")}
-          action={{ label: t("back"), onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: leave }}
         />
       </View>
     );

@@ -1,6 +1,7 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
+import { Pressable, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../src/lib/auth";
@@ -8,8 +9,38 @@ import { LangProvider, useLang } from "../src/lib/i18n";
 import { isConfigured } from "../src/lib/supabase";
 import { Loading } from "../src/ui/components";
 import { ClosedScreen, SignInScreen } from "../src/ui/gate";
-import { colors } from "../src/ui/theme";
+import { Icon } from "../src/ui/icons";
+import { colors, space, type } from "../src/ui/theme";
 import { WelcomeScreen, useWelcome } from "../src/ui/welcome";
+
+/**
+ * The way out of 解いた問題.
+ *
+ * It needs one of its own because the screen is reached two ways and only one
+ * of them leaves anything underneath: 記録 pushes it, but the result screen
+ * *replaces* itself with it, and a replaced screen has no history to go back
+ * through. On the web that meant a header with no back arrow and no browser
+ * entry to press either — a room with the door painted on. So the control is
+ * always drawn, and when there is nothing behind it, it goes to 記録, which is
+ * where the screen belongs.
+ */
+function BackToRecord() {
+  const router = useRouter();
+  const { t } = useLang();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => (router.canGoBack() ? router.back() : router.replace("/progress"))}
+      style={({ pressed }) => [
+        { flexDirection: "row", alignItems: "center", gap: space.xs, paddingRight: space.md },
+        pressed && { opacity: 0.6 },
+      ]}
+    >
+      <Icon name="chevronLeft" size={18} color={colors.accent} strokeWidth={2} />
+      <Text style={[type.small, { color: colors.accent, fontWeight: "700" }]}>{t("back")}</Text>
+    </Pressable>
+  );
+}
 
 export default function RootLayout() {
   return (
@@ -62,7 +93,10 @@ function Navigator() {
               a phone the swipe is easy to trigger by accident while reading. */}
           <Stack.Screen name="practice" options={{ title: t("title_practice"), gestureEnabled: false }} />
           <Stack.Screen name="result" options={{ title: t("title_result"), headerBackVisible: false }} />
-          <Stack.Screen name="history" options={{ title: t("title_history") }} />
+          <Stack.Screen
+            name="history"
+            options={{ title: t("title_history"), headerLeft: () => <BackToRecord /> }}
+          />
         </Stack>
   );
 }

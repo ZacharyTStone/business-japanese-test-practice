@@ -8,8 +8,13 @@
  * choose a level, a type, or a mode, and in this app there is nowhere they
  * could: this button is the only way to a question.
  *
- * Under it is one sentence: what the app noticed, and what it is doing about
- * it. The statistics live on the 記録 tab; home is not a dashboard.
+ * Under it, nothing. There used to be a card here narrating what the app had
+ * noticed and what it was doing about it — the level rule, the tag it judged
+ * weak, how many answers until it would have an opinion. None of it was
+ * anything to act on: the queue already puts those items first, and a person
+ * who came to answer five questions does not need the machinery described to
+ * them on the way past. The statistics live on 記録; the start screen explains
+ * the plan once. Home starts the set.
  */
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -19,82 +24,26 @@ import { useAuth } from "../../src/lib/auth";
 import {
   fetchAnsweredToday,
   fetchProfile,
-  fetchReviewLoad,
   fetchSectionLevels,
-  fetchRoleTraps,
   fetchStreak,
-  fetchTagStats,
   fetchTypeStats,
 } from "../../src/lib/db";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
-import { useLang, type Key, type Lang } from "../../src/lib/i18n";
-import { levelsAgree, SECTION_SHORT, sortLevels } from "../../src/lib/levels";
-import { roleInfo } from "../../src/lib/roles";
+import { useLang } from "../../src/lib/i18n";
+import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type {
-  Profile,
-  ReviewLoad,
-  RoleTrap,
-  SectionLevel,
-  TagStat,
-  TypeStat,
-} from "../../src/lib/types";
+import type { Profile, SectionLevel, TypeStat } from "../../src/lib/types";
 import {
   Button,
-  Card,
   GradientCard,
-  IconBadge,
   Loading,
   Notice,
   ProgressRing,
   ScreenHeader,
   ScreenMessage,
-  SectionLabel,
 } from "../../src/ui/components";
 import { Icon } from "../../src/ui/icons";
 import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
-
-/** Below this, "your weakness" is noise rather than a signal. */
-const MIN_ATTEMPTS_FOR_WEAKNESS = 10;
-/** A tag needs this many answers before it is called weak. */
-const MIN_ANSWERS_PER_TAG = 4;
-
-/**
- * The one sentence the app says about its plan.
- *
- * All the thinking happens in the database — the level, the retries, the
- * weakest tag, the stretch item — and none of it needs a dashboard. What a
- * person needs is to know that it happened. So: one line, in their words, that
- * says what the app noticed and what it is doing about it. Nothing here is a
- * number to plan around; it is the app explaining itself.
- */
-function plan(
-  lang: Lang,
-  t: (key: Key, vars?: Record<string, string | number>) => string,
-  answered: number,
-  due: number,
-  tags: TagStat[],
-  traps: RoleTrap[],
-  onStretch: boolean
-): string {
-  if (answered === 0) return t("plan_first");
-  // Above the weakness lines on purpose: due reviews are a fact about today,
-  // and "three are waiting" beats "eight more answers and I will have an
-  // opinion" for somebody deciding whether to open the app now.
-  if (due > 0) return t("plan_due", { n: due });
-  if (answered < MIN_ATTEMPTS_FOR_WEAKNESS) {
-    return t("plan_watching", { n: MIN_ATTEMPTS_FOR_WEAKNESS - answered });
-  }
-  const weak = tags
-    .filter((x) => x.answered >= MIN_ANSWERS_PER_TAG && x.accuracy < 0.7)
-    .sort((a, b) => a.accuracy - b.accuracy)[0];
-  if (weak) return t("plan_weak", { tag: weak.tag, pct: Math.round(weak.accuracy * 100) });
-  const trap = traps[0];
-  if (trap && trap.times_chosen >= 3) {
-    return t("plan_trap", { label: roleInfo(trap.role, lang).label });
-  }
-  return t(onStretch ? "plan_stretch" : "plan_good");
-}
 
 export default function Home() {
   const router = useRouter();
@@ -104,10 +53,7 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
   const [today, setToday] = useState(0);
-  const [traps, setTraps] = useState<RoleTrap[]>([]);
-  const [tags, setTags] = useState<TagStat[]>([]);
   const [types, setTypes] = useState<TypeStat[]>([]);
-  const [review, setReview] = useState<ReviewLoad>({ due_now: 0, tracked: 0, next_due_at: null });
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,24 +65,18 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, t, r, tg, ty, rv, lv] = await Promise.all([
+          const [p, s, t, ty, lv] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchAnsweredToday(),
-            fetchRoleTraps(),
-            fetchTagStats(),
             fetchTypeStats(),
-            fetchReviewLoad(),
             fetchSectionLevels(),
           ]);
           if (cancelled) return;
           setProfile(p);
           setStreak(s);
           setToday(t);
-          setTraps(r);
-          setTags(tg);
           setTypes(ty);
-          setReview(rv);
           setLevels(lv);
         } catch (e) {
           // Without this the screen sat on its spinner for ever when the record
@@ -189,19 +129,21 @@ export default function Home() {
   const goal = profile?.daily_goal ?? 5;
   const done = Math.min(today, goal);
   const countdown = countdownLine(daysUntil(profile?.exam_date), lang);
-  const answered = types.reduce((n, t) => n + t.answered, 0);
-  const level = profile?.target_level ?? "J2";
-  // One number while the three agree, which is how everybody starts; the three
-  // the moment they diverge, because by then the split IS the news — "聴解 J3 ・
-  // 読解 J1" is the single most useful sentence the app can put on this screen.
+
+  // Only sections with enough answers behind them get named. A new account has
+  // none, so this line is simply absent rather than announcing a level nobody
+  // has earned — and it fills in section by section as the evidence arrives.
+  // One number while the placed sections agree; the three the moment they
+  // diverge, because by then the split IS the news.
+  const placed = placedLevels(levels, types);
   const levelLine =
-    levels.length === 3 && !levelsAgree(levels)
-      ? t("level_split", {
-          levels: sortLevels(levels)
-            .map((l) => `${t(SECTION_SHORT[l.section])} ${l.level}`)
-            .join("・"),
-        })
-      : t("level_line", { level });
+    placed.length === 0
+      ? undefined
+      : levelsAgree(placed)
+        ? t("level_line", { level: placed[0].level })
+        : t("level_split", {
+            levels: placed.map((l) => `${t(SECTION_SHORT[l.section])} ${l.level}`).join("・"),
+          });
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
@@ -249,19 +191,6 @@ export default function Home() {
           onPress={() => router.push("/practice")}
         />
       </GradientCard>
-
-      <View style={{ gap: space.md }}>
-        <SectionLabel>{t("thinking")}</SectionLabel>
-        <Card style={{ gap: space.md }}>
-          <View style={styles.trapHead}>
-            <IconBadge name="spark" tone="violet" />
-            <Text style={[type.body, { flex: 1 }]}>
-              {plan(lang, t, answered, review.due_now, tags, traps, level !== "J1")}
-            </Text>
-          </View>
-        </Card>
-      </View>
-
     </ScrollView>
   );
 }
@@ -272,7 +201,6 @@ const styles = StyleSheet.create({
   heroLabel: { color: colors.onAccentMuted, fontSize: 13, fontWeight: "700", letterSpacing: 0.6 },
   heroTitle: { color: colors.onAccent, fontSize: 30, fontWeight: "700", lineHeight: 40 },
   heroSub: { color: colors.onAccentMuted, fontSize: 13, lineHeight: 21 },
-  trapHead: { flexDirection: "row", alignItems: "center", gap: space.md },
   streakPill: {
     flexDirection: "row",
     alignItems: "center",

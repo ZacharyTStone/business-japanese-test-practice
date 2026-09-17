@@ -1,32 +1,35 @@
 /**
  * The account screen: who is signed in, the three levels, the exam date, the
- * language. While the app is in testing everybody here is signed in with
- * Google and on the tester list, or they would not have got past the door
- * (ui/gate.tsx), so there is nothing to link and nothing to explain about it.
+ * language. While the app is in testing everybody here is on the tester list,
+ * or they would not have got past the door (ui/gate.tsx), so there is nothing
+ * to link and nothing to explain about it.
  *
  * The levels are shown, not chosen — three of them, one per exam section,
- * because almost nobody is the same at listening and at reading. The database
- * moves each on the evidence of the answers in that section (twenty there, 80%
- * right: up; 40% or fewer: down), and the one sentence here says so, because a
- * number that moves by itself should say why. The exam date is the only thing a
- * person is asked for, and it is asked here rather than on first launch: a
- * countdown helps, a form on the first screen does not.
+ * because almost nobody is the same at listening and at reading. A section
+ * reads 「—」 until there are ten answers behind it: the database has to serve
+ * something from the first question, but a starting level is a placeholder and
+ * printing it as a level says the app has concluded something it has not.
+ *
+ * The exam date is the only thing a person is asked for, and it is a date, not
+ * a rounding of one. It is asked here rather than on first launch: a countdown
+ * helps, a form on the first screen does not.
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchProfile, fetchSectionLevels, updateProfile } from "../../src/lib/db";
-import { countdownLine, daysUntil, formatExamDate, monthsFromNow } from "../../src/lib/exam";
-import { LANG_NAME, LANGS, useLang, type Key } from "../../src/lib/i18n";
-import { SECTION_NAME, SECTION_ORDER, levelOf } from "../../src/lib/levels";
+import { fetchProfile, fetchSectionLevels, fetchTypeStats, updateProfile } from "../../src/lib/db";
+import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/lib/exam";
+import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
+import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, SectionLevel } from "../../src/lib/types";
+import type { Profile, SectionLevel, TypeStat } from "../../src/lib/types";
 import {
   Button,
   Card,
   Chip,
+  DateField,
   IconBadge,
   Loading,
   Notice,
@@ -36,18 +39,13 @@ import {
 } from "../../src/ui/components";
 import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
-const EXAM_PRESETS: { key: Key; months: number }[] = [
-  { key: "preset_1", months: 1 },
-  { key: "preset_3", months: 3 },
-  { key: "preset_6", months: 6 },
-];
-
 export default function Account() {
   const router = useRouter();
   const { lang, setLang, t } = useLang();
   const { email, signOut, loading: authLoading, error: authError } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
+  const [types, setTypes] = useState<TypeStat[]>([]);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -57,11 +55,15 @@ export default function Account() {
     fetchProfile()
       .then(setProfile)
       .catch((e) => setProfileError(e instanceof Error ? e.message : String(e)));
-    // Not fatal if it fails: the card falls back to the one-line summary, which
-    // is a worse answer rather than a broken screen.
+    // Neither is fatal if it fails: with no levels and no counts every section
+    // reads 「—」, which is a worse answer rather than a broken screen — and a
+    // safe one, since 「—」 is exactly what an unplaced section says anyway.
     fetchSectionLevels()
       .then(setLevels)
       .catch(() => setLevels([]));
+    fetchTypeStats()
+      .then(setTypes)
+      .catch(() => setTypes([]));
   }, [authLoading, authError, reloads]);
 
   async function setExamDate(date: string | null) {
@@ -122,7 +124,6 @@ export default function Account() {
             <Text style={type.small}>{email ?? t("acc_google")}</Text>
           </View>
         </View>
-        <Text style={type.small}>{t("acc_any_device")}</Text>
       </Card>
 
       <View style={{ gap: space.md }}>
@@ -134,13 +135,11 @@ export default function Account() {
               {SECTION_ORDER.map((section) => (
                 <View key={section} style={styles.levelRow}>
                   <Text style={[type.body, { flex: 1 }]}>{t(SECTION_NAME[section])}</Text>
-                  <Text style={type.stat}>{levelOf(levels, section) ?? profile.target_level}</Text>
+                  <Text style={type.stat}>{placedLevel(levels, types, section) ?? "—"}</Text>
                 </View>
               ))}
-              <Text style={type.small}>{t("acc_level_sub")}</Text>
             </View>
           </View>
-          <Text style={type.small}>{t("acc_level_rule")}</Text>
         </Card>
       </View>
 
@@ -153,24 +152,21 @@ export default function Account() {
               <Text style={type.h2}>
                 {profile.exam_date ? formatExamDate(profile.exam_date, lang) : t("acc_exam_unset")}
               </Text>
-              <Text style={type.small}>
-                {countdown ?? t("acc_exam_hint")}
-              </Text>
+              {countdown ? <Text style={type.small}>{countdown}</Text> : null}
             </View>
           </View>
-          <View style={styles.chips}>
-            {EXAM_PRESETS.map((preset) => (
-              <Chip
-                key={preset.key}
-                label={t(preset.key)}
-                selected={false}
-                onPress={() => setExamDate(monthsFromNow(preset.months))}
-              />
-            ))}
-            {profile.exam_date ? (
+          <DateField
+            value={profile.exam_date}
+            onChange={setExamDate}
+            placeholder={t("acc_exam_placeholder")}
+            min={todayIso()}
+            accessibilityLabel={t("acc_exam")}
+          />
+          {profile.exam_date ? (
+            <View style={styles.chips}>
               <Chip label={t("clear")} selected={false} onPress={() => setExamDate(null)} />
-            ) : null}
-          </View>
+            </View>
+          ) : null}
         </Card>
       </View>
 

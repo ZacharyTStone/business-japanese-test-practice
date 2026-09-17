@@ -3,14 +3,20 @@
  *
  * Three sections first — 聴解, 聴読解, 読解 — because that is what a person
  * gets back from the real thing, and it is the shape their study plan has to
- * take. The nine types sit under a fold for anyone who wants the finer grain;
- * the tag list is the part that earns its place beneath that. Knowing you are
- * at 62% on 発言聴解 is a grade; knowing you are at 30% on the telephone and
- * 85% face to face is a plan for the evening.
+ * take. All nine types are drawn under it, unfolded: this is the screen
+ * somebody opens *to* see where they stand, and a chart behind a "show me"
+ * link is a chart most people never see. The tag list earns its place beneath
+ * that — knowing you are at 62% on 発言聴解 is a grade; knowing you are at 30%
+ * on the telephone and 85% face to face is a plan for the evening.
+ *
+ * A section's level is printed only once the answers have earned it. Before
+ * that the app is serving a neutral starting level, and a "J2" beside a section
+ * with two answers in it reads as a verdict on the learner rather than as the
+ * placeholder it is.
  */
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
   fetchRoleTraps,
@@ -20,7 +26,7 @@ import {
   hasAdFree,
 } from "../../src/lib/db";
 import { useLang, type Key } from "../../src/lib/i18n";
-import { levelOf } from "../../src/lib/levels";
+import { placedLevel } from "../../src/lib/levels";
 import { roleInfo } from "../../src/lib/roles";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { RoleTrap, Section, SectionLevel, TagStat, TypeStat } from "../../src/lib/types";
@@ -68,7 +74,6 @@ export default function Progress() {
   const [adFree, setAdFree] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
-  const [showTypes, setShowTypes] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -137,7 +142,7 @@ export default function Progress() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <ScreenHeader title={t("tab_progress")} subtitle={t("prog_sub")} />
+      <ScreenHeader title={t("tab_progress")} />
 
       <Card style={{ gap: space.lg }}>
         {SECTIONS.map((section) => {
@@ -150,7 +155,7 @@ export default function Progress() {
           // The level being served here, beside the accuracy that earned it.
           // This is the whole per-section design in one glance: 読解 J1 next to
           // 聴解 J3 says more than either number does alone.
-          const level = levelOf(levels, section.id);
+          const level = placedLevel(levels, types, section.id);
           return (
             <View key={section.id} style={{ gap: 6 }}>
               <View style={styles.row}>
@@ -167,26 +172,12 @@ export default function Progress() {
             </View>
           );
         })}
-        <Text style={type.small}>
-          {answered === 0 ? t("prog_first") : t("prog_level_note")}
-        </Text>
+        {answered === 0 ? <Text style={type.small}>{t("prog_first")}</Text> : null}
       </Card>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: showTypes }}
-        onPress={() => setShowTypes((v) => !v)}
-        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
-      >
-        <Text style={[type.small, styles.toggle]}>
-          {showTypes ? t("prog_types_close") : t("prog_types_open")}
-        </Text>
-      </Pressable>
-      {showTypes ? (
-        <Card style={{ gap: space.md }}>
-          <TypeRadar stats={types} />
-        </Card>
-      ) : null}
+      <Card style={{ gap: space.md }}>
+        <TypeRadar stats={types} />
+      </Card>
 
       {traps.length > 0 ? (
         <Card style={{ gap: space.lg }}>
@@ -222,11 +213,6 @@ export default function Progress() {
               </View>
             </View>
           ))}
-          <Text style={type.small}>{t("prog_min_tags", { n: MIN_ANSWERS_PER_TAG })}</Text>
-        </Card>
-      ) : answered > 0 ? (
-        <Card>
-          <Text style={type.small}>{t("prog_more")}</Text>
         </Card>
       ) : null}
 
@@ -252,5 +238,4 @@ const styles = StyleSheet.create({
   trapRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   track: { height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: "hidden" },
   fill: { height: 8, backgroundColor: colors.accent, borderRadius: 4 },
-  toggle: { textAlign: "center", textDecorationLine: "underline" },
 });

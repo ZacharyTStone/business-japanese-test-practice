@@ -74,6 +74,17 @@ const CHANNEL_KEY: Record<string, Key> = {
   written: "ch_written",
 };
 
+/** How the words travel, as a picture. It is the one part of the scene that
+ *  changes the right answer without being in the sentence — on the phone you
+ *  name yourself and your company, face to face you do not — so it is worth
+ *  being the thing the eye finds first in the strip. */
+const CHANNEL_EMOJI: Record<string, string> = {
+  in_person: "🤝",
+  phone: "📞",
+  video: "💻",
+  written: "✉️",
+};
+
 /** What to tell the learner to do. The act is the same everywhere, but the
  *  instruction is not: "最も適切な言い方" makes no sense for a reading item. */
 const PROMPT_KEY: Record<string, Key> = {
@@ -285,6 +296,17 @@ export default function Practice() {
   const role = graded?.chosenRole || chosenOption?.role || "";
   const mood = graded ? moodFor(role, graded.isCorrect) : "happy";
   const explanation = lang === "en" && item.explanation_en ? item.explanation_en : item.explanation_ja;
+  // The one line under the verdict. For a right answer it is why that option
+  // fits — and the per-option `why` is written in Japanese only, so in English
+  // the item's own gloss is the sentence that exists. Wrong answers get the
+  // listener's reaction instead, which is already translated.
+  const verdictSub = graded
+    ? graded.isCorrect
+      ? lang === "en" && item.explanation_en
+        ? item.explanation_en
+        : correctOption?.why
+      : moodLabel(mood, lang)
+    : "";
 
   /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
   function onKey(key: string): boolean | void {
@@ -491,9 +513,7 @@ export default function Practice() {
                 <Text style={[type.h2, graded.isCorrect && { color: colors.correct }]}>
                   {graded.isCorrect ? t("correct_title") : verdictFor(role, item.listener_role, lang)}
                 </Text>
-                <Text style={type.small}>
-                  {graded.isCorrect ? correctOption?.why : moodLabel(mood, lang)}
-                </Text>
+                <Text style={type.small}>{verdictSub}</Text>
               </View>
             </View>
             {!graded.isCorrect ? <RudenessMeter role={role} showLabel={false} /> : null}
@@ -512,7 +532,9 @@ export default function Practice() {
 
           {showDetails ? (
             <Card style={{ gap: space.md }}>
-              <Text style={type.body}>{explanation}</Text>
+              {/* Skipped when the verdict line above already is it, which is the
+                  English case for a right answer. */}
+              {explanation === verdictSub ? null : <Text style={type.body}>{explanation}</Text>}
               <View style={{ gap: space.sm }}>
                 {options.map((option, i) => (
                   <View key={option.position} style={styles.why}>
@@ -581,7 +603,9 @@ function SceneStrip({ item, big }: { item: QueuedItem; big: boolean }) {
   if (item.listener_role) parts.push({ k: t("other"), v: item.listener_role });
   if (item.channel) {
     const key = CHANNEL_KEY[item.channel];
-    parts.push({ k: "", v: key ? t(key) : item.channel });
+    const emoji = CHANNEL_EMOJI[item.channel];
+    const name = key ? t(key) : item.channel;
+    parts.push({ k: "", v: emoji ? `${emoji} ${name}` : name });
   }
   if (!parts.length) return null;
   return (
@@ -624,6 +648,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     gap: 1,
+    // The channel pill carries no label above its value, so on its own it would
+    // sit its one line against the top of a row whose other pills are two lines
+    // tall. Centring holds the three of them on one line.
+    justifyContent: "center",
     ...shadow.card,
   },
   stripPillBig: { paddingHorizontal: space.lg, paddingVertical: space.md },

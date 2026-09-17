@@ -39,6 +39,13 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
+        // Always stacked, at every width. Left to itself the bar puts the label
+        // *beside* the icon once the viewport is wide enough — which is what a
+        // desktop browser gets — and in that arrangement the label's top margin,
+        // there to space it under the icon, drops it a couple of pixels below
+        // the icon's centre line. Same bar on a phone and on a laptop, and the
+        // one spacing rule is right in both.
+        tabBarLabelPosition: "below-icon",
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopWidth: 0,
@@ -47,7 +54,10 @@ export default function TabsLayout() {
           height: 76,
           ...shadow.bar,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "700", marginTop: 2 },
+        // The icon and its word are one thing; centring them together is what
+        // keeps the three tabs sitting on the same line as each other.
+        tabBarItemStyle: { justifyContent: "center", alignItems: "center" },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "700", marginTop: 2, textAlign: "center" },
       }}
     >
       <Tabs.Screen name="index" options={{ title: t("tab_home"), tabBarIcon: tabIcon("home") }} />
