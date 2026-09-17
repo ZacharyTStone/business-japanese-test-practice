@@ -11,7 +11,7 @@
 #                applies only what is new next time.
 #   the bank     every batches/*.sql, which `bjt publish` wrote as upserts.
 #                Includes scenes.sql once the nightly job has drawn artwork.
-#   a tester     optional: the Google account email typed into the run form,
+#   a tester     optional: the email address typed into the run form,
 #                added to public.testers with `bjt tester`. The app admits
 #                nobody who is not in that table.
 #
@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       tester_email:
-        description: "Google account to let into the app (leave blank to add nobody)"
+        description: "Email address to let into the app (leave blank to add nobody)"
         required: false
         default: ""
       tester_note:

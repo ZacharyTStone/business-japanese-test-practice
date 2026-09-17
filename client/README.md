@@ -29,14 +29,15 @@ The cost of hiding all of it is that the app's intelligence becomes invisible.
 That is what `src/ui/welcome.tsx` is for: shown once, on first launch, it says
 the three true things (your answers set the level; the questions aim at how you
 go wrong; your part is to answer) and then never appears again. It is also the
-only sign-in prompt — Google, and nothing else, while the app is in testing.
+only introduction; the sign-in screen comes right after it.
 
 ## Testers only, for now
 
-The app opens only to a Google account whose email is on the tester list
+The app opens only to a signed-in user whose email is on the tester list
 (`public.testers`), and it is the database that decides: every row-level policy
 requires it, and the anon role can read nothing at all. `src/ui/gate.tsx` is the
-two screens that say so — sign in, or "not open yet" with the account named —
+two screens that say so — email and password, or "not open yet" with the
+account named —
 and `src/lib/auth.tsx` asks the one RPC, `is_tester()`, that answers. Neither is
 what keeps anybody out; a client that skipped both would see an empty app.
 
@@ -116,7 +117,7 @@ app/                expo-router screens
 src/lib/
   i18n.tsx          the words on the furniture, ja/en; questions stay Japanese
   supabase.ts       the client (anon key is public by design — RLS is the guard)
-  auth.tsx          Google sign-in, the tester check, token refresh on resume
+  auth.tsx          email sign-in, the tester check, token refresh on resume
   db.ts             every query the app makes, in one file
   levels.ts         the three section levels: order, names, and what moved
   roles.ts          distractor role → Japanese label + 失礼度メーター values

@@ -17,17 +17,15 @@
  * not about who is holding it, and a person who reinstalls has forgotten the
  * explanation anyway.
  *
- * Google is the only button, because while the app is in testing the database
- * admits nobody else (see lib/auth.tsx). The screen is marked seen before the
- * sign-in starts: on web the sign-in leaves the page, and a person coming back
- * from Google should land in the app, not on this explanation a second time.
+ * One button, which leads to the sign-in screen: while the app is in testing
+ * the database admits nobody who is not on the tester list (see lib/auth.tsx),
+ * so the explanation ends and the door is next.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useAuth } from "../lib/auth";
 import { useLang, type Key } from "../lib/i18n";
 import { Button, IconBadge } from "./components";
 import type { IconName } from "./icons";
@@ -86,23 +84,6 @@ export function useWelcome(): Welcome {
 export function WelcomeScreen({ onStart }: { onStart: () => void }) {
   const { t } = useLang();
   const insets = useSafeAreaInsets();
-  const { signInWithGoogle } = useAuth();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function withGoogle() {
-    setBusy(true);
-    setError(null);
-    try {
-      onStart();
-      await signInWithGoogle();
-    } catch (e) {
-      // A failed sign-in lands on the sign-in screen, which has the same
-      // button; the explanation above does not need reading twice.
-      setError(e instanceof Error ? e.message : String(e));
-      setBusy(false);
-    }
-  }
 
   return (
     <ScrollView
@@ -130,13 +111,7 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
       </View>
 
       <View style={{ gap: space.md }}>
-        <Button
-          label={busy ? t("wel_google_busy") : t("wel_google")}
-          icon="user"
-          disabled={busy}
-          onPress={withGoogle}
-        />
-        {error ? <Text style={[type.small, { color: colors.wrong }]}>{error}</Text> : null}
+        <Button label={t("wel_start")} icon="play" onPress={onStart} />
         <Text style={[type.small, styles.footnote]}>{t("wel_testers_note")}</Text>
         <Text style={[type.small, styles.footnote]}>{t("wel_honesty")}</Text>
       </View>

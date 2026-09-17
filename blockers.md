@@ -110,48 +110,51 @@ without a picture, which the app allows.
 
 ---
 
-## 4. Google sign-in has never been tested end to end
+## 4. Sign-in has been tested by one person on one project
 
-**What exists.** The app opens only to a Google account on the tester list.
-The client shows a sign-in screen, calls `signInWithOAuth`, and asks one RPC
-(`is_tester()`) whether the account is allowed; the database enforces the same
-check in every row-level policy, so the client is not what keeps anybody out.
-The anonymous-first path the schema was built for is switched off in the client
-until the app opens.
+**What exists.** The app opens only to an email address on the tester list.
+The client shows an email-and-password screen (sign in, or create an
+account), then asks one RPC (`is_tester()`) whether the email is allowed; the
+database enforces the same check in every row-level policy, so the client is
+not what keeps anybody out. Google sign-in is not wired up: it needs an OAuth
+client in Google Cloud Console and a consent screen, which is more than a
+one-person test needs. When it comes back it is a second button on the same
+screen, and the tester list matches on the same email.
 
-**What is blocked.** All of it is configuration in two dashboards, and none of it
-can be verified from here.
+**What is blocked.** Only the dashboard settings below, and a deployed URL to
+sign in from.
 
 **What unblocks it.**
 
-1. In Supabase → Authentication → Providers, enable **Google**. Leave
-   anonymous sign-ins **off**; the client no longer uses them.
-2. In Google Cloud Console, create an OAuth client and register the Supabase
-   callback URL (`https://<project-ref>.supabase.co/auth/v1/callback`). The
-   Google client id and secret go in the Supabase provider settings and
-   nowhere else.
-3. In Supabase → Authentication → URL Configuration, allow the production
-   Cloudflare hostname, the local development URLs, and the `bizjadrill`
-   scheme.
+1. In Supabase → Authentication → Sign In / Providers → **Email**: enabled
+   (it is by default). Turn **Confirm email** off while testing, or every new
+   account waits on a confirmation link, and the built-in mailer only sends to
+   the project's own team members.
+2. Leave anonymous sign-ins **off**; the client no longer uses them.
+3. In Supabase → Authentication → URL Configuration, set the Site URL to
+   where the app is served.
 4. Set only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in
    the Cloudflare build variables. **Never a service-role key.**
-5. Put yourself on the tester list. `bjt tester you@gmail.com --note owner`
-   prints the statement; apply it with
-   `psql "$SUPABASE_DB_URL" -c "<statement>"`.
+5. Put the email on the tester list: the **deploy database** workflow's
+   `tester_email` field, or `bjt tester you@example.com` applied with psql.
 
 Then the acceptance checks, which are the point:
 
 - Fresh browser: the sign-in screen, and nothing behind it without signing in.
-- Sign in with a Google account that is **not** on the list: the "not open
-  yet" screen names the account; the network tab shows every query returning
-  nothing.
-- Sign in with the listed account: one profile is created; answering items
+- Create an account with an email that is **not** on the list: the "not open
+  yet" screen names it; the network tab shows every query returning nothing.
+- Sign in with the listed email: one profile is created; answering items
   writes attempts and moves the weakness metrics.
 - Refresh, and open on a second device: the same history is there.
 - Sign out: the sign-in screen again, and no data readable.
-- Denied consent, cancelled consent, an unapproved redirect URL, and a missing
-  build variable each fail in a way the app explains.
-- Repeat on the deployed hostname, not only on localhost.
+- A wrong password and a missing build variable each fail in a way the app
+  explains.
+
+**Google, when wanted.** Create an OAuth client in Google Cloud Console with
+the redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`, paste
+its id and secret into Supabase → Authentication → Providers → Google, allow
+the `bizjadrill` scheme under URL Configuration, and add a button that calls
+`signInWithOAuth({ provider: "google" })` beside the email form.
 
 ---
 

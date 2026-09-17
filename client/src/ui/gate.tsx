@@ -4,7 +4,7 @@
  * Two screens, and neither explains the app — that is the welcome screen's
  * job, and it has already happened by the time either of these shows.
  *
- *   SignInScreen  there is no session. One button: Google.
+ *   SignInScreen  there is no session. Email, password, sign in or create.
  *   ClosedScreen  there is a session, and the database says this account is
  *                 not on the tester list. Says which account, so a person who
  *                 signed in with the wrong one can see that, and offers the
@@ -15,24 +15,30 @@
  * screens would see nothing anyway. They exist to say so politely.
  */
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
 import { useLang } from "../lib/i18n";
 import { Button, IconBadge, ScreenMessage } from "./components";
-import { colors, space, type } from "./theme";
+import { colors, radius, space, type } from "./theme";
 
 export function SignInScreen() {
   const { t } = useLang();
-  const { signInWithGoogle, error: authError } = useAuth();
+  const { signIn, signUp, error: authError } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  async function withGoogle() {
+  const ready = email.includes("@") && password.length >= 6;
+
+  async function attempt(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
-      await signInWithGoogle();
+      await action();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -46,12 +52,49 @@ export function SignInScreen() {
         <IconBadge name="user" tone="violet" />
         <Text style={type.h2}>{t("gate_title")}</Text>
         <Text style={type.small}>{t("gate_body")}</Text>
-        <Button
-          label={busy ? t("wel_google_busy") : t("wel_google")}
-          icon="user"
-          disabled={busy}
-          onPress={withGoogle}
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          placeholder={t("gate_email")}
+          placeholderTextColor={colors.muted}
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          textContentType="emailAddress"
+          editable={!busy}
         />
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder={t("gate_password")}
+          placeholderTextColor={colors.muted}
+          secureTextEntry
+          autoComplete="password"
+          textContentType="password"
+          editable={!busy}
+          onSubmitEditing={() => ready && attempt(() => signIn(email, password))}
+        />
+        <Button
+          label={busy ? t("gate_busy") : t("gate_sign_in")}
+          icon="user"
+          disabled={busy || !ready}
+          onPress={() => attempt(() => signIn(email, password))}
+        />
+        <Button
+          label={t("gate_create")}
+          tone="secondary"
+          disabled={busy || !ready}
+          onPress={() =>
+            attempt(async () => {
+              const usable = await signUp(email, password);
+              if (!usable) setNotice(t("gate_check_email"));
+            })
+          }
+        />
+        <Text style={type.small}>{t("gate_password_hint")}</Text>
+        {notice ? <Text style={[type.small, { color: colors.accent }]}>{notice}</Text> : null}
         {error ?? authError ? (
           <Text style={[type.small, { color: colors.wrong }]}>{error ?? authError}</Text>
         ) : null}
@@ -76,5 +119,15 @@ export function ClosedScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: space.md, alignItems: "flex-start" },
+  card: { gap: space.md, alignItems: "stretch" },
+  input: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm + 2,
+    fontSize: 16,
+    color: colors.text,
+  },
 });
