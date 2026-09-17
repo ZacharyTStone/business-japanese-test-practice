@@ -57,19 +57,34 @@ class GateResult:
         return self.verdict == "kept"
 
 
-def _run_side(question: str, options: list[str], answer: int, side: str) -> list[Trial]:
-    trials: list[Trial] = []
-    for t in range(config.GATE_TRIALS):
+def run_trials(question: str, options: list[str], answer: int, side: str, *,
+               model: str, trials: int) -> list[Trial]:
+    """Ask `model` the same question `trials` times and score each answer.
+
+    Shared with the difficulty probe (bjt/fidelity/difficulty.py), which asks
+    the gate's full-view question of a weaker model. A call that fails — outage,
+    refusal, a reply that is not an index — is a trial with `chosen=None`, and
+    it is the caller's business whether that counts as wrong (the gate: yes,
+    consistency is the point) or as not measured (the probe: yes, a fake rate is
+    worse than none).
+    """
+    out: list[Trial] = []
+    for t in range(trials):
         try:
-            res = llm.answer_choice(question, options, model=config.JUDGE_MODEL)
+            res = llm.answer_choice(question, options, model=model)
             chosen = int(res.get("choice", -1))
         except (llm.LLMError, ValueError, TypeError):
             chosen = None
-        trials.append(Trial(side=side, trial=t, chosen=chosen, correct=chosen == answer))
-    return trials
+        out.append(Trial(side=side, trial=t, chosen=chosen, correct=chosen == answer))
+    return out
 
 
-def _questions(item: dict) -> tuple[str, str]:
+def _run_side(question: str, options: list[str], answer: int, side: str) -> list[Trial]:
+    return run_trials(question, options, answer, side,
+                      model=config.JUDGE_MODEL, trials=config.GATE_TRIALS)
+
+
+def questions(item: dict) -> tuple[str, str]:
     """The full-view and cold-view prompts, worded for the item type."""
     if item.get("item_type") == "hatsugen_choukai":
         full = (
@@ -96,7 +111,7 @@ def run_gate(item: dict) -> GateResult:
     options = textutil.option_texts(item)
     answer = correct_index(item["options"])
 
-    full_q, cold_q = _questions(item)
+    full_q, cold_q = questions(item)
 
     full_trials = _run_side(full_q, options, answer, "full")
     cold_trials = _run_side(cold_q, options, answer, "cold")

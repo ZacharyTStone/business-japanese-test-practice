@@ -26,13 +26,12 @@ import {
   fetchProfile,
   fetchSectionLevels,
   fetchStreak,
-  fetchTypeStats,
 } from "../../src/lib/db";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, SectionLevel, TypeStat } from "../../src/lib/types";
+import type { Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   GradientCard,
@@ -53,7 +52,6 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
   const [today, setToday] = useState(0);
-  const [types, setTypes] = useState<TypeStat[]>([]);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,18 +63,16 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, t, ty, lv] = await Promise.all([
+          const [p, s, t, lv] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchAnsweredToday(),
-            fetchTypeStats(),
             fetchSectionLevels(),
           ]);
           if (cancelled) return;
           setProfile(p);
           setStreak(s);
           setToday(t);
-          setTypes(ty);
           setLevels(lv);
         } catch (e) {
           // Without this the screen sat on its spinner for ever when the record
@@ -130,12 +126,12 @@ export default function Home() {
   const done = Math.min(today, goal);
   const countdown = countdownLine(daysUntil(profile?.exam_date), lang);
 
-  // Only sections with enough answers behind them get named. A new account has
-  // none, so this line is simply absent rather than announcing a level nobody
-  // has earned — and it fills in section by section as the evidence arrives.
+  // Only sections the database has placed get named. A new account has none,
+  // so this line is simply absent rather than announcing a level nobody has
+  // earned — and it fills in section by section as the evidence arrives.
   // One number while the placed sections agree; the three the moment they
   // diverge, because by then the split IS the news.
-  const placed = placedLevels(levels, types);
+  const placed = placedLevels(levels);
   const levelLine =
     placed.length === 0
       ? undefined

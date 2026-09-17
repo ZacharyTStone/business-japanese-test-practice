@@ -167,8 +167,10 @@ def bundle_sql(bundle: dict, bundle_id: str) -> str:
             it.get("documents", []),
             it.get("dialogue", []),
             (it.get("audio") or {}).get("narration"),
-            # Null for the hand-written batches, which skip the gate. The queue
-            # reads null as "no opinion" rather than as "average", so an
+            # The difficulty prior, as measured at generation time by the
+            # difficulty probe (or by the gate's full view, when the probe did
+            # not run). Null for the hand-written batches, which skip both. The
+            # queue reads null as "no opinion" rather than as "average", so an
             # unmeasured item is neither promoted nor buried.
             it.get("model_p_correct"),
         ])
