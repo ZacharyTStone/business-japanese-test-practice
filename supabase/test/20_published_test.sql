@@ -183,6 +183,42 @@ begin
     perform test.check(
         (select count(*) from public.next_items(5)) > 0,
         'the queue still has something to serve after a full set');
+
+    -- The five just answered are the last thing the queue should reach for:
+    -- nothing is due for twenty hours, and every unseen item in the window —
+    -- at this level, above it, or below it — comes first. A thousand, so the
+    -- whole window comes back and the five are in it to be last.
+    perform test.check(
+        (select count(*) from public.next_items(1000) where times_seen > 0) = 5
+        and (select max(q.ordinality) from public.next_items(1000) with ordinality as q where q.times_seen = 0)
+            < (select min(q.ordinality) from public.next_items(1000) with ordinality as q where q.times_seen > 0),
+        'and every unseen item precedes every item answered in this session');
+
+    -- The record the screen shows is the record the queue uses. Everything was
+    -- answered a moment ago, so the recent figures equal the lifetime ones.
+    perform test.check(
+        (select count(*) from public.v_my_type_stats where recent_answered > answered) = 0
+        and (select coalesce(sum(recent_answered), 0) from public.v_my_type_stats) = 5,
+        'the radar counts the recent answers, and never more than the lifetime ones');
+    perform test.check(
+        (select count(*) from public.v_my_type_stats
+          where answered > 0
+            and (recent_accuracy is null or recent_accuracy not between 0 and 1
+                 or abs(recent_accuracy - accuracy) > 0.001)) = 0
+        and (select count(*) from public.v_my_type_stats
+              where answered = 0 and recent_accuracy is not null) = 0,
+        'recent accuracy is a share, matches the lifetime one when everything is recent, '
+        'and is null for a type never answered');
+    perform test.check(
+        (select count(*) from public.v_my_tag_stats
+          where recent_answered > answered
+             or recent_accuracy not between 0 and 1
+             or abs(recent_accuracy - accuracy) > 0.001) = 0,
+        'the tag view carries the same two figures, per tag');
+    perform test.check(
+        (select count(*) from public.v_my_role_traps) > 0
+        and (select count(*) from public.v_my_role_traps where recent_times <> times_chosen) = 0,
+        'the trap view counts recent catches, and today they are all of them');
     perform test.check(
         (select count(*) from public.next_items(50) n
           join public.item_options o on o.item_id = n.id and o.position <> n.correct_index
