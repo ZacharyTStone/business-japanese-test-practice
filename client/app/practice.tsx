@@ -55,7 +55,7 @@ import {
 import { useLang, type Key } from "../src/lib/i18n";
 import { verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
+import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { AnsweredItem, QueuedItem, SectionLevel } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
@@ -174,7 +174,7 @@ export default function Practice() {
         setSessionId(await startSession(session.user.id));
         questionShownAt.current = Date.now();
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setError(errorText(e));
       }
     })();
     return () => {

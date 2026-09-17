@@ -21,6 +21,7 @@ import { useAuth } from "../lib/auth";
 import { useLang } from "../lib/i18n";
 import { Button, IconBadge, ScreenMessage } from "./components";
 import { colors, radius, space, type } from "./theme";
+import { errorText } from "../lib/supabase";
 
 export function SignInScreen() {
   const { t } = useLang();
@@ -40,7 +41,7 @@ export function SignInScreen() {
     try {
       await action();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
