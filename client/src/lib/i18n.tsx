@@ -56,9 +56,8 @@ const S = {
   wel_p2_body: ["正誤だけでなく、どのまちがえ方をしたかまで見ます。まちがえた問題は一晩おいて、できた問題も三日後・一週間後と間をあけて、もう一度出します。", "Not just right or wrong — which way you went wrong. A question that caught you comes back after a night's sleep; one you got right comes back in three days, then a week, then longer."],
   wel_p3_title: ["あなたがすることは、答えるだけ", "Your part is to answer"],
   wel_p3_body: ["1日5問、3分ほど。続けるほど、出る問題があなたに合っていきます。", "Five questions a day, about three minutes. The longer you keep at it, the better the questions fit you."],
-  wel_google: ["Googleでログインして始める", "Sign in with Google to start"],
-  wel_google_busy: ["つないでいます…", "Signing in…"],
-  wel_testers_note: ["いまはテスト中です。登録されたGoogleアカウントでのみ使えます。", "The app is in testing and opens only to registered Google accounts."],
+  wel_start: ["始める", "Get started"],
+  wel_testers_note: ["いまはテスト中です。登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   wel_honesty: ["問題はすべて独自に作ったものです。過去問は使っていません。点数の予測は出しません。", "Every question is an original composition — no past papers. The app never predicts a score."],
 
   // home
@@ -84,7 +83,14 @@ const S = {
 
   // the door, while the app is in testing
   gate_title: ["ログインしてください", "Sign in to continue"],
-  gate_body: ["いまはテスト中のため、登録されたGoogleアカウントでのみ使えます。", "The app is in testing and opens only to registered Google accounts."],
+  gate_body: ["いまはテスト中のため、登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
+  gate_email: ["メールアドレス", "Email"],
+  gate_password: ["パスワード", "Password"],
+  gate_password_hint: ["パスワードは6文字以上。初めての方は「アカウントを作る」を押してください。", "Password of at least 6 characters. First time here? Press “Create account”."],
+  gate_sign_in: ["ログイン", "Sign in"],
+  gate_create: ["アカウントを作る", "Create account"],
+  gate_busy: ["確認しています…", "Checking…"],
+  gate_check_email: ["確認メールを送りました。メールのリンクを開いてから、もう一度ログインしてください。", "We sent a confirmation email. Open the link in it, then sign in again."],
   closed_title: ["まだ公開していません", "Not open yet"],
   closed_body: ["{email} はテスト参加者に登録されていません。別のアカウントで入る場合は、いったんログアウトしてください。", "{email} is not on the tester list. To use another account, sign out first."],
 
