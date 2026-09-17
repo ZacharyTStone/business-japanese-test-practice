@@ -14,12 +14,15 @@ mercy of an image model's handwriting.
 This module does no image generation. It says what is needed, what is present,
 and writes the SQL that points the database at what has been approved — the same
 split as ``bjt/tts``, and for the same reason: media arrives by review, not by a
-job deciding it looks fine.
+job deciding it looks fine. The drawing, the review and the upload live in
+``bjt/scene_art.py``; the review there applies the brief in `prompt_for` below,
+rule by rule, and a draft that breaks one is rejected outright.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 from . import config, publish, seedtable
 
@@ -51,15 +54,22 @@ def storage_path(scene_id: str, suffix: str) -> str:
     return f"{scene_id}{suffix}"
 
 
-def survey(media_dir: Path | None = None) -> list[Scene]:
+def survey(media_dir: Path | None = None, remote: Iterable[str] = ()) -> list[Scene]:
     """Every scene the committed seed tables can ask for, and whether it exists.
 
     Demand is counted across all item types, because the bank is shared: a
     reception counter used by 場面把握 and 状況把握 and 発言聴解 is one drawing,
     and the point of the survey is to commission it before a scene that only one
     cell wants.
+
+    `remote` is the listing of the storage bucket, when the caller has one. A
+    scene whose file is already in the bucket has art even on a machine with an
+    empty `media/` — the nightly runner, every night — and must not be drawn
+    again. A local file wins over a remote one, because local is what has just
+    been made and is about to be uploaded.
     """
     media_dir = Path(media_dir or config.MEDIA_DIR) / "scenes"
+    remote = set(remote)
 
     labels: dict[str, str] = {}
     used_by: dict[str, set[str]] = {}
@@ -81,6 +91,11 @@ def survey(media_dir: Path | None = None) -> list[Scene]:
             if candidate.exists():
                 path = storage_path(scene_id, ext)
                 break
+        if path is None:
+            for ext in IMAGE_EXTENSIONS:
+                if storage_path(scene_id, ext) in remote:
+                    path = storage_path(scene_id, ext)
+                    break
         scenes.append(
             Scene(
                 scene_id=scene_id,
@@ -94,31 +109,59 @@ def survey(media_dir: Path | None = None) -> list[Scene]:
     return sorted(scenes, key=lambda s: (s.has_art, -s.cell_count, s.scene_id))
 
 
-def prompt_for(scene: Scene) -> str:
-    """The brief for one scene, as a contract rather than a wish.
+#: The style every scene shares. One sentence, so that sixteen pictures drawn
+#: on sixteen different nights still look like one bank.
+STYLE = ("A clean editorial illustration of a Japanese workplace, flat colour, consistent "
+         "line weight across the whole bank, neutral professional clothing, landscape 3:2.")
 
-    Every clause below is here because its absence produces an unusable image:
-    readable text ruins reuse and gets the kanji wrong, a recognisable face
-    makes the picture a person, and a scene that contradicts the item's
-    formality teaches the opposite of what the item teaches.
-    """
+#: What a draft may not contain. Each clause is here because its absence
+#: produces an unusable image: readable text ruins reuse and gets the kanji
+#: wrong, a recognisable face makes the picture a person, and a scene that
+#: gives the scenario away makes the listening optional. The reviewer in
+#: `scene_art` checks these same clauses, one flag each.
+FORBIDDEN = (
+    "any readable text, signage, logo, brand mark, chart or user interface "
+    "(labels are overlaid by the app, so drawn text makes the picture single-use "
+    "and gets the kanji wrong)",
+    "a recognisable likeness of any real person",
+    "anything that fixes the situation more tightly than the setting does — this "
+    "picture is shared by many items, and an illustration that gives the scenario "
+    "away makes the listening optional",
+    "malformed hands, extra limbs, or more people than the setting calls for",
+)
+
+
+def prompt_for(scene: Scene) -> str:
+    """The brief for one scene, as a contract rather than a wish."""
     return "\n".join([
         f"scene_id: {scene.scene_id}",
         f"設定: {scene.label_ja}",
         f"使用する問題タイプ: {'、'.join(scene.used_by)}",
         "",
-        "A clean editorial illustration of a Japanese workplace, flat colour, consistent "
-        "line weight across the whole bank, neutral professional clothing, landscape 3:2.",
+        STYLE,
         "",
         "Must NOT contain:",
-        "  - any readable text, signage, logo, brand mark, chart or user interface "
-        "(labels are overlaid by the app, so drawn text makes the picture single-use "
-        "and gets the kanji wrong);",
-        "  - a recognisable likeness of any real person;",
-        "  - anything that fixes the situation more tightly than the setting does — this "
-        "picture is shared by many items, and an illustration that gives the scenario "
-        "away makes the listening optional;",
-        "  - malformed hands, extra limbs, or more people than the setting calls for.",
+        *(f"  - {clause};" for clause in FORBIDDEN),
+    ])
+
+
+def image_prompt(scene: Scene) -> str:
+    """The same brief, addressed to an image model rather than a person.
+
+    The setting is stated first and positively, because that is what an image
+    model draws; the prohibitions follow in the same words the reviewer uses,
+    so a draft is judged by the rule it was given.
+    """
+    return "\n".join([
+        f"{STYLE} The setting: {scene.label_ja} (a Japanese office setting; "
+        "show the place and the kind of people who would be there, mid-moment, "
+        "with nothing that says what they are saying).",
+        "",
+        "The image must not contain:",
+        *(f"- {clause}." for clause in FORBIDDEN),
+        "",
+        "No words or letters anywhere in the picture, in any language. Signs, "
+        "screens, papers and whiteboards are blank.",
     ])
 
 

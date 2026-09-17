@@ -1,11 +1,12 @@
 """Thin wrapper over the Anthropic Messages API.
 
-Three call shapes are used across the tool:
+Four call shapes are used across the tool:
   * generate_structured  — the generators, constrained to an item JSON schema
   * answer_choice        — the answerability gate / calibration (pick 1 of N)
   * judge_synthetic      — the discriminator loop (real vs synthetic + why)
+  * review_scene_image   — the scene art gate (one flag per rule in the brief)
 
-All three use structured output (`output_config.format`) so we never parse free
+All four use structured output (`output_config.format`) so we never parse free
 text. The SDK is imported lazily so the offline commands (selftest, demo) run
 with neither the package nor an API key present.
 """
@@ -39,7 +40,7 @@ def _get_client():
 
 def _structured(
     system: str,
-    user: str,
+    user: "str | list",
     schema: dict,
     model: str,
     *,
@@ -141,3 +142,46 @@ def judge_synthetic(rendered_items: list[str], model: Optional[str] = None) -> d
     )
     system = "You are an expert BJT item writer with an eye for synthetic-item tells."
     return _structured(system, user, schema, model or config.JUDGE_MODEL, max_tokens=4000, effort="high")
+
+
+# ----- scene artwork review ---------------------------------------------
+
+def review_scene_image(image: bytes, media_type: str, brief: str, rules: dict[str, str],
+                       model: Optional[str] = None) -> dict:
+    """Look at one draft and say which of the brief's rules it breaks.
+
+    Returns {rule: bool, ..., "notes": str}; a true flag means the rule is
+    broken. The rules are named by the caller so the schema and the verdict
+    stay in one place (`scene_art.RULES`, key → fault in words). Strict on purpose: a picture that
+    is doubtful on any rule is a picture the whole bank inherits.
+    """
+    import base64
+
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [*rules, "notes"],
+        "properties": {
+            **{rule: {"type": "boolean", "description": f"true if the image has this fault: {fault}"}
+               for rule, fault in rules.items()},
+            "notes": {"type": "string", "description": "one or two sentences on what you see"},
+        },
+    }
+    content = [
+        {"type": "image", "source": {"type": "base64", "media_type": media_type,
+                                     "data": base64.b64encode(image).decode("ascii")}},
+        {"type": "text", "text": (
+            "This image was drawn for the brief below. It will be shared by many "
+            "listening-comprehension items about the same setting, so it must show the "
+            "setting and nothing more specific. Check it against every clause of the "
+            "brief and set each flag to true only if that fault is actually present. "
+            "Be strict: readable text of any language, a logo, a recognisable real "
+            "person, or a picture that tells the viewer what is being said are each a "
+            "fault on their own.\n\n=== Brief ===\n" + brief
+        )},
+    ]
+    system = ("You are the art reviewer for a shared illustration bank used by a "
+              "business-Japanese listening test. You judge drafts against a written "
+              "brief and report faults, not taste.")
+    return _structured(system, content, schema, model or config.JUDGE_MODEL,
+                       max_tokens=1500, effort="medium")
