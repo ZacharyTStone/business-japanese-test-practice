@@ -160,37 +160,63 @@ export default function Home() {
         }
       />
 
-      <GradientCard style={{ gap: space.lg }}>
-        <View style={styles.heroRow}>
-          <View style={{ flex: 1, gap: space.xs }}>
-            <Text style={styles.heroLabel}>{countdown ?? t("today")}</Text>
-            <Text style={styles.heroTitle}>
-              {done} / {goal}
-            </Text>
-            <Text style={styles.heroSub}>
-              {done >= goal
-                ? t("today_done")
-                : streak > 0
-                  ? t("streak_going", { n: streak })
-                  : t("start_today")}
-            </Text>
+      {/* Two cards, not one card with a full ring in it. A day's work that is
+          finished is a different thing from a day's work in progress, and a
+          counter reading 5 / 5 beside a circle filled to the brim is the app
+          still asking to be read as a target when there is nothing left to
+          aim at. Done says done, and the extra set is offered quietly, which
+          is the weight it deserves: it is a bonus, not the job. */}
+      {done >= goal ? (
+        <GradientCard style={{ gap: space.lg }}>
+          <View style={styles.heroRow}>
+            <View style={styles.doneMark}>
+              <Icon name="check" size={30} color={colors.onAccent} strokeWidth={2.4} />
+            </View>
+            <View style={{ flex: 1, gap: space.xs }}>
+              <Text style={styles.heroLabel}>{countdown ?? t("today")}</Text>
+              <Text style={styles.heroTitle}>{t("today_done")}</Text>
+              {streak > 0 ? (
+                <Text style={styles.heroSub}>{t("streak_going", { n: streak })}</Text>
+              ) : null}
+            </View>
           </View>
-          <ProgressRing
-            value={goal > 0 ? done / goal : 0}
-            label={`${Math.round((goal > 0 ? done / goal : 0) * 100)}%`}
-            caption={t("today")}
-            accessibilityLabel={t("goal_ring", { done, goal })}
-          />
-        </View>
 
-        <Button
-          label={done >= goal ? t("btn_more") : t("btn_today")}
-          sub={t("btn_today_sub", { goal })}
-          tone="onAccent"
-          icon="play"
-          onPress={() => router.push("/practice")}
-        />
-      </GradientCard>
+          <Button
+            label={t("btn_more")}
+            tone="secondary"
+            icon="play"
+            onPress={() => router.push("/practice")}
+          />
+        </GradientCard>
+      ) : (
+        <GradientCard style={{ gap: space.lg }}>
+          <View style={styles.heroRow}>
+            <View style={{ flex: 1, gap: space.xs }}>
+              <Text style={styles.heroLabel}>{countdown ?? t("today")}</Text>
+              <Text style={styles.heroTitle}>
+                {done} / {goal}
+              </Text>
+              <Text style={styles.heroSub}>
+                {streak > 0 ? t("streak_going", { n: streak }) : t("start_today")}
+              </Text>
+            </View>
+            <ProgressRing
+              value={goal > 0 ? done / goal : 0}
+              label={`${Math.round((goal > 0 ? done / goal : 0) * 100)}%`}
+              caption={t("today")}
+              accessibilityLabel={t("goal_ring", { done, goal })}
+            />
+          </View>
+
+          <Button
+            label={t("btn_today")}
+            sub={t("btn_today_sub", { goal })}
+            tone="onAccent"
+            icon="play"
+            onPress={() => router.push("/practice")}
+          />
+        </GradientCard>
+      )}
     </ScrollView>
   );
 }
@@ -201,6 +227,14 @@ const styles = StyleSheet.create({
   heroLabel: { color: colors.onAccentMuted, fontSize: 13, fontWeight: "700", letterSpacing: 0.6 },
   heroTitle: { color: colors.onAccent, fontSize: 30, fontWeight: "700", lineHeight: 40 },
   heroSub: { color: colors.onAccentMuted, fontSize: 13, lineHeight: 21 },
+  doneMark: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
   streakPill: {
     flexDirection: "row",
     alignItems: "center",

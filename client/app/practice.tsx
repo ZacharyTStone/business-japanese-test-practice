@@ -148,6 +148,16 @@ export default function Practice() {
   // again when the explanation is unfolded, and without this the screen would
   // snap back to the top just as somebody started reading it.
   const scrolledFor = useRef<number | null>(null);
+  // One press, one move. `chosen` and `index` are state, and state does not
+  // change until the next render, so two presses landing in the same tick both
+  // read the old value and both go through: a browser that delivers a tap as
+  // touch *and* click, or a key the focused control handled before this screen
+  // saw it. Answering twice wrote two attempts for one question; advancing
+  // twice stepped over a question without asking it, which is why the counter
+  // went 1 / 5 to 3 / 5 and never showed 2 / 5. A ref is written immediately,
+  // so the second press finds the door already shut.
+  const answeredFor = useRef<number | null>(null);
+  const advancedFrom = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isConfigured || !session?.user) return;
@@ -244,6 +254,8 @@ export default function Practice() {
 
   async function choose(position: number) {
     if (chosen !== null || busy || !item) return;
+    if (answeredFor.current === index) return;
+    answeredFor.current = index;
     buzz(12);
     setBusy(true);
     setChosen(position);
@@ -270,6 +282,8 @@ export default function Practice() {
   }
 
   async function next() {
+    if (advancedFrom.current === index) return;
+    advancedFrom.current = index;
     const last = index + 1 >= items!.length;
     if (last) {
       if (sessionId) await finishSession(sessionId);
