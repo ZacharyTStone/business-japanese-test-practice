@@ -65,3 +65,10 @@ RECENT_TOPICS_WINDOW = int(_env("BJT_RECENT_TOPICS_WINDOW", "25"))
 
 # Answerability gate: run each side this many times and require consistency.
 GATE_TRIALS = int(_env("BJT_GATE_TRIALS", "3"))
+
+# The image model that draws the scene bank, and how hard it tries. The bank is
+# sixteen pictures drawn once, so quality is cheap here; attempts is how many
+# drafts the review gate may reject before a scene ships without a picture.
+IMAGE_MODEL = _env("BJT_IMAGE_MODEL", "gpt-image-1")
+IMAGE_QUALITY = _env("BJT_IMAGE_QUALITY", "high")
+SCENE_ATTEMPTS = int(_env("BJT_SCENE_ATTEMPTS", "3"))

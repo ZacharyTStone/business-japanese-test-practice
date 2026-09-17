@@ -987,11 +987,29 @@ def cmd_synth(args) -> int:
 
 
 def cmd_scenes(args) -> int:
-    """What the scene bank needs, what exists, and the SQL for what is approved."""
+    """What the scene bank needs, what exists, the drawing of what is missing,
+    and the SQL for what is approved."""
     import pathlib
 
-    survey = scenemod.survey(args.media_dir)
-    have = [s for s in survey if s.has_art]
+    from . import scene_art
+
+    # The bucket is consulted whenever it is configured: on the nightly runner
+    # media/ is empty every night, and the only record of what has already
+    # been drawn is the bucket itself.
+    bucket = scene_art.Bucket()
+    remote: set[str] = set()
+    if bucket.configured and (args.generate is not None or args.upload or args.sql):
+        try:
+            remote = bucket.list()
+        except RuntimeError as exc:
+            print(f"could not list the scenes bucket: {exc}", file=sys.stderr)
+            return 1
+    elif args.upload:
+        print("--upload needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment",
+              file=sys.stderr)
+        return 2
+
+    survey = scenemod.survey(args.media_dir, remote)
 
     if args.prompt:
         wanted = [s for s in survey if s.scene_id == args.prompt]
@@ -1001,11 +1019,54 @@ def cmd_scenes(args) -> int:
         print(scenemod.prompt_for(wanted[0]))
         return 0
 
+    failed = False
+    if args.generate is not None:
+        try:
+            provider = scene_art.get_provider(args.provider)
+        except KeyError as exc:
+            print(exc.args[0], file=sys.stderr)
+            return 2
+        if args.generate:
+            unknown = sorted(set(args.generate) - {s.scene_id for s in survey})
+            if unknown:
+                print(f"no such scene(s): {', '.join(unknown)}", file=sys.stderr)
+                return 2
+            wanted = [s for s in survey if s.scene_id in args.generate]
+        else:
+            wanted = list(survey)
+        if not args.force:
+            wanted = [s for s in wanted if not s.has_art]
+        if not wanted:
+            print("every scene already has artwork; nothing to draw (--force redraws)")
+        else:
+            result = scene_art.draw(
+                wanted, provider=provider, review=scene_art.review_with_model,
+                media_dir=args.media_dir, attempts=args.attempts,
+            )
+            print(result.summary())
+            if args.summary:
+                pathlib.Path(args.summary).write_text(result.summary() + "\n", encoding="utf-8")
+            failed = bool(result.failed)
+            if not provider.real:
+                print("\n  placeholder provider: files are under media/scenes/placeholder/,")
+                print("  the survey does not count them, and nothing uploads them.")
+            survey = scenemod.survey(args.media_dir, remote)
+
+    if args.upload:
+        sent = scene_art.upload_approved(survey, bucket, args.media_dir)
+        print(f"uploaded {len(sent)} file(s) to the `{bucket.name}` bucket"
+              + (": " + ", ".join(sent) if sent else ""))
+
+    have = [s for s in survey if s.has_art]
+
     if args.sql:
         out = pathlib.Path(args.out) if args.out else config.ROOT / "batches" / "scenes.sql"
         out.write_text(scenemod.to_sql(survey), encoding="utf-8")
         print(f"Wrote {out}  ({len(have)} scene(s) with artwork)")
-        return 0
+        return 1 if failed else 0
+
+    if args.generate is not None or args.upload:
+        return 1 if failed else 0
 
     print(f"scene bank: {len(survey)} scene(s), {len(have)} with artwork\n")
     print(f"  {'scene_id':32} {'art':4} {'cells':>6}  used by")
@@ -1014,8 +1075,8 @@ def cmd_scenes(args) -> int:
         print(f"  {scene.scene_id:32} {mark:4} {scene.cell_count:6}  "
               f"{'、'.join(scene.used_by)}")
     if not have:
-        print("\n  No artwork yet. Items ship and are practised without pictures;")
-        print("  put approved files in media/scenes/<scene_id>.webp when they exist.")
+        print("\n  No artwork yet. Items ship and are practised without pictures.")
+        print("  `bjt scenes --generate` draws the missing ones and reviews each draft;")
         print("  `bjt scenes --prompt <scene_id>` prints the brief for one.")
     return 0
 
@@ -1193,14 +1254,28 @@ def build_parser() -> argparse.ArgumentParser:
                     help="synthesise even if the bundle fails its checks")
     sy.set_defaults(func=cmd_synth)
 
-    sc = sub.add_parser("scenes", help="what the scene bank needs, and what exists")
+    sc = sub.add_parser("scenes", help="what the scene bank needs, draw what is missing")
     sc.add_argument("--media-dir", type=pathlib.Path,
                     help=f"where scene art lives (default: {config.MEDIA_DIR}/scenes)")
     sc.add_argument("--prompt", metavar="SCENE_ID",
                     help="print the illustration brief for one scene")
+    sc.add_argument("--generate", nargs="*", metavar="SCENE_ID",
+                    help="draw the scenes that have no artwork (or only the named ones), "
+                         "reviewing every draft against the brief")
+    sc.add_argument("--provider", default="openai",
+                    help="image backend: openai (needs OPENAI_API_KEY), or placeholder "
+                         "(offline, grey rectangles that are never counted as art)")
+    sc.add_argument("--attempts", type=int, default=None,
+                    help=f"drafts the review may reject per scene (default: {config.SCENE_ATTEMPTS})")
+    sc.add_argument("--force", action="store_true",
+                    help="redraw even scenes that already have artwork")
+    sc.add_argument("--upload", action="store_true",
+                    help="put approved files in the `scenes` bucket "
+                         "(needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)")
     sc.add_argument("--sql", action="store_true",
                     help="write the SQL pointing the database at approved artwork")
     sc.add_argument("--out", help="where to write that SQL")
+    sc.add_argument("--summary", default=None, help="write a markdown summary here")
     sc.set_defaults(func=cmd_scenes)
 
     rn = sub.add_parser("render", help="render a document stimulus to HTML")

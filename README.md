@@ -123,14 +123,17 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt discriminate --type T` | Mix official + generated items, ask a judge which are synthetic, report the rate and the tells — then auto-fold those tells into the generator prompt. |
 | `bjt publish <bundle.json>` | Turn a checked bundle into idempotent SQL for the database. |
 | `bjt synth <bundle.json>` | Synthesise the bundle's audio offline and write the SQL that points at it. `--provider silent` runs with no vendor account. |
-| `bjt scenes` | What the scene bank needs, most-wanted first; `--prompt` for one brief, `--sql` for approved art. |
+| `bjt scenes` | What the scene bank needs, most-wanted first. `--generate` draws the missing ones and has a judge model review each draft against the brief; `--upload` puts approved art in the bucket; `--sql` points the database at it. |
 | `bjt render <bundle.json>` | Render a document stimulus to HTML, to look at while writing one. |
 | `bjt grant <user-id>` | SQL granting or revoking the ad-free unlock, as the service role. |
 | `bjt calibrate --type T` | Sit the official sample items; compare your accuracy there to your accuracy on generated items. |
 
 Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
 `BJT_JUDGE_MODEL`, `BJT_DB_PATH`, `BJT_SEEDS_DIR`, `BJT_SEEDTABLE_DIR`,
-`BJT_BATCH_DIR`, `BJT_GATE_TRIALS`.
+`BJT_BATCH_DIR`, `BJT_GATE_TRIALS`, `BJT_IMAGE_MODEL`, `BJT_IMAGE_QUALITY`,
+`BJT_SCENE_ATTEMPTS`. Secrets, each read only by the step that needs it:
+`ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (scene art), `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` (uploading it).
 
 ---
 
