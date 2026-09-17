@@ -6,24 +6,25 @@
  * that nobody was stopped at a login wall to try five questions. That is the
  * right shape for a public app and the wrong one for an app that is not open
  * yet: the owner asked (2026-09-17) that only the people testing it can use it.
- * So now there is a wall, and it is Google: sign in, and the database says
- * whether that account is on the tester list. The database, not this file —
- * every row-level policy requires it, so a client that skipped this check would
- * simply see nothing. `isTester` here exists to say so politely.
+ * So now there is a wall: sign in with an email and a password, and the
+ * database says whether that email is on the tester list. The database, not
+ * this file — every row-level policy requires it, so a client that skipped this
+ * check would simply see nothing. `isTester` here exists to say so politely.
+ *
+ * Email and password rather than Google, for now, because it needs nothing
+ * outside Supabase — no OAuth client, no consent screen — and the people
+ * testing are the owner. Google can come back as a second button later; the
+ * tester list matches on the email either way.
  *
  * Opening the app later means putting the anonymous sign-in back in front of
  * this wall, and the linking path that came with it. The schema still supports
  * both; nothing about a user id changes.
  */
-import * as AuthSession from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
 import type { Session } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { AppState, Platform } from "react-native";
+import { AppState } from "react-native";
 
 import { isConfigured, supabase } from "./supabase";
-
-WebBrowser.maybeCompleteAuthSession();
 
 type AuthState = {
   session: Session | null;
@@ -35,7 +36,10 @@ type AuthState = {
   /** Whether the signed-in account is on the tester list. null until asked. */
   isTester: boolean | null;
   email: string | null;
-  signInWithGoogle: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  /** Resolves to true when the account is usable at once, false when Supabase
+   *  sent a confirmation email first ("Confirm email" left on in the project). */
+  signUp: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 };
 
@@ -111,28 +115,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isTester,
       email: user?.email ?? null,
 
-      async signInWithGoogle() {
-        const redirectTo = AuthSession.makeRedirectUri({ scheme: "bizjadrill" });
-        const { data, error: signInError } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: { redirectTo, skipBrowserRedirect: Platform.OS !== "web" },
+      async signIn(email, password) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
         });
         if (signInError) throw signInError;
-        if (Platform.OS === "web" || !data?.url) return; // the browser handles it
+      },
 
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-        if (result.type !== "success") return;
-
-        // Native gets the tokens back in the callback URL fragment and has to
-        // install them itself; there is no page load to pick them up.
-        const params = new URLSearchParams(result.url.split("#")[1] ?? "");
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
-        if (access_token && refresh_token) {
-          await supabase.auth.setSession({ access_token, refresh_token });
-        }
-        const { data: refreshed } = await supabase.auth.getSession();
-        setSession(refreshed.session);
+      async signUp(email, password) {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+        if (signUpError) throw signUpError;
+        return data.session !== null;
       },
 
       async signOut() {

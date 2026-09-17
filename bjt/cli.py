@@ -1156,7 +1156,7 @@ def cmd_tester(args) -> int:
     """SQL adding (or removing) somebody on the tester list.
 
     While the app is in testing, `public.testers` is the only door: every
-    row-level policy requires the signed-in Google account's email to be in it.
+    row-level policy requires the signed-in user's email to be in it.
     SQL rather than a live call, for the same reason `bjt grant` is: what
     reaches the database is a statement somebody can read first, and no key
     that can write it has to live near this process.
@@ -1343,7 +1343,7 @@ def build_parser() -> argparse.ArgumentParser:
     gr.set_defaults(func=cmd_grant)
 
     te = sub.add_parser("tester", help="SQL adding or removing somebody on the tester list")
-    te.add_argument("email", help="the Google account email they sign in with")
+    te.add_argument("email", help="the email address they sign in with")
     te.add_argument("--note", help="who this is — shows up in the row")
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
