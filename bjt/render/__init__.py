@@ -16,6 +16,7 @@ from .document import (  # noqa: F401
     BLOCK_TYPES,
     CALLOUT_TONES,
     document_schema,
+    prune_empty_blocks,
     text_of,
     validate_document,
 )
