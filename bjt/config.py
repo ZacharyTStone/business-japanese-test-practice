@@ -114,3 +114,8 @@ SCENE_ATTEMPTS = int(_env("BJT_SCENE_ATTEMPTS", "3"))
 # visible cost, and the limit is checked here before a byte is sent.
 IMAGE_COMPRESSION = int(_env("BJT_IMAGE_COMPRESSION", "80"))
 SCENE_MAX_BYTES = 2 * 1024 * 1024
+
+# The `audio` bucket's file_size_limit, from the same migration. A clean 24 kHz
+# clip runs to about 48 KB a second, so this is over a minute and a half of
+# narration; a clip near it is a planning bug, not a long question.
+AUDIO_MAX_BYTES = 5 * 1024 * 1024

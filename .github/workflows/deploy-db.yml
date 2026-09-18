@@ -14,9 +14,20 @@
 #   a tester     optional: the email address typed into the run form,
 #                added to public.testers with `bjt tester`. The app admits
 #                nobody who is not in that table.
+#   the audio    optional: every clip the published bank names that the
+#                database does not yet point at is synthesised, put in the
+#                `audio` bucket, and pointed at. A clip already live is never
+#                touched again — the voice a learner first heard is the voice
+#                they keep hearing. Runs only with a TTS key and the storage
+#                secrets; without them the app keeps showing the text, which
+#                it was built to do.
 #
 # Needs one secret: SUPABASE_DB_URL, the session-pooler connection string with
-# the database password in it. Nothing here reads a service-role key.
+# the database password in it. The audio step additionally reads a TTS key
+# (GEMINI_API_KEY or OPENAI_API_KEY; the repository variable BJT_TTS_PROVIDER
+# pins which, after `bjt audition`) and SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY,
+# the only key that may write to a bucket. That key lives here and in nobody's
+# .env, and never in client/.
 name: deploy database
 
 on:
@@ -87,7 +98,89 @@ jobs:
           python -m bjt tester "$EMAIL" --note "$NOTE" > tester.sql
           psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f tester.sql
 
+      # ---------------------------------------------------------- the audio
+
+      # Nothing is synthesised at practice time; this is the batch job, run at
+      # the one moment the bank changes. The database says what is already
+      # live, `bjt synth --have` makes only what is missing, `--upload` puts it
+      # in the bucket, and the SQL it writes points the rows at the files.
+      - name: which voice, if any
+        id: tts
+        env:
+          HAVE_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
+          HAVE_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
+          HAVE_STORAGE: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: |
+          if { [ "$HAVE_GEMINI" = "true" ] || [ "$HAVE_OPENAI" = "true" ]; } && [ "$HAVE_STORAGE" = "true" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            {
+              echo '### No audio synthesised'
+              echo
+              echo "Giving the bank a voice needs a TTS key — \`GEMINI_API_KEY\` (present: $HAVE_GEMINI)"
+              echo "or \`OPENAI_API_KEY\` (present: $HAVE_OPENAI) — and the storage pair"
+              echo "\`SUPABASE_URL\` + \`SUPABASE_SERVICE_ROLE_KEY\` (present: $HAVE_STORAGE)."
+              echo 'Until then listening items show their text. See blockers.md.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: what is already live
+        if: steps.tts.outputs.go == 'true'
+        run: |
+          psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 \
+            -c "select id from public.audio_clips where audio_path is not null" > have.txt
+          echo "$(wc -l < have.txt) clip(s) already live"
+
+      - name: give the bank its voice
+        if: steps.tts.outputs.go == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BJT_TTS_PROVIDER: ${{ vars.BJT_TTS_PROVIDER }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          shopt -s nullglob
+          failed=0
+          for f in batches/*.json; do
+            case "$f" in *.source.json) continue ;; esac
+            out="${f%.json}.audio.sql"
+            rm -f "$out"
+            echo "::group::$f"
+            # One bundle failing must not stop the rest: its clips are made on
+            # the next run, and everything that did reach the bucket is pointed
+            # at now.
+            python -m bjt synth "$f" --provider auto --have have.txt --upload --out "$out" || failed=1
+            if [ -f "$out" ]; then
+              psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$out"
+            fi
+            echo "::endgroup::"
+          done
+          {
+            echo '### Audio'
+            echo
+            echo '```'
+            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "
+              select count(*) filter (where audio_path is not null) as clips_live,
+                     count(*) filter (where audio_path is null)     as clips_silent,
+                     coalesce(sum(duration_ms) / 60000, 0)           as minutes
+                from public.audio_clips;"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $failed
+
+      - uses: actions/upload-artifact@v4
+        if: steps.tts.outputs.go == 'true' && always()
+        with:
+          name: audio
+          path: |
+            media/audio
+            media/reports
+          if-no-files-found: ignore
+
       - name: what the project holds now
+        if: always()
         run: |
           {
             echo '## The database after this run'
@@ -97,6 +190,7 @@ jobs:
               select (select count(*) from supabase_migrations.schema_migrations) as migrations,
                      (select count(*) from public.items where is_published)     as published_items,
                      (select count(*) from public.scenes where image_path is not null) as scenes_with_art,
+                     (select count(*) from public.audio_clips where audio_path is not null) as clips_with_audio,
                      (select count(*) from public.testers)                       as testers;"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

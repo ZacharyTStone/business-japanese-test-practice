@@ -68,7 +68,45 @@ export function ClipButton({
   );
 }
 
+/**
+ * A play button with nothing but an icon — for an option that is heard rather
+ * than read. Sits inside the option's own Pressable; a press here plays, a press
+ * anywhere else on the option answers, which is the same split as a letter and
+ * a speaker button on the exam room's answer sheet.
+ */
+export function MiniPlay({ url, label }: { url: string; label: string }) {
+  const player = useAudioPlayer(url);
+  const status = useAudioPlayerStatus(player);
+  const playing = status.playing;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={8}
+      onPress={() => {
+        if (playing) {
+          player.pause();
+        } else {
+          player.seekTo(0);
+          player.play();
+        }
+      }}
+      style={({ pressed }) => [styles.mini, pressed && { opacity: 0.85 }]}
+    >
+      <Icon name={playing ? "stop" : "play"} size={16} color={colors.onAccent} strokeWidth={2} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  mini: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.accent,
+  },
   fallback: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.md,

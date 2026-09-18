@@ -115,6 +115,58 @@ def bundle():
     )
 
 
+def test_clips_already_live_are_neither_made_nor_pointed_at_again(bundle, tmp_path):
+    """On a fresh runner media/ is empty; the database says what exists, and a
+    clip on that list is left exactly as the learner first heard it."""
+    have_file = tmp_path / "have.txt"
+    ids = [c["clip_id"] for c in bundle["audio_manifest"]]
+    have_file.write_text(f"# from psql\n{ids[0]}\n\n{ids[1]}\n", encoding="utf-8")
+    have = synth.read_have(have_file)
+    assert have == {ids[0], ids[1]}
+
+    report = synth.synthesise_bundle(bundle, out_dir=tmp_path, have=have)
+    assert sorted(report.live) == sorted(have)
+    assert len(report.written) == len(ids) - 2
+    assert not (tmp_path / "audio" / synth.storage_path(ids[0], "silent")).exists()
+    sql = synth.to_sql(report)
+    assert ids[0] not in sql and ids[2] in sql
+    assert "already live" in report.summary()
+
+
+def test_a_bundle_that_is_entirely_live_has_nothing_to_apply(bundle, tmp_path):
+    have = {c["clip_id"] for c in bundle["audio_manifest"]}
+    report = synth.synthesise_bundle(bundle, out_dir=tmp_path, have=have)
+    assert not report.clips
+    assert "Nothing to apply" in synth.to_sql(report)
+
+
+def test_uploading_sends_every_clip_and_a_failure_keeps_it_out_of_the_sql(bundle, tmp_path):
+    from bjt import scene_art
+
+    report = synth.synthesise_bundle(bundle, out_dir=tmp_path)
+    bad = report.written[0].path
+    sent = []
+
+    class FakeBucket:
+        name = "audio"
+        configured = True
+
+        def upload(self, path, data, content_type):
+            assert content_type == "audio/wav"
+            if path == bad:
+                raise RuntimeError("413 too large")
+            sent.append(path)
+
+    up = synth.upload_clips(report, FakeBucket(), tmp_path)  # type: ignore[arg-type]
+    assert len(sent) == len(report.clips) - 1
+    assert up.failed == [(bad, "413 too large")]
+    assert isinstance(up, scene_art.UploadResult)
+
+    report.drop({c.clip_id for c in report.clips if c.path == bad})
+    assert bad not in synth.to_sql(report)
+    assert all(c.path in synth.to_sql(report) for c in report.clips)
+
+
 def test_synthesis_produces_a_clip_per_manifest_entry(bundle, tmp_path):
     report = synth.synthesise_bundle(bundle, out_dir=tmp_path)
     assert len(report.written) == len(bundle["audio_manifest"])
@@ -204,14 +256,123 @@ def test_ssml_keeps_the_written_form_visible():
 
 def test_a_provider_with_no_cast_refuses_rather_than_guessing():
     """A cast assigned by accident is one the whole library inherits."""
-    with pytest.raises(RuntimeError, match="no Google voice chosen"):
-        providers.GoogleProvider().synthesize("こんにちは", "narrator_f")
+    with pytest.raises(RuntimeError, match="no Google Cloud voice cast"):
+        providers.GoogleProvider().synthesize("こんにちは", "someone_new")
+
+
+CAST = {plan.NARRATOR_VOICE, *plan.RELATION_VOICES.values(), *plan.DIALOGUE_VOICES}
 
 
 def test_every_cast_voice_has_a_direction():
-    voices = {plan.NARRATOR_VOICE, *plan.RELATION_VOICES.values(), *plan.DIALOGUE_VOICES}
-    missing = voices - set(providers.VOICE_DIRECTION)
+    missing = CAST - set(providers.VOICE_DIRECTION)
     assert not missing, f"no delivery direction for {missing}"
+
+
+@pytest.mark.parametrize("cls", [providers.GeminiProvider, providers.OpenAIProvider,
+                                 providers.GoogleProvider])
+def test_every_real_provider_casts_every_voice(cls):
+    """`bjt synth` must run the day a key exists, for every role the plan can
+    hand it — a refusal in the middle of a batch is a bill for the clips
+    before it and nothing after."""
+    missing = CAST - set(cls.VOICE_IDS)
+    assert not missing, f"{cls.name} has no voice for {missing}"
+    # Distinct voices, or the learner is back to speaker identification for
+    # whichever two roles share one.
+    assert len(set(cls.VOICE_IDS.values())) == len(cls.VOICE_IDS)
+
+
+def test_the_direction_says_native_office_japanese_and_nothing_else():
+    """The house style is the one lever on "robotic" a provider gives us."""
+    note = providers.direction_for("reception_f")
+    for phrase in ("pitch accent", "business pace", "exactly as written"):
+        assert phrase in note
+    assert providers.VOICE_DIRECTION["reception_f"] in note
+
+
+def test_the_openai_request_carries_the_direction_and_asks_for_wav(monkeypatch):
+    sent = {}
+
+    def fake_post(url, body, headers):
+        sent.update(url=url, body=body, headers=headers)
+        return channel.silence(0.2)
+
+    monkeypatch.setattr(providers, "_post", fake_post)
+    out = providers.OpenAIProvider(api_key="k").synthesize("代替案です", "manager_m")
+    assert out[:4] == b"RIFF"
+    assert sent["body"]["response_format"] == "wav"
+    assert sent["body"]["voice"] == providers.OpenAIProvider.VOICE_IDS["manager_m"]
+    assert sent["body"]["input"] == "だいたい案です"
+    assert providers.HOUSE_STYLE in sent["body"]["instructions"]
+    assert sent["headers"]["Authorization"] == "Bearer k"
+
+
+def test_the_gemini_response_is_wrapped_into_wav(monkeypatch):
+    """Gemini returns headerless PCM; the rest of the pipeline reads WAV."""
+    import base64
+    import json as jsonmod
+
+    pcm = b"\x00\x10" * 2400  # a tenth of a second at 24 kHz
+    reply = {"candidates": [{"content": {"parts": [{"inlineData": {
+        "mimeType": "audio/L16;codec=pcm;rate=24000",
+        "data": base64.b64encode(pcm).decode("ascii"),
+    }}]}}]}
+    sent = {}
+
+    def fake_post(url, body, headers):
+        sent.update(url=url, body=body, headers=headers)
+        return jsonmod.dumps(reply).encode("utf-8")
+
+    monkeypatch.setattr(providers, "_post", fake_post)
+    out = providers.GeminiProvider(api_key="k").synthesize("承知いたしました。", "staff_mid_f")
+    assert channel.duration_ms(out) == 100
+    assert sent["headers"]["x-goog-api-key"] == "k"
+    cfg = sent["body"]["generationConfig"]
+    assert cfg["responseModalities"] == ["AUDIO"]
+    assert cfg["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == \
+        providers.GeminiProvider.VOICE_IDS["staff_mid_f"]
+    prompt = sent["body"]["contents"][0]["parts"][0]["text"]
+    assert prompt.endswith("承知いたしました。")
+    assert providers.HOUSE_STYLE in prompt
+
+
+def test_gemini_says_so_when_there_is_no_audio_in_the_reply():
+    with pytest.raises(RuntimeError, match="no audio"):
+        providers.GeminiProvider.wav_from_response(b'{"error": {"message": "quota"}}')
+
+
+def test_the_provider_is_picked_from_the_environment(monkeypatch):
+    """No key: silent, so the pipeline still runs. A key: that provider. A
+    pinned choice wins over any key, because the cast is fixed for the life of
+    the library and must not follow whichever secret was set last."""
+    for keys in providers.CREDENTIALS.values():
+        for key in keys:
+            monkeypatch.delenv(key, raising=False)
+    monkeypatch.delenv(providers.PROVIDER_ENV, raising=False)
+    assert providers.default_provider() == "silent"
+
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    assert providers.default_provider() == "openai"
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    assert providers.default_provider() == "gemini"
+    assert providers.available() == ["gemini", "openai"]
+
+    monkeypatch.setenv(providers.PROVIDER_ENV, "openai")
+    assert providers.get_provider("auto").name == "openai"
+
+
+# ----- the audition ---------------------------------------------------------
+
+def test_the_audition_writes_every_voice_and_a_page_to_compare_them(tmp_path):
+    from bjt.tts import audition
+
+    report = audition.run(["silent"], media_dir=tmp_path)
+    assert not report.failed
+    names = {p.name for p in report.written}
+    assert "narrator_f.wav" in names and "staff_mid_m.phone.wav" in names
+    assert {v for v, _, _ in audition.LINES} == CAST
+    page = (tmp_path / "audition" / "index.html").read_text(encoding="utf-8")
+    assert 'src="silent/manager_m.wav"' in page
+    assert "代替" in page  # the dictionary reading is on the page to be judged
 
 
 # ----- the scene bank -----------------------------------------------------
@@ -253,3 +414,32 @@ def test_the_brief_forbids_what_makes_a_picture_unusable(tmp_path):
     brief = scenes.prompt_for(scenes.survey(tmp_path)[0])
     for clause in ("readable text", "likeness", "makes the listening optional"):
         assert clause in brief
+
+
+# ----- the command line -------------------------------------------------------
+
+def test_the_cli_refuses_to_upload_silence(tmp_path, monkeypatch, capsys):
+    """Silent clips in the real bucket would make the app play nothing where it
+    now shows the text — worse than no audio at all."""
+    from bjt import cli
+
+    monkeypatch.delenv("BJT_TTS_PROVIDER", raising=False)
+    rc = cli.main(["synth", str(config.ROOT / "batches" / "hatsugen_choukai_J2_001.json"),
+                   "--provider", "silent", "--upload", "--media-dir", str(tmp_path)])
+    assert rc == 2
+    assert "ship silence" in capsys.readouterr().err
+
+
+def test_the_cli_names_the_provider_it_used(tmp_path, monkeypatch, capsys):
+    for keys in providers.CREDENTIALS.values():
+        for key in keys:
+            monkeypatch.delenv(key, raising=False)
+    monkeypatch.delenv("BJT_TTS_PROVIDER", raising=False)
+    from bjt import cli
+
+    rc = cli.main(["synth", str(config.ROOT / "batches" / "hatsugen_choukai_J2_001.json"),
+                   "--media-dir", str(tmp_path), "--out", str(tmp_path / "a.sql")])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "(silent)" in out and "SILENT placeholder" in out
+    assert (tmp_path / "a.sql").exists()

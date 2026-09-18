@@ -10,6 +10,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# Only the Google Cloud adapter needs a package; gemini and openai speak plain
+# HTTPS from the standard library, so a key is all they need.
+tts-google = ["google-cloud-texttospeech>=2.16"]
 
 [project.scripts]
 bjt = "bjt.cli:main"
