@@ -184,6 +184,8 @@ const styles = StyleSheet.create({
   entry: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
     padding: space.lg,
     gap: space.sm,
     ...shadow.card,

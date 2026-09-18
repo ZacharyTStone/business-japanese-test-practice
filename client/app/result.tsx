@@ -27,7 +27,8 @@ import {
   ProgressRing,
   SectionLabel,
 } from "../src/ui/components";
-import { colors, space, type } from "../src/ui/theme";
+import { FadeIn } from "../src/ui/motion";
+import { colors, space, tabular, type } from "../src/ui/theme";
 
 export default function Result() {
   const router = useRouter();
@@ -72,6 +73,12 @@ export default function Result() {
   const move = levelsNow.length ? levelMove(summary.levelsBefore, levelsNow) : null;
   const sectionName = move ? t(SECTION_NAME[move.section]) : "";
 
+  // The cards land one after another, top to bottom, a beat apart: the score
+  // first, then what to take from it. A whole screen arriving at once is a
+  // page load; a sequence is a result being read out.
+  let beat = 0;
+  const step = () => (beat += 70);
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
       {move && move.direction > 0 ? (
@@ -106,42 +113,48 @@ export default function Result() {
         </Card>
       ) : null}
 
-      <GradientCard style={styles.hero}>
-        <ProgressRing
-          value={total > 0 ? correct / total : 0}
-          size={96}
-          label={`${correct}/${total}`}
-          caption={t("ring_correct")}
-        />
-        <View style={{ flex: 1, gap: space.xs }}>
-          <Text style={styles.heroLabel}>{t("mode_this")}</Text>
-          <Text style={styles.heroTitle}>{t("n_correct", { n: correct })}</Text>
-          <Text style={styles.heroSub}>{t("n_min", { total, min: minutes })}</Text>
-        </View>
-      </GradientCard>
+      <FadeIn delay={beat}>
+        <GradientCard style={styles.hero}>
+          <ProgressRing
+            value={total > 0 ? correct / total : 0}
+            size={96}
+            label={`${correct}/${total}`}
+            caption={t("ring_correct")}
+          />
+          <View style={{ flex: 1, gap: space.xs }}>
+            <Text style={styles.heroLabel}>{t("mode_this")}</Text>
+            <Text style={styles.heroTitle}>{t("n_correct", { n: correct })}</Text>
+            <Text style={styles.heroSub}>{t("n_min", { total, min: minutes })}</Text>
+          </View>
+        </GradientCard>
+      </FadeIn>
 
       {trap ? (
-        <Card style={{ gap: space.md }}>
-          <View style={styles.trapHead}>
-            <IconBadge name="alert" tone="pink" />
-            <View style={{ flex: 1 }}>
-              <Text style={type.small}>{t("top_mistake")}</Text>
-              <Text style={type.h2}>{roleInfo(trap.role, lang).label}</Text>
+        <FadeIn delay={step()}>
+          <Card style={{ gap: space.md }}>
+            <View style={styles.trapHead}>
+              <IconBadge name="alert" tone="pink" />
+              <View style={{ flex: 1 }}>
+                <Text style={type.small}>{t("top_mistake")}</Text>
+                <Text style={type.h2}>{roleInfo(trap.role, lang).label}</Text>
+              </View>
             </View>
-          </View>
-          <Text style={type.small}>{roleInfo(trap.role, lang).advice}</Text>
-        </Card>
+            <Text style={type.small}>{roleInfo(trap.role, lang).advice}</Text>
+          </Card>
+        </FadeIn>
       ) : correct === total ? (
-        <Card style={{ backgroundColor: colors.correctSoft }}>
-          <View style={styles.trapHead}>
-            <IconBadge name="check" tone="teal" />
-            <Text style={[type.h2, { color: colors.correct, flex: 1 }]}>{t("all_correct")}</Text>
-          </View>
-          <Text style={[type.small, { marginTop: space.sm }]}>{t("all_correct_body")}</Text>
-        </Card>
+        <FadeIn delay={step()}>
+          <Card style={{ backgroundColor: colors.correctSoft }}>
+            <View style={styles.trapHead}>
+              <IconBadge name="check" tone="teal" />
+              <Text style={[type.h2, { color: colors.correct, flex: 1 }]}>{t("all_correct")}</Text>
+            </View>
+            <Text style={[type.small, { marginTop: space.sm }]}>{t("all_correct_body")}</Text>
+          </Card>
+        </FadeIn>
       ) : null}
 
-      <View style={{ gap: space.sm }}>
+      <FadeIn delay={step()} style={{ gap: space.sm }}>
         <SectionLabel>{t("breakdown")}</SectionLabel>
         <Card style={{ gap: space.md }}>
           {summary.answers.map((a, i) => (
@@ -165,20 +178,20 @@ export default function Result() {
             <Text style={[type.small, { marginTop: space.xs }]}>{t("retry_promise")}</Text>
           ) : null}
         </Card>
-      </View>
+      </FadeIn>
 
       {/* The one place an ad is allowed, along with the list screens. Never
           during listening practice. */}
       <AdSlot placement="session_result" enabled={!adFree} />
 
-      <View style={{ gap: space.md }}>
+      <FadeIn delay={step()} style={{ gap: space.md }}>
         <Button label={t("to_home")} onPress={() => router.replace("/")} />
         <Button
           label={t("review_wrong")}
           tone="secondary"
           onPress={() => router.replace("/history")}
         />
-      </View>
+      </FadeIn>
     </ScrollView>
   );
 }
@@ -187,8 +200,15 @@ const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   hero: { flexDirection: "row", alignItems: "center", gap: space.lg },
   heroLabel: { color: colors.onAccentMuted, fontSize: 13, fontWeight: "700", letterSpacing: 0.6 },
-  heroTitle: { color: colors.onAccent, fontSize: 26, fontWeight: "700", lineHeight: 36 },
-  heroSub: { color: colors.onAccentMuted, fontSize: 13 },
+  heroTitle: {
+    color: colors.onAccent,
+    fontSize: 26,
+    fontWeight: "700",
+    lineHeight: 36,
+    letterSpacing: -0.3,
+    ...tabular,
+  },
+  heroSub: { color: colors.onAccentMuted, fontSize: 13, ...tabular },
   trapHead: { flexDirection: "row", alignItems: "center", gap: space.md },
   row: { flexDirection: "row", gap: space.sm, alignItems: "flex-start" },
   rowMark: { width: 18, fontSize: 14, fontWeight: "700" },
