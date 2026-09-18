@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from bjt import fixtures, llm, schemas
+from bjt import fixtures, llm, schemas, seedtable
 from bjt.generators import GENERATORS, get_generator
 from bjt.generators.base import Generator
 from bjt.fidelity import roles
@@ -104,3 +104,27 @@ def test_finalize_shuffle_is_deterministic_with_seed():
     a = G()._finalize(_valid("goi_bunpou"), "J2", seed=42)
     b = G()._finalize(_valid("goi_bunpou"), "J2", seed=42)
     assert [o["text"] for o in a["options"]] == [o["text"] for o in b["options"]]
+
+
+def test_blank_document_block_is_pruned_not_retried(monkeypatch):
+    """The model's output does not carry item_type (the schema has no such
+    field); the generator stamps it. The pruning of blank headings and callouts
+    looks a document up by type, so it must run after the stamp — before it
+    did, every blank callout cost the full three attempts and produced nothing,
+    which is where most of the 2026-09-18 bill went."""
+    cell = seedtable.load("joukyou_haaku").cells("J2")[0]
+    calls = {"n": 0}
+
+    def fake(*a, **k):
+        calls["n"] += 1
+        item = _valid("joukyou_haaku")
+        del item["item_type"]  # as the model returns it
+        item["document"]["blocks"].insert(1, {"type": "callout", "text": ""})
+        return item
+
+    monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
+    item = get_generator("joukyou_haaku").generate(cell=cell, seed=0)
+    assert calls["n"] == 1
+    assert item["item_type"] == "joukyou_haaku"
+    assert all(b.get("text") for b in item["document"]["blocks"] if b["type"] == "callout")
+    assert schemas.validate_item("joukyou_haaku", item) == []

@@ -196,6 +196,14 @@ class Generator:
                     + "\n".join(f"- {e}" for e in last_errors)
                 )
             item = llm.generate_structured(system, prompt, schema)
+            # The model's output does not name its own type — the schema has
+            # no item_type field — and everything below that looks a document
+            # up by type (documents_of, and through it the pruning) reads
+            # item["item_type"]. Stamp it first. Until it was stamped here the
+            # pruning below found no document, every blank callout cost the
+            # full three attempts, and a night's run spent most of its bill
+            # on document types that produced nothing (2026-09-18).
+            item["item_type"] = self.item_type
             # A blank heading or callout is a model tic, not a fault in the
             # item; drop it rather than spend an attempt asking for it back.
             for doc in schemas.documents_of(item):
