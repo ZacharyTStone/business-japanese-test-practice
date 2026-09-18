@@ -186,13 +186,13 @@ begin
 
     -- The five just answered are the last thing the queue should reach for:
     -- nothing is due for twenty hours, and every unseen item in the window —
-    -- at this level, above it, or below it — comes first. A thousand, so the
-    -- whole window comes back and the five are in it to be last.
+    -- at this level, above it, or below it — comes first. A thousand is asked
+    -- for and ten come back: the day allows fifteen and five are spent, and
+    -- with a bank this size none of the ten is one of the five.
     perform test.check(
-        (select count(*) from public.next_items(1000) where times_seen > 0) = 5
-        and (select max(q.ordinality) from public.next_items(1000) with ordinality as q where q.times_seen = 0)
-            < (select min(q.ordinality) from public.next_items(1000) with ordinality as q where q.times_seen > 0),
-        'and every unseen item precedes every item answered in this session');
+        (select count(*) from public.next_items(1000)) = 10
+        and (select count(*) from public.next_items(1000) where times_seen > 0) = 0,
+        'the door sizes the set to what the day has left, and none of it is a repeat');
 
     -- The record the screen shows is the record the queue uses. Everything was
     -- answered a moment ago, so the recent figures equal the lifetime ones.

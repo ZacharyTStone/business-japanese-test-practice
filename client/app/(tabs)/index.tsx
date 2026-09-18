@@ -21,17 +21,12 @@ import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import {
-  fetchAnsweredToday,
-  fetchProfile,
-  fetchSectionLevels,
-  fetchStreak,
-} from "../../src/lib/db";
+import { fetchDay, fetchProfile, fetchSectionLevels, fetchStreak } from "../../src/lib/db";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, SectionLevel } from "../../src/lib/types";
+import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   GradientCard,
@@ -41,8 +36,14 @@ import {
   ScreenHeader,
   ScreenMessage,
 } from "../../src/ui/components";
+import { DayDone } from "../../src/ui/done";
 import { Icon } from "../../src/ui/icons";
 import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
+
+/** About how long a set takes: a question is a little over half a minute. */
+function minutesFor(n: number): number {
+  return Math.max(1, Math.round(n * 0.6));
+}
 
 export default function Home() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export default function Home() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
-  const [today, setToday] = useState(0);
+  const [day, setDay] = useState<DayStatus | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,16 +64,16 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, t, lv] = await Promise.all([
+          const [p, s, d, lv] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
-            fetchAnsweredToday(),
+            fetchDay(),
             fetchSectionLevels(),
           ]);
           if (cancelled) return;
           setProfile(p);
           setStreak(s);
-          setToday(t);
+          setDay(d);
           setLevels(lv);
         } catch (e) {
           // Without this the screen sat on its spinner for ever when the record
@@ -122,8 +123,15 @@ export default function Home() {
     );
   }
 
-  const goal = profile?.daily_goal ?? 5;
-  const done = Math.min(today, goal);
+  // Three states, decided by the database's own count of today (v_my_day):
+  // the day's set still open; the set done and a bonus set on offer; and the
+  // ceiling reached, which is a full stop rather than a dimmer button. An
+  // account with the ceiling lifted never reaches the third.
+  const goal = day?.goal ?? profile?.daily_goal ?? 10;
+  const answered = day?.answered_today ?? 0;
+  const done = Math.min(answered, goal);
+  const blocked = day != null && !day.unlimited && (day.left_today ?? 0) <= 0;
+  const bonus = day?.unlimited ? goal : (day?.left_today ?? 0);
   const countdown = countdownLine(daysUntil(profile?.exam_date), lang);
 
   // Only sections the database has placed get named. A new account has none,
@@ -162,7 +170,9 @@ export default function Home() {
           still asking to be read as a target when there is nothing left to
           aim at. Done says done, and the extra set is offered quietly, which
           is the weight it deserves: it is a bonus, not the job. */}
-      {done >= goal ? (
+      {blocked ? (
+        <DayDone answered={answered} streak={streak} countdown={countdown ?? undefined} />
+      ) : done >= goal ? (
         <GradientCard style={{ gap: space.lg }}>
           <View style={styles.heroRow}>
             <View style={styles.doneMark}>
@@ -179,6 +189,7 @@ export default function Home() {
 
           <Button
             label={t("btn_more")}
+            sub={t("btn_more_sub", { n: bonus })}
             tone="secondary"
             icon="play"
             onPress={() => router.push("/practice")}
@@ -206,7 +217,7 @@ export default function Home() {
 
           <Button
             label={t("btn_today")}
-            sub={t("btn_today_sub", { goal })}
+            sub={t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done) })}
             tone="onAccent"
             icon="play"
             onPress={() => router.push("/practice")}

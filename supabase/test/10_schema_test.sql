@@ -1303,11 +1303,13 @@ delete from auth.users where id = '99999999-9999-9999-9999-999999999999';
 
 -- --- the rest, and the due cap ---------------------------------------------
 
--- Seventeen items for one learner: five answered wrong two days ago (due), two
--- answered right four days ago and again two days ago (rested, due tomorrow), five to
--- answer today, three never seen, one from the level below, never seen, and
--- one kept for a forty-day-old answer at the end. answered_at is supplied on
--- the insert, which the app may also do; the trigger keeps it.
+-- Fourteen items for one learner: two answered wrong two days ago (due), two
+-- answered right four days ago and again two days ago (rested, due tomorrow),
+-- five to answer today, three never seen, one from the level below, never
+-- seen, and one kept for a forty-day-old answer at the end. Fourteen and not
+-- more because the day allows fifteen answers, and the ordering test wants
+-- the whole window inside what is left after two of them. answered_at is
+-- supplied on the insert, which the app may also do; the trigger keeps it.
 begin;
 insert into auth.users (id, email, is_anonymous) values
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'h@example.com', false);
@@ -1319,7 +1321,7 @@ insert into public.items (id, bundle_id, item_type, level, setting, function, to
                           correct_index, model_p_correct)
 select 'itm_c_' || k, 'bnd_cap', 'goi_bunpou', case when k = 'lo' then 'J3' else 'J2' end,
        'set_' || k, 'request', k, '空欄は。', 0, 0.70
-  from unnest(array['d1', 'd2', 'd3', 'd4', 'd5', 'r1', 'r2',
+  from unnest(array['d1', 'd2', 'r1', 'r2',
                     't1', 't2', 't3', 't4', 't5', 'u1', 'u2', 'u3', 'lo', 'old']) as k;
 insert into public.item_options (item_id, position, text, role, why)
 select i.id, p.pos, p.text, p.role, p.why
@@ -1339,9 +1341,10 @@ do $$
 declare
     i integer;
     n integer;
+    d record;
 begin
-    raise notice 'the due cap opens once the goal is met';
-    for i in 1..5 loop
+    raise notice 'the set is sized by what the day has left';
+    for i in 1..2 loop
         insert into public.attempts (item_id, chosen_index, answered_at)
         values ('itm_c_d' || i, 1, now() - interval '2 days' - (i || ' minutes')::interval);
     end loop;
@@ -1354,31 +1357,34 @@ begin
         insert into public.attempts (item_id, chosen_index, answered_at)
         values ('itm_c_r' || i, 0, now() - interval '2 days' + (i || ' minutes')::interval);
     end loop;
-    perform test.check((select due_now from public.v_my_review_load) = 5
-                       and (select tracked from public.v_my_review_load) = 7,
-        'five items are due and two are rested, on answers dated days ago');
+    perform test.check((select due_now from public.v_my_review_load) = 2
+                       and (select tracked from public.v_my_review_load) = 4,
+        'two items are due and two are rested, on answers dated days ago');
 
-    -- Nothing answered today, so the goal of five is open and the cap is two
-    -- fifths: two due items, and three fresh ones the learner has never met.
+    select * into d from public.v_my_day;
+    perform test.check(d.goal = 10 and d.answered_today = 0 and d.max_today = 15
+                       and d.left_today = 15 and not d.unlimited,
+        'a fresh day: ten to do, fifteen allowed, nothing answered yet');
+
+    -- Two fifths of whatever is served goes to the backlog: two of five.
     select count(*) into n from public.next_items(5) q where q.times_seen > 0;
     perform test.check(n = 2,
-        'with the goal open, a set of five carries two due items and no more');
+        'a set of five carries two due items and no more');
+    perform test.check((select count(*) from public.next_items(50)) = 14,
+        'and while the day is open a set of fifty is the whole window: fourteen items');
 
-    for i in 1..5 loop
+    -- Two answered today. Thirteen are then left, which is one more than the
+    -- rest of the window — enough for the ordering test below to see every
+    -- bucket, including the first of today's two.
+    for i in 1..2 loop
         insert into public.attempts (item_id, chosen_index) values ('itm_c_t' || i, 0);
     end loop;
+    select * into d from public.v_my_day;
+    perform test.check(d.answered_today = 2 and d.left_today = 13,
+        'two answered, thirteen left');
     perform test.check(
         (select level from public.v_my_levels where section = 'dokkai') = 'J2',
-        'twelve first attempts at seven right have not moved the section');
-
-    -- Five answers today is the default goal. The next set the learner asks
-    -- for is a bonus set, and four fifths of it goes to the backlog.
-    select count(*) into n from public.next_items(5) q where q.times_seen > 0;
-    perform test.check(n = 4,
-        'with the goal met, a set of five carries four due items');
-    perform test.check(
-        (select count(*) from public.next_items(5) q where q.times_seen = 0) = 1,
-        'and still one the learner has never met');
+        'six first attempts have not moved the section');
 end
 $$;
 
@@ -1395,17 +1401,17 @@ begin
     create temporary table q_order on commit drop as
         select q.id, q.times_seen, q.level, q.ordinality as ord
           from public.next_items(50) with ordinality as q;
-    perform test.check((select count(*) from q_order) = 17,
-        'a set of fifty is the whole window: seventeen items');
+    perform test.check((select count(*) from q_order) = 13,
+        'a set of fifty is what the day has left: thirteen of the fourteen');
 
     select max(ord) into ord_due_max    from q_order where id like 'itm_c_d%';
     select max(ord) into ord_unseen_max from q_order where times_seen = 0;
     select min(ord), max(ord) into ord_rest_min, ord_rest_max from q_order where id like 'itm_c_r%';
-    select min(ord) into ord_today_min  from q_order where id like 'itm_c_t%';
+    select min(ord) into ord_today_min  from q_order where id in ('itm_c_t1', 'itm_c_t2');
     select ord      into ord_lo         from q_order where id = 'itm_c_lo';
 
-    perform test.check(ord_due_max = 5,
-        'the five due items come first, whatever else is in the window');
+    perform test.check(ord_due_max = 2,
+        'the two due items come first, whatever else is in the window');
     perform test.check(ord_unseen_max < ord_rest_min,
         'every unseen item precedes every item already answered and not due');
     perform test.check(ord_lo < ord_rest_min,
@@ -1414,8 +1420,63 @@ begin
         'which comes after the unseen items at this level');
     perform test.check(ord_rest_max < ord_today_min,
         'an item rested for two days precedes one answered today');
-    perform test.check(ord_today_min = 13,
-        'and the five answered today are the last five: served only when nothing else exists');
+    perform test.check(ord_today_min = 13
+                       and (select count(*) from q_order where id in ('itm_c_t1', 'itm_c_t2')) = 1,
+        'and of the two answered today, one is last and the other is behind the door');
+end
+$$;
+
+do $$
+declare
+    d record;
+    i integer;
+begin
+    raise notice 'at fifteen the door shuts';
+    -- Twelve more answers, all repeats of one item: the cheapest way to spend
+    -- a day, and repeats never count for the level.
+    for i in 1..12 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_c_t1', 0);
+    end loop;
+    select * into d from public.v_my_day;
+    perform test.check(d.answered_today = 14 and d.left_today = 1,
+        'fourteen answered, one left');
+    perform test.check((select count(*) from public.next_items(5)) = 1,
+        'a set of five is served as a set of one');
+
+    insert into public.attempts (item_id, chosen_index) values ('itm_c_t1', 0);
+    select * into d from public.v_my_day;
+    perform test.check(d.answered_today = 15 and d.left_today = 0,
+        'fifteen answered, none left');
+    perform test.check((select count(*) from public.next_items(5)) = 0
+                       and (select count(*) from public.next_items(50)) = 0,
+        'and the queue serves nothing, whatever it is asked for');
+    perform test.check(
+        (select level from public.v_my_levels where section = 'dokkai') = 'J2',
+        'thirteen repeats of one item moved nothing');
+end
+$$;
+
+-- The owner lifts this tester's ceiling, as the service role.
+begin;
+set local role service_role;
+update public.testers set unlimited = true where email = 'h@example.com';
+commit;
+
+do $$ begin perform test.become('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); end $$;
+set role authenticated;
+
+do $$
+declare
+    d record;
+begin
+    raise notice 'a tester whose ceiling is lifted';
+    select * into d from public.v_my_day;
+    perform test.check(d.unlimited and d.max_today is null and d.left_today is null
+                       and d.answered_today = 15 and d.goal = 10,
+        'the view says so, and has no ceiling left to report');
+    perform test.check((select count(*) from public.next_items(5)) = 5
+                       and (select count(*) from public.next_items(50)) = 14,
+        'and the queue serves the whole window again');
 end
 $$;
 
@@ -1429,8 +1490,8 @@ begin
     values ('itm_c_old', 1, now() - interval '40 days');
 
     select * into r from public.v_my_type_stats where item_type = 'goi_bunpou';
-    perform test.check(r.answered = 15 and r.recent_answered = 14,
-        'the type view counts fifteen answers, fourteen of them in the last thirty days');
+    perform test.check(r.answered = 22 and r.recent_answered = 21,
+        'the type view counts twenty-two answers, twenty-one of them in the last thirty days');
     perform test.check(r.recent_accuracy between 0 and 1,
         'recent accuracy is a share');
     perform test.check(r.recent_accuracy > r.accuracy,
@@ -1441,12 +1502,12 @@ begin
         'a type never answered has no recent accuracy and zero recent answers');
 
     select * into r from public.v_my_tag_stats where axis = 'function' and tag = 'request';
-    perform test.check(r.answered = 15 and r.recent_answered = 14 and r.recent_accuracy > r.accuracy,
+    perform test.check(r.answered = 22 and r.recent_answered = 21 and r.recent_accuracy > r.accuracy,
         'the tag view says the same, per tag');
 
     select * into r from public.v_my_role_traps where role = 'register_too_casual';
-    perform test.check(r.times_chosen = 6 and r.recent_times = 5,
-        'the trap view counts six catches, five of them recent');
+    perform test.check(r.times_chosen = 3 and r.recent_times = 2,
+        'the trap view counts three catches, two of them recent');
 end
 $$;
 

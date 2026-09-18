@@ -103,6 +103,14 @@ accident is not.
   slips in one item from the level above. The owner asked for this (2026-09-16):
   all the thinking happens behind the scenes, and the app's whole job is to
   raise a score rather than to offer a study menu.
+- **Ten a day, fifteen at most, and the database counts.** The daily set is
+  `profiles.daily_goal` (default 10, never above 15, never chosen in the app).
+  After it one bonus set is offered; at fifteen answers in a Japanese calendar
+  day `next_items()` returns nothing and the app shows the done screen
+  (`client/src/ui/done.tsx`). `v_my_day` is the one row both read. A tester
+  row with `unlimited = true` lifts the ceiling for that account alone
+  (`bjt tester <email> --unlimited`); it is for exercising the app, not for
+  studying. The owner asked for this (2026-09-18).
 - **Testers only, for now, and the database is the door.** `public.testers`
   lists who may use the app by the email they sign in with (email and password
   today; Google later, matched on the same email); `is_tester()` reads the JWT; every row-level policy in `public` requires it and the anon role holds

@@ -137,6 +137,20 @@ export type SectionLevel = {
   placed: boolean;
 };
 
+/** One row from v_my_day: where today stands against the goal and the ceiling.
+ *
+ *  `max_today` and `left_today` are null for an account whose ceiling is lifted
+ *  (a tester exercising the app); `unlimited` says so explicitly. The database
+ *  runs the same arithmetic inside next_items(), so what this row says is left
+ *  is what the queue will serve. */
+export type DayStatus = {
+  goal: number;
+  answered_today: number;
+  unlimited: boolean;
+  max_today: number | null;
+  left_today: number | null;
+};
+
 export type Profile = {
   id: string;
   display_name: string | null;
