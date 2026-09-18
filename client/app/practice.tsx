@@ -107,10 +107,12 @@ type Stage = "scene" | "listen" | "answer" | "reveal";
  *
  * In the exam these are heard, never read: the answer sheet has four numbers
  * and nothing else. So when the audio exists the options are played after the
- * narration and shown as letters with a replay button, and the text stays
- * hidden until the answer is in. All four or none — a set where three are
- * spoken and one is printed would mark the odd one out, and the type table in
- * bjt/tts/plan.py is the only reason any other type would have option clips.
+ * narration, and each option carries a replay button next to its text. The
+ * text is on screen from the start: the owner asked for it (2026-09-18) —
+ * practice is not the exam, and a learner who wants a pure listen can leave
+ * the words unread. All four or none — a set where three are spoken and one
+ * is printed would mark the odd one out, and the type table in bjt/tts/plan.py
+ * is the only reason any other type would have option clips.
  */
 function spokenOptionUrls(item: QueuedItem): string[] | null {
   if (item.item_type !== "hatsugen_choukai") return null;
@@ -153,10 +155,6 @@ export default function Practice() {
   const [chosen, setChosen] = useState<number | null>(null);
   const [graded, setGraded] = useState<{ isCorrect: boolean; chosenRole: string } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  // The learner asked to see spoken options as text before answering. Practice
-  // is not the exam, and the fourth listen sometimes needs the page; but it is
-  // off by default and resets with every item, so the listen comes first.
-  const [optionsAsText, setOptionsAsText] = useState(false);
   const [answers, setAnswers] = useState<AnsweredItem[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -347,14 +345,11 @@ export default function Practice() {
     setChosen(null);
     setGraded(null);
     setShowDetails(false);
-    setOptionsAsText(false);
     scrolledFor.current = null;
     questionShownAt.current = Date.now();
   }
 
   const revealed = stage === "reveal" && graded !== null;
-  // Spoken options are letters until the answer is in, unless asked for.
-  const optionTextHidden = spokenOptions !== null && !revealed && !optionsAsText;
   const chosenOption = chosen !== null ? options[chosen] : null;
   const correctOption = options[item.correct_index];
   const role = graded?.chosenRole || chosenOption?.role || "";
@@ -440,7 +435,11 @@ export default function Practice() {
         </Card>
       ) : (
         <Card style={{ gap: space.md }}>
-          {sceneImage ? <SceneImage uri={sceneImage} small /> : null}
+          {/* The same picture at the same size as on the scene card. It used
+              to shrink to a strip once the audio started, which cropped the
+              drawing to a band of ceiling; the owner asked for it whole
+              (2026-09-18). */}
+          {sceneImage ? <SceneImage uri={sceneImage} /> : null}
 
           {/* The stimulus, in the order it is met: what you read, then what you
               hear. A document comes first because the audio usually revises it —
@@ -483,18 +482,6 @@ export default function Practice() {
             <Text style={[type.mono, styles.hint]}>{t("key_hint_answer")}</Text>
           ) : null}
 
-          {spokenOptions !== null && !revealed ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setOptionsAsText((v) => !v)}
-              style={({ pressed }) => [pressed && { opacity: 0.85 }]}
-            >
-              <Text style={[type.small, styles.toggle]}>
-                {optionsAsText ? t("hide_options_text") : t("show_options_text")}
-              </Text>
-            </Pressable>
-          ) : null}
-
           <View style={{ gap: space.md }}>
             {options.map((option, i) => {
               const isChosen = chosen === i;
@@ -510,9 +497,7 @@ export default function Practice() {
                   // then a sentence with nothing tying them together — and, once
                   // answered, says which one this was.
                   accessibilityLabel={
-                    (optionTextHidden
-                      ? t("option_spoken", { letter: LETTERS[i] })
-                      : `${LETTERS[i]}. ${option.text}`) +
+                    `${LETTERS[i]}. ${option.text}` +
                     (show ? ` — ${isAnswer ? t("mark_correct") : t("mark_chosen")}` : "")
                   }
                   accessibilityState={{ disabled: revealed || busy || chosen !== null }}
@@ -561,7 +546,7 @@ export default function Practice() {
                       </Text>
                     ) : null}
                   </View>
-                  {optionTextHidden ? null : <Text style={type.option}>{option.text}</Text>}
+                  <Text style={type.option}>{option.text}</Text>
                 </Pressable>
               );
             })}
@@ -704,14 +689,14 @@ function SceneStrip({ item, big }: { item: QueuedItem; big: boolean }) {
   );
 }
 
-function SceneImage({ uri, small }: { uri: string; small?: boolean }) {
+function SceneImage({ uri }: { uri: string }) {
   return (
     // Decorative on purpose. The scene is one of sixteen shared drawings, so it
     // cannot contain the answer — describing it to a screen reader would be
     // describing a stock illustration, not the question.
     <Image
       source={{ uri }}
-      style={[styles.scene, small && styles.sceneSmall]}
+      style={styles.scene}
       resizeMode="cover"
       accessible={false}
       accessibilityElementsHidden
@@ -747,7 +732,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.accentSoft,
   },
-  sceneSmall: { aspectRatio: 3 / 1 },
   option: {
     backgroundColor: colors.surface,
     borderWidth: 2,

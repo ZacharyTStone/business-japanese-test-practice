@@ -210,9 +210,6 @@ const S = {
   listening: ["聞いています…", "Listening…"],
   skip: ["とばして選択肢へ", "Skip to the options"],
   play_option: ["{letter}をもう一回聞く", "Play {letter} again"],
-  option_spoken: ["{letter}（音声）", "{letter} (spoken)"],
-  show_options_text: ["選択肢を文字で見る", "Show the options as text"],
-  hide_options_text: ["選択肢の文字を隠す", "Hide the text"],
 
   // meter
   rudeness: ["失礼度", "Rudeness"],
