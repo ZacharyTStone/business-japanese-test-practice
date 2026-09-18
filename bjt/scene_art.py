@@ -30,7 +30,7 @@ import struct
 import urllib.error
 import urllib.request
 import zlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Protocol
 
@@ -120,6 +120,9 @@ class OpenAIImageProvider:
             "size": self.SIZE,
             "quality": config.IMAGE_QUALITY,
             "output_format": "webp",
+            # Without this the API returns a lossless-grade file that can pass
+            # the bucket's 2 MiB limit; see config.IMAGE_COMPRESSION.
+            "output_compression": config.IMAGE_COMPRESSION,
         }
         data = _json_request(
             "POST", self.ENDPOINT, body,
@@ -341,20 +344,80 @@ _MEDIA_TYPES = {
 }
 
 
+@dataclass
+class UploadResult:
+    #: Storage paths now in the bucket because of this call.
+    sent: list[str] = field(default_factory=list)
+    #: (storage path, why) for every local file that did not get there.
+    failed: list[tuple[str, str]] = field(default_factory=list)
+
+    @property
+    def failed_paths(self) -> set[str]:
+        return {path for path, _ in self.failed}
+
+    def summary(self) -> str:
+        """Markdown for the run summary. Empty when nothing went wrong."""
+        if not self.failed:
+            return ""
+        lines = [
+            "### Not uploaded",
+            "",
+            f"{len(self.failed)} approved picture(s) did not reach the bucket and are "
+            "not pointed at by the database. They are in this run's artifact; the "
+            "next night draws them again.",
+            "",
+            "| file | why |",
+            "|---|---|",
+        ]
+        lines.extend(f"| {path} | {why} |" for path, why in self.failed)
+        return "\n".join(lines)
+
+
 def upload_approved(survey: list[scenes.Scene], bucket: Bucket,
-                    media_dir: Path | None = None) -> list[str]:
-    """Push every locally approved file to the bucket. Returns what was sent."""
+                    media_dir: Path | None = None) -> UploadResult:
+    """Push every locally approved file to the bucket.
+
+    One file failing must not stop the rest: the first real night lost ten
+    approved pictures because the fourth was over the bucket's size limit and
+    the exception ended the loop. A file the bucket would refuse is caught here
+    before a byte is sent, and any other failure is recorded against its file
+    and the loop goes on. The caller uses `failed_paths` to keep those files out
+    of the SQL, so the database is never pointed at a picture that is not there.
+    """
     root = Path(media_dir or config.MEDIA_DIR) / "scenes"
-    sent = []
+    result = UploadResult()
     for scene in survey:
         if not scene.path:
             continue
         local = root / scene.path
         if not local.is_file():
             continue  # known only from the bucket listing; nothing to send
-        bucket.upload(scene.path, local.read_bytes(), _MEDIA_TYPES[local.suffix])
-        sent.append(scene.path)
-    return sent
+        size = local.stat().st_size
+        if size > config.SCENE_MAX_BYTES:
+            result.failed.append((
+                scene.path,
+                f"{size:,} bytes is over the bucket's {config.SCENE_MAX_BYTES:,} byte limit",
+            ))
+            continue
+        try:
+            bucket.upload(scene.path, local.read_bytes(), _MEDIA_TYPES[local.suffix])
+        except RuntimeError as exc:
+            result.failed.append((scene.path, str(exc)))
+            continue
+        result.sent.append(scene.path)
+    return result
+
+
+def without(survey: list[scenes.Scene], paths: set[str]) -> list[scenes.Scene]:
+    """The survey with those files forgotten, as if they had never been drawn.
+
+    For the SQL after an upload with failures: a scene whose file is on this
+    machine but not in the bucket must read as having no picture, or the app
+    would be pointed at a URL that 404s.
+    """
+    if not paths:
+        return survey
+    return [replace(s, path=None) if s.path in paths else s for s in survey]
 
 
 # ----- HTTP, kept small on purpose -----------------------------------------
