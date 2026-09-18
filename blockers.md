@@ -187,11 +187,13 @@ grant itself the paid unlock, and that nobody off the tester list reads a row.
 committed items into it.
 
 **What unblocks it.** A Supabase project and its `SUPABASE_DB_URL` secret.
-Then, from the Actions tab, run **deploy database**: it applies the
-migrations with the Supabase CLI, publishes every `batches/*.sql`, and adds
-the Google account typed into the form to the tester list. Every step is
-idempotent, so running it again after a new migration or a new batch is the
-whole deployment story. No laptop needed. The same three commands by hand:
+Then **deploy database** runs by itself after every green `checks` run on
+`main`, and from the Actions tab whenever you like: it applies the migrations
+with the Supabase CLI, publishes every `batches/*.sql`, makes and uploads the
+audio the bank still lacks (entry 2), and — by hand only — adds the email
+typed into the form to the tester list. Every step is idempotent, so a merged
+nightly pull request is live a few minutes later with nothing to press. No
+laptop needed. The same three commands by hand:
 
 ```bash
 supabase db push --db-url "$SUPABASE_DB_URL"
