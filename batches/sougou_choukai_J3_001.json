@@ -1,0 +1,322 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choukai",
+  "level": "J3",
+  "generated_at": "2026-09-18T08:50:50+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "eabb6f222a",
+      "item_type": "sougou_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "desk_huddle+subordinate_to_superior+why_delayed@J3",
+        "setting": "desk_huddle",
+        "relation": "subordinate_to_superior",
+        "function": "why_delayed",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "報告書が遅れる理由",
+      "stem": "報告書が遅れそうなのは、なぜですか。",
+      "options": [
+        {
+          "text": "部下がほかの仕事で忙しいから",
+          "role": "unsupported_but_plausible",
+          "why": "遅れの理由としてはありそうだが、会話では誰も言っていない。"
+        },
+        {
+          "text": "グラフを作るソフトが動かないから",
+          "role": "correct",
+          "why": "部下が「ただ、グラフを作るソフトが今朝から動かなくて」と、遅れる理由として述べている。"
+        },
+        {
+          "text": "データがまだ届いていないから",
+          "role": "stated_by_wrong_speaker",
+          "why": "課長がそう聞いただけで、部下は「昨日届きました」と否定している。"
+        },
+        {
+          "text": "システム部からの返事を待っているから",
+          "role": "surface_keyword_match",
+          "why": "システム部は話に出るが、返事はすでにあり、午後には直ると分かっている。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "課長は「データが届いていないのか」と聞くが、部下は「いえ」と否定し、本当の理由はソフトが動かないことだと言う。システム部には連絡ずみで、午後には直る。課長の推測をそのまま答えにすると誤る。",
+      "explanation_en": "The manager guesses a cause and the subordinate corrects it; the real reason is the software.",
+      "vocab_notes": [
+        {
+          "term": "提出",
+          "reading": "ていしゅつ",
+          "meaning": "submission"
+        },
+        {
+          "term": "仕上げる",
+          "reading": "しあげる",
+          "meaning": "to finish up"
+        }
+      ],
+      "audio": {
+        "narration": "b4ec14f1473c4de6",
+        "options": [],
+        "dialogue": [
+          "81895b53cfc0cd40",
+          "5e61179310ac7e27",
+          "80191c1fb273d2ba",
+          "27b8b6c9c6ee4426",
+          "3b594ac659668250",
+          "20d47b49df7e0887"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "部下",
+          "text": "課長、報告書の提出が少し遅れそうです。",
+          "clip_id": "81895b53cfc0cd40"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "どうしたの。データがまだ届いていないのかな。",
+          "clip_id": "5e61179310ac7e27"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "いえ、データは昨日届きました。ただ、グラフを作るソフトが今朝から動かなくて。",
+          "clip_id": "80191c1fb273d2ba"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "システム部には連絡した？",
+          "clip_id": "27b8b6c9c6ee4426"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。午後には直るそうです。",
+          "clip_id": "3b594ac659668250"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "分かった。直ったらすぐ仕上げてください。",
+          "clip_id": "20d47b49df7e0887"
+        }
+      ],
+      "scene_id": "scene_office_desk_pair",
+      "channel": "in_person"
+    },
+    {
+      "id": "b2498c2196",
+      "item_type": "sougou_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "client_meeting+staff_to_client+what_changed@J3",
+        "setting": "client_meeting",
+        "relation": "staff_to_client",
+        "function": "what_changed",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "見積で変わった点",
+      "stem": "前回の見積から変わったのは、何ですか。",
+      "options": [
+        {
+          "text": "金額が安くなった点",
+          "role": "superseded_by_later_turn",
+          "why": "取引先が金額が変わったのかと聞いたが、営業担当は「金額は前回と同じ」と答えている。"
+        },
+        {
+          "text": "担当者が代わった点",
+          "role": "surface_keyword_match",
+          "why": "「担当」という言葉は出るが、担当は変わらないと確認されている。"
+        },
+        {
+          "text": "数量が増えた点",
+          "role": "unsupported_but_plausible",
+          "why": "見積の変更としてはありそうだが、数量の話は出ていない。"
+        },
+        {
+          "text": "納期が一週間早くなった点",
+          "role": "correct",
+          "why": "営業担当が「納期が一週間早くなりました」と、変わった点として述べている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "取引先は金額と担当者について聞くが、どちらも「同じ」「変わらない」と答えられる。変わったのは納期だけ。聞かれたことと、実際に変わったことを分けて聞き取る。",
+      "explanation_en": "Two things the client asks about are unchanged; only the delivery date moved.",
+      "vocab_notes": [
+        {
+          "term": "見積",
+          "reading": "みつもり",
+          "meaning": "quotation / estimate"
+        },
+        {
+          "term": "引き続き",
+          "reading": "ひきつづき",
+          "meaning": "continuing as before"
+        }
+      ],
+      "audio": {
+        "narration": "14b6815909b5129d",
+        "options": [],
+        "dialogue": [
+          "1bc13ccf8628238f",
+          "b52bbeaa967fa9ab",
+          "d4e3903dd584808d",
+          "cf697f93a4441aa7",
+          "10151dfd4f7b0061"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "前回お渡しした見積から、変わった点をご説明します。",
+          "clip_id": "1bc13ccf8628238f"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "金額が変わったのでしょうか。",
+          "clip_id": "b52bbeaa967fa9ab"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "いえ、金額は前回と同じです。納期が一週間早くなりました。",
+          "clip_id": "d4e3903dd584808d"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "それは助かります。担当の方は変わりませんね。",
+          "clip_id": "cf697f93a4441aa7"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "はい、私が引き続き担当いたします。",
+          "clip_id": "10151dfd4f7b0061"
+        }
+      ],
+      "scene_id": "scene_client_meeting_room",
+      "channel": "in_person"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "b4ec14f1473c4de6",
+      "item_id": "eabb6f222a",
+      "kind": "narration",
+      "index": null,
+      "text": "報告書が遅れそうなのは、なぜですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "81895b53cfc0cd40",
+      "item_id": "eabb6f222a",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "課長、報告書の提出が少し遅れそうです。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5e61179310ac7e27",
+      "item_id": "eabb6f222a",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "どうしたの。データがまだ届いていないのかな。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "80191c1fb273d2ba",
+      "item_id": "eabb6f222a",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "いえ、データは昨日届きました。ただ、グラフを作るソフトが今朝から動かなくて。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "27b8b6c9c6ee4426",
+      "item_id": "eabb6f222a",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "システム部には連絡した？",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3b594ac659668250",
+      "item_id": "eabb6f222a",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "はい。午後には直るそうです。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "20d47b49df7e0887",
+      "item_id": "eabb6f222a",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "分かった。直ったらすぐ仕上げてください。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "14b6815909b5129d",
+      "item_id": "b2498c2196",
+      "kind": "narration",
+      "index": null,
+      "text": "前回の見積から変わったのは、何ですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1bc13ccf8628238f",
+      "item_id": "b2498c2196",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "前回お渡しした見積から、変わった点をご説明します。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b52bbeaa967fa9ab",
+      "item_id": "b2498c2196",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "金額が変わったのでしょうか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d4e3903dd584808d",
+      "item_id": "b2498c2196",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "いえ、金額は前回と同じです。納期が一週間早くなりました。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "cf697f93a4441aa7",
+      "item_id": "b2498c2196",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "それは助かります。担当の方は変わりませんね。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "10151dfd4f7b0061",
+      "item_id": "b2498c2196",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "はい、私が引き続き担当いたします。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_client_meeting_room",
+    "scene_office_desk_pair"
+  ]
+}

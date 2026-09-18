@@ -1,0 +1,222 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_dokkai",
+  "level": "J1",
+  "generated_at": "2026-09-18T08:50:50+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "807d62e9b4",
+      "item_type": "sougou_dokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "scheduling+subordinate_to_superior+infer_owner@J1",
+        "setting": "scheduling",
+        "relation": "subordinate_to_superior",
+        "function": "infer_owner",
+        "level": "J1",
+        "channel": "written"
+      },
+      "topic": "日程調整を誰が引き取るか",
+      "stem": "先方への返事は、誰がどのようにすることになりますか。",
+      "options": [
+        {
+          "text": "課長が、十六日の午後に先方を訪ねる旨を返事をする。",
+          "role": "wrong_timeframe",
+          "why": "課長は十六日は午前しか空いておらず、先方の希望は午後なので、その日程は成り立たない。"
+        },
+        {
+          "text": "先方の担当者が、技術担当に直接連絡して日程を決める。",
+          "role": "unsupported_but_plausible",
+          "why": "先方は同席を頼んでいるだけで、自分から技術担当に連絡するとは書いていない。"
+        },
+        {
+          "text": "佐藤が、技術担当の予定を確かめたうえで、今日中に先方へ返事をする。",
+          "role": "correct",
+          "why": "課長は「調整をお願いします」「返事は今日中に」と佐藤に振っており、先方の希望する技術担当の同席も踏まえるよう求めている。"
+        },
+        {
+          "text": "技術の担当者が、自分の空いている日を先方へ直接返事をする。",
+          "role": "surface_keyword_match",
+          "why": "「技術のご担当」は先方が同席を望んだ相手で、返事をする役割は課長から佐藤に振られている。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "課長のメールは、先方の候補日を転送したうえで、自分の都合を伝え、調整と返事を佐藤に頼んでいる。先方の希望する技術担当の同席は、佐藤が確かめる条件の一つであって、技術担当が返事をするわけではない。課長の空きは先方の希望する午後と合わないので、課長自身が日程を決めて返事をする流れにもならない。",
+      "explanation_en": "The manager forwards the request, states his own constraints and delegates the reply; the engineer's presence is a condition to check, not the reply itself.",
+      "vocab_notes": [
+        {
+          "term": "同席",
+          "reading": "どうせき",
+          "meaning": "attending together"
+        },
+        {
+          "term": "踏まえる",
+          "reading": "ふまえる",
+          "meaning": "to take into account"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "email_thread",
+          "title": "Re: 打ち合わせ日程のご相談",
+          "meta": [
+            {
+              "label": "差出人",
+              "value": "営業部 課長 川口"
+            },
+            {
+              "label": "宛先",
+              "value": "営業部 佐藤"
+            },
+            {
+              "label": "件名",
+              "value": "Re: 打ち合わせ日程のご相談"
+            },
+            {
+              "label": "日時",
+              "value": "九月九日 九時十分"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "佐藤さん　下記、先方から日程の候補が来ています。私は十四日は終日外出、十六日は午前しか空いていません。先方は技術の話も聞きたいそうなので、その点も踏まえて調整をお願いします。返事は今日中に。"
+            },
+            {
+              "type": "quoted_message",
+              "sender": "あさひ工業 鈴木",
+              "sent_at": "九月八日 十七時二十分",
+              "depth": 1,
+              "text": "川口様　次回の打ち合わせですが、十四日か十六日の午後でいかがでしょうか。可能でしたら、技術のご担当の方にもご同席いただけると助かります。"
+            }
+          ]
+        }
+      ],
+      "channel": "written"
+    },
+    {
+      "id": "a151810e90",
+      "item_type": "sougou_dokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "project_update+junior_to_senior+infer_risk@J1",
+        "setting": "project_update",
+        "relation": "junior_to_senior",
+        "function": "infer_risk",
+        "level": "J1",
+        "channel": "written"
+      },
+      "topic": "報告書に隠れた日程の問題",
+      "stem": "先輩に報告しておくべき問題は何ですか。",
+      "options": [
+        {
+          "text": "測定器の戻りが検査の開始予定より遅く、検査の着手が遅れること",
+          "role": "correct",
+          "why": "検査は十月一日開始の予定だが、測定器は十月六日まで戻らないと書かれており、予定どおりには始められない。報告書はそれを問題として書いていない。"
+        },
+        {
+          "text": "製造がまだ八割までしか進んでいないこと",
+          "role": "stated_but_answers_different_question",
+          "why": "報告書に書かれた事実だが、完了予定は九月三十日でまだ先であり、遅れとは言えない。"
+        },
+        {
+          "text": "設計の完了が予定より遅れたこと",
+          "role": "wrong_timeframe",
+          "why": "設計は九月五日に完了済みで、遅れたとはどこにも書かれていない。"
+        },
+        {
+          "text": "製造の人手が足りず、製造が遅れること",
+          "role": "unsupported_but_plausible",
+          "why": "遅れの原因としてはありがちだが、人手については報告書に何も書かれていない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "報告書は「予定どおり」と書くが、表と備考を突き合わせると、検査の開始日より測定器の戻りが五日遅い。書き手はそれを問題として挙げていないので、読む側が気づいて報告する必要がある。製造の八割は予定の範囲内、設計は完了済みで、人手の話は出ていない。",
+      "explanation_en": "The report says on schedule, but the instrument returns five days after inspection is due to start; the risk is implied by two lines, not stated.",
+      "vocab_notes": [
+        {
+          "term": "校正",
+          "reading": "こうせい",
+          "meaning": "calibration"
+        },
+        {
+          "term": "着手",
+          "reading": "ちゃくしゅ",
+          "meaning": "starting (work)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "progress_report",
+          "title": "案件N 進捗報告",
+          "meta": [
+            {
+              "label": "報告者",
+              "value": "技術部 後藤"
+            },
+            {
+              "label": "報告日",
+              "value": "九月二十二日"
+            },
+            {
+              "label": "案件",
+              "value": "案件N（ひかり製作所）"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "全体としては予定どおり進んでいます。"
+            },
+            {
+              "type": "table",
+              "columns": [
+                "工程",
+                "状況",
+                "予定"
+              ],
+              "rows": [
+                [
+                  "設計",
+                  "完了",
+                  "九月五日 完了済み"
+                ],
+                [
+                  "製造",
+                  "進行中（八割）",
+                  "九月三十日 完了予定"
+                ],
+                [
+                  "検査",
+                  "未着手",
+                  "十月一日 開始予定"
+                ]
+              ]
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "検査に使う測定器は、九月末まで業者で校正中。戻りは十月六日の見込み。",
+                "納品は十月二十日で先方と合意済み。"
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "written"
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}

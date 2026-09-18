@@ -1,0 +1,146 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "sougou_choukai",
+  "level": "J1",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "client_meeting+peer_to_peer+who_decides@J1",
+      "topic": "問い合わせ窓口を誰が持つか",
+      "scene_id": "scene_client_meeting_room",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "導入後の問い合わせ窓口ですが、御社ではどなたになりますか。"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "設定まわりは私が見ておりますので、私が窓口になるのが自然かと思います。"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "ただ、私のほうは来月から御社に常駐しますので、その場で受けられます。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "常駐していただけるなら、そのほうが助かりますね。"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では、窓口はそちらにお願いします。私は後ろで技術的な確認を受け持ちます。"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "承知しました。"
+        }
+      ],
+      "stem": "問い合わせの窓口は、誰が担当することになりましたか。",
+      "options": [
+        {
+          "text": "来月から取引先に常駐する社員",
+          "role": "correct",
+          "why": "常駐するという申し出を取引先が歓迎し、設定担当の社員も「窓口はそちらに」と譲っている。"
+        },
+        {
+          "text": "設定を担当している社員",
+          "role": "superseded_by_later_turn",
+          "why": "最初に自分が窓口になるのが自然だと述べたが、常駐の話が出たあとで自ら譲り、後方の技術確認に回った。"
+        },
+        {
+          "text": "取引先の担当者",
+          "role": "stated_by_wrong_speaker",
+          "why": "窓口を尋ねたのはこの人で、窓口になるとは述べていない。"
+        },
+        {
+          "text": "二人の社員が交代で担当する",
+          "role": "unsupported_but_plausible",
+          "why": "分担としてはあり得るが、会話では窓口は一人に決まり、もう一人は後方に回っている。"
+        }
+      ],
+      "explanation_ja": "最初に手を挙げたのは設定担当の社員だが、常駐するという同僚の話に取引先が「そのほうが助かる」と応じ、設定担当は「窓口はそちらに」と譲った。決まったのは常駐する社員で、譲った側は後ろで技術確認を受け持つ。途中で出た候補をそのまま答えると誤る。",
+      "explanation_en": "The first volunteer withdraws once the client welcomes the on-site colleague; the decision is the later turn, not the first.",
+      "vocab_notes": [
+        {
+          "term": "常駐",
+          "reading": "じょうちゅう",
+          "meaning": "being stationed on site"
+        },
+        {
+          "term": "窓口",
+          "reading": "まどぐち",
+          "meaning": "point of contact"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "video_meeting+staff_to_client+dates_and_numbers@J1",
+      "topic": "初回納品の台数",
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "dialogue": [
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "初回は百台を二十日に、とお願いしていましたね。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "はい。ただ、部材の関係で二十日には八十台が限度でして、残りは月末になります。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "八十台ですか。実はこちらも現場の準備が遅れていまして、二十日は六十台あれば足ります。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "では二十日に六十台、残りの四十台を月末に、ということで。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "月末の分は一度に受け取れないので、二十五日に二十台、月末に二十台と分けていただけますか。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "承知しました。そのように手配いたします。"
+        }
+      ],
+      "stem": "二十日に納品する台数は、いくつになりましたか。",
+      "options": [
+        {
+          "text": "百台",
+          "role": "surface_keyword_match",
+          "why": "会話の冒頭に出る注文全体の数で、二十日に届く数ではない。"
+        },
+        {
+          "text": "四十台",
+          "role": "unsupported_but_plausible",
+          "why": "二十日の残りとして出た数で、しかも二十五日と月末に二十台ずつ分けると決まっており、二十日の話ではない。"
+        },
+        {
+          "text": "六十台",
+          "role": "correct",
+          "why": "取引先が二十日は六十台で足りると述べ、営業担当が「二十日に六十台」と受けており、その後この数は変わっていない。"
+        },
+        {
+          "text": "八十台",
+          "role": "superseded_by_later_turn",
+          "why": "営業担当が示した二十日の上限だが、その直後に取引先が六十台で足りると述べて数が下がった。"
+        }
+      ],
+      "explanation_ja": "二十日の数は百台から八十台、さらに六十台へと会話の中で二度変わり、六十台で確定する。残り四十台は二十五日と月末に分けられた。最後の発言は「そのように手配します」としか言わないので、途中の数の動きを追わないと答えられない。",
+      "explanation_en": "The figure for the twentieth drops twice and settles at sixty; the closing line only confirms without repeating it.",
+      "vocab_notes": [
+        {
+          "term": "部材",
+          "reading": "ぶざい",
+          "meaning": "components / materials"
+        },
+        {
+          "term": "手配",
+          "reading": "てはい",
+          "meaning": "arrangements"
+        }
+      ]
+    }
+  ]
+}
