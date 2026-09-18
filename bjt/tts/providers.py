@@ -1,23 +1,41 @@
 """TTS provider adapters.
 
 An adapter rather than a hard-coded vendor, for a reason that is specific rather
-than architectural good manners: the choice between providers has to be settled
-by a native speaker listening to the same twenty clips from each, judging names,
-business terms, dates, 敬語 and contrastive emphasis. That comparison is only
-cheap if switching is a flag. It is also the kind of decision that gets revisited
-— a provider that reads 御社 correctly today may not after its next model update,
-and the pronunciation dictionary below is where such a fix goes.
+than architectural good manners: which provider sounds right is settled by a
+native speaker listening to the same clips from each (`bjt audition`), judging
+names, business terms, dates, 敬語 and contrastive emphasis. That comparison is
+only cheap if switching is a flag. It is also the kind of decision that gets
+revisited — a provider that reads 御社 correctly today may not after its next
+model update, and the pronunciation dictionary below is where such a fix goes.
+
+Three real adapters, all of them the current generation of "instructable"
+speech models rather than the concatenative voices that made TTS sound like a
+station announcement:
+
+  gemini   Google's Gemini speech model, over the Gemini API. One API key.
+           Takes a free-text direction, so the voice can be told to sound like
+           a receptionist rather than tuned per clip.
+  openai   OpenAI's speech API. One API key — the same one the scene artwork
+           already uses. Also takes a free-text direction.
+  google   Google Cloud Text-to-Speech with its studio-grade Japanese voices.
+           Needs a Cloud project and application credentials rather than a
+           key, so it is the heaviest to set up; it is here because its
+           Japanese voices are native recordings and worth comparing against.
 
 Every adapter returns 16-bit PCM WAV at whatever rate it likes; `channel.py`
 resamples. WAV rather than a compressed format because review happens on the
 original and a delivery derivative is made afterwards, once.
 
-No adapter is called at practice time, ever. This runs on a laptop, over a
-bundle that has already passed every gate.
+No adapter is called at practice time, ever. This runs on a laptop or in the
+deploy workflow, over a bundle that has already passed every gate.
 """
 from __future__ import annotations
 
+import base64
+import json
 import os
+import urllib.error
+import urllib.request
 from typing import Protocol
 
 from . import channel
@@ -33,26 +51,54 @@ class Provider(Protocol):
         ...
 
 
-#: How each cast voice should be delivered. Sent to providers that accept a
-#: direction; ignored by those that do not. These are performance notes, not
-#: identities — the identity is the provider's voice id, chosen once during the
-#: listening comparison and recorded in VOICE_IDS.
+#: How every clip should sound, whoever is speaking. Sent, ahead of the role
+#: note below, to providers that take a direction; it is the difference between
+#: a voice that reads and a person who talks, and it is what "not robotic" means
+#: in practice: native pitch accent, an office pace, and phrases that run
+#: together the way speech does instead of a pause after every particle.
+HOUSE_STYLE = (
+    "Natural, native Japanese as spoken in a Tokyo office. Standard pitch accent. "
+    "Ordinary business pace — do not slow down or over-enunciate for a learner; "
+    "phrases flow together the way a person actually talks, with no pause after "
+    "every particle. Keigo comes out fluently, as from someone who says it every "
+    "day, never stiffly or as if reading a list. Plain, unaffected delivery: no "
+    "theatrical acting, no smiling announcer voice, no foreign accent. Read the "
+    "text exactly as written and say nothing else."
+)
+
+#: How each cast voice should be delivered, on top of the house style. These are
+#: performance notes, not identities — the identity is the provider's voice id,
+#: chosen once during the listening comparison and recorded in VOICE_IDS.
 VOICE_DIRECTION: dict[str, str] = {
-    "narrator_f": "Neutral, even, unhurried. Reading a situation aloud, not acting it. "
-                  "No warmth and no drama — the narration is not what is being tested.",
-    "staff_junior_m": "A junior employee. Polite, slightly careful, a little fast when nervous.",
-    "staff_junior_f": "A junior employee. Polite and clear, deferential to seniors.",
-    "staff_mid_m": "A mid-career employee. Businesslike, unhurried, comfortable with keigo.",
+    "narrator_f": "The narrator, outside the scene: even, neutral, unhurried, setting up "
+                  "a situation rather than acting it. No warmth and no drama — the "
+                  "narration is not what is being tested.",
+    "staff_junior_m": "A junior employee in his twenties. Polite and a little careful; "
+                      "slightly quick when nervous.",
+    "staff_junior_f": "A junior employee in her twenties. Polite, clear, deferential to "
+                      "seniors without sounding meek.",
+    "staff_mid_m": "A mid-career employee. Businesslike, unhurried, entirely at ease with "
+                   "keigo — the voice of somebody who answers the phone all day.",
     "staff_mid_f": "A mid-career employee. Businesslike and warm, professional pace.",
-    "manager_m": "A section manager. Calm, measured, used to being listened to.",
+    "manager_m": "A section manager. Calm and measured, used to being listened to; "
+                 "never barks.",
     "reception_f": "Front desk. Bright, very clear articulation, welcoming but formal.",
 }
+
+
+def direction_for(voice: str) -> str:
+    """The full delivery note for a cast voice: house style, then the role."""
+    role = VOICE_DIRECTION.get(voice, "")
+    return f"{HOUSE_STYLE}\n\n{role}".strip()
+
 
 #: The pronunciation dictionary. Business Japanese is full of readings a TTS
 #: model gets wrong in a way that would teach the wrong thing — a learner who
 #: hears 代替 as だいがえ and repeats it in an interview has been actively
 #: harmed by this app. Entries are applied as a text substitution before
-#: synthesis, so they work with any provider.
+#: synthesis, so they work with any provider. Kept short on purpose: kana in
+#: place of kanji costs a modern model context it uses for accent, so only the
+#: readings that are commonly got wrong belong here.
 PRONUNCIATION: dict[str, str] = {
     "代替": "だいたい",
     "早急": "さっきゅう",
@@ -66,6 +112,8 @@ PRONUNCIATION: dict[str, str] = {
     "遵守": "じゅんしゅ",
     "他人事": "ひとごと",
     "一段落": "いちだんらく",
+    "何卒": "なにとぞ",
+    "御中": "おんちゅう",
 }
 
 
@@ -105,22 +153,48 @@ class SilentProvider:
         return channel.silence(seconds)
 
 
+def _cast(provider_label: str, voice_ids: dict[str, str], voice: str) -> str:
+    """The provider's id for a cast voice, or a refusal that says why.
+
+    A cast assigned by accident is one the whole library inherits: clip ids hash
+    the cast voice, so a voice that quietly fell back to some default would be
+    recorded once and shared by every item that uses that role.
+    """
+    provider_voice = voice_ids.get(voice)
+    if not provider_voice:
+        raise RuntimeError(
+            f"no {provider_label} voice cast for {voice!r}. Add it to VOICE_IDS after "
+            "listening to the candidates (`bjt audition`) — a cast assigned by "
+            "accident is one the whole library inherits."
+        )
+    return provider_voice
+
+
 class OpenAIProvider:
     """OpenAI's speech API.
 
-    A candidate because it takes free-text delivery instructions, which is the
-    only mechanism either candidate offers for "say this the way a receptionist
-    would" without hand-tuning SSML per clip.
+    Takes a free-text delivery direction, which is the mechanism that lets one
+    house style apply to every clip without hand-tuning SSML. The same key the
+    scene artwork uses, so a project that draws pictures can speak for free.
     """
 
     name = "openai"
-    MODEL = "gpt-4o-mini-tts"
+    MODEL = os.environ.get("BJT_OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+    URL = "https://api.openai.com/v1/audio/speech"
 
-    #: Cast voice → the provider's voice id. Filled in once the listening
-    #: comparison has been done; until then the adapter refuses rather than
-    #: guessing, because a cast assigned by accident is one the whole library
-    #: inherits.
-    VOICE_IDS: dict[str, str] = {}
+    #: Cast voice → the provider's voice id. A first cast, chosen by the voices'
+    #: published character (register, age, warmth) so that `bjt synth` runs the
+    #: day a key exists; `bjt audition` is how it gets checked by ear, and any
+    #: change is made here, once, before the library is synthesised.
+    VOICE_IDS: dict[str, str] = {
+        "narrator_f": "sage",
+        "staff_junior_m": "verse",
+        "staff_junior_f": "coral",
+        "staff_mid_m": "ash",
+        "staff_mid_f": "nova",
+        "manager_m": "onyx",
+        "reception_f": "shimmer",
+    }
 
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
@@ -128,57 +202,136 @@ class OpenAIProvider:
     def synthesize(self, text: str, voice: str, *, instructions: str = "") -> bytes:
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is not set")
-        provider_voice = self.VOICE_IDS.get(voice)
-        if not provider_voice:
-            raise RuntimeError(
-                f"no OpenAI voice chosen for cast voice {voice!r}. Run the listening "
-                "comparison first and record the choice in OpenAIProvider.VOICE_IDS — "
-                "a cast assigned by accident is one the whole library inherits."
-            )
-        try:
-            from openai import OpenAI
-        except ImportError as exc:  # pragma: no cover - depends on optional extra
-            raise RuntimeError("pip install 'bjt[tts-openai]' to use this provider") from exc
-
-        client = OpenAI(api_key=self.api_key)
-        response = client.audio.speech.create(
-            model=self.MODEL,
-            voice=provider_voice,
-            input=apply_pronunciation(text),
-            instructions=instructions or VOICE_DIRECTION.get(voice, ""),
-            response_format="wav",
+        provider_voice = _cast("OpenAI", self.VOICE_IDS, voice)
+        body = {
+            "model": self.MODEL,
+            "voice": provider_voice,
+            "input": apply_pronunciation(text),
+            "instructions": instructions or direction_for(voice),
+            "response_format": "wav",
+        }
+        return _post(
+            self.URL, body,
+            {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
         )
-        return response.read()
+
+
+class GeminiProvider:
+    """Google's Gemini speech model, over the Gemini API.
+
+    The lightest of the three to set up — one API key from AI Studio — and a
+    model of the same family as the generator, which matters for the thing this
+    app tests: it reads keigo as language rather than as a string of readings,
+    so 伺います and 参ります come out as a person would say them, not as a
+    dictionary would. Directions are natural language, prefixed to the line.
+
+    The response is raw 16-bit PCM (24 kHz mono, per its MIME type) rather than
+    a container, so it is wrapped into WAV here.
+    """
+
+    name = "gemini"
+    MODEL = os.environ.get("BJT_GEMINI_TTS_MODEL", "gemini-2.5-flash-preview-tts")
+    URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+    #: Cast voice → prebuilt voice name. Chosen by the voices' published
+    #: character; checked by ear with `bjt audition`.
+    VOICE_IDS: dict[str, str] = {
+        "narrator_f": "Erinome",       # clear
+        "staff_junior_m": "Iapetus",   # clear, younger
+        "staff_junior_f": "Leda",      # youthful
+        "staff_mid_m": "Charon",       # informative, even
+        "staff_mid_f": "Sulafat",      # warm
+        "manager_m": "Alnilam",        # firm
+        "reception_f": "Autonoe",      # bright
+    }
+
+    def __init__(self, api_key: str | None = None):
+        self.api_key = (
+            api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        )
+
+    def synthesize(self, text: str, voice: str, *, instructions: str = "") -> bytes:
+        if not self.api_key:
+            raise RuntimeError("GEMINI_API_KEY is not set")
+        provider_voice = _cast("Gemini", self.VOICE_IDS, voice)
+        prompt = self.prompt_for(apply_pronunciation(text), instructions or direction_for(voice))
+        body = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": provider_voice}}
+                },
+            },
+        }
+        raw = _post(
+            self.URL.format(model=self.MODEL), body,
+            {"x-goog-api-key": self.api_key, "Content-Type": "application/json"},
+        )
+        return self.wav_from_response(raw)
+
+    @staticmethod
+    def prompt_for(text: str, direction: str) -> str:
+        """The direction, then the line — the model speaks the line only."""
+        return f"{direction}\n\nSay only this line, exactly as written:\n{text}"
+
+    @staticmethod
+    def wav_from_response(raw: bytes) -> bytes:
+        try:
+            payload = json.loads(raw)
+            part = payload["candidates"][0]["content"]["parts"][0]["inlineData"]
+            data = base64.b64decode(part["data"])
+            mime = part.get("mimeType", "")
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError("Gemini returned no audio: " + raw[:300].decode("utf-8", "replace")) from exc
+        rate = 24000
+        for field in mime.split(";"):
+            field = field.strip()
+            if field.startswith("rate="):
+                rate = int(field[len("rate="):])
+        if mime.startswith("audio/wav") or data[:4] == b"RIFF":
+            return data
+        return channel.wrap_pcm(data, rate)
 
 
 class GoogleProvider:
     """Google Cloud Text-to-Speech.
 
-    The other candidate, and the stronger one wherever exact control matters:
-    SSML gives explicit pauses, and `<sub>` handles a reading without editing the
-    text the learner sees. If the comparison turns on dates, numbers and
-    acronyms, this is likely to win it.
+    The candidate with the most explicit control and the most setup: a Cloud
+    project, the API enabled, and application default credentials. Its newest
+    Japanese voices are native studio recordings driven by a modern model,
+    which is why it is worth the comparison. Those voices take plain text; the
+    older ones take SSML, where `<sub>` handles a reading without editing the
+    text the learner sees.
     """
 
     name = "google"
 
-    VOICE_IDS: dict[str, str] = {}
+    #: Cast voice → Cloud voice name. The Chirp 3 HD voices for ja-JP.
+    VOICE_IDS: dict[str, str] = {
+        "narrator_f": "ja-JP-Chirp3-HD-Kore",
+        "staff_junior_m": "ja-JP-Chirp3-HD-Puck",
+        "staff_junior_f": "ja-JP-Chirp3-HD-Leda",
+        "staff_mid_m": "ja-JP-Chirp3-HD-Charon",
+        "staff_mid_f": "ja-JP-Chirp3-HD-Aoede",
+        "manager_m": "ja-JP-Chirp3-HD-Orus",
+        "reception_f": "ja-JP-Chirp3-HD-Zephyr",
+    }
 
     def synthesize(self, text: str, voice: str, *, instructions: str = "") -> bytes:
-        provider_voice = self.VOICE_IDS.get(voice)
-        if not provider_voice:
-            raise RuntimeError(
-                f"no Google voice chosen for cast voice {voice!r}. Run the listening "
-                "comparison first and record the choice in GoogleProvider.VOICE_IDS."
-            )
+        provider_voice = _cast("Google Cloud", self.VOICE_IDS, voice)
         try:  # pragma: no cover - depends on optional extra
             from google.cloud import texttospeech
         except ImportError as exc:  # pragma: no cover
-            raise RuntimeError("pip install 'bjt[tts-google]' to use this provider") from exc
+            raise RuntimeError("pip install 'bjt-practice[tts-google]' to use this provider") from exc
 
+        if "Chirp" in provider_voice:
+            synthesis_input = texttospeech.SynthesisInput(text=apply_pronunciation(text))
+        else:
+            synthesis_input = texttospeech.SynthesisInput(ssml=self.to_ssml(text))
         client = texttospeech.TextToSpeechClient()
         response = client.synthesize_speech(
-            input=texttospeech.SynthesisInput(ssml=self.to_ssml(text)),
+            input=synthesis_input,
             voice=texttospeech.VoiceSelectionParams(
                 language_code="ja-JP", name=provider_voice
             ),
@@ -208,12 +361,64 @@ class GoogleProvider:
 
 PROVIDERS: dict[str, type] = {
     "silent": SilentProvider,
+    "gemini": GeminiProvider,
     "openai": OpenAIProvider,
     "google": GoogleProvider,
 }
 
+#: What each real provider needs in the environment before it can be used.
+#: Any one of the names is enough. In order of preference for `auto`.
+CREDENTIALS: dict[str, tuple[str, ...]] = {
+    "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+    "openai": ("OPENAI_API_KEY",),
+    "google": ("GOOGLE_APPLICATION_CREDENTIALS",),
+}
+
+#: How to pin the choice once the audition has been listened to.
+PROVIDER_ENV = "BJT_TTS_PROVIDER"
+
+
+def available() -> list[str]:
+    """The real providers whose credentials are in the environment."""
+    return [name for name, keys in CREDENTIALS.items()
+            if any(os.environ.get(k) for k in keys)]
+
+
+def default_provider() -> str:
+    """What `--provider auto` means.
+
+    `BJT_TTS_PROVIDER` when set — that is the audition's verdict, and it should
+    be pinned once made, because the cast is fixed for the life of the library.
+    Otherwise the first configured provider, and `silent` when there is none,
+    so the pipeline still runs end to end on a machine with no key.
+    """
+    pinned = os.environ.get(PROVIDER_ENV, "").strip().lower()
+    if pinned:
+        return pinned
+    configured = available()
+    return configured[0] if configured else "silent"
+
 
 def get_provider(name: str) -> Provider:
+    if name == "auto":
+        name = default_provider()
     if name not in PROVIDERS:
         raise KeyError(f"unknown TTS provider {name!r}; available: {sorted(PROVIDERS)}")
     return PROVIDERS[name]()
+
+
+def _post(url: str, body: dict, headers: dict[str, str]) -> bytes:
+    """One JSON request, the response body as bytes, and an error that names
+    the status and the first few hundred characters of what came back — the
+    part of a vendor error that actually says what was wrong."""
+    req = urllib.request.Request(
+        url, data=json.dumps(body).encode("utf-8"), method="POST", headers=headers
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            return resp.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[:500]
+        raise RuntimeError(f"POST {url} → HTTP {exc.code}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"POST {url} failed: {exc.reason}") from exc
