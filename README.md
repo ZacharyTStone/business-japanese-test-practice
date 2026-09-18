@@ -136,7 +136,17 @@ Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
 `BJT_JUDGE_MODEL`, `BJT_DB_PATH`, `BJT_SEEDS_DIR`, `BJT_SEEDTABLE_DIR`,
 `BJT_BATCH_DIR`, `BJT_GEN_EFFORT`, `BJT_SLOT_PATIENCE`, `BJT_GATE_TRIALS`,
 `BJT_IMAGE_MODEL`, `BJT_IMAGE_QUALITY`, `BJT_IMAGE_COMPRESSION`,
-`BJT_SCENE_ATTEMPTS`. Secrets, each read only by the step that needs it:
+`BJT_SCENE_ATTEMPTS`.
+
+Every process that calls the API runs under ceilings it cannot lift from the
+prompt: `BJT_RUN_BUDGET_USD` (default 2, priced from the usage each response
+reports), `BJT_RUN_MAX_CALLS` (500) and `BJT_RUN_MAX_MINUTES` (30) stop a run
+before the call that would cross them, keeping what it wrote; each call has a
+`BJT_API_TIMEOUT_SECONDS` (300) timeout and at most `BJT_API_MAX_RETRIES` (2); `BJT_MAX_TOKENS_CEILING` (8000) and
+`BJT_EFFORT_CEILING` (`high`) cap one call; `BJT_NIGHT_MAX_BUDGET` (24) and
+`BJT_NIGHT_MAX_PER_SLOT` (6) cap what a night may be asked to write. `bjt
+nightly` prints the running bill after every shelf and puts the total in its
+summary. Secrets, each read only by the step that needs it:
 `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (scene art and the voice), `SUPABASE_URL`
 and `SUPABASE_SERVICE_ROLE_KEY` (uploading either). `bjt seeds --bootstrap` builds a
 `seeds/` from the reference batches when there is no licensed material, which is

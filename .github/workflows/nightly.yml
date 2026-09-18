@@ -74,13 +74,22 @@ on:
       budget:
         description: "Most items this run may write"
         required: false
-        default: "12"
+        default: "8"
       per_slot:
         description: "Most items into any one (type, level)"
         required: false
-        default: "4"
+        default: "3"
       scenes:
         description: "Also draw the scenes the bank is missing (the schedule does this on Sundays)"
+        type: boolean
+        required: false
+        default: false
+      max_usd:
+        description: "Most dollars this run may spend on the Anthropic API (measured from usage; the run stops with what it has)"
+        required: false
+        default: "2"
+      force:
+        description: "Write tonight even though an earlier night's content branch is still unmerged"
         type: boolean
         required: false
         default: false
@@ -102,11 +111,19 @@ jobs:
   nightly:
     name: survey the bank, and fill it if the keys are there
     runs-on: ubuntu-latest
+    # A night is minutes, not hours. The morning of 2026-09-18 a single run
+    # generated for two and a half hours. The process stops itself at
+    # BJT_RUN_MAX_MINUTES (30) and keeps what it wrote; this clock, a little
+    # above it, is the guard that does not depend on any code being right.
+    timeout-minutes: 45
     env:
-      # Twelve a night, four to a shelf: half the first night's order. The bank
-      # still fills its empty shelves in a few weeks, at half the bill.
-      BUDGET: ${{ github.event.inputs.budget || '12' }}
-      PER_SLOT: ${{ github.event.inputs.per_slot || '4' }}
+      # Eight a night, three to a shelf: about two dollars on Sonnet. The
+      # code clamps whatever is typed here to BJT_NIGHT_MAX_BUDGET / _PER_SLOT.
+      BUDGET: ${{ github.event.inputs.budget || '8' }}
+      PER_SLOT: ${{ github.event.inputs.per_slot || '3' }}
+      # The most this run may spend, checked before every call against the
+      # usage the API reports. Reached, the run stops and keeps what it wrote.
+      BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '2' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -177,7 +194,24 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "seeds=$HAVE_SEEDS" >> "$GITHUB_OUTPUT"
-          if [ "$HAVE_API_KEY" = "true" ]; then
+          # A night's work is a branch waiting for a person. While one is
+          # still waiting, another night of generation is money spent on
+          # items nobody has looked at yet — and if the review has stalled,
+          # every night after it would be. One unreviewed night at a time;
+          # a manual run may say "force" to write anyway.
+          waiting="$(git ls-remote --heads origin 'content/nightly-*' | awk '{print $2}' | sed 's#refs/heads/##')"
+          if [ -n "$waiting" ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            {
+              echo
+              echo '### Nothing written: an earlier night is still waiting for review'
+              echo
+              echo 'These content branches are still on the remote. Merge or delete them and'
+              echo 'the next night writes again; or run this workflow by hand with "force".'
+              echo
+              echo "$waiting" | sed 's/^/- `/; s/$/`/'
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$HAVE_API_KEY" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
             echo "go=false" >> "$GITHUB_OUTPUT"
@@ -294,6 +328,20 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --summary summary.md
 
+      # Whatever happens after this point — a push refused, a pull request
+      # not permitted, the job killed by its own clock — the items that were
+      # paid for are in the run's artifact. Eight items were lost this way on
+      # 2026-09-18, and lost items are the most expensive kind.
+      - name: keep tonight's work whatever happens next
+        if: always() && steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tonight-batches
+          path: |
+            batches
+            summary.md
+          if-no-files-found: ignore
+
       # The same sweep the `checks` workflow runs, over the whole of batches/ and
       # not only tonight's. A new bundle that breaks an old one's dedupe distance
       # is exactly the failure this catches, and it is invisible to a per-batch
@@ -332,6 +380,20 @@ jobs:
           git commit \
             -m "Fill the emptiest shelves of the bank ($(date -u +%Y-%m-%d))" \
             -m "Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied. Scene artwork, if any, passed the review gate and is already in the bucket."
+          # The run checked out the default branch as it was hours ago. If it
+          # has moved since — and on 2026-09-18 it moved by an edit to this
+          # very file — a branch pushed from the old base is refused as an
+          # unauthorised workflow change, and the night is lost. Put tonight's
+          # one commit on top of the branch as it is now; it adds files, so
+          # a conflict means main grew a bundle of the same name meanwhile,
+          # which a person has to look at (the artifact above has the files).
+          default="${{ github.event.repository.default_branch }}"
+          git fetch origin "$default"
+          if ! git rebase "origin/$default"; then
+            git rebase --abort
+            echo "::error::tonight's bundle conflicts with $default; see the tonight-batches artifact"
+            exit 1
+          fi
           git push -u origin "$branch"
           [ -f summary.md ] || echo "Nightly run: scene artwork only." > summary.md
           [ -f scenes.md ] && { echo; cat scenes.md; } >> summary.md

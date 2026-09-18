@@ -35,6 +35,7 @@ from . import (
     scenes as scenemod,
     seedtable,
 )
+from . import llm as llmmod
 from .llm import LLMBillingError, LLMError
 from .db import Store
 from .fidelity import answerability, dedupe, difficulty, discriminator, roles, sanity, vocab
@@ -797,6 +798,7 @@ def cmd_batch(args) -> int:
         bundle = batchmod.load(path)
         print(f"Next: synthesise the {len(bundle['audio_manifest'])} clip(s) in "
               "audio_manifest, then eyeball the items once.")
+        print(llmmod.spend.report())
     finally:
         store.close()
     return 0
@@ -831,9 +833,14 @@ def cmd_nightly(args) -> int:
     the tree, and a person reads the diff. That is the roadmap's rule, and it is
     the only reason a job that writes exam content unattended is a safe thing to
     have."""
+    budget, per_slot = clamp_night(args.budget, args.per_slot)
     state = plan.survey()
-    order = plan.work_order(state, budget=args.budget, per_slot=args.per_slot)
+    order = plan.work_order(state, budget=budget, per_slot=per_slot)
     print(plan.render(state, order))
+    print(f"\nCeilings this run: ${config.RUN_BUDGET_USD:.2f}, "
+          f"{config.RUN_MAX_CALLS} calls, {config.RUN_MAX_MINUTES:g} minutes, "
+          f"{config.MAX_TOKENS_CEILING} output tokens per call, effort at most "
+          f"{config.EFFORT_CEILING!r}; writer {config.GEN_MODEL}, judge {config.JUDGE_MODEL}.")
     if args.dry_run or not order:
         return 0
 
@@ -843,14 +850,16 @@ def cmd_nightly(args) -> int:
     try:
         for w in order:
             print(f"\n--- {w.n} × {w.item_type} {w.level} " + "-" * 32)
+            before = llmmod.spend.usd
             try:
                 path, kept = run_batch(
                     store, w.item_type, w.level, w.n, gate=not args.no_gate,
                     sanity_check=not args.no_sanity, force=False,
                 )
             except LLMBillingError as e:
-                # The account is empty. Every remaining shelf would fail the
-                # same way, so say it once and keep what was written.
+                # The account is empty, or this run has spent its ceiling.
+                # Every remaining shelf would fail the same way, so say it
+                # once and keep what was written.
                 print(f"  stopping the run: {e}", file=sys.stderr)
                 failures.append(f"{w.item_type} {w.level} and everything after it: {e}")
                 break
@@ -861,6 +870,12 @@ def cmd_nightly(args) -> int:
                 print(f"  skipped: {e}", file=sys.stderr)
                 failures.append(f"{w.item_type} {w.level}: {e}")
                 continue
+            finally:
+                # The bill so far, after every shelf, so the log says where
+                # the money went while it is going.
+                print(f"  this shelf ${llmmod.spend.usd - before:.2f}; "
+                      f"run so far ${llmmod.spend.usd:.2f} of "
+                      f"${config.RUN_BUDGET_USD:.2f} in {llmmod.spend.calls} call(s)")
             if path is None:
                 failures.append(f"{w.item_type} {w.level}: nothing passed the gates")
                 continue
@@ -870,7 +885,7 @@ def cmd_nightly(args) -> int:
     finally:
         store.close()
 
-    summary = _nightly_summary(written, failures)
+    summary = _nightly_summary(written, failures, spend=llmmod.spend)
     print()
     print(summary)
     if args.summary:
@@ -879,8 +894,25 @@ def cmd_nightly(args) -> int:
     return 0 if written else 1
 
 
+def clamp_night(budget: int, per_slot: int) -> tuple[int, int]:
+    """The night's size, no larger than config allows, whatever was asked.
+
+    The workflow's inputs are typed into a box, and "24" typed into that box
+    is how the expensive morning of 2026-09-18 began. A request above the
+    ceiling is honoured up to the ceiling and said so, not refused: the run
+    still happens, at a size somebody decided in code."""
+    b = max(0, min(budget, config.NIGHT_MAX_BUDGET))
+    p = max(0, min(per_slot, config.NIGHT_MAX_PER_SLOT))
+    if (b, p) != (budget, per_slot):
+        print(f"night clamped to {b} item(s), {p} per shelf (asked: {budget}, "
+              f"{per_slot}; ceilings BJT_NIGHT_MAX_BUDGET={config.NIGHT_MAX_BUDGET}, "
+              f"BJT_NIGHT_MAX_PER_SLOT={config.NIGHT_MAX_PER_SLOT})", file=sys.stderr)
+    return b, p
+
+
 def _nightly_summary(
-    written: list[tuple[str, str, int, "pathlib.Path"]], failures: list[str]
+    written: list[tuple[str, str, int, "pathlib.Path"]], failures: list[str],
+    spend: "llmmod.Spend | None" = None,
 ) -> str:
     """The run, as something that can be pasted into a pull request."""
     total = sum(kept for _, _, kept, _ in written)
@@ -890,6 +922,11 @@ def _nightly_summary(
     if failures:
         lines += ["", "Not written:"]
         lines += [f"- {f}" for f in failures]
+    if spend is not None:
+        # The bill is part of the record: a reader of the pull request sees
+        # what the night cost next to what it wrote, every night, so a bad
+        # one is noticed the morning after and not on the invoice.
+        lines += ["", "### What tonight cost", "", spend.report()]
     lines += [
         "",
         "Every item passed the per-item answerability gate and the whole-batch "
