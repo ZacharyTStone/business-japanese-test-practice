@@ -10,10 +10,10 @@ caught by the rest.
 """
 import copy
 import pathlib
+import re
 from types import SimpleNamespace
 
 import pytest
-import yaml
 
 from bjt import cli, config, fixtures, llm
 
@@ -244,20 +244,28 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 def test_the_workflow_keeps_its_guards():
     """The guards that live in YAML rather than Python, asserted so that an
-    edit to the workflow cannot drop one without a test noticing."""
+    edit to the workflow cannot drop one without a test noticing. Read as
+    text, not parsed: the check needs no YAML library, and the file is
+    simple enough for a line to say what it means."""
     text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
-    wf = yaml.safe_load(text)
-    job = wf["jobs"]["nightly"]
-    assert job["timeout-minutes"] <= 60, "a night is minutes, not hours"
-    assert job["timeout-minutes"] > config.RUN_MAX_MINUTES, "the process stops itself first"
-    assert "BJT_RUN_BUDGET_USD" in job["env"], "the dollar ceiling is set for the run"
-    inputs = wf[True]["workflow_dispatch"]["inputs"]  # `on:` parses as True
-    assert "max_usd" in inputs and "force" in inputs
-    steps = {s.get("name"): s for s in job["steps"]}
-    keep = steps["keep tonight's work whatever happens next"]
-    assert keep["if"].startswith("always()"), "the artifact is saved even when a later step fails"
-    assert "batches" in keep["with"]["path"]
-    pr = steps["open a pull request for somebody to read"]["run"]
-    assert "git rebase" in pr and "git fetch origin" in pr, "tonight's commit sits on today's main"
-    unlocked = steps["which of tonight's work is unlocked"]["run"]
-    assert "content/nightly-*" in unlocked, "one unreviewed night at a time"
+
+    clock = re.search(r"^\s+timeout-minutes:\s*(\d+)\s*$", text, re.M)
+    assert clock, "the job has a clock"
+    assert int(clock.group(1)) <= 60, "a night is minutes, not hours"
+    assert int(clock.group(1)) > config.RUN_MAX_MINUTES, "the process stops itself first"
+
+    assert re.search(r"^\s+BJT_RUN_BUDGET_USD:", text, re.M), "the dollar ceiling is set for the run"
+    assert re.search(r"^\s+max_usd:", text, re.M) and re.search(r"^\s+force:", text, re.M)
+
+    keep = text.index("name: keep tonight's work whatever happens next")
+    keep_block = text[keep:text.index("- name:", keep + 1)]
+    assert re.search(r"if:\s*always\(\)", keep_block), "the artifact is saved even when a later step fails"
+    assert "batches" in keep_block
+
+    pr = text.index("name: open a pull request for somebody to read")
+    pr_block = text[pr:]
+    assert "git rebase" in pr_block and "git fetch origin" in pr_block, "tonight's commit sits on today's main"
+
+    unlocked = text.index("name: which of tonight's work is unlocked")
+    unlocked_block = text[unlocked:text.index("- name:", unlocked + 1)]
+    assert "content/nightly-*" in unlocked_block, "one unreviewed night at a time"
