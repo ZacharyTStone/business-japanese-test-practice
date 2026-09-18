@@ -52,8 +52,8 @@ export function GradientCard({
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
         <Defs>
           <LinearGradient id="heroFill" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={colors.accent} />
-            <Stop offset="1" stopColor={colors.accentDeep} />
+            <Stop offset="0" stopColor={colors.accentDeep} />
+            <Stop offset="1" stopColor={colors.accentInk} />
           </LinearGradient>
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroFill)" />
@@ -220,6 +220,7 @@ export function ProgressRing({
   label,
   caption,
   labelColor = colors.onAccent,
+  captionColor = colors.onAccentMuted,
   accessibilityLabel,
 }: {
   value: number;
@@ -230,6 +231,11 @@ export function ProgressRing({
   label: string;
   caption?: string;
   labelColor?: string;
+  /** The caption is the quiet half of the ring, and it used to be the label at
+   *  85% opacity — a second way of saying "muted" that no contrast check could
+   *  see through. It is the same token as every other quiet line on an accent
+   *  fill now, so it moves when that one does. */
+  captionColor?: string;
   /** What the ring means in words. Without it a screen reader reads "3 / 5" and
    *  "today" as two loose fragments with a circle between them. */
   accessibilityLabel?: string;
@@ -262,7 +268,9 @@ export function ProgressRing({
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.ringCenter]}>
         <Text style={[styles.ringLabel, { color: labelColor }]}>{label}</Text>
-        {caption ? <Text style={[styles.ringCaption, { color: labelColor }]}>{caption}</Text> : null}
+        {caption ? (
+          <Text style={[styles.ringCaption, { color: captionColor }]}>{caption}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -455,7 +463,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   buttonRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  buttonPrimary: { backgroundColor: colors.accent, ...shadow.card },
+  buttonPrimary: { backgroundColor: colors.accentDeep, ...shadow.card },
   buttonSecondary: { backgroundColor: colors.accentSoft },
   buttonOnAccent: { backgroundColor: colors.onAccent },
   buttonLabel: { fontSize: 16, fontWeight: "700" },
@@ -489,7 +497,7 @@ const styles = StyleSheet.create({
   },
   ringCenter: { alignItems: "center", justifyContent: "center" },
   ringLabel: { fontSize: 20, fontWeight: "700" },
-  ringCaption: { fontSize: 11, opacity: 0.85 },
+  ringCaption: { fontSize: 11, fontWeight: "600" },
   // No horizontal padding: the screen owns its gutter, and a header that added
   // its own would sit a notch further in than the cards under it.
   header: { flexDirection: "row", alignItems: "center", gap: space.md, paddingBottom: space.xs },
@@ -501,7 +509,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadow.card,
   },
-  chipOn: { backgroundColor: colors.accent },
+  chipOn: { backgroundColor: colors.accentDeep },
   dateInput: {
     fontSize: 16,
     color: colors.text,

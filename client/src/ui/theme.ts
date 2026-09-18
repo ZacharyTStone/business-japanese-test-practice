@@ -10,6 +10,15 @@
  * Everything a learner has to *read* stays near-black on white. The content is
  * dense Japanese prose read on a train; the colour lives in the furniture around
  * it — headers, badges, progress — and not behind the sentences themselves.
+ *
+ * **An accent fill that carries text is `accentDeep` or darker.** The furniture
+ * still has to be legible, and `accent` is too light to hold two weights of
+ * text: white on `#6C5CE7` is 4.86:1, which leaves nothing underneath it for a
+ * quieter second line, and the quieter line is the one the hero uses for the
+ * countdown and the streak. On `accentDeep` white is 7.3:1 and `onAccentMuted`
+ * is 5.9:1, so both clear 4.5:1 — the floor for 13px text — with room to spare.
+ * `tests/test_theme_contrast.py` holds the tokens to that; the rule about which
+ * fills carry text is one a reader has to keep, so it is written here.
  */
 import { StyleSheet, type ViewStyle } from "react-native";
 
@@ -23,14 +32,23 @@ export const colors = {
 
   accent: "#6C5CE7",
   accentDeep: "#4B3BD4",
+  /** The far end of a hero's fill. A gradient run from `accent` put its lightest
+   *  violet under the hero's top-left corner, which is exactly where the small
+   *  text sits; running it from `accentDeep` instead keeps the depth and gives
+   *  that corner 2.5 more points of contrast. */
+  accentInk: "#3B2EB3",
   accentSoft: "#EFEDFF",
-  /** Text and controls that sit on top of an accent-filled surface. */
+  /** Text and controls that sit on top of an accent-filled surface. Muted is a
+   *  step down in weight, not a step towards invisible: it stays above 4.5:1. */
   onAccent: "#FFFFFF",
-  onAccentMuted: "#DBD5FF",
+  onAccentMuted: "#E8E4FF",
 
-  correct: "#0E9F6E",
+  /** The verdict ink. Dark enough to be *read* on its own soft background —
+   *  「正解」 on the green card, and the marked option in the review — which the
+   *  brighter pair it replaces was not: 3.0:1 and 3.9:1 against those fills. */
+  correct: "#097A52",
   correctSoft: "#E3F6EF",
-  wrong: "#D93A4B",
+  wrong: "#C62B3C",
   wrongSoft: "#FDEBEE",
   warn: "#E0952A",
 } as const;
