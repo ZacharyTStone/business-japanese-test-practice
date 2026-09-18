@@ -1,0 +1,280 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "goi_bunpou",
+  "level": "J1",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "phone_call+staff_to_visitor+keigo_humble@J1",
+      "topic": "来客からの電話に折り返しを約束する",
+      "channel": "phone",
+      "stem": "恐れ入りますが、山田はただいま席を外しておりますので、戻り次第＿＿＿。",
+      "options": [
+        {
+          "text": "折り返しお電話を差し上げます",
+          "role": "correct",
+          "why": "「差し上げる」は自社側の行為をへりくだって述べる謙譲語で、電話をかけ直すという未来の行為に自然に接続する。"
+        },
+        {
+          "text": "折り返しお電話をいただきます",
+          "role": "real_form_wrong_context",
+          "why": "「いただく」は相手側の行為の恩恵を受ける形で、ここでは自社側からかけ直すという状況と方向が逆になる。"
+        },
+        {
+          "text": "折り返しお電話をさしあがります",
+          "role": "nonexistent_form",
+          "why": "「さしあがります」は「差し上げます」と「上がります」が混ざったような形で、実際には存在しない活用である。"
+        },
+        {
+          "text": "お世話になっております",
+          "role": "set_phrase_misfit",
+          "why": "「お世話になっております」は電話の冒頭で使う挨拶の定型句で、「戻り次第」に続けて今後の行動を述べるこの空欄には入らない。"
+        }
+      ],
+      "explanation_ja": "「戻り次第」の後には、これから行う行為を丁重に述べる謙譲語が続く。自社側の行為には「差し上げる」を使い、「いただく」は相手の行為を受ける形なので方向が逆になる。「さしあがります」は存在しない活用形。「お世話になっております」は冒頭の挨拶であり、この文脈の空欄には入らない。",
+      "explanation_en": "差し上げます humbly describes the caller's own future action; いただきます reverses the direction of benefit, さしあがります isn't a real conjugation, and お世話になっております is a fixed opening greeting that doesn't fit this slot.",
+      "vocab_notes": [
+        { "term": "差し上げる", "reading": "さしあげる", "meaning": "humble form of \"to give/do for\", used for one's own action" },
+        { "term": "戻り次第", "reading": "もどりしだい", "meaning": "as soon as (someone) returns" }
+      ]
+    },
+    {
+      "seed_cell_id": "report_document+peer_to_peer+connective_expression@J1",
+      "topic": "予算減額でも施策継続を報告する",
+      "channel": "written",
+      "stem": "今期の広告予算は前年比で減額となった。＿＿＿、主要施策への配分は維持する方針である。",
+      "options": [
+        {
+          "text": "そのため",
+          "role": "opposite_valence",
+          "why": "「そのため」は原因と結果をつなぐ言い方で、予算が減ったことを理由に配分も変える、という真逆の含みになってしまう。"
+        },
+        {
+          "text": "とはいえ",
+          "role": "correct",
+          "why": "「とはいえ」は前の内容を認めつつ逆接的に続ける表現で、「予算は減額されたが配分方針は変えない」という文意に合う。"
+        },
+        {
+          "text": "つきましては",
+          "role": "set_phrase_misfit",
+          "why": "「つきましては」は前の内容を理由として次の依頼や対応を述べる定型表現で、逆接の関係を表すこの文脈には合わない。"
+        },
+        {
+          "text": "とはいえども",
+          "role": "nonexistent_form",
+          "why": "「とはいえども」は「とはいえ」を無理に引き延ばしたような言い方で、実際のビジネス文書では使われない。"
+        }
+      ],
+      "explanation_ja": "予算は減ったが方針は変えない、という逆接の関係を表すのは「とはいえ」。「そのため」は因果関係になり意味が逆転する。「つきましては」は理由を受けて次の対応を述べる表現で逆接ではない。「とはいえども」は存在しない言い方。",
+      "explanation_en": "とはいえ marks a concessive turn; そのため wrongly implies causation, つきましては introduces a consequent action rather than a contrast, and とはいえども isn't real usage.",
+      "vocab_notes": [
+        { "term": "前年比", "reading": "ぜんねんひ", "meaning": "year-on-year (comparison)" },
+        { "term": "配分", "reading": "はいぶん", "meaning": "allocation" }
+      ]
+    },
+    {
+      "seed_cell_id": "meeting_floor+staff_to_client+causative_permission@J1",
+      "topic": "取引先との会議で資料確認の経緯を述べる",
+      "channel": "in_person",
+      "stem": "本日は、事前にいただいた資料を拝見のうえ、論点を整理＿＿＿。",
+      "options": [
+        {
+          "text": "させられました",
+          "role": "opposite_valence",
+          "why": "「させられました」は使役受身で、誰かに無理やりやらされたという不本意なニュアンスになり、自分から進んで整理したという文意と食い違う。"
+        },
+        {
+          "text": "していただきました",
+          "role": "real_form_wrong_context",
+          "why": "「していただきました」は相手にしてもらったという意味になり、論点整理を行ったのが自分ではなく取引先だったことになってしまう。"
+        },
+        {
+          "text": "させていただきました",
+          "role": "correct",
+          "why": "「させていただきました」は、許可を得て行った行為を丁重に述べる言い方で、事前に資料をいただいたうえで整理を行ったという流れに合う。"
+        },
+        {
+          "text": "させさせていただきました",
+          "role": "nonexistent_form",
+          "why": "「させさせていただきました」は使役の形を二重に重ねた誤りで、実際には存在しない活用である。"
+        }
+      ],
+      "explanation_ja": "許可を得て行った行為をへりくだって述べるのは「させていただきました」。「させられました」は使役受身で不本意なニュアンス、「していただきました」は相手が行ったことになり主体が逆転、「させさせていただきました」は使役を二重に重ねた存在しない形。",
+      "explanation_en": "させていただきました humbly reports an action taken with implicit permission; させられました flips it to an imposed action, していただきました reverses who did the organizing, and させさせていただきました double-stacks the causative incorrectly.",
+      "vocab_notes": [
+        { "term": "拝見する", "reading": "はいけんする", "meaning": "humble form of \"to see/read\"" },
+        { "term": "論点", "reading": "ろんてん", "meaning": "point of discussion" }
+      ]
+    },
+    {
+      "seed_cell_id": "email_internal+junior_to_senior+business_idiom@J1",
+      "topic": "添付資料の確認を先輩に依頼する",
+      "channel": "written",
+      "stem": "＿＿＿、添付の資料についてご確認いただけますでしょうか。",
+      "options": [
+        {
+          "text": "お忙しいところ助かりますが",
+          "role": "opposite_valence",
+          "why": "「助かりますが」は自分が得をする・楽になるという意味合いで、相手に手間をかけることを詫びる本来の趣旨と逆の方向になる。"
+        },
+        {
+          "text": "いつもお世話になっております",
+          "role": "set_phrase_misfit",
+          "why": "「いつもお世話になっております」は社外あての挨拶の定型句で、同じ社内の先輩への依頼メールの書き出しとしては不自然である。"
+        },
+        {
+          "text": "お忙しいところ恐れ多いですが",
+          "role": "real_form_wrong_context",
+          "why": "「恐れ多い」は相手の身分や厚意に対して自分が畏れ多いと感じるときに使う語で、単に手間を取らせることを詫びるこの文脈の言い方としては据わりが悪い。"
+        },
+        {
+          "text": "お忙しいところ恐れ入りますが",
+          "role": "correct",
+          "why": "「お忙しいところ恐れ入りますが」は相手の時間を取ることを詫びたうえで依頼につなげる定型表現で、確認を頼む文脈に合う。"
+        }
+      ],
+      "explanation_ja": "相手の手間を詫びて依頼につなげる言い方は「お忙しいところ恐れ入りますが」。「助かりますが」は自分の利益を述べる形で趣旨が逆転する。「いつもお世話になっております」は社外向けの挨拶で社内メールには合わない。「恐れ多いですが」は相手の厚意への畏れを表す語で、この場面の詫び方としては合わない。",
+      "explanation_en": "お忙しいところ恐れ入りますが politely apologizes before a request; 助かりますが shifts to the speaker's own benefit, いつもお世話になっております is an external-correspondence greeting, and 恐れ多いですが names a different feeling (being humbled by someone's grace) than simply taking their time.",
+      "vocab_notes": [
+        { "term": "恐れ入る", "reading": "おそれいる", "meaning": "to be sorry for the trouble caused (humble)" },
+        { "term": "添付", "reading": "てんぷ", "meaning": "attachment" }
+      ]
+    },
+    {
+      "seed_cell_id": "notice_document+peer_to_peer+aspect_form@J1",
+      "topic": "会議室の予約状況を知らせる社内掲示",
+      "channel": "written",
+      "stem": "来週の全体会議に向けて、大会議室はすでに＿＿＿ので、各自での予約は不要です。",
+      "options": [
+        {
+          "text": "確保してあります",
+          "role": "correct",
+          "why": "「てある」は誰かが意図的に行った結果が今も続いている状態を表し、すでに確保済みで今も部屋が押さえられている、という文意に合う。"
+        },
+        {
+          "text": "確保しておきます",
+          "role": "real_form_wrong_context",
+          "why": "「ておきます」はこれから備えて行う準備を表す形で、「すでに」という完了済みを示す語と時間的にかみ合わない。"
+        },
+        {
+          "text": "確保します",
+          "role": "wrong_grammatical_category",
+          "why": "「確保します」は単純な未来の行為を述べるだけで、すでに済んでいて今もその状態にある、という「てある」の含みを持たない。"
+        },
+        {
+          "text": "確保しておいてあります",
+          "role": "nonexistent_form",
+          "why": "「確保しておいてあります」は「ておく」と「てある」を無理に重ねた言い方で、実際には使われない。"
+        }
+      ],
+      "explanation_ja": "すでに済んでいて今もその状態が続いていることを表すのは「てある」。「ておきます」は今後の準備を表し時制が合わない。「確保します」は単純未来で状態の含みがない。「確保しておいてあります」はアスペクトを二重に重ねた存在しない言い方。",
+      "explanation_en": "てある marks a completed action whose resulting state persists, matching すでに; ておきます wrongly points to future preparation, 確保します lacks the state nuance, and 確保しておいてあります stacks two aspect markers that don't combine this way.",
+      "vocab_notes": [
+        { "term": "確保する", "reading": "かくほする", "meaning": "to secure/reserve" },
+        { "term": "各自", "reading": "かくじ", "meaning": "each person individually" }
+      ]
+    },
+    {
+      "seed_cell_id": "client_visit+staff_to_client+transitive_intransitive@J1",
+      "topic": "訪問先で資料の金額変更を伝える",
+      "channel": "in_person",
+      "stem": "恐れ入りますが、３ページ目の金額が一部＿＿＿おりますので、こちらの新しい資料をご覧ください。",
+      "options": [
+        {
+          "text": "変えて",
+          "role": "wrong_grammatical_category",
+          "why": "他動詞「変える」は「〜を変える」のように対象を取る形で、ここでは「金額が」という自動詞の主語に続けて使うと文法的に噛み合わない。"
+        },
+        {
+          "text": "変わって",
+          "role": "correct",
+          "why": "自動詞「変わる」は変化そのものを表し、誰が変えたかを問わずに「金額が変わっている」という状態を柔らかく伝えるのに向いている。"
+        },
+        {
+          "text": "戻って",
+          "role": "opposite_valence",
+          "why": "「戻って」は元の状態に戻ったという意味で、新しい金額になったことを伝えたいこの文脈とは逆方向の変化になってしまう。"
+        },
+        {
+          "text": "変わってあり",
+          "role": "nonexistent_form",
+          "why": "「変わってあり」は自動詞「変わる」に他動詞専用の「てある」を無理に付けた形で、実際には使われない。"
+        }
+      ],
+      "explanation_ja": "誰の行為かを問わず状態の変化を柔らかく伝えるのは自動詞「変わって」。他動詞「変えて」は対象を取る形で「金額が」に続かない。「戻って」は元に戻る意味で方向が逆。「変わってあり」は自動詞に「てある」を誤って付けた存在しない形。",
+      "explanation_en": "The intransitive 変わって softly reports the change itself; 変えて needs a transitive object, 戻って reverses the direction of change, and 変わってあり misapplies てある to an intransitive verb.",
+      "vocab_notes": [
+        { "term": "自動詞・他動詞", "reading": "じどうし・たどうし", "meaning": "intransitive / transitive verb" },
+        { "term": "金額", "reading": "きんがく", "meaning": "amount of money" }
+      ]
+    },
+    {
+      "seed_cell_id": "quote_document+staff_to_visitor+keigo_honorific@J1",
+      "topic": "説明会への出席可否を尋ねる送付状",
+      "channel": "written",
+      "stem": "つきましては、説明会に＿＿＿場合は、事前に人数のみお知らせいただけますと幸いです。",
+      "options": [
+        {
+          "text": "ご出席いたす",
+          "role": "real_form_wrong_context",
+          "why": "「いたす」は自分の行為をへりくだる謙譲語で、ここで立てるべき相手の行為に使うと方向が逆になる。"
+        },
+        {
+          "text": "ご出席中",
+          "role": "wrong_grammatical_category",
+          "why": "「ご出席中」は「〜中の場合は」のように「の」を挟まなければ次に続かない形で、単独で「場合は」の前に置くと文法的に成り立たない。"
+        },
+        {
+          "text": "ご出席になる",
+          "role": "correct",
+          "why": "「ご出席になる」は「ご＋動作性名詞＋になる」という尊敬語の型で、相手側の出席という行為を立てて述べるのに合う。"
+        },
+        {
+          "text": "出席させていただきます",
+          "role": "set_phrase_misfit",
+          "why": "「出席させていただきます」は自分の出席を丁重に述べる決まった言い方で、相手の出席を尋ねるこの空欄には合わない。"
+        }
+      ],
+      "explanation_ja": "相手の行為を立てる尊敬語の型は「ご＋動作性名詞＋になる」で「ご出席になる」。「ご出席いたす」は謙譲語で自分の行為になり方向が逆。「ご出席中」は「の」を伴わないとこの位置に文法的に入らない。「出席させていただきます」は自分の出席を述べる定型句で、相手について尋ねるこの文脈には合わない。",
+      "explanation_en": "ご出席になる is the standard honorific pattern for the other party's action; ご出席いたす wrongly humbles it as the speaker's own act, ご出席中 needs の to attach here, and 出席させていただきます is a fixed phrase for stating one's own attendance, not asking about someone else's.",
+      "vocab_notes": [
+        { "term": "出席", "reading": "しゅっせき", "meaning": "attendance" },
+        { "term": "幸いです", "reading": "さいわいです", "meaning": "it would be appreciated (polite closing)" }
+      ]
+    },
+    {
+      "seed_cell_id": "desk_conversation+subordinate_to_superior+sino_verb_choice@J1",
+      "topic": "クレーム対応の状況を上司に報告する",
+      "channel": "in_person",
+      "stem": "先ほどのお客様からのご指摘について、担当部署に共有し、すでに＿＿＿を始めております。",
+      "options": [
+        {
+          "text": "検討",
+          "role": "real_form_wrong_context",
+          "why": "「検討」は行うかどうかを考える段階を表す語で、すでに部署に共有して動き出している状況を述べるこの文脈には合わない。"
+        },
+        {
+          "text": "対応し",
+          "role": "wrong_grammatical_category",
+          "why": "「対応し」は動詞の連用形で、「＿＿＿を始めております」のように「を」を伴う名詞の位置には文法的に入らない。"
+        },
+        {
+          "text": "対応化",
+          "role": "nonexistent_form",
+          "why": "「対応化」は「対応」に「化」を無理に付けた言い方で、実際には使われない語である。"
+        },
+        {
+          "text": "対応",
+          "role": "correct",
+          "why": "「対応」はすでに動き出している具体的な処置を表し、クレームに対して部署で動き始めているという文意に合う。"
+        }
+      ],
+      "explanation_ja": "すでに動き出している処置を表すのは「対応」。「検討」は考える段階を表し、すでに動き出している文脈とは合わない。「対応し」は動詞の形で「を始める」の前に置く名詞の位置に文法的に入らない。「対応化」は存在しない語。",
+      "explanation_en": "対応 names the concrete action already underway; 検討 wrongly suggests mere deliberation, 対応し is a verb form that can't sit before を始める, and 対応化 is not a real word.",
+      "vocab_notes": [
+        { "term": "指摘", "reading": "してき", "meaning": "pointing out (an issue)" },
+        { "term": "対応", "reading": "たいおう", "meaning": "response / handling" }
+      ]
+    }
+  ]
+}
