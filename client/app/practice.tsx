@@ -63,13 +63,14 @@ import { setSummary } from "../src/lib/session";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { AnsweredItem, QueuedItem, SectionLevel } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer, MiniPlay } from "../src/ui/audio";
-import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
+import { Button, Card, Loading, Notice, ProgressBar, Tag } from "../src/ui/components";
 import { DayDone } from "../src/ui/done";
 import { DocumentView } from "../src/ui/document";
 import { Face, moodFor, moodLabel } from "../src/ui/face";
 import { HAS_KEYBOARD, optionForKey, useKeys } from "../src/ui/keys";
 import { RudenessMeter } from "../src/ui/meters";
-import { colors, radius, shadow, space, type } from "../src/ui/theme";
+import { FadeIn } from "../src/ui/motion";
+import { colors, radius, shadow, space, tabular, type } from "../src/ui/theme";
 
 const LETTERS = ["A", "B", "C", "D"];
 
@@ -162,6 +163,8 @@ export default function Practice() {
   // is not the exam, and the fourth listen sometimes needs the page; but it is
   // off by default and resets with every item, so the listen comes first.
   const [optionsAsText, setOptionsAsText] = useState(false);
+  /** The option under a pointer, on a machine that has one. */
+  const [hovered, setHovered] = useState<number | null>(null);
   const [answers, setAnswers] = useState<AnsweredItem[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -360,6 +363,7 @@ export default function Practice() {
     setGraded(null);
     setShowDetails(false);
     setOptionsAsText(false);
+    setHovered(null);
     scrolledFor.current = null;
     questionShownAt.current = Date.now();
   }
@@ -423,65 +427,69 @@ export default function Practice() {
         accessibilityRole="progressbar"
         accessibilityLabel={t("q_of_n", { i: index + 1, n: items.length })}
       >
-        <Text style={type.small}>
+        <Text style={[type.small, tabular]}>
           {index + 1} / {items.length}
         </Text>
-        <View style={styles.bar}>
-          <View
-            style={[
-              styles.barFill,
-              { width: `${((index + (revealed ? 1 : 0)) / items.length) * 100}%` },
-            ]}
-          />
-        </View>
+        <ProgressBar
+          value={(index + (revealed ? 1 : 0)) / items.length}
+          height={6}
+          style={{ flex: 1 }}
+        />
         {item.times_seen > 0 ? <Tag tone="amber">{t("again_tag")}</Tag> : null}
       </View>
 
       <SceneStrip item={item} big={stage === "scene"} />
 
+      {/* Each stage of a question arrives rather than snaps: the scene card,
+          then the question card in its place. The key is what makes the
+          second one arrive too — same component, new content. */}
       {stage === "scene" ? (
-        <Card style={{ gap: space.lg }}>
-          {sceneImage ? <SceneImage uri={sceneImage} /> : null}
-          {item.documents?.map((doc, i) => (
-            <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
-          ))}
-          <Text style={[type.small, styles.hint]}>
-            {listenable ? t("scene_hint_listen") : t("scene_hint_read")}
-          </Text>
-          <Button
-            label={listenable ? t("btn_listen") : t("btn_to_q")}
-            icon={listenable ? "headphones" : "chevron"}
-            onPress={() => go(listenable ? "listen" : "answer")}
-          />
-        </Card>
-      ) : (
-        <Card style={{ gap: space.md }}>
-          {/* The same picture at the same size as on the scene card. It used
-              to shrink to a strip once the audio started, which cropped the
-              drawing to a band of ceiling; the owner asked for it whole
-              (2026-09-18). */}
-          {sceneImage ? <SceneImage uri={sceneImage} /> : null}
-
-          {/* The stimulus, in the order it is met: what you read, then what you
-              hear. A document comes first because the audio usually revises it —
-              hearing the change before reading the original teaches nothing. */}
-          {item.documents?.map((doc, i) => (
-            <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
-          ))}
-
-          {dialogueAsText ? <DialoguePlayer turns={item.dialogue} /> : null}
-
-          {listenable ? (
-            <AutoPlaylist
-              key={item.id}
-              urls={playlist}
-              autoplay={stage === "listen"}
-              onFinished={() => go("answer")}
+        <FadeIn key={`${item.id}-scene`}>
+          <Card style={{ gap: space.lg }}>
+            {sceneImage ? <SceneImage uri={sceneImage} /> : null}
+            {item.documents?.map((doc, i) => (
+              <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
+            ))}
+            <Text style={[type.small, styles.hint]}>
+              {listenable ? t("scene_hint_listen") : t("scene_hint_read")}
+            </Text>
+            <Button
+              label={listenable ? t("btn_listen") : t("btn_to_q")}
+              icon={listenable ? "headphones" : "chevron"}
+              onPress={() => go(listenable ? "listen" : "answer")}
             />
-          ) : null}
+          </Card>
+        </FadeIn>
+      ) : (
+        <FadeIn key={`${item.id}-question`}>
+          <Card style={{ gap: space.md }}>
+            {/* The same picture at the same size as on the scene card. It used
+                to shrink to a strip once the audio started, which cropped the
+                drawing to a band of ceiling; the owner asked for it whole
+                (2026-09-18). */}
+            {sceneImage ? <SceneImage uri={sceneImage} /> : null}
 
-          {stemAsText ? <Text style={type.body}>{item.stem}</Text> : null}
-        </Card>
+            {/* The stimulus, in the order it is met: what you read, then what you
+                hear. A document comes first because the audio usually revises it —
+                hearing the change before reading the original teaches nothing. */}
+            {item.documents?.map((doc, i) => (
+              <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
+            ))}
+
+            {dialogueAsText ? <DialoguePlayer turns={item.dialogue} /> : null}
+
+            {listenable ? (
+              <AutoPlaylist
+                key={item.id}
+                urls={playlist}
+                autoplay={stage === "listen"}
+                onFinished={() => go("answer")}
+              />
+            ) : null}
+
+            {stemAsText ? <Text style={type.body}>{item.stem}</Text> : null}
+          </Card>
+        </FadeIn>
       )}
 
       {stage === "listen" ? (
@@ -515,12 +523,13 @@ export default function Practice() {
             </Pressable>
           ) : null}
 
-          <View style={{ gap: space.md }}>
+          <FadeIn key={`${item.id}-options`} style={{ gap: space.md }}>
             {options.map((option, i) => {
               const isChosen = chosen === i;
               const isAnswer = i === item.correct_index;
               const show = revealed && (isChosen || isAnswer);
               const dim = revealed && !show;
+              const open = !revealed && !busy && chosen === null;
               return (
                 <Pressable
                   key={option.position}
@@ -538,8 +547,11 @@ export default function Practice() {
                   accessibilityState={{ disabled: revealed || busy || chosen !== null }}
                   disabled={revealed || busy || chosen !== null}
                   onPress={() => choose(i)}
+                  onHoverIn={() => setHovered(i)}
+                  onHoverOut={() => setHovered((h) => (h === i ? null : h))}
                   style={({ pressed }) => [
                     styles.option,
+                    open && hovered === i && styles.optionHover,
                     pressed && !revealed && { opacity: 0.85 },
                     isChosen && !revealed && styles.optionPending,
                     show && (isAnswer ? styles.optionCorrect : styles.optionWrong),
@@ -585,12 +597,13 @@ export default function Practice() {
                 </Pressable>
               );
             })}
-          </View>
+          </FadeIn>
         </>
       ) : null}
 
       {revealed && graded ? (
-        <View
+        <FadeIn
+          key={`${item.id}-verdict`}
           style={{ gap: space.lg }}
           // Put the verdict at the top of the screen rather than wherever the
           // option happened to be. onLayout fires with the y it lands at, which
@@ -679,7 +692,7 @@ export default function Practice() {
             icon="chevron"
             onPress={next}
           />
-        </View>
+        </FadeIn>
       ) : null}
     </ScrollView>
   );
@@ -743,12 +756,12 @@ function SceneImage({ uri }: { uri: string }) {
 const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
   progressRow: { flexDirection: "row", alignItems: "center", gap: space.md },
-  bar: { flex: 1, height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: "hidden" },
-  barFill: { height: 6, backgroundColor: colors.accent, borderRadius: 3 },
   strip: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   stripPill: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     gap: 1,
@@ -777,6 +790,10 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   optionHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  // A pointer over an option that can still be chosen: the card lifts and its
+  // edge takes the soft accent, which is "this one, if you press" without
+  // the full border that means "this one, pressed".
+  optionHover: { borderColor: colors.accentSoft, ...shadow.cardRaised },
   optionPending: { borderColor: colors.accent },
   optionCorrect: { borderColor: colors.correct, backgroundColor: colors.correctSoft },
   optionWrong: { borderColor: colors.wrong, backgroundColor: colors.wrongSoft },

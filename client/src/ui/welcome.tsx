@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLang, type Key } from "../lib/i18n";
 import { Button, IconBadge } from "./components";
 import type { IconName } from "./icons";
+import { FadeIn } from "./motion";
 import type { BadgeTone } from "./theme";
 import { colors, space, type } from "./theme";
 
@@ -92,29 +93,32 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
         { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl },
       ]}
     >
-      <View style={{ gap: space.sm }}>
+      {/* The first screen, read in order: the claim, then the three points
+          under it a beat apart, then the button. Staggered so the eye is led
+          down the page the way the argument goes. */}
+      <FadeIn style={{ gap: space.sm }}>
         <Text style={type.label}>{t("wel_kicker")}</Text>
         <Text style={styles.title}>{t("wel_title")}</Text>
         <Text style={type.body}>{t("wel_lead")}</Text>
-      </View>
+      </FadeIn>
 
       <View style={{ gap: space.lg }}>
-        {POINTS.map((point) => (
-          <View key={point.title} style={styles.point}>
+        {POINTS.map((point, i) => (
+          <FadeIn key={point.title} delay={120 + i * 90} style={styles.point}>
             <IconBadge name={point.icon} tone={point.tone} />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={type.h2}>{t(point.title)}</Text>
               <Text style={type.small}>{t(point.body)}</Text>
             </View>
-          </View>
+          </FadeIn>
         ))}
       </View>
 
-      <View style={{ gap: space.md }}>
+      <FadeIn delay={120 + POINTS.length * 90} style={{ gap: space.md }}>
         <Button label={t("wel_start")} icon="play" onPress={onStart} />
         <Text style={[type.small, styles.footnote]}>{t("wel_testers_note")}</Text>
         <Text style={[type.small, styles.footnote]}>{t("wel_honesty")}</Text>
-      </View>
+      </FadeIn>
     </ScrollView>
   );
 }
@@ -127,7 +131,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
   },
-  title: { fontSize: 30, fontWeight: "700", color: colors.text, lineHeight: 42 },
+  title: { fontSize: 30, fontWeight: "700", color: colors.text, lineHeight: 42, letterSpacing: -0.4 },
   point: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   footnote: { textAlign: "center" },
 });
