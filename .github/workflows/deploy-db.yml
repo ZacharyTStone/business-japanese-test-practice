@@ -1,10 +1,21 @@
-# Deploy the database: migrations, the committed bank, and who may use it.
+# Deploy the database: migrations, the committed bank, its audio, and who may
+# use it.
 #
-# Everything the schema needs to reach the real project, from the Actions tab,
-# so that nobody needs the repository on a laptop to bring a project up. Each
-# step is idempotent — re-running the workflow on a project that is already
-# current changes nothing and says so — which is what makes "run it again" the
-# safe answer to any doubt about whether it ran.
+# Everything the schema needs to reach the real project, so that nobody needs
+# the repository on a laptop to bring a project up. Each step is idempotent —
+# re-running the workflow on a project that is already current changes nothing
+# and says so — which is what makes "run it again" the safe answer to any doubt
+# about whether it ran, and what makes it safe to run without being asked:
+#
+#   by itself   after the `checks` workflow goes green on `main`. A merged
+#               nightly pull request is therefore live — items and their audio
+#               together — a few minutes after the merge, with nothing further
+#               to press. The owner asked for this (2026-09-18); the review
+#               gate is the pull request, and a merge is the decision to ship.
+#               Only a green run triggers it: a push that fails a check never
+#               reaches the database.
+#   by hand     from the Actions tab, which is also the only way to add a
+#               tester (the form fields exist only there).
 #
 #   migrations   `supabase db push` against SUPABASE_DB_URL. The CLI records
 #                what it applied in supabase_migrations.schema_migrations and
@@ -31,6 +42,10 @@
 name: deploy database
 
 on:
+  workflow_run:
+    workflows: ["checks"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       tester_email:
@@ -52,9 +67,12 @@ permissions:
 jobs:
   deploy:
     name: migrate, publish, admit
+    # After `checks`, only a green one; by hand, always.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BY_HAND: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -70,17 +88,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client
 
+      # No project yet is an ordinary state on an automatic run — every merge
+      # to main would otherwise be a red workflow — and an error on a run
+      # somebody started by hand, because they expected it to do something.
       - name: the one secret this needs
+        id: db
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
+          if [ -n "$SUPABASE_DB_URL" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          elif [ "$BY_HAND" = "true" ]; then
             echo "::error::SUPABASE_DB_URL is not set. Settings → Secrets and variables → Actions."
             exit 1
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            {
+              echo '## Nothing deployed'
+              echo
+              echo 'No `SUPABASE_DB_URL` secret, so there is no project to deploy to. See blockers.md.'
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: apply migrations
+        if: steps.db.outputs.go == 'true'
         run: supabase db push --db-url "$SUPABASE_DB_URL" --yes
 
       - name: publish the committed bank
+        if: steps.db.outputs.go == 'true'
         run: |
           shopt -s nullglob
           for f in batches/*.sql; do
@@ -90,7 +123,7 @@ jobs:
           done
 
       - name: let a tester in
-        if: github.event.inputs.tester_email != ''
+        if: steps.db.outputs.go == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.tester_email != ''
         env:
           EMAIL: ${{ github.event.inputs.tester_email }}
           NOTE: ${{ github.event.inputs.tester_note }}
@@ -105,6 +138,7 @@ jobs:
       # live, `bjt synth --have` makes only what is missing, `--upload` puts it
       # in the bucket, and the SQL it writes points the rows at the files.
       - name: which voice, if any
+        if: steps.db.outputs.go == 'true'
         id: tts
         env:
           HAVE_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
@@ -176,7 +210,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: what the project holds now
-        if: always()
+        if: always() && steps.db.outputs.go == 'true'
         run: |
           {
             echo '## The database after this run'

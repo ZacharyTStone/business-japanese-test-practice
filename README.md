@@ -473,9 +473,11 @@ item is answered correctly across all learners. That is the other half of the
 night — measure the bank, then grow it where it is thin.
 
 **Nothing here publishes.** The job writes bundles and the SQL for them and opens
-a pull request; applying that SQL stays a deliberate act somebody takes. A branch
-that exists to be read before it lands is the review gate the roadmap asks for,
-not a way around the repository's work-on-`main` rule.
+a pull request. A branch that exists to be read before it lands is the review
+gate the roadmap asks for, not a way around the repository's work-on-`main`
+rule — and the merge is the decision to ship: once `checks` is green on `main`,
+the **deploy database** workflow runs by itself and publishes the items and
+their audio together.
 
 ---
 
