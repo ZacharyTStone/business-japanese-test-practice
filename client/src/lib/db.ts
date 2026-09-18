@@ -15,6 +15,7 @@
  */
 import { supabase } from "./supabase";
 import type {
+  DayStatus,
   HistoryEntry,
   Profile,
   QueuedItem,
@@ -173,13 +174,19 @@ export async function fetchStreak(): Promise<number> {
   return (data as number) ?? 0;
 }
 
-export async function fetchAnsweredToday(): Promise<number> {
-  // JST, to match the streak function: a day should end at midnight where the
-  // user is, not at UTC midnight.
-  const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
-  const { data, error } = await supabase.from("v_my_daily").select("answered").eq("day", today);
+/** Today, against the goal and the ceiling.
+ *
+ *  Always one row. The day ends at midnight in Japan and the view does that
+ *  arithmetic, so the app never has to guess the date. Home sizes its button
+ *  from this and shows the "done" screen from it; practice sizes its set from
+ *  it — and next_items() would cap the set anyway, so the two cannot disagree. */
+export async function fetchDay(): Promise<DayStatus> {
+  const { data, error } = await supabase
+    .from("v_my_day")
+    .select("goal, answered_today, unlimited, max_today, left_today")
+    .single();
   if (error) throw error;
-  return data?.[0]?.answered ?? 0;
+  return data as DayStatus;
 }
 
 /** The ad-free unlock. Absence of a row is the normal case.

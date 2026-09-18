@@ -74,6 +74,19 @@ def test_tester_sql_is_lowercased_and_idempotent(capsys):
     assert "on conflict (email) do update" in out
 
 
+def test_tester_unlimited_lifts_the_ceiling_and_is_off_by_default(capsys):
+    assert cli.main(["tester", "z@example.com"]) == 0
+    out = capsys.readouterr().out
+    assert "insert into public.testers (email, note, unlimited)" in out
+    assert "'z@example.com', '', false" in out
+    assert "unlimited = excluded.unlimited" in out
+
+    assert cli.main(["tester", "z@example.com", "--unlimited"]) == 0
+    out = capsys.readouterr().out
+    assert "'z@example.com', '', true" in out
+    assert "no daily ceiling" in out
+
+
 def test_tester_remove_and_bad_input(capsys):
     assert cli.main(["tester", "b@example.com", "--remove"]) == 0
     assert "delete from public.testers where email = 'b@example.com'" in capsys.readouterr().out
