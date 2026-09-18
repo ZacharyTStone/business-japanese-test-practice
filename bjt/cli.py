@@ -1094,7 +1094,7 @@ def cmd_audition(args) -> int:
     from .tts import audition, providers
 
     names = args.provider if args.provider else providers.available()
-    if not names:
+    if not names and not args.voices:
         print("No TTS provider is configured. Set one of:", file=sys.stderr)
         for name, keys in providers.CREDENTIALS.items():
             print(f"  {name:8} {' or '.join(keys)}", file=sys.stderr)
@@ -1106,12 +1106,15 @@ def cmd_audition(args) -> int:
               f"available: {sorted(providers.PROVIDERS)}", file=sys.stderr)
         return 2
 
-    report = audition.run(names, media_dir=args.media_dir, force=args.force)
+    report = audition.run(names, media_dir=args.media_dir, force=args.force,
+                          voices=args.voices)
     print(report.summary())
     for name, voice, why in report.failed:
         print(f"  FAILED {name} {voice}: {why}", file=sys.stderr)
     print(f"\nOpen {report.root / 'index.html'} and listen.")
-    print(f"Then pin the winner: {providers.PROVIDER_ENV}=<name> in .env or the repository secrets.")
+    if args.voices:
+        print(f"Every {providers.DEFAULT} voice saying one line is under "
+              f"{report.root / 'openai-voices'}; a recast goes in OpenAIProvider.VOICE_IDS.")
     return 1 if report.failed else 0
 
 
@@ -1455,6 +1458,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="which providers (default: every one with credentials)")
     au.add_argument("--media-dir", type=pathlib.Path,
                     help=f"where the clips go (default: {config.MEDIA_DIR}/audition)")
+    au.add_argument("--voices", action="store_true",
+                    help="also one line in every voice the library's provider offers, "
+                         "to recast a role by ear")
     au.add_argument("--force", action="store_true", help="re-synthesise clips that exist")
     au.set_defaults(func=cmd_audition)
 

@@ -12,15 +12,16 @@ Three real adapters, all of them the current generation of "instructable"
 speech models rather than the concatenative voices that made TTS sound like a
 station announcement:
 
-  gemini   Google's Gemini speech model, over the Gemini API. One API key.
-           Takes a free-text direction, so the voice can be told to sound like
-           a receptionist rather than tuned per clip.
   openai   OpenAI's speech API. One API key — the same one the scene artwork
-           already uses. Also takes a free-text direction.
+           already uses. Takes a free-text direction, so the voice can be told
+           to sound like a receptionist rather than tuned per clip. **This is
+           the library's voice**: the owner chose it (2026-09-18), and
+           `DEFAULT` below is that decision.
+  gemini   Google's Gemini speech model, over the Gemini API. One API key.
+           Kept as a comparison for `bjt audition`; not what ships.
   google   Google Cloud Text-to-Speech with its studio-grade Japanese voices.
            Needs a Cloud project and application credentials rather than a
-           key, so it is the heaviest to set up; it is here because its
-           Japanese voices are native recordings and worth comparing against.
+           key, so it is the heaviest to set up. Also a comparison only.
 
 Every adapter returns 16-bit PCM WAV at whatever rate it likes; `channel.py`
 resamples. WAV rather than a compressed format because review happens on the
@@ -182,10 +183,17 @@ class OpenAIProvider:
     MODEL = os.environ.get("BJT_OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
     URL = "https://api.openai.com/v1/audio/speech"
 
-    #: Cast voice → the provider's voice id. A first cast, chosen by the voices'
-    #: published character (register, age, warmth) so that `bjt synth` runs the
-    #: day a key exists; `bjt audition` is how it gets checked by ear, and any
-    #: change is made here, once, before the library is synthesised.
+    #: Every voice the model offers, for `bjt audition --voices`: one line in
+    #: each, so a role can be recast by ear if one sounds accented in Japanese.
+    CANDIDATE_VOICES = ("alloy", "ash", "ballad", "coral", "echo", "fable", "nova",
+                        "onyx", "sage", "shimmer", "verse")
+
+    #: Cast voice → the provider's voice id. Chosen by the voices' published
+    #: character (register, age, warmth) so that `bjt synth` runs the day a key
+    #: exists; `bjt audition` is how it gets checked by ear, and any change is
+    #: made here, once, before the library is synthesised — a live clip is
+    #: never re-made, so a recast after that is a library that sounds different
+    #: from one item to the next.
     VOICE_IDS: dict[str, str] = {
         "narrator_f": "sage",
         "staff_junior_m": "verse",
@@ -199,10 +207,13 @@ class OpenAIProvider:
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
 
-    def synthesize(self, text: str, voice: str, *, instructions: str = "") -> bytes:
+    def synthesize(self, text: str, voice: str, *, instructions: str = "",
+                   provider_voice: str | None = None) -> bytes:
+        """`provider_voice` bypasses the cast — for the audition only, which
+        asks every voice the model offers to say the same line."""
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is not set")
-        provider_voice = _cast("OpenAI", self.VOICE_IDS, voice)
+        provider_voice = provider_voice or _cast("OpenAI", self.VOICE_IDS, voice)
         body = {
             "model": self.MODEL,
             "voice": provider_voice,
@@ -367,14 +378,21 @@ PROVIDERS: dict[str, type] = {
 }
 
 #: What each real provider needs in the environment before it can be used.
-#: Any one of the names is enough. In order of preference for `auto`.
+#: Any one of the names is enough.
 CREDENTIALS: dict[str, tuple[str, ...]] = {
-    "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
     "openai": ("OPENAI_API_KEY",),
+    "gemini": ("GEMINI_API_KEY", "GOOGLE_API_KEY"),
     "google": ("GOOGLE_APPLICATION_CREDENTIALS",),
 }
 
-#: How to pin the choice once the audition has been listened to.
+#: The library's voice. A decision, recorded in code rather than in anybody's
+#: environment, because the cast is fixed for the life of the library and a
+#: clip once live is never re-made: the provider must not follow whichever key
+#: happens to be set on the machine running the job. The owner chose OpenAI
+#: (2026-09-18).
+DEFAULT = "openai"
+
+#: An override, for trying another provider on a laptop. Not for the workflow.
 PROVIDER_ENV = "BJT_TTS_PROVIDER"
 
 
@@ -387,16 +405,16 @@ def available() -> list[str]:
 def default_provider() -> str:
     """What `--provider auto` means.
 
-    `BJT_TTS_PROVIDER` when set — that is the audition's verdict, and it should
-    be pinned once made, because the cast is fixed for the life of the library.
-    Otherwise the first configured provider, and `silent` when there is none,
-    so the pipeline still runs end to end on a machine with no key.
+    `BJT_TTS_PROVIDER` when set, else the library's voice (`DEFAULT`) when its
+    key is present, else `silent`, so the pipeline still runs end to end on a
+    machine with no key. Another provider's key alone does not make it the
+    voice — a job with only GEMINI_API_KEY set synthesises silence and says so,
+    rather than quietly giving the library a second cast.
     """
     pinned = os.environ.get(PROVIDER_ENV, "").strip().lower()
     if pinned:
         return pinned
-    configured = available()
-    return configured[0] if configured else "silent"
+    return DEFAULT if DEFAULT in available() else "silent"
 
 
 def get_provider(name: str) -> Provider:

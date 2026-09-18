@@ -350,14 +350,34 @@ def test_the_provider_is_picked_from_the_environment(monkeypatch):
     monkeypatch.delenv(providers.PROVIDER_ENV, raising=False)
     assert providers.default_provider() == "silent"
 
-    monkeypatch.setenv("OPENAI_API_KEY", "k")
-    assert providers.default_provider() == "openai"
+    # Another provider's key alone does not make it the voice: the library's
+    # provider is a decision in code, not the last secret somebody set.
     monkeypatch.setenv("GEMINI_API_KEY", "k")
-    assert providers.default_provider() == "gemini"
-    assert providers.available() == ["gemini", "openai"]
+    assert providers.default_provider() == "silent"
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    assert providers.default_provider() == providers.DEFAULT == "openai"
+    assert providers.available() == ["openai", "gemini"]
 
-    monkeypatch.setenv(providers.PROVIDER_ENV, "openai")
-    assert providers.get_provider("auto").name == "openai"
+    monkeypatch.setenv(providers.PROVIDER_ENV, "gemini")
+    assert providers.get_provider("auto").name == "gemini"
+
+
+def test_the_voices_audition_says_one_line_in_every_openai_voice(tmp_path, monkeypatch):
+    from bjt.tts import audition
+
+    asked = []
+
+    def fake_post(url, body, headers):
+        asked.append(body["voice"])
+        return channel.silence(0.2)
+
+    monkeypatch.setattr(providers, "_post", fake_post)
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    report = audition.run([], media_dir=tmp_path, voices=True)
+    assert not report.failed
+    assert asked == list(providers.OpenAIProvider.CANDIDATE_VOICES)
+    page = (tmp_path / "audition" / "index.html").read_text(encoding="utf-8")
+    assert 'src="openai-voices/nova.wav"' in page
 
 
 # ----- the audition ---------------------------------------------------------

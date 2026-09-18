@@ -23,11 +23,11 @@
 #                it was built to do.
 #
 # Needs one secret: SUPABASE_DB_URL, the session-pooler connection string with
-# the database password in it. The audio step additionally reads a TTS key
-# (GEMINI_API_KEY or OPENAI_API_KEY; the repository variable BJT_TTS_PROVIDER
-# pins which, after `bjt audition`) and SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY,
-# the only key that may write to a bucket. That key lives here and in nobody's
-# .env, and never in client/.
+# the database password in it. The audio step additionally reads OPENAI_API_KEY
+# (the library's voice — the owner chose it, and bjt/tts/providers.py records
+# that; the same key draws the scene artwork) and SUPABASE_URL +
+# SUPABASE_SERVICE_ROLE_KEY, the only key that may write to a bucket. That key
+# lives here and in nobody's .env, and never in client/.
 name: deploy database
 
 on:
@@ -107,20 +107,18 @@ jobs:
       - name: which voice, if any
         id: tts
         env:
-          HAVE_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
           HAVE_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
           HAVE_STORAGE: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
         run: |
-          if { [ "$HAVE_GEMINI" = "true" ] || [ "$HAVE_OPENAI" = "true" ]; } && [ "$HAVE_STORAGE" = "true" ]; then
+          if [ "$HAVE_OPENAI" = "true" ] && [ "$HAVE_STORAGE" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
             echo "go=false" >> "$GITHUB_OUTPUT"
             {
               echo '### No audio synthesised'
               echo
-              echo "Giving the bank a voice needs a TTS key — \`GEMINI_API_KEY\` (present: $HAVE_GEMINI)"
-              echo "or \`OPENAI_API_KEY\` (present: $HAVE_OPENAI) — and the storage pair"
-              echo "\`SUPABASE_URL\` + \`SUPABASE_SERVICE_ROLE_KEY\` (present: $HAVE_STORAGE)."
+              echo "Giving the bank a voice needs \`OPENAI_API_KEY\` (present: $HAVE_OPENAI)"
+              echo "and the storage pair \`SUPABASE_URL\` + \`SUPABASE_SERVICE_ROLE_KEY\` (present: $HAVE_STORAGE)."
               echo 'Until then listening items show their text. See blockers.md.'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -135,9 +133,7 @@ jobs:
       - name: give the bank its voice
         if: steps.tts.outputs.go == 'true'
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          BJT_TTS_PROVIDER: ${{ vars.BJT_TTS_PROVIDER }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
@@ -151,7 +147,7 @@ jobs:
             # One bundle failing must not stop the rest: its clips are made on
             # the next run, and everything that did reach the bucket is pointed
             # at now.
-            python -m bjt synth "$f" --provider auto --have have.txt --upload --out "$out" || failed=1
+            python -m bjt synth "$f" --provider openai --have have.txt --upload --out "$out" || failed=1
             if [ -f "$out" ]; then
               psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$out"
             fi
