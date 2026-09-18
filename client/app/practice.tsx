@@ -57,7 +57,7 @@ import { verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { AnsweredItem, QueuedItem, SectionLevel } from "../src/lib/types";
-import { AutoPlaylist, DialoguePlayer } from "../src/ui/audio";
+import { AutoPlaylist, DialoguePlayer, MiniPlay } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
 import { DayDone } from "../src/ui/done";
 import { DocumentView } from "../src/ui/document";
@@ -102,14 +102,34 @@ const PROMPT_KEY: Record<string, Key> = {
 
 type Stage = "scene" | "listen" | "answer" | "reveal";
 
+/**
+ * The four utterances of a 発言聴解 item, when every one of them has a clip.
+ *
+ * In the exam these are heard, never read: the answer sheet has four numbers
+ * and nothing else. So when the audio exists the options are played after the
+ * narration and shown as letters with a replay button, and the text stays
+ * hidden until the answer is in. All four or none — a set where three are
+ * spoken and one is printed would mark the odd one out, and the type table in
+ * bjt/tts/plan.py is the only reason any other type would have option clips.
+ */
+function spokenOptionUrls(item: QueuedItem): string[] | null {
+  if (item.item_type !== "hatsugen_choukai") return null;
+  const urls = [...item.options]
+    .sort((a, b) => a.position - b.position)
+    .map((o) => clipUrl(o.audio_path));
+  return urls.every((u): u is string => Boolean(u)) ? (urls as string[]) : null;
+}
+
 /** Every clip of an item, in the order it is heard: the conversation, then the
- *  question. Turns without a clip yet are skipped, not waited for. */
+ *  question, then — for 発言聴解 — the four things one might say. Turns without
+ *  a clip yet are skipped, not waited for. */
 function playlistFor(item: QueuedItem): string[] {
   const turns = (item.dialogue ?? [])
     .map((t) => clipUrl(t.audio_path))
     .filter((u): u is string => Boolean(u));
   const narration = clipUrl(item.narration_path);
-  return narration ? [...turns, narration] : turns;
+  const spoken = spokenOptionUrls(item) ?? [];
+  return [...turns, ...(narration ? [narration] : []), ...spoken];
 }
 
 /** A tap you can feel. Pattern durations are ignored on iOS, which is fine —
@@ -133,6 +153,10 @@ export default function Practice() {
   const [chosen, setChosen] = useState<number | null>(null);
   const [graded, setGraded] = useState<{ isCorrect: boolean; chosenRole: string } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  // The learner asked to see spoken options as text before answering. Practice
+  // is not the exam, and the fourth listen sometimes needs the page; but it is
+  // off by default and resets with every item, so the listen comes first.
+  const [optionsAsText, setOptionsAsText] = useState(false);
   const [answers, setAnswers] = useState<AnsweredItem[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +226,7 @@ export default function Practice() {
     [item]
   );
   const playlist = useMemo(() => (item ? playlistFor(item) : []), [item]);
+  const spokenOptions = useMemo(() => (item ? spokenOptionUrls(item) : null), [item]);
 
   if (!isConfigured) {
     return (
@@ -322,11 +347,14 @@ export default function Practice() {
     setChosen(null);
     setGraded(null);
     setShowDetails(false);
+    setOptionsAsText(false);
     scrolledFor.current = null;
     questionShownAt.current = Date.now();
   }
 
   const revealed = stage === "reveal" && graded !== null;
+  // Spoken options are letters until the answer is in, unless asked for.
+  const optionTextHidden = spokenOptions !== null && !revealed && !optionsAsText;
   const chosenOption = chosen !== null ? options[chosen] : null;
   const correctOption = options[item.correct_index];
   const role = graded?.chosenRole || chosenOption?.role || "";
@@ -455,6 +483,18 @@ export default function Practice() {
             <Text style={[type.mono, styles.hint]}>{t("key_hint_answer")}</Text>
           ) : null}
 
+          {spokenOptions !== null && !revealed ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setOptionsAsText((v) => !v)}
+              style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+            >
+              <Text style={[type.small, styles.toggle]}>
+                {optionsAsText ? t("hide_options_text") : t("show_options_text")}
+              </Text>
+            </Pressable>
+          ) : null}
+
           <View style={{ gap: space.md }}>
             {options.map((option, i) => {
               const isChosen = chosen === i;
@@ -470,7 +510,9 @@ export default function Practice() {
                   // then a sentence with nothing tying them together — and, once
                   // answered, says which one this was.
                   accessibilityLabel={
-                    `${LETTERS[i]}. ${option.text}` +
+                    (optionTextHidden
+                      ? t("option_spoken", { letter: LETTERS[i] })
+                      : `${LETTERS[i]}. ${option.text}`) +
                     (show ? ` — ${isAnswer ? t("mark_correct") : t("mark_chosen")}` : "")
                   }
                   accessibilityState={{ disabled: revealed || busy || chosen !== null }}
@@ -500,6 +542,12 @@ export default function Practice() {
                         {LETTERS[i]}
                       </Text>
                     </View>
+                    {spokenOptions !== null && !revealed ? (
+                      <MiniPlay
+                        url={spokenOptions[i]}
+                        label={t("play_option", { letter: LETTERS[i] })}
+                      />
+                    ) : null}
                     {show ? (
                       // A word as well as a colour: the marker has to survive being
                       // read by someone who cannot tell the green from the red.
@@ -513,7 +561,7 @@ export default function Practice() {
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={type.option}>{option.text}</Text>
+                  {optionTextHidden ? null : <Text style={type.option}>{option.text}</Text>}
                 </Pressable>
               );
             })}

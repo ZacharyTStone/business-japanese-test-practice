@@ -124,7 +124,8 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt quality` | The fidelity report — all six mechanisms plus raw per-item-type accuracy. |
 | `bjt discriminate --type T` | Mix official + generated items, ask a judge which are synthetic, report the rate and the tells — then auto-fold those tells into the generator prompt. |
 | `bjt publish <bundle.json>` | Turn a checked bundle into idempotent SQL for the database. |
-| `bjt synth <bundle.json>` | Synthesise the bundle's audio offline and write the SQL that points at it. `--provider silent` runs with no vendor account. |
+| `bjt synth <bundle.json>` | Synthesise the bundle's audio offline and write the SQL that points at it. `--provider auto` picks the pinned or configured provider; `--have` skips clips the database already has; `--upload` puts the files in the `audio` bucket. `--provider silent` runs with no vendor account. |
+| `bjt audition` | The cast saying the same eight lines, on a page to listen to; `--voices` adds every voice the model offers, to recast a role by ear. |
 | `bjt scenes` | What the scene bank needs, most-wanted first. `--generate` draws the missing ones and has a judge model review each draft against the brief; `--upload` puts approved art in the bucket; `--sql` points the database at it. |
 | `bjt render <bundle.json>` | Render a document stimulus to HTML, to look at while writing one. |
 | `bjt grant <user-id>` | SQL granting or revoking the ad-free unlock, as the service role. |
@@ -135,8 +136,8 @@ Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
 `BJT_JUDGE_MODEL`, `BJT_DB_PATH`, `BJT_SEEDS_DIR`, `BJT_SEEDTABLE_DIR`,
 `BJT_BATCH_DIR`, `BJT_GATE_TRIALS`, `BJT_IMAGE_MODEL`, `BJT_IMAGE_QUALITY`,
 `BJT_IMAGE_COMPRESSION`, `BJT_SCENE_ATTEMPTS`. Secrets, each read only by the step that needs it:
-`ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (scene art), `SUPABASE_URL` and
-`SUPABASE_SERVICE_ROLE_KEY` (uploading it). `bjt seeds --bootstrap` builds a
+`ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (scene art and the voice), `SUPABASE_URL`
+and `SUPABASE_SERVICE_ROLE_KEY` (uploading either). `bjt seeds --bootstrap` builds a
 `seeds/` from the reference batches when there is no licensed material, which is
 what the nightly job does without a `SEEDS_TAR_B64` secret.
 
@@ -313,9 +314,28 @@ bundle that has already passed every gate, and emits files plus the SQL that
 points the database at them. Uploading and applying are separate deliberate acts,
 which is why no key that can write media needs to exist on a build machine.
 
+**The voice is OpenAI.** The owner chose it (2026-09-18), `providers.py` records
+it as the default, and the same `OPENAI_API_KEY` that draws the scene artwork
+is all `bjt synth` needs. It is an instructable speech model rather than the
+concatenative kind that made TTS sound like a station announcement, and every
+clip is given one house direction (`HOUSE_STYLE`): native Tokyo office Japanese
+at a working pace, keigo said fluently rather than read off a list, no acting,
+no announcer voice. Seven roles are cast to seven of its voices. `bjt audition`
+writes the cast side by side — and with `--voices`, every voice the model offers
+saying one line — into `media/audition/index.html`, for a native speaker to
+check by ear before the library is synthesised. Gemini and Google Cloud
+adapters remain for comparison (`--provider gemini`), not for shipping: the
+cast is fixed for the life of the library.
+
+The **deploy database** workflow runs the same job over the whole published
+bank: the database says which clips are live (`--have`), only the missing ones
+are made, `--upload` puts them in the `audio` bucket and the SQL points the rows
+at them. A clip already live is never touched again.
+
 `--provider silent` runs the whole thing with no vendor account: valid, silent
-clips, pathed `silent/` so they can never be mistaken for real recordings. What
-they cannot tell you is whether the Japanese sounds right — see `blockers.md`.
+clips, pathed `silent/` so they can never be mistaken for real recordings (and
+`--upload` refuses them). What they cannot tell you is whether the Japanese
+sounds right — see `blockers.md`.
 
 Two decisions are encoded in the plan:
 
