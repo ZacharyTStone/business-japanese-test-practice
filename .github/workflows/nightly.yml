@@ -216,11 +216,25 @@ jobs:
           path: media/scenes
           if-no-files-found: ignore
 
+      # The scene step above is allowed to fail — a picture is optional — and
+      # when it dies before writing the SQL, this step must not be the one that
+      # ends the night: everything after it is the generation, which is the job.
       - name: point the database at the artwork
         if: steps.keys.outputs.art == 'true' && steps.keys.outputs.storage == 'true' && steps.keys.outputs.db == 'true' && github.event.inputs.dry_run != 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f batches/scenes.sql
+        run: |
+          if [ ! -f batches/scenes.sql ]; then
+            {
+              echo
+              echo '### Artwork not applied'
+              echo
+              echo 'The scene step did not write `batches/scenes.sql` (see its output above);'
+              echo 'the database was not pointed at any new picture tonight.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f batches/scenes.sql
 
       # --------------------------------------------------------- the generation
 

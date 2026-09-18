@@ -1104,7 +1104,15 @@ def cmd_scenes(args) -> int:
         if not args.force:
             wanted = [s for s in wanted if not s.has_art]
         if not wanted:
-            print("every scene already has artwork; nothing to draw (--force redraws)")
+            note = "every scene already has artwork; nothing to draw (--force redraws)"
+            print(note)
+            # The summary file is a promise to the workflow, which appends it to
+            # the run page whatever happened. A night with nothing to draw is
+            # the ordinary night once the bank is full, and it must not be the
+            # night the job fails on a missing file.
+            if args.summary:
+                pathlib.Path(args.summary).write_text(
+                    f"## Scene artwork ({provider.name})\n\n{note}\n", encoding="utf-8")
         else:
             result = scene_art.draw(
                 wanted, provider=provider, review=scene_art.review_with_model,
@@ -1120,9 +1128,18 @@ def cmd_scenes(args) -> int:
             survey = scenemod.survey(args.media_dir, remote)
 
     if args.upload:
-        sent = scene_art.upload_approved(survey, bucket, args.media_dir)
-        print(f"uploaded {len(sent)} file(s) to the `{bucket.name}` bucket"
-              + (": " + ", ".join(sent) if sent else ""))
+        up = scene_art.upload_approved(survey, bucket, args.media_dir)
+        print(f"uploaded {len(up.sent)} file(s) to the `{bucket.name}` bucket"
+              + (": " + ", ".join(up.sent) if up.sent else ""))
+        for path, why in up.failed:
+            print(f"not uploaded: {path}: {why}", file=sys.stderr)
+        if up.failed:
+            failed = True
+            if args.summary:
+                with pathlib.Path(args.summary).open("a", encoding="utf-8") as fh:
+                    fh.write("\n" + up.summary() + "\n")
+            # The SQL below must describe the bucket, not this machine.
+            survey = scene_art.without(survey, up.failed_paths)
 
     have = [s for s in survey if s.has_art]
 
