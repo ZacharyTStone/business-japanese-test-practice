@@ -74,11 +74,11 @@ on:
       budget:
         description: "Most items this run may write"
         required: false
-        default: "12"
+        default: "8"
       per_slot:
         description: "Most items into any one (type, level)"
         required: false
-        default: "4"
+        default: "3"
       scenes:
         description: "Also draw the scenes the bank is missing (the schedule does this on Sundays)"
         type: boolean
@@ -87,7 +87,7 @@ on:
       max_usd:
         description: "Most dollars this run may spend on the Anthropic API (measured from usage; the run stops with what it has)"
         required: false
-        default: "3"
+        default: "2"
       force:
         description: "Write tonight even though an earlier night's content branch is still unmerged"
         type: boolean
@@ -112,18 +112,18 @@ jobs:
     name: survey the bank, and fill it if the keys are there
     runs-on: ubuntu-latest
     # A night is minutes, not hours. The morning of 2026-09-18 a single run
-    # generated for two and a half hours; the clock is the guard that does not
-    # depend on any code being right.
-    timeout-minutes: 60
+    # generated for two and a half hours. The process stops itself at
+    # BJT_RUN_MAX_MINUTES (30) and keeps what it wrote; this clock, a little
+    # above it, is the guard that does not depend on any code being right.
+    timeout-minutes: 45
     env:
-      # Twelve a night, four to a shelf: half the first night's order. The bank
-      # still fills its empty shelves in a few weeks, at half the bill. The
+      # Eight a night, three to a shelf: about two dollars on Sonnet. The
       # code clamps whatever is typed here to BJT_NIGHT_MAX_BUDGET / _PER_SLOT.
-      BUDGET: ${{ github.event.inputs.budget || '12' }}
-      PER_SLOT: ${{ github.event.inputs.per_slot || '4' }}
+      BUDGET: ${{ github.event.inputs.budget || '8' }}
+      PER_SLOT: ${{ github.event.inputs.per_slot || '3' }}
       # The most this run may spend, checked before every call against the
       # usage the API reports. Reached, the run stops and keeps what it wrote.
-      BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '3' }}
+      BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '2' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

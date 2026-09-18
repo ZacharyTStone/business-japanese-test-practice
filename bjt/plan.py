@@ -52,10 +52,13 @@ from . import seedtable
 DEFAULT_FLOOR = 12
 
 #: Most items one run may write into one (type, level) shelf.
-DEFAULT_PER_SLOT = 4
+DEFAULT_PER_SLOT = 3
 
-#: Most items one run may write at all.
-DEFAULT_BUDGET = 12
+#: Most items one run may write at all. Eight a night is about two dollars on
+#: Sonnet; the bank fills its thin shelves in weeks rather than days, and the
+#: owner asked for cheap (2026-09-18). The night's real throttle is the
+#: review gate: nothing is written while an earlier night waits unmerged.
+DEFAULT_BUDGET = 8
 
 
 @dataclass(frozen=True)

@@ -203,9 +203,35 @@ def test_the_summary_carries_the_bill(ledger):
     assert "$0.30" in text and "claude-sonnet-5" in text
 
 
+def test_the_time_ceiling_stops_the_next_call(ledger, answers, monkeypatch):
+    monkeypatch.setattr("bjt.config.RUN_MAX_MINUTES", 30)
+    llm.answer_choice("q", ["a"], model="claude-sonnet-5")
+    ledger.started -= 31 * 60  # thirty-one minutes ago
+    with pytest.raises(llm.LLMSpendLimitError) as err:
+        llm.answer_choice("q", ["a"], model="claude-sonnet-5")
+    assert len(answers) == 1 and "time ceiling" in str(err.value)
+
+
+def test_the_client_has_a_timeout_and_few_retries(monkeypatch):
+    seen = {}
+
+    class FakeAnthropic:
+        def __init__(self, **kw):
+            seen.update(kw)
+
+    import sys, types
+    fake = types.ModuleType("anthropic"); fake.Anthropic = FakeAnthropic
+    monkeypatch.setitem(sys.modules, "anthropic", fake)
+    monkeypatch.setattr(llm, "_client", None)
+    llm._get_client()
+    assert seen == {"timeout": config.API_TIMEOUT_SECONDS, "max_retries": config.API_MAX_RETRIES}
+    assert config.API_TIMEOUT_SECONDS <= 600 and config.API_MAX_RETRIES <= 2
+
+
 def test_the_defaults_are_the_stated_ones():
-    assert config.RUN_BUDGET_USD == 3.0
+    assert config.RUN_BUDGET_USD == 2.0
     assert config.RUN_MAX_CALLS == 500
+    assert config.RUN_MAX_MINUTES == 30
     assert config.MAX_TOKENS_CEILING == 8000
     assert config.EFFORT_CEILING == "high"
     assert (config.NIGHT_MAX_BUDGET, config.NIGHT_MAX_PER_SLOT) == (24, 6)
@@ -223,6 +249,7 @@ def test_the_workflow_keeps_its_guards():
     wf = yaml.safe_load(text)
     job = wf["jobs"]["nightly"]
     assert job["timeout-minutes"] <= 60, "a night is minutes, not hours"
+    assert job["timeout-minutes"] > config.RUN_MAX_MINUTES, "the process stops itself first"
     assert "BJT_RUN_BUDGET_USD" in job["env"], "the dollar ceiling is set for the run"
     inputs = wf[True]["workflow_dispatch"]["inputs"]  # `on:` parses as True
     assert "max_usd" in inputs and "force" in inputs
