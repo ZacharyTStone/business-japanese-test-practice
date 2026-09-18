@@ -44,15 +44,17 @@ import {
   IconBadge,
   Loading,
   Notice,
+  ProgressBar,
   ScreenHeader,
   ScreenMessage,
   SectionLabel,
   Tag,
 } from "../../src/ui/components";
 import type { IconName } from "../../src/ui/icons";
+import { FadeIn } from "../../src/ui/motion";
 import { TypeRadar } from "../../src/ui/radar";
 import type { BadgeTone } from "../../src/ui/theme";
-import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
+import { colors, space, TAB_CLEARANCE, tabular, type } from "../../src/ui/theme";
 
 const AXIS_KEY: Record<TagStat["axis"], Key> = {
   function: "axis_function",
@@ -177,40 +179,42 @@ export default function Progress() {
     <ScrollView contentContainerStyle={styles.page}>
       <ScreenHeader title={t("tab_progress")} />
 
-      <Card style={{ gap: space.lg }}>
-        {SECTIONS.map((section) => {
-          const inSection = types.filter((t) => t.section === section.id);
-          const n = inSection.reduce((a, t) => a + t.answered, 0);
-          const c = inSection.reduce((a, t) => a + t.correct, 0);
-          // 「—」 and not 0%: a section nobody has opened has no accuracy, and
-          // printing zero there is the lie that sends people off to drill it.
-          const pct = n > 0 ? Math.round((c / n) * 100) : null;
-          // The level being served here, beside the accuracy that earned it.
-          // This is the whole per-section design in one glance: 読解 J1 next to
-          // 聴解 J3 says more than either number does alone.
-          const level = placedLevel(levels, section.id);
-          return (
-            <View key={section.id} style={{ gap: 6 }}>
-              <View style={styles.row}>
-                <IconBadge name={section.icon} tone={section.tone} size={28} />
-                <Text style={[type.body, { flex: 1, fontWeight: "700" }]}>{t(section.key)}</Text>
-                {level ? <Tag tone={section.tone}>{level}</Tag> : null}
-                <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
-                  {pct === null ? "—" : t("pct_n", { pct, n })}
-                </Text>
+      <FadeIn>
+        <Card style={{ gap: space.lg }}>
+          {SECTIONS.map((section) => {
+            const inSection = types.filter((t) => t.section === section.id);
+            const n = inSection.reduce((a, t) => a + t.answered, 0);
+            const c = inSection.reduce((a, t) => a + t.correct, 0);
+            // 「—」 and not 0%: a section nobody has opened has no accuracy, and
+            // printing zero there is the lie that sends people off to drill it.
+            const pct = n > 0 ? Math.round((c / n) * 100) : null;
+            // The level being served here, beside the accuracy that earned it.
+            // This is the whole per-section design in one glance: 読解 J1 next to
+            // 聴解 J3 says more than either number does alone.
+            const level = placedLevel(levels, section.id);
+            return (
+              <View key={section.id} style={{ gap: 6 }}>
+                <View style={styles.row}>
+                  <IconBadge name={section.icon} tone={section.tone} size={28} />
+                  <Text style={[type.body, { flex: 1, fontWeight: "700" }]}>{t(section.key)}</Text>
+                  {level ? <Tag tone={section.tone}>{level}</Tag> : null}
+                  <Text style={[type.small, tabular, { fontWeight: "700", color: colors.text }]}>
+                    {pct === null ? "—" : t("pct_n", { pct, n })}
+                  </Text>
+                </View>
+                <ProgressBar value={(pct ?? 0) / 100} />
               </View>
-              <View style={styles.track}>
-                <View style={[styles.fill, { width: `${pct ?? 0}%` }]} />
-              </View>
-            </View>
-          );
-        })}
-        {answered === 0 ? <Text style={type.small}>{t("prog_first")}</Text> : null}
-      </Card>
+            );
+          })}
+          {answered === 0 ? <Text style={type.small}>{t("prog_first")}</Text> : null}
+        </Card>
+      </FadeIn>
 
-      <Card style={{ gap: space.md }}>
-        <TypeRadar stats={types} />
-      </Card>
+      <FadeIn delay={70}>
+        <Card style={{ gap: space.md }}>
+          <TypeRadar stats={types} />
+        </Card>
+      </FadeIn>
 
       {topTraps.length > 0 ? (
         <Card style={{ gap: space.lg }}>
@@ -243,13 +247,11 @@ export default function Progress() {
                 <Text style={[type.small, { flex: 1 }]}>
                   {t(AXIS_KEY[tag.axis])} · {tag.tag}
                 </Text>
-                <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
+                <Text style={[type.small, tabular, { fontWeight: "700", color: colors.text }]}>
                   {t("pct_n", { pct: Math.round(tag.acc * 100), n: tag.n })}
                 </Text>
               </View>
-              <View style={styles.track}>
-                <View style={[styles.fill, { width: `${Math.round(tag.acc * 100)}%` }]} />
-              </View>
+              <ProgressBar value={tag.acc} />
             </View>
           ))}
         </Card>
@@ -275,6 +277,4 @@ const styles = StyleSheet.create({
   page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
   row: { flexDirection: "row", alignItems: "center", gap: space.sm },
   trapRow: { flexDirection: "row", alignItems: "center", gap: space.md },
-  track: { height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: "hidden" },
-  fill: { height: 8, backgroundColor: colors.accent, borderRadius: 4 },
 });

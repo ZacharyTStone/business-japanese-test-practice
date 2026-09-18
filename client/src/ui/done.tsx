@@ -20,7 +20,8 @@ import { useLang } from "../lib/i18n";
 import { Button, Card } from "./components";
 import { Face } from "./face";
 import { Icon } from "./icons";
-import { colors, radius, space, type } from "./theme";
+import { FadeIn } from "./motion";
+import { colors, radius, space, tabular, type } from "./theme";
 
 export function DayDone({
   answered,
@@ -39,11 +40,11 @@ export function DayDone({
   const { t } = useLang();
   return (
     <Card style={styles.card} accessibilityRole="summary" accessibilityLiveRegion="polite">
-      <View style={styles.faceWrap}>
+      <FadeIn distance={0} style={styles.faceWrap}>
         <Face mood="happy" size={92} />
-      </View>
+      </FadeIn>
       <Text style={styles.title}>{t("day_done_title")}</Text>
-      <Text style={[type.body, styles.centre]}>{t("day_done_body", { n: answered })}</Text>
+      <Text style={[type.body, tabular, styles.centre]}>{t("day_done_body", { n: answered })}</Text>
 
       <View style={styles.facts}>
         <View style={styles.fact}>
