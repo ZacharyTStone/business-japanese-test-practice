@@ -32,9 +32,12 @@ def _env(name: str, default: str) -> str:
     return os.environ.get(name, default)
 
 
-# The generator model. A strong model matters most here: distractor quality and
-# the honorific/register judgements are exactly where weaker models collapse.
-GEN_MODEL = _env("BJT_MODEL", "claude-opus-5")
+# The generator model. Sonnet 5 writes the drafts: it is a current-generation
+# strong model at two and a half times less than Opus per token, and the
+# owner chose it (2026-09-18) once the first nights' bill came in. What keeps
+# the bar where it was is that every draft still has to get past the judge
+# below, which stays on Opus. BJT_MODEL=claude-opus-5 puts the writer back.
+GEN_MODEL = _env("BJT_MODEL", "claude-sonnet-5")
 
 # How hard the generator thinks. Output tokens are the expensive half of every
 # generation and thinking is most of the output, so this is the single biggest
@@ -49,10 +52,12 @@ GEN_EFFORT = _env("BJT_GEN_EFFORT", "medium")
 # the first. Three is enough to be sure it is the shelf and not bad luck.
 SLOT_PATIENCE = int(_env("BJT_SLOT_PATIENCE", "3"))
 
-# The model used for the answerability gate and the discriminator judge. Kept
-# strong on purpose: the cold/full test only means something if the model taking
-# it is genuinely capable ("a strong model should fail cold, succeed full").
-JUDGE_MODEL = _env("BJT_JUDGE_MODEL", GEN_MODEL)
+# The model used for the answerability gate, the discriminator judge and the
+# scene reviewer. Kept strong on purpose, and no longer tied to the writer: the
+# cold/full test only means something if the model taking it is genuinely
+# capable ("a strong model should fail cold, succeed full"). Its calls are
+# short and run at low effort, so it is a small part of the bill.
+JUDGE_MODEL = _env("BJT_JUDGE_MODEL", "claude-opus-5")
 
 # The proofreader. It runs once per item the moment the item exists, before the
 # expensive gate, and it is deliberately the cheapest model in the family: what
