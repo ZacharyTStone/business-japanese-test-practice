@@ -126,10 +126,10 @@ def test_the_generator_prompt_is_cacheable_and_at_the_configured_effort(monkeypa
 def test_the_defaults_are_the_cheaper_ones():
     from bjt import plan
 
-    # The writer is Sonnet; the judge that every draft must get past is not.
+    # Sonnet writes and Sonnet judges; Opus is one env var away, not the default.
     assert config.GEN_MODEL == "claude-sonnet-5"
-    assert config.JUDGE_MODEL == "claude-opus-5"
+    assert config.JUDGE_MODEL == "claude-sonnet-5"
     assert config.GEN_EFFORT == "medium"
     assert config.IMAGE_QUALITY == "medium"
     assert config.SLOT_PATIENCE == 3
-    assert (plan.DEFAULT_BUDGET, plan.DEFAULT_PER_SLOT) == (12, 4)
+    assert (plan.DEFAULT_BUDGET, plan.DEFAULT_PER_SLOT) == (8, 3)

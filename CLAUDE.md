@@ -49,6 +49,18 @@ accident is not.
   is the decision to ship: the **deploy database** workflow runs by itself
   once `checks` is green on `main`, and publishes the items and their audio
   together. The owner asked for this (2026-09-18).
+- **A run has ceilings, and they are checked before the call, not after.**
+  `bjt/llm.py` prices every response from the usage it reports and refuses the
+  next call once the process has spent `BJT_RUN_BUDGET_USD` (default $2), made
+  `BJT_RUN_MAX_CALLS`, or run for `BJT_RUN_MAX_MINUTES` (30); no call may ask for more than
+  `BJT_MAX_TOKENS_CEILING` output or think above `BJT_EFFORT_CEILING`; a night
+  is clamped to `BJT_NIGHT_MAX_BUDGET` / `_PER_SLOT` whatever the workflow input
+  says; the job has a clock; the night's files are an artifact before any push;
+  and no night writes while an earlier `content/nightly-*` branch is unmerged.
+  They are independent on purpose, so a bug in one is caught by another. Two
+  manual runs on 2026-09-18 spent $26 in three hours and shipped nothing; that
+  morning is why. Raising a ceiling is fine; removing one, or moving the check
+  after the call, is not.
 - **Variety comes from `seedtable/`, never from prompt wording.** 発言聴解 refuses
   to generate without a seed cell (`requires_cell`).
 - **The database grades answers, not the app.** The client posts `item_id` and

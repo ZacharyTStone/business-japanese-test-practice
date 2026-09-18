@@ -14,6 +14,8 @@ with neither the package nor an API key present.
 from __future__ import annotations
 
 import json
+import time
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from . import config
@@ -38,6 +40,129 @@ class LLMBillingError(LLMError):
 _BILLING_SIGNS = ("credit balance", "insufficient_quota", "billing")
 
 
+class LLMSpendLimitError(LLMBillingError):
+    """This process has spent what it was allowed to. Raised *before* the
+    call that would go over, so the ceiling is never crossed by more than one
+    response. A subclass of the billing error on purpose: every caller that
+    stops for an empty account stops for this too, keeping what it wrote."""
+
+
+# ----- the spend ledger --------------------------------------------------
+#
+# Dollars per million tokens, by model family, as the price list has them
+# (2026-09). Cache writes cost a quarter more than plain input and cache
+# reads a tenth of it. A model not in the table is priced as the dearest one
+# there — the ledger exists to stop a run, and a guess that is too low is the
+# one kind of wrong it must not be.
+PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
+    "claude-opus": (5.0, 25.0),
+    "claude-sonnet": (2.0, 10.0),
+    "claude-haiku": (1.0, 5.0),
+}
+CACHE_WRITE_MULTIPLIER = 1.25
+CACHE_READ_MULTIPLIER = 0.10
+
+
+def price_usd(model: str, usage: Any) -> float:
+    """What one response cost, from the usage the API reports on it."""
+    rates = next((r for prefix, r in PRICES_USD_PER_MTOK.items()
+                  if model.startswith(prefix)), None)
+    if rates is None:
+        rates = max(PRICES_USD_PER_MTOK.values(), key=lambda r: r[1])
+    per_in, per_out = rates
+    get = lambda name: int(getattr(usage, name, None) or 0)  # noqa: E731
+    plain = get("input_tokens")
+    written = get("cache_creation_input_tokens")
+    read = get("cache_read_input_tokens")
+    out = get("output_tokens")
+    return (
+        plain * per_in
+        + written * per_in * CACHE_WRITE_MULTIPLIER
+        + read * per_in * CACHE_READ_MULTIPLIER
+        + out * per_out
+    ) / 1_000_000
+
+
+@dataclass
+class Spend:
+    """Everything this process has spent on the API, priced as it went.
+
+    One per process (`spend`, below). Anything that wants the bill for a run
+    — the nightly summary, `bjt batch`'s last line — reads it; the ceilings in
+    config are enforced against it before every call.
+    """
+    calls: int = 0
+    input_tokens: int = 0
+    cache_write_tokens: int = 0
+    cache_read_tokens: int = 0
+    output_tokens: int = 0
+    usd: float = 0.0
+    usd_by_model: dict[str, float] = field(default_factory=dict)
+    calls_by_model: dict[str, int] = field(default_factory=dict)
+    started: float = field(default_factory=time.monotonic)
+
+    @property
+    def minutes(self) -> float:
+        return (time.monotonic() - self.started) / 60
+
+    def add(self, model: str, usage: Any) -> float:
+        cost = price_usd(model, usage)
+        get = lambda name: int(getattr(usage, name, None) or 0)  # noqa: E731
+        self.calls += 1
+        self.input_tokens += get("input_tokens")
+        self.cache_write_tokens += get("cache_creation_input_tokens")
+        self.cache_read_tokens += get("cache_read_input_tokens")
+        self.output_tokens += get("output_tokens")
+        self.usd += cost
+        self.usd_by_model[model] = self.usd_by_model.get(model, 0.0) + cost
+        self.calls_by_model[model] = self.calls_by_model.get(model, 0) + 1
+        return cost
+
+    def check_ceilings(self) -> None:
+        """Raise if the next call would be one too many. Called before it."""
+        if self.calls >= config.RUN_MAX_CALLS:
+            raise LLMSpendLimitError(
+                f"call ceiling reached: {self.calls} calls this run "
+                f"(BJT_RUN_MAX_CALLS={config.RUN_MAX_CALLS}); ${self.usd:.2f} spent")
+        if self.usd >= config.RUN_BUDGET_USD:
+            raise LLMSpendLimitError(
+                f"spend ceiling reached: ${self.usd:.2f} of "
+                f"${config.RUN_BUDGET_USD:.2f} (BJT_RUN_BUDGET_USD) "
+                f"in {self.calls} calls")
+        if self.minutes >= config.RUN_MAX_MINUTES:
+            raise LLMSpendLimitError(
+                f"time ceiling reached: {self.minutes:.0f} minutes this run "
+                f"(BJT_RUN_MAX_MINUTES={config.RUN_MAX_MINUTES:g}); "
+                f"${self.usd:.2f} spent in {self.calls} calls")
+
+    def report(self) -> str:
+        """The bill, as a few lines for a summary."""
+        lines = [
+            f"Spent ${self.usd:.2f} of the ${config.RUN_BUDGET_USD:.2f} ceiling in "
+            f"{self.calls} call(s) over {self.minutes:.0f} minute(s): "
+            f"{self.input_tokens:,} input, "
+            f"{self.cache_write_tokens:,} cache-write, {self.cache_read_tokens:,} "
+            f"cache-read, {self.output_tokens:,} output token(s).",
+        ]
+        for model in sorted(self.usd_by_model, key=self.usd_by_model.get, reverse=True):
+            lines.append(f"- {model}: ${self.usd_by_model[model]:.2f} "
+                         f"in {self.calls_by_model[model]} call(s)")
+        return "\n".join(lines)
+
+
+spend = Spend()
+
+
+_EFFORTS = ("low", "medium", "high", "xhigh", "max")
+
+
+def clamp_effort(effort: str) -> str:
+    """Never harder than config.EFFORT_CEILING, whatever was asked for."""
+    if effort not in _EFFORTS or config.EFFORT_CEILING not in _EFFORTS:
+        return effort if effort in _EFFORTS else "medium"
+    return _EFFORTS[min(_EFFORTS.index(effort), _EFFORTS.index(config.EFFORT_CEILING))]
+
+
 def _get_client():
     global _client
     if _client is None:
@@ -48,7 +173,8 @@ def _get_client():
                 "The 'anthropic' package is required for generation. "
                 "Install it with: pip install anthropic"
             ) from e
-        _client = anthropic.Anthropic()
+        _client = anthropic.Anthropic(timeout=config.API_TIMEOUT_SECONDS,
+                                      max_retries=config.API_MAX_RETRIES)
     return _client
 
 
@@ -73,6 +199,11 @@ def request_params(
     small judgements with a small ceiling, and they do not need thinking at
     all, so for Haiku the two keys are simply left out.
     """
+    # Two ceilings no caller can lift: output per call, and how hard the
+    # model may think. They cap the cost of one call the way the ledger below
+    # caps the cost of a run.
+    max_tokens = min(max_tokens, config.MAX_TOKENS_CEILING)
+    effort = clamp_effort(effort)
     params: dict = {
         "model": model,
         "max_tokens": max_tokens,
@@ -102,6 +233,9 @@ def _structured(
     effort: str = "high",
 ) -> dict:
     """One structured-output request. Returns the parsed JSON object."""
+    # The ceilings are checked before the call, never after: a run that is
+    # over its budget makes no further request, not one more.
+    spend.check_ceilings()
     client = _get_client()
     try:
         resp = client.messages.create(**request_params(
@@ -110,6 +244,10 @@ def _structured(
         if any(sign in str(e).lower() for sign in _BILLING_SIGNS):
             raise LLMBillingError(f"API request failed: {e}") from e
         raise LLMError(f"API request failed: {e}") from e
+
+    # Priced from what the API says it used, before anything else can fail:
+    # a refusal or a malformed reply was paid for too.
+    spend.add(model, getattr(resp, "usage", None))
 
     if resp.stop_reason == "refusal":
         raise LLMError(f"model refused the request ({resp.stop_details})")
