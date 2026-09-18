@@ -1,0 +1,439 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J1",
+  "generated_at": "2026-09-18T08:50:50+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "91d768f9f8",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "handover+subordinate_to_superior+find_the_deadline@J1",
+        "setting": "handover",
+        "relation": "subordinate_to_superior",
+        "function": "find_the_deadline",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "引き継いだ案件の期限",
+      "stem": "社内の完成は、いつまでに必要になりましたか。",
+      "options": [
+        {
+          "text": "十月七日ごろまで",
+          "role": "unsupported_but_plausible",
+          "why": "検収の遅れに合わせて完成も一週間遅らせた形だが、納品日を動かさないと約束している以上、遅らせる余地はない。"
+        },
+        {
+          "text": "十月十五日まで",
+          "role": "stated_by_wrong_speaker",
+          "why": "部下が最初に挙げた日付だが、課長がそれは先方の希望する納品日であって完成の期限ではないと述べている。"
+        },
+        {
+          "text": "九月二十三日ごろまで",
+          "role": "correct",
+          "why": "報告書の完成目安は九月三十日だが、検収の開始が一週間遅れるのに納品日を動かさないので、完成もその分、一週間早める必要がある。"
+        },
+        {
+          "text": "九月三十日まで",
+          "role": "combines_wrong_pair",
+          "why": "報告書に書かれた目安のままで、検収が一週間遅れて始まるという課長の話を反映していない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "報告書の日付は、納品十月十五日、その前に検収二週間、だから完成は九月三十日という組み立て。会話で、検収の開始が一週間遅れること、それでも納品日は動かさないことが分かる。動かせるのは完成日だけなので、一週間前倒しの九月二十三日ごろになる。報告書だけでは遅れが分からず、会話だけでは元の日付が分からない。",
+      "explanation_en": "The report chains delivery, two weeks of acceptance and completion; the conversation delays acceptance a week and fixes delivery, so completion moves a week earlier.",
+      "vocab_notes": [
+        {
+          "term": "検収",
+          "reading": "けんしゅう",
+          "meaning": "acceptance inspection"
+        },
+        {
+          "term": "前倒し",
+          "reading": "まえだおし",
+          "meaning": "bringing forward"
+        }
+      ],
+      "audio": {
+        "narration": "ea48beeb13697a5d",
+        "options": [],
+        "dialogue": [
+          "f634a159fb45d245",
+          "ee7d23749c3b7722",
+          "42b0498777d66d52",
+          "e39ae53ca4c67039",
+          "829e56922bee762c",
+          "7823a3471d64019e"
+        ]
+      },
+      "documents": [
+        {
+          "template": "progress_report",
+          "title": "案件K 進捗報告（引き継ぎ用）",
+          "meta": [
+            {
+              "label": "報告者",
+              "value": "技術部 山本"
+            },
+            {
+              "label": "報告日",
+              "value": "九月十二日"
+            },
+            {
+              "label": "案件",
+              "value": "案件K（みどり物産）"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "key_values",
+              "pairs": [
+                {
+                  "label": "納品希望日",
+                  "value": "十月十五日"
+                },
+                {
+                  "label": "検収期間",
+                  "value": "納品前に二週間（先方の要望）"
+                },
+                {
+                  "label": "社内完成目安",
+                  "value": "九月三十日"
+                }
+              ]
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "仕様は確定済み。残る作業は最終検査のみ。",
+                "検収の日程は先方の担当者と改めて調整すること。"
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "部下",
+          "text": "山本さんから引き継いだ案件ですが、進捗報告書では、先方への納品が十月十五日になっています。",
+          "clip_id": "f634a159fb45d245"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "それは先方の希望日でしょう。確か、検収に二週間みてほしいと言われていたはずだが。",
+          "clip_id": "ee7d23749c3b7722"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。ですので、社内の完成は九月末が目安と書いてあります。",
+          "clip_id": "42b0498777d66d52"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "ただ、先週の連絡で、先方の検収担当が十月の頭は出張だと聞いています。検収の開始が一週間遅れる前提で考えてください。",
+          "clip_id": "e39ae53ca4c67039"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "では、納品日を動かさないなら、完成をその分早める必要がありますね。",
+          "clip_id": "829e56922bee762c"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "そういうことです。納品日は動かさない、と先方に約束しています。",
+          "clip_id": "7823a3471d64019e"
+        }
+      ],
+      "scene_id": "scene_office_desk_pair",
+      "channel": "in_person"
+    },
+    {
+      "id": "749cfab0e3",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "client_review+subordinate_to_superior+choose_revision@J1",
+        "setting": "client_review",
+        "relation": "subordinate_to_superior",
+        "function": "choose_revision",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "見積の修正案をどれにするか",
+      "stem": "どの案で進めることになりましたか。",
+      "options": [
+        {
+          "text": "納期を一か月延ばして設置費を減らし、予算を超える分は初年度の保守の値引きで補う。",
+          "role": "correct",
+          "why": "課長が案二を前提に「超える分は初年度の保守を値引きで吸収」「台数はそのまま」と決めており、案二に値引きを足した形になる。"
+        },
+        {
+          "text": "台数を十六台に減らして、予算内に収める。",
+          "role": "combines_wrong_pair",
+          "why": "表の中で予算内に収まる案だが、課長が来年の追加でかえって高くつくと退けている。"
+        },
+        {
+          "text": "保守契約を外して、最も安い案にする。",
+          "role": "stated_by_wrong_speaker",
+          "why": "部下が用意した案の一つではあるが、先方が保守を重視していると課長が指摘し、部下も実質外れると認めている。"
+        },
+        {
+          "text": "納期を一か月延ばして設置費を減らし、超える分は先方に予算を増やしてもらう。",
+          "role": "wrong_action_owner",
+          "why": "案二を通す方法としてはあり得るが、超過分を吸収するのは自社の保守の値引きで、先方に予算を動かしてもらう話は出ていない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "表には三案と予算があり、予算内に収まるのは案一と案三。会話で案一は保守の重視、案三は将来の追加コストを理由に外れ、予算をわずかに超える案二が残る。超過分は初年度の保守の値引きで吸収し、台数は変えない。表だけを見ると予算内の案を選び、会話だけでは案二の中身が分からない。",
+      "explanation_en": "The table shows which options fit the budget; the conversation rules those out and adopts the one that slightly exceeds it, absorbing the gap with a maintenance discount.",
+      "vocab_notes": [
+        {
+          "term": "保守",
+          "reading": "ほしゅ",
+          "meaning": "maintenance (contract)"
+        },
+        {
+          "term": "吸収する",
+          "reading": "きゅうしゅうする",
+          "meaning": "to absorb (a cost)"
+        }
+      ],
+      "audio": {
+        "narration": "b2f949f39d8e3870",
+        "options": [],
+        "dialogue": [
+          "94561c3a595df897",
+          "acd39c0cbf164f3a",
+          "096dad51111dbee0",
+          "9549cfceb1f9d0b8",
+          "a80739165aba624f",
+          "fe0cbc037f4cf5c4"
+        ]
+      },
+      "documents": [
+        {
+          "template": "quote_order",
+          "title": "お見積書 修正案の比較",
+          "meta": [
+            {
+              "label": "宛先",
+              "value": "あさひ工業株式会社 御中"
+            },
+            {
+              "label": "発行者",
+              "value": "山川商事株式会社 営業部"
+            },
+            {
+              "label": "発行日",
+              "value": "九月十七日"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "案",
+                "内容",
+                "合計金額"
+              ],
+              "rows": [
+                [
+                  "案一",
+                  "保守契約を外す",
+                  "2,850,000円"
+                ],
+                [
+                  "案二",
+                  "納期を一か月延ばし、設置費を減らす",
+                  "3,050,000円"
+                ],
+                [
+                  "案三",
+                  "台数を二十台から十六台に減らす",
+                  "2,900,000円"
+                ]
+              ]
+            },
+            {
+              "type": "key_values",
+              "pairs": [
+                {
+                  "label": "先方のご予算",
+                  "value": "3,000,000円"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "部下",
+          "text": "先方から、見積を予算内に収めてほしいと言われています。修正案は三つ用意しました。",
+          "clip_id": "94561c3a595df897"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "一つ目は保守を外す案ですね。先方は保守を重視していたと思いますが。",
+          "clip_id": "acd39c0cbf164f3a"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。ですので実質、二つ目か三つ目かと。",
+          "clip_id": "096dad51111dbee0"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "三つ目は台数を減らす案ですか。それだと来年また追加の話になって、かえって高くつきます。",
+          "clip_id": "9549cfceb1f9d0b8"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "では、二つ目でいきますか。金額は予算をわずかに超えますが。",
+          "clip_id": "a80739165aba624f"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "超える分は初年度の保守を値引きで吸収しましょう。台数はそのままで。",
+          "clip_id": "fe0cbc037f4cf5c4"
+        }
+      ],
+      "scene_id": "scene_client_meeting_room",
+      "channel": "in_person"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "ea48beeb13697a5d",
+      "item_id": "91d768f9f8",
+      "kind": "narration",
+      "index": null,
+      "text": "社内の完成は、いつまでに必要になりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f634a159fb45d245",
+      "item_id": "91d768f9f8",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "山本さんから引き継いだ案件ですが、進捗報告書では、先方への納品が十月十五日になっています。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ee7d23749c3b7722",
+      "item_id": "91d768f9f8",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "それは先方の希望日でしょう。確か、検収に二週間みてほしいと言われていたはずだが。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "42b0498777d66d52",
+      "item_id": "91d768f9f8",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "はい。ですので、社内の完成は九月末が目安と書いてあります。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e39ae53ca4c67039",
+      "item_id": "91d768f9f8",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "ただ、先週の連絡で、先方の検収担当が十月の頭は出張だと聞いています。検収の開始が一週間遅れる前提で考えてください。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "829e56922bee762c",
+      "item_id": "91d768f9f8",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "では、納品日を動かさないなら、完成をその分早める必要がありますね。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "7823a3471d64019e",
+      "item_id": "91d768f9f8",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "そういうことです。納品日は動かさない、と先方に約束しています。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b2f949f39d8e3870",
+      "item_id": "749cfab0e3",
+      "kind": "narration",
+      "index": null,
+      "text": "どの案で進めることになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "94561c3a595df897",
+      "item_id": "749cfab0e3",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "先方から、見積を予算内に収めてほしいと言われています。修正案は三つ用意しました。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "acd39c0cbf164f3a",
+      "item_id": "749cfab0e3",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "一つ目は保守を外す案ですね。先方は保守を重視していたと思いますが。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "096dad51111dbee0",
+      "item_id": "749cfab0e3",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "はい。ですので実質、二つ目か三つ目かと。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9549cfceb1f9d0b8",
+      "item_id": "749cfab0e3",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "三つ目は台数を減らす案ですか。それだと来年また追加の話になって、かえって高くつきます。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a80739165aba624f",
+      "item_id": "749cfab0e3",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "では、二つ目でいきますか。金額は予算をわずかに超えますが。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fe0cbc037f4cf5c4",
+      "item_id": "749cfab0e3",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "超える分は初年度の保守を値引きで吸収しましょう。台数はそのままで。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_client_meeting_room",
+    "scene_office_desk_pair"
+  ]
+}

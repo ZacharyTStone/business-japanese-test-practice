@@ -1,0 +1,151 @@
+{
+  "bundle_version": 2,
+  "item_type": "bamen_haaku",
+  "level": "J1",
+  "generated_at": "2026-09-18T08:50:48+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "72ff3a7b7c",
+      "item_type": "bamen_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "event_venue+staff_to_client+identify_next_action@J1",
+        "setting": "event_venue",
+        "relation": "staff_to_client",
+        "function": "identify_next_action",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "展示会でカタログが切れている",
+      "stem": "展示会のブースで、担当者が取引先の人と話しています。「新型のカタログですが、あいにく手元の分が切れてしまいまして。ご住所を頂戴できれば戻り次第お送りしますし、お急ぎでしたら会場の端末でデータをご覧いただくこともできます。」「では、データで結構です。」担当者はこのあと何をしますか。",
+      "options": [
+        {
+          "text": "会場の端末で、カタログのデータをその場で見せる。",
+          "role": "correct",
+          "why": "二つの案のうち、取引先が「データで結構です」と選んだのは会場で見るほうで、担当者はその場で見せることになる。"
+        },
+        {
+          "text": "住所を控えて、会社に戻ってからカタログを送る。",
+          "role": "right_scene_wrong_moment",
+          "why": "担当者が最初に示した案だが、取引先はそれを採らずデータを選んでおり、送る段取りには進まない。"
+        },
+        {
+          "text": "隣のブースからカタログを一部借りてくる。",
+          "role": "adjacent_setting",
+          "why": "同じ会場の中で済ませる案としてはありそうだが、隣のブースの話は一度も出ていない。"
+        },
+        {
+          "text": "取引先に、カタログのデータを送ってもらう。",
+          "role": "wrong_participant",
+          "why": "データを見せるのは担当者の側で、取引先に何かを送ってもらう向きの話ではない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "担当者は「戻り次第お送りする」と「会場の端末でデータを見せる」の二つを並べ、取引先が後者を選んだ。「では、データで結構です」という短い返事がどちらを指すかを、直前の二案と結びつけて聞き取る必要がある。住所を控えて送る案は退けられ、隣のブースや取引先から送ってもらう話は出ていない。",
+      "explanation_en": "Two options are offered; the client's short reply picks the second, so the next step is showing the data on the spot.",
+      "vocab_notes": [
+        {
+          "term": "戻り次第",
+          "reading": "もどりしだい",
+          "meaning": "as soon as (I) get back"
+        },
+        {
+          "term": "頂戴する",
+          "reading": "ちょうだいする",
+          "meaning": "to receive (humble)"
+        }
+      ],
+      "audio": {
+        "narration": "7d3635c26223c62e",
+        "options": [],
+        "dialogue": []
+      },
+      "scene_id": "scene_expo_booth",
+      "channel": "in_person"
+    },
+    {
+      "id": "64619d5452",
+      "item_type": "bamen_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "dining+other_department+identify_listener_role@J1",
+        "setting": "dining",
+        "relation": "other_department",
+        "function": "identify_listener_role",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "会食の席で誰に礼を言っているか",
+      "stem": "取引先との会食の席で、先方が席を外している間に、ある社員が小声でこう話しています。「さっきはフォローしていただいて助かりました。納期の話はうちの課だけでは答えられませんので。戻ったら、そちらの部からも部長に一言添えていただけますか。」この人は誰に向かって話していますか。",
+      "options": [
+        {
+          "text": "料理を運んできた店の人",
+          "role": "adjacent_setting",
+          "why": "同じ個室にいるが、納期の話やフォローへの礼は店の人に向けるものではない。"
+        },
+        {
+          "text": "同じ課の先輩",
+          "role": "plausible_but_unmentioned",
+          "why": "礼を言う相手として自然だが、「うちの課だけでは答えられない」と言っており、相手は同じ課の人ではない。"
+        },
+        {
+          "text": "同じ会食に出ている、他の部署の社員",
+          "role": "correct",
+          "why": "「うちの課だけでは」「そちらの部からも」と言い分けており、相手は自社の別の部署の人だと分かる。"
+        },
+        {
+          "text": "取引先の担当者",
+          "role": "wrong_participant",
+          "why": "会食の相手ではあるが、先方が席を外している間の話で、「部長に一言添えて」と頼む相手でもない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "「うちの課」と「そちらの部」の言い分けが決め手。話し手は自分の課と相手の部を分けて述べており、相手は自社の別の部署の人。先方が席を外している間の小声の話なので取引先ではなく、店の人に納期の話はしない。同じ課の先輩なら「うちの課だけでは」とは言わない。",
+      "explanation_en": "うちの課 versus そちらの部 marks the listener as a colleague from another department, not the client and not one's own team.",
+      "vocab_notes": [
+        {
+          "term": "席を外す",
+          "reading": "せきをはずす",
+          "meaning": "to step away from the table"
+        },
+        {
+          "term": "一言添える",
+          "reading": "ひとことそえる",
+          "meaning": "to add a word (of support)"
+        }
+      ],
+      "audio": {
+        "narration": "9b54696b8cd116ea",
+        "options": [],
+        "dialogue": []
+      },
+      "scene_id": "scene_restaurant_private",
+      "channel": "in_person"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "7d3635c26223c62e",
+      "item_id": "72ff3a7b7c",
+      "kind": "narration",
+      "index": null,
+      "text": "展示会のブースで、担当者が取引先の人と話しています。「新型のカタログですが、あいにく手元の分が切れてしまいまして。ご住所を頂戴できれば戻り次第お送りしますし、お急ぎでしたら会場の端末でデータをご覧いただくこともできます。」「では、データで結構です。」担当者はこのあと何をしますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9b54696b8cd116ea",
+      "item_id": "64619d5452",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先との会食の席で、先方が席を外している間に、ある社員が小声でこう話しています。「さっきはフォローしていただいて助かりました。納期の話はうちの課だけでは答えられませんので。戻ったら、そちらの部からも部長に一言添えていただけますか。」この人は誰に向かって話していますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_expo_booth",
+    "scene_restaurant_private"
+  ]
+}

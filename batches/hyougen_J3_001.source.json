@@ -1,0 +1,92 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "hyougen",
+  "level": "J3",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "client_office+staff_to_customer+introduce_self@J3",
+      "topic": "新しい担当者として挨拶する",
+      "channel": "in_person",
+      "stem": "担当が代わり、前の担当者の田中と一緒に、初めて顧客の会社を訪ねました。自分が新しい担当だと名乗って挨拶します。最も適切な表現はどれですか。",
+      "options": [
+        {
+          "text": "田中がいつもお世話になっております。本日はご挨拶に伺いました。",
+          "role": "correct_keigo_wrong_speech_act",
+          "why": "丁寧ではあるが、自分の名前も新しい担当であることも言っておらず、自己紹介になっていない。"
+        },
+        {
+          "text": "このたび田中に代わりまして担当させていただきます、山川商事の佐藤と申します。よろしくお願いいたします。",
+          "role": "correct",
+          "why": "自社の田中を呼び捨てにし、自分を「〜と申します」と名乗る、引き継ぎの挨拶の型どおりの言い方。"
+        },
+        {
+          "text": "今度から田中の代わりに担当になった佐藤です。よろしく。",
+          "role": "register_too_casual",
+          "why": "顧客に対する初めての挨拶としては言葉が短く、「よろしく」だけでは丁寧さが足りない。"
+        },
+        {
+          "text": "このたび田中さんに代わりまして担当いたします、山川商事の佐藤様と申します。",
+          "role": "wrong_honorific_direction",
+          "why": "顧客の前で自社の田中に「さん」を付け、自分に「様」を付けており、敬意の向きが逆になっている。"
+        }
+      ],
+      "explanation_ja": "顧客の前では、自社の人は呼び捨てにし、自分は「〜と申します」と名乗る。「よろしく」で終わる言い方は丁寧さが足りない。「田中さん」「佐藤様」は敬意の向きが逆。挨拶だけで名前を言わない言い方は、自己紹介という目的を果たしていない。",
+      "explanation_en": "Introduce yourself with 〜と申します, drop honorifics from your own colleague's name, and actually give your name.",
+      "vocab_notes": [
+        {
+          "term": "〜に代わりまして",
+          "reading": "〜にかわりまして",
+          "meaning": "in place of (someone)"
+        },
+        {
+          "term": "申す",
+          "reading": "もうす",
+          "meaning": "to be called (humble)"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "meeting_room+other_department+request@J3",
+      "topic": "他部署の人に資料を頼む",
+      "channel": "in_person",
+      "stem": "社内の会議室で、他の部署の担当者が資料を配りました。あとで自分の部署にも一部送ってほしいと頼みます。最も適切な表現はどれですか。",
+      "options": [
+        {
+          "text": "その資料、あとでうちにも送っといて。",
+          "role": "register_too_casual",
+          "why": "「送っといて」はくだけた命令の形で、他の部署の人に頼む言い方としては丁寧さが足りない。"
+        },
+        {
+          "text": "その資料、うちの部にも送るのが当然ですよね。",
+          "role": "register_insulting",
+          "why": "頼む形になっておらず、相手が当然すべきだと決めつけて責める言い方になっている。"
+        },
+        {
+          "text": "その資料、あとで一部うちの部にもお送りしましょうか。",
+          "role": "correct_keigo_wrong_speech_act",
+          "why": "丁寧ではあるが、自分が送ると申し出る形になっており、相手に送ってもらう依頼ではない。"
+        },
+        {
+          "text": "すみません、その資料、あとで一部うちの部にも送っていただけますか。",
+          "role": "correct",
+          "why": "「〜ていただけますか」で相手にしてもらうことを丁寧に頼んでおり、他部署の人への依頼として自然。"
+        }
+      ],
+      "explanation_ja": "相手にしてもらうことを頼むので「送っていただけますか」。「送っといて」は丁寧さが足りず、「当然ですよね」は頼むのではなく責める言い方。「お送りしましょうか」は自分が送る申し出で、頼みたいことと向きが逆になる。",
+      "explanation_en": "A request to a colleague from another department uses 〜ていただけますか; an offer (〜しましょうか) points the action the wrong way.",
+      "vocab_notes": [
+        {
+          "term": "一部",
+          "reading": "いちぶ",
+          "meaning": "one copy"
+        },
+        {
+          "term": "うちの部",
+          "reading": "うちのぶ",
+          "meaning": "our department"
+        }
+      ]
+    }
+  ]
+}

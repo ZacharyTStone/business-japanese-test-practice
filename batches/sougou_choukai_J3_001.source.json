@@ -1,0 +1,142 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "sougou_choukai",
+  "level": "J3",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "desk_huddle+subordinate_to_superior+why_delayed@J3",
+      "topic": "報告書が遅れる理由",
+      "scene_id": "scene_office_desk_pair",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "部下",
+          "text": "課長、報告書の提出が少し遅れそうです。"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "どうしたの。データがまだ届いていないのかな。"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "いえ、データは昨日届きました。ただ、グラフを作るソフトが今朝から動かなくて。"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "システム部には連絡した？"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。午後には直るそうです。"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "分かった。直ったらすぐ仕上げてください。"
+        }
+      ],
+      "stem": "報告書が遅れそうなのは、なぜですか。",
+      "options": [
+        {
+          "text": "部下がほかの仕事で忙しいから",
+          "role": "unsupported_but_plausible",
+          "why": "遅れの理由としてはありそうだが、会話では誰も言っていない。"
+        },
+        {
+          "text": "グラフを作るソフトが動かないから",
+          "role": "correct",
+          "why": "部下が「ただ、グラフを作るソフトが今朝から動かなくて」と、遅れる理由として述べている。"
+        },
+        {
+          "text": "データがまだ届いていないから",
+          "role": "stated_by_wrong_speaker",
+          "why": "課長がそう聞いただけで、部下は「昨日届きました」と否定している。"
+        },
+        {
+          "text": "システム部からの返事を待っているから",
+          "role": "surface_keyword_match",
+          "why": "システム部は話に出るが、返事はすでにあり、午後には直ると分かっている。"
+        }
+      ],
+      "explanation_ja": "課長は「データが届いていないのか」と聞くが、部下は「いえ」と否定し、本当の理由はソフトが動かないことだと言う。システム部には連絡ずみで、午後には直る。課長の推測をそのまま答えにすると誤る。",
+      "explanation_en": "The manager guesses a cause and the subordinate corrects it; the real reason is the software.",
+      "vocab_notes": [
+        {
+          "term": "提出",
+          "reading": "ていしゅつ",
+          "meaning": "submission"
+        },
+        {
+          "term": "仕上げる",
+          "reading": "しあげる",
+          "meaning": "to finish up"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "client_meeting+staff_to_client+what_changed@J3",
+      "topic": "見積で変わった点",
+      "scene_id": "scene_client_meeting_room",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "前回お渡しした見積から、変わった点をご説明します。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "金額が変わったのでしょうか。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "いえ、金額は前回と同じです。納期が一週間早くなりました。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "それは助かります。担当の方は変わりませんね。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "はい、私が引き続き担当いたします。"
+        }
+      ],
+      "stem": "前回の見積から変わったのは、何ですか。",
+      "options": [
+        {
+          "text": "金額が安くなった点",
+          "role": "superseded_by_later_turn",
+          "why": "取引先が金額が変わったのかと聞いたが、営業担当は「金額は前回と同じ」と答えている。"
+        },
+        {
+          "text": "担当者が代わった点",
+          "role": "surface_keyword_match",
+          "why": "「担当」という言葉は出るが、担当は変わらないと確認されている。"
+        },
+        {
+          "text": "数量が増えた点",
+          "role": "unsupported_but_plausible",
+          "why": "見積の変更としてはありそうだが、数量の話は出ていない。"
+        },
+        {
+          "text": "納期が一週間早くなった点",
+          "role": "correct",
+          "why": "営業担当が「納期が一週間早くなりました」と、変わった点として述べている。"
+        }
+      ],
+      "explanation_ja": "取引先は金額と担当者について聞くが、どちらも「同じ」「変わらない」と答えられる。変わったのは納期だけ。聞かれたことと、実際に変わったことを分けて聞き取る。",
+      "explanation_en": "Two things the client asks about are unchanged; only the delivery date moved.",
+      "vocab_notes": [
+        {
+          "term": "見積",
+          "reading": "みつもり",
+          "meaning": "quotation / estimate"
+        },
+        {
+          "term": "引き続き",
+          "reading": "ひきつづき",
+          "meaning": "continuing as before"
+        }
+      ]
+    }
+  ]
+}

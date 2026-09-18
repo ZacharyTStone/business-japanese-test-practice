@@ -1,0 +1,151 @@
+{
+  "bundle_version": 2,
+  "item_type": "bamen_haaku",
+  "level": "J3",
+  "generated_at": "2026-09-18T08:50:48+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "b9e1673422",
+      "item_type": "bamen_haaku",
+      "level": "J3",
+      "seed_cell": {
+        "id": "office_floor+other_department+identify_stage@J3",
+        "setting": "office_floor",
+        "relation": "other_department",
+        "function": "identify_stage",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "他部署の人に声をかける",
+      "stem": "執務フロアで、他の部署の人が席に来て、こう話しています。「お忙しいところすみません。先ほどメールでお送りした件ですが、今、少しお時間よろしいでしょうか。」これはやりとりのどの段階ですか。",
+      "options": [
+        {
+          "text": "相手のほうが、時間を取ってほしいと頼んでいる段階",
+          "role": "wrong_participant",
+          "why": "時間を頼んでいるのは話しかけた側で、相手はまだ何も言っていない。"
+        },
+        {
+          "text": "これから話を始めようとしている段階",
+          "role": "correct",
+          "why": "「今、少しお時間よろしいでしょうか」は、話を始める前に相手の都合を確かめる言い方。"
+        },
+        {
+          "text": "話が終わって、礼を言っている段階",
+          "role": "right_scene_wrong_moment",
+          "why": "「お忙しいところすみません」は話の終わりにも使うが、ここでは続けて時間があるかを聞いており、まだ話は始まっていない。"
+        },
+        {
+          "text": "メールの内容について意見が分かれている段階",
+          "role": "plausible_but_unmentioned",
+          "why": "メールの件だとは言っているが、内容も意見の違いも何も述べられていない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "「今、少しお時間よろしいでしょうか」は、話を始める前に相手の都合を聞く決まった言い方。「お忙しいところすみません」だけでは始まりか終わりか分からないが、そのあとに時間を聞いているので、これから話が始まる。メールの中身はまだ出ていない。",
+      "explanation_en": "Asking 少しお時間よろしいでしょうか comes before a conversation starts, not after it ends.",
+      "vocab_notes": [
+        {
+          "term": "お忙しいところ",
+          "reading": "おいそがしいところ",
+          "meaning": "(sorry to bother you) while you are busy"
+        },
+        {
+          "term": "件",
+          "reading": "けん",
+          "meaning": "matter / case"
+        }
+      ],
+      "audio": {
+        "narration": "004fa50818a8258a",
+        "options": [],
+        "dialogue": []
+      },
+      "scene_id": "scene_office_open_floor",
+      "channel": "in_person"
+    },
+    {
+      "id": "32efa89696",
+      "item_type": "bamen_haaku",
+      "level": "J3",
+      "seed_cell": {
+        "id": "phone_desk+subordinate_to_superior+identify_next_action@J3",
+        "setting": "phone_desk",
+        "relation": "subordinate_to_superior",
+        "function": "identify_next_action",
+        "level": "J3",
+        "channel": "phone"
+      },
+      "topic": "資料を忘れて上司に電話する",
+      "stem": "外出中の部下が、会社の上司に電話をかけています。「課長、お疲れさまです。今、駅に着きました。先方との打ち合わせは三時からですが、資料を会社に忘れてしまいました。」「分かった。資料は今から私が先方にメールで送っておく。君はそのまま向かいなさい。」部下はこのあと何をしますか。",
+      "options": [
+        {
+          "text": "会社に戻って、資料を取ってくる。",
+          "role": "right_scene_wrong_moment",
+          "why": "忘れ物をしたときに考えやすい行動だが、上司はそうせず、そのまま向かうように言っている。"
+        },
+        {
+          "text": "先方に資料をメールで送る。",
+          "role": "wrong_participant",
+          "why": "メールで送るのは上司のほうで、部下がすることではない。"
+        },
+        {
+          "text": "駅の近くで資料を印刷してから、先方へ向かう。",
+          "role": "adjacent_setting",
+          "why": "駅の近くで済ませる方法としてはありそうだが、資料は上司がメールで送ることになっており、印刷の話は出ていない。"
+        },
+        {
+          "text": "そのまま先方の会社へ向かう。",
+          "role": "correct",
+          "why": "上司が「君はそのまま向かいなさい」と、部下のすることをはっきり指示している。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "上司の返事には二つのことが入っている。「私が送っておく」は上司がすること、「君はそのまま向かいなさい」は部下がすること。問われているのは部下の行動なので、そのまま先方へ向かう。会社に戻ることも、駅の近くで印刷することも言われていない。",
+      "explanation_en": "The manager's reply assigns one action to each person; the question asks for the subordinate's.",
+      "vocab_notes": [
+        {
+          "term": "先方",
+          "reading": "せんぽう",
+          "meaning": "the other party / the client"
+        },
+        {
+          "term": "向かう",
+          "reading": "むかう",
+          "meaning": "to head toward"
+        }
+      ],
+      "audio": {
+        "narration": "6fd5ad68198fc535",
+        "options": [],
+        "dialogue": []
+      },
+      "scene_id": "scene_phone_mobile_outside",
+      "channel": "phone"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "004fa50818a8258a",
+      "item_id": "b9e1673422",
+      "kind": "narration",
+      "index": null,
+      "text": "執務フロアで、他の部署の人が席に来て、こう話しています。「お忙しいところすみません。先ほどメールでお送りした件ですが、今、少しお時間よろしいでしょうか。」これはやりとりのどの段階ですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6fd5ad68198fc535",
+      "item_id": "32efa89696",
+      "kind": "narration",
+      "index": null,
+      "text": "外出中の部下が、会社の上司に電話をかけています。「課長、お疲れさまです。今、駅に着きました。先方との打ち合わせは三時からですが、資料を会社に忘れてしまいました。」「分かった。資料は今から私が先方にメールで送っておく。君はそのまま向かいなさい。」部下はこのあと何をしますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_office_open_floor",
+    "scene_phone_mobile_outside"
+  ]
+}
