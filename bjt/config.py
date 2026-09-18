@@ -72,6 +72,43 @@ SANITY_MODEL = _env("BJT_SANITY_MODEL", "claude-haiku-4-5")
 # checked rather than as clean — see bjt/fidelity/sanity.py.
 SANITY_ENABLED = _env("BJT_SANITY", "1").strip().lower() not in ("0", "false", "no", "off")
 
+# ----- the ceilings ------------------------------------------------------
+#
+# Every guard below is a rule the morning of 2026-09-18 wrote: two manual runs
+# on the old defaults spent twenty-six dollars of Opus in three hours, most of
+# it on a bug that made every document draft cost three attempts, and then
+# lost the eight items they had written. A patient loop and a cheap model are
+# what keep a normal night cheap; these are what keep a broken night from
+# being expensive. They are deliberately independent of each other, so that a
+# bug in one of them is caught by the others.
+
+# The most one process may spend, measured from the usage every response
+# reports and priced with the table in bjt/llm.py. Checked before each call;
+# reached, the run stops with what it has (LLMSpendLimitError, which the
+# nightly loop treats like an empty account). Three dollars is above a normal
+# night of twelve items on Sonnet and below anything worth being angry about.
+RUN_BUDGET_USD = float(_env("BJT_RUN_BUDGET_USD", "3"))
+
+# The most calls one process may make, whatever they cost. The dollar ceiling
+# depends on the price table being right; this one does not. Twelve items at
+# three attempts, each a generation, a proofread, six gate trials and five
+# difficulty probes, is a little over four hundred; a loop that is still
+# calling after that is a loop that is wrong.
+RUN_MAX_CALLS = int(_env("BJT_RUN_MAX_CALLS", "500"))
+
+# No single call may ask for more output than this, and no generation may
+# think harder than this, whatever the caller or an environment variable
+# says. Output is the expensive half of every call and thinking is most of
+# the output; the first night ran at "high" and nobody had decided that.
+MAX_TOKENS_CEILING = int(_env("BJT_MAX_TOKENS_CEILING", "8000"))
+EFFORT_CEILING = _env("BJT_EFFORT_CEILING", "high")
+
+# The most a night may be asked to write, whatever the workflow input says.
+# The plan's defaults are twelve and four; a manual run may go up to here and
+# no further, because "24" typed into a box is how the first night happened.
+NIGHT_MAX_BUDGET = int(_env("BJT_NIGHT_MAX_BUDGET", "24"))
+NIGHT_MAX_PER_SLOT = int(_env("BJT_NIGHT_MAX_PER_SLOT", "6"))
+
 DB_PATH = Path(_env("BJT_DB_PATH", str(ROOT / "bjt.db")))
 
 # Licensed few-shot examples, official sample items, vocab lists, and level
