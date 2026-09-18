@@ -134,8 +134,9 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 
 Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
 `BJT_JUDGE_MODEL`, `BJT_DB_PATH`, `BJT_SEEDS_DIR`, `BJT_SEEDTABLE_DIR`,
-`BJT_BATCH_DIR`, `BJT_GATE_TRIALS`, `BJT_IMAGE_MODEL`, `BJT_IMAGE_QUALITY`,
-`BJT_IMAGE_COMPRESSION`, `BJT_SCENE_ATTEMPTS`. Secrets, each read only by the step that needs it:
+`BJT_BATCH_DIR`, `BJT_GEN_EFFORT`, `BJT_SLOT_PATIENCE`, `BJT_GATE_TRIALS`,
+`BJT_IMAGE_MODEL`, `BJT_IMAGE_QUALITY`, `BJT_IMAGE_COMPRESSION`,
+`BJT_SCENE_ATTEMPTS`. Secrets, each read only by the step that needs it:
 `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (scene art and the voice), `SUPABASE_URL`
 and `SUPABASE_SERVICE_ROLE_KEY` (uploading either). `bjt seeds --bootstrap` builds a
 `seeds/` from the reference batches when there is no licensed material, which is

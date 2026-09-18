@@ -36,6 +36,19 @@ def _env(name: str, default: str) -> str:
 # the honorific/register judgements are exactly where weaker models collapse.
 GEN_MODEL = _env("BJT_MODEL", "claude-opus-5")
 
+# How hard the generator thinks. Output tokens are the expensive half of every
+# generation and thinking is most of the output, so this is the single biggest
+# dial on the nightly bill after the model itself. Medium keeps the honorific
+# judgement; "high" was the first night's setting and is still one env var away.
+GEN_EFFORT = _env("BJT_GEN_EFFORT", "medium")
+
+# How many discards in a row a shelf tolerates before the night gives up on it.
+# The first real night spent six generations on a shelf that discarded every
+# one as leaky, three times over: a generator that is wrong about a type is
+# wrong about it all night, and the second and third proofs cost as much as
+# the first. Three is enough to be sure it is the shelf and not bad luck.
+SLOT_PATIENCE = int(_env("BJT_SLOT_PATIENCE", "3"))
+
 # The model used for the answerability gate and the discriminator judge. Kept
 # strong on purpose: the cold/full test only means something if the model taking
 # it is genuinely capable ("a strong model should fail cold, succeed full").
@@ -100,10 +113,14 @@ DIFFICULTY_TRIALS = int(_env("BJT_DIFFICULTY_TRIALS", "5"))
 DIFFICULTY_ENABLED = _env("BJT_DIFFICULTY", "1").strip().lower() not in ("0", "false", "no", "off")
 
 # The image model that draws the scene bank, and how hard it tries. The bank is
-# sixteen pictures drawn once, so quality is cheap here; attempts is how many
-# drafts the review gate may reject before a scene ships without a picture.
+# sixteen pictures drawn once — but "once" turned out to be two nights of drafts
+# at "high", which was most of the first ten dollars, and the two scenes the
+# reviewer keeps rejecting would be redrawn every night for ever. Medium is a
+# quarter of the price and a flat illustration cannot tell the difference;
+# attempts is how many drafts the review gate may reject before a scene ships
+# without a picture, and the nightly job only draws once a week.
 IMAGE_MODEL = _env("BJT_IMAGE_MODEL", "gpt-image-1")
-IMAGE_QUALITY = _env("BJT_IMAGE_QUALITY", "high")
+IMAGE_QUALITY = _env("BJT_IMAGE_QUALITY", "medium")
 SCENE_ATTEMPTS = int(_env("BJT_SCENE_ATTEMPTS", "3"))
 
 # How hard the image API compresses the WebP it returns (0–100, higher is

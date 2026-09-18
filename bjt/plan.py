@@ -52,10 +52,10 @@ from . import seedtable
 DEFAULT_FLOOR = 12
 
 #: Most items one run may write into one (type, level) shelf.
-DEFAULT_PER_SLOT = 6
+DEFAULT_PER_SLOT = 4
 
 #: Most items one run may write at all.
-DEFAULT_BUDGET = 24
+DEFAULT_BUDGET = 12
 
 
 @dataclass(frozen=True)
