@@ -48,7 +48,8 @@ class Trial:
 @dataclass
 class GateResult:
     cold_success_rate: float
-    full_success_rate: float
+    #: None for a leaky item: the full side is not run on what is already out.
+    full_success_rate: float | None
     verdict: str  # "kept" | "discarded:ambiguous" | "discarded:leaky"
     trials: list[Trial] = field(default_factory=list)
 
@@ -107,24 +108,34 @@ def questions(item: dict) -> tuple[str, str]:
 
 
 def run_gate(item: dict) -> GateResult:
-    """Run both sides and decide the verdict."""
+    """Run the cold side, then the full side only if the cold side passed.
+
+    Cold first because it is the side that discards. A leaky item is out
+    whatever the full view says, so asking the full question of it is three
+    strong-model calls that cannot change the verdict — and on the first real
+    night the gate discarded eighteen items in a row as leaky, every one of
+    them after paying for the full view too. Cold-first halves the cost of a
+    discard and leaves a kept item exactly as it was: both sides run, both
+    rates recorded. A leaky item carries no full rate, not a fake one.
+    """
     options = textutil.option_texts(item)
     answer = correct_index(item["options"])
 
     full_q, cold_q = questions(item)
 
-    full_trials = _run_side(full_q, options, answer, "full")
     cold_trials = _run_side(cold_q, options, answer, "cold")
-
-    full_rate = sum(t.correct for t in full_trials) / len(full_trials)
     cold_rate = sum(t.correct for t in cold_trials) / len(cold_trials)
+    if cold_rate > COLD_MAX:
+        return GateResult(
+            cold_success_rate=cold_rate,
+            full_success_rate=None,
+            verdict="discarded:leaky",
+            trials=cold_trials,
+        )
 
-    if full_rate < FULL_MIN:
-        verdict = "discarded:ambiguous"
-    elif cold_rate > COLD_MAX:
-        verdict = "discarded:leaky"
-    else:
-        verdict = "kept"
+    full_trials = _run_side(full_q, options, answer, "full")
+    full_rate = sum(t.correct for t in full_trials) / len(full_trials)
+    verdict = "discarded:ambiguous" if full_rate < FULL_MIN else "kept"
 
     return GateResult(
         cold_success_rate=cold_rate,

@@ -209,7 +209,8 @@ def _gate_detail(cold, full, verdict, vres, sres=None, dres=None) -> str:
     if sres is not None and (not sres.ok or not sres.checked):
         bits.append(sres.detail())
     if cold is not None:
-        bits.append(f"cold={cold:.0%} full={full:.0%}")
+        # No full rate for a leaky item: the gate stops at the cold side.
+        bits.append(f"cold={cold:.0%} full=" + ("n/a" if full is None else f"{full:.0%}"))
     if dres is not None and (dres.measured or dres.trials):
         # Say which model measured it: a rate from the gate's strong model and a
         # rate from the probe's weak one are not comparable numbers.
@@ -217,8 +218,11 @@ def _gate_detail(cold, full, verdict, vres, sres=None, dres=None) -> str:
     bits.append(f"verdict={verdict}")
     if vres.enforced and vres.violations:
         bits.append(f"above-band kanji: {' '.join(vres.violations)}")
-    if sres is not None and not sres.ok and sres.notes:
-        bits.append(f"({sres.notes})")
+    # A fault's note, or the reason no check ran. A whole night of
+    # "sanity=skipped" with the reason kept to itself is a night nobody can
+    # diagnose from the log, which is where the log was read.
+    if sres is not None and (not sres.ok or not sres.checked) and sres.notes:
+        bits.append(f"({sres.notes[:200]})")
     return "  ".join(bits)
 
 
