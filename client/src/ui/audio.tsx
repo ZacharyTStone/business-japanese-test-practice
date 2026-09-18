@@ -279,9 +279,10 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
  * Every clip of one item, in the order it is met — the turns of a conversation,
  * then the question — played once without being asked, the way the exam plays
  * them, and then a button to hear it all again, which the exam does not offer
- * and practice should. Nothing else is on screen while it runs: the options
- * appear when it finishes, so the first listen is a real listen and not a
- * skim of the answers with sound in the background.
+ * and practice should. Nothing readable about the answers is on screen while
+ * it runs, so the first listen is a real listen and not a skim of the answers
+ * with sound in the background; spoken options, which show no text, sit under
+ * it as letters and may be answered before it finishes.
  *
  * `autoplay` is read once, on mount. The screen mounts this at the listening
  * stage and keeps it mounted through answering, so the replay button is the
