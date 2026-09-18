@@ -67,6 +67,29 @@ def test_a_block_missing_its_content_is_rejected():
     assert any("missing rows" in e for e in errors)
 
 
+def test_blank_text_blocks_are_pruned_and_the_rest_validates():
+    """The first real night lost a shelf to 'block 3 (callout) is missing
+    text' three attempts running. A blank heading says nothing; drop it."""
+    doc = _email(blocks=[
+        {"type": "heading", "text": "  "},
+        {"type": "paragraph", "text": "本文です。"},
+        {"type": "callout", "tone": "warning"},
+        {"type": "bullets", "items": ["一", "二"]},
+    ])
+    assert any("missing text" in e for e in render.validate_document(doc))
+    assert render.prune_empty_blocks(doc) == 2
+    assert [b["type"] for b in doc["blocks"]] == ["paragraph", "bullets"]
+    assert render.validate_document(doc) == []
+    # A table with no rows is not a blank text block; the validator keeps its say.
+    doc = _email(blocks=[{"type": "table", "columns": ["品名"]}])
+    assert render.prune_empty_blocks(doc) == 0
+    # And a document that was nothing but blanks still fails, as it should.
+    doc = _email(blocks=[{"type": "heading"}])
+    render.prune_empty_blocks(doc)
+    assert any("no blocks" in e for e in render.validate_document(doc))
+    assert render.prune_empty_blocks("not a document") == 0
+
+
 def test_a_document_with_no_blocks_is_rejected():
     assert any("no blocks" in e for e in render.validate_document(_email(blocks=[])))
 

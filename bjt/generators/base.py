@@ -18,7 +18,7 @@ import json
 import random
 from typing import Optional
 
-from .. import config, levels, llm, schemas, seedtable
+from .. import config, levels, llm, render, schemas, seedtable
 from ..fidelity import roles
 
 
@@ -183,6 +183,10 @@ class Generator:
                     + "\n".join(f"- {e}" for e in last_errors)
                 )
             item = llm.generate_structured(system, prompt, schema)
+            # A blank heading or callout is a model tic, not a fault in the
+            # item; drop it rather than spend an attempt asking for it back.
+            for doc in schemas.documents_of(item):
+                render.prune_empty_blocks(doc)
             errors = schemas.validate_item(self.item_type, item)
             errors.extend(self.validate_extra(item, cell))
             if not errors:
