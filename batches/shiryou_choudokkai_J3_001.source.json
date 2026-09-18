@@ -1,0 +1,183 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "shiryou_choudokkai",
+  "level": "J3",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "video_shared_doc+other_department+apply_spoken_change@J3",
+      "topic": "研修の場所が変わる",
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "document": {
+        "template": "schedule",
+        "title": "十月 新人研修 予定表",
+        "meta": [
+          {
+            "label": "期間",
+            "value": "十月七日（火）〜九日（木）"
+          },
+          {
+            "label": "作成者",
+            "value": "人事部 山本"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "table",
+            "columns": [
+              "日付",
+              "内容",
+              "場所"
+            ],
+            "rows": [
+              [
+                "十月七日（火）",
+                "基礎研修 一日目",
+                "第二会議室"
+              ],
+              [
+                "十月八日（水）",
+                "基礎研修 二日目",
+                "第一会議室"
+              ],
+              [
+                "十月九日（木）",
+                "実技研修",
+                "研修センター"
+              ]
+            ]
+          },
+          {
+            "type": "key_values",
+            "pairs": [
+              {
+                "label": "時間",
+                "value": "各日 九時三十分〜十六時三十分"
+              }
+            ]
+          }
+        ]
+      },
+      "stem": "オンライン会議で、人事部の担当者が画面に予定表を映しながらこう言いました。「一つ変更があります。基礎研修の二日目ですが、第一会議室が使えなくなったので、第三会議室に変わります。時間は同じです。」十月八日の研修はどこで行いますか。",
+      "options": [
+        {
+          "text": "研修センター",
+          "role": "surface_keyword_match",
+          "why": "「研修」という言葉は同じだが、これは九日の実技研修の場所で、二日目の話ではない。"
+        },
+        {
+          "text": "第三会議室",
+          "role": "correct",
+          "why": "十月八日は予定表で基礎研修の二日目にあたり、その場所が口頭で第三会議室に変わると言われた。"
+        },
+        {
+          "text": "第一会議室",
+          "role": "ignores_the_spoken_change",
+          "why": "予定表に書かれているままの場所で、使えなくなったという話を聞いていない。"
+        },
+        {
+          "text": "第二会議室",
+          "role": "reads_wrong_row",
+          "why": "一日目の場所で、十月八日の行ではない。"
+        }
+      ],
+      "explanation_ja": "話し手は「二日目」と言い、日付は言っていない。予定表で二日目が十月八日だと分かり、その場所が第一会議室から第三会議室に変わる。予定表だけでは変更が分からず、話だけでは二日目がどの日か分からない。",
+      "explanation_en": "The speaker says day two, not the date; the sheet maps day two to October 8, and the room change is spoken only.",
+      "vocab_notes": [
+        {
+          "term": "研修",
+          "reading": "けんしゅう",
+          "meaning": "training"
+        },
+        {
+          "term": "変更",
+          "reading": "へんこう",
+          "meaning": "change"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "delivery_email+staff_to_customer+find_the_quantity@J3",
+      "topic": "二回目に届く部数",
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "document": {
+        "template": "email_external",
+        "title": "カタログの納品日について",
+        "meta": [
+          {
+            "label": "差出人",
+            "value": "山川商事 営業部 佐藤"
+          },
+          {
+            "label": "宛先",
+            "value": "あさひ工業 総務部 鈴木様"
+          },
+          {
+            "label": "件名",
+            "value": "カタログの納品日について"
+          },
+          {
+            "label": "日時",
+            "value": "九月八日 十時"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "ご注文のカタログ三百部は、二回に分けてお届けします。"
+          },
+          {
+            "type": "bullets",
+            "items": [
+              "九月十日：二百部",
+              "九月十七日：残りの部数"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "どうぞよろしくお願いいたします。"
+          }
+        ]
+      },
+      "stem": "お客様から電話がありました。「カタログの件でメールをいただきました。二回目の、十七日に届くのは何部でしょうか。」十七日に届くのは何部ですか。",
+      "options": [
+        {
+          "text": "二百部",
+          "role": "reads_wrong_row",
+          "why": "これは十日に届く一回目の部数で、聞かれている十七日の分ではない。"
+        },
+        {
+          "text": "三百部",
+          "role": "wrong_timeframe",
+          "why": "注文全体の部数で、二回に分けて届くうちの十七日の分ではない。"
+        },
+        {
+          "text": "十七部",
+          "role": "surface_keyword_match",
+          "why": "「十七」は日付の数字で、部数ではない。"
+        },
+        {
+          "text": "百部",
+          "role": "correct",
+          "why": "全部で三百部のうち、十日に二百部が届くので、十七日に届く残りは百部。"
+        }
+      ],
+      "explanation_ja": "メールには「三百部」「十日に二百部」「十七日に残り」とあり、残りの数は書かれていない。電話で聞かれたのは十七日の分なので、三百から二百を引いて百部。メールだけでは何を聞かれているか分からず、電話だけでは数が分からない。",
+      "explanation_en": "The email gives the total and the first delivery; the remainder for the seventeenth has to be computed.",
+      "vocab_notes": [
+        {
+          "term": "部",
+          "reading": "ぶ",
+          "meaning": "counter for copies (of a catalogue)"
+        },
+        {
+          "term": "残り",
+          "reading": "のこり",
+          "meaning": "the remainder"
+        }
+      ]
+    }
+  ]
+}

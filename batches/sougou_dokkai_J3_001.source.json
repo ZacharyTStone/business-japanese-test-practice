@@ -1,0 +1,164 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "sougou_dokkai",
+  "level": "J3",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "project_update+peer_to_peer+infer_next_step@J3",
+      "topic": "議事録を読んでまずすること",
+      "channel": "written",
+      "document": {
+        "template": "meeting_minutes",
+        "title": "チラシ作成 打ち合わせ 議事録",
+        "meta": [
+          {
+            "label": "日時",
+            "value": "九月十五日 十時"
+          },
+          {
+            "label": "場所",
+            "value": "第二会議室"
+          },
+          {
+            "label": "出席者",
+            "value": "佐藤、田中、山本"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "決まったこと"
+          },
+          {
+            "type": "numbered",
+            "items": [
+              "チラシの案は、木曜日までに全員がコメントを入れる。",
+              "金曜日に佐藤が印刷を発注する。"
+            ]
+          },
+          {
+            "type": "callout",
+            "tone": "action",
+            "text": "コメントは共有フォルダのファイルに直接書き込むこと。メールでは送らないでください。"
+          }
+        ]
+      },
+      "stem": "この議事録を読んだ出席者は、まず何をしますか。",
+      "options": [
+        {
+          "text": "木曜日までに、コメントをメールで佐藤に送る。",
+          "role": "surface_keyword_match",
+          "why": "コメントと期限は合っているが、注記は「メールでは送らない」と書いている。"
+        },
+        {
+          "text": "金曜日に、印刷を発注する。",
+          "role": "wrong_timeframe",
+          "why": "発注は金曜日で、佐藤の担当。コメントのあとの話で、まずすることではない。"
+        },
+        {
+          "text": "チラシの案を新しく作り直す。",
+          "role": "unsupported_but_plausible",
+          "why": "作り直すという話は議事録のどこにも書かれていない。"
+        },
+        {
+          "text": "木曜日までに、共有フォルダのファイルにコメントを書き込む。",
+          "role": "correct",
+          "why": "決まったことの一つ目が全員のコメントで、注記が書き込む場所を共有フォルダのファイルと定めている。"
+        }
+      ],
+      "explanation_ja": "決まったことは順番になっていて、まず全員がコメント、そのあとで佐藤が発注する。コメントの書き方は注記にあり、メールではなく共有フォルダのファイルに書く。期限とやり方の両方を読み取る。",
+      "explanation_en": "The first numbered decision is everyone's comment; the callout says where it goes and where it must not.",
+      "vocab_notes": [
+        {
+          "term": "発注",
+          "reading": "はっちゅう",
+          "meaning": "placing an order"
+        },
+        {
+          "term": "共有フォルダ",
+          "reading": "きょうゆうフォルダ",
+          "meaning": "shared folder"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "order_exchange+staff_to_client+infer_risk@J3",
+      "topic": "注文どおりに納品できない",
+      "channel": "written",
+      "document": {
+        "template": "email_thread",
+        "title": "Re: 部品Aのご注文",
+        "meta": [
+          {
+            "label": "差出人",
+            "value": "みどり物産 購買部 田中"
+          },
+          {
+            "label": "宛先",
+            "value": "山川商事 営業部 佐藤様"
+          },
+          {
+            "label": "件名",
+            "value": "Re: 部品Aのご注文"
+          },
+          {
+            "label": "日時",
+            "value": "九月十二日 十一時"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "佐藤様　お世話になっております。部品Aを五十個、注文いたします。九月二十日までに納品をお願いします。注文書は別途お送りします。"
+          },
+          {
+            "type": "quoted_message",
+            "sender": "山川商事 佐藤",
+            "sent_at": "九月十一日 十六時",
+            "depth": 1,
+            "text": "田中様　部品Aの在庫は現在三十個です。追加の入荷は九月二十五日の予定です。ご注文の数量と納期をお知らせください。"
+          }
+        ]
+      },
+      "stem": "佐藤が先方に伝えなければならない問題は何ですか。",
+      "options": [
+        {
+          "text": "部品Aの値段が上がること",
+          "role": "unsupported_but_plausible",
+          "why": "値段の話はどちらのメールにも出ていない。"
+        },
+        {
+          "text": "二十日までには三十個しか納品できず、残りは二十五日以降になること",
+          "role": "correct",
+          "why": "在庫は三十個で追加の入荷は二十五日なのに、先方は五十個を二十日までと頼んでいる。二つのメールを合わせると、注文どおりには納品できない。"
+        },
+        {
+          "text": "注文の数量が五十個であること",
+          "role": "stated_but_answers_different_question",
+          "why": "メールに書かれている事実だが、それ自体は問題ではない。"
+        },
+        {
+          "text": "追加の入荷が二十五日より遅れること",
+          "role": "wrong_timeframe",
+          "why": "入荷は二十五日の予定と書かれているだけで、遅れるとは書かれていない。"
+        }
+      ],
+      "explanation_ja": "佐藤のメールには在庫三十個と入荷二十五日、先方のメールには五十個と納期二十日がある。二つを合わせると、二十日までに五十個は無理で、二十個は二十五日以降になる。どちらのメールにも「問題」とは書かれていないが、読み比べると分かる。",
+      "explanation_en": "Neither email names a problem; putting the stock and the order side by side shows the deadline cannot be met in full.",
+      "vocab_notes": [
+        {
+          "term": "在庫",
+          "reading": "ざいこ",
+          "meaning": "stock / inventory"
+        },
+        {
+          "term": "入荷",
+          "reading": "にゅうか",
+          "meaning": "arrival of goods"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "joukyou_haaku",
+  "level": "J3",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "meeting_room_board+subordinate_to_superior+choose_owner@J3",
+      "topic": "会議室の準備を誰がするか",
+      "scene_id": "scene_corridor",
+      "channel": "in_person",
+      "document": {
+        "template": "office_sign",
+        "title": "会議室のご利用について",
+        "meta": [
+          {
+            "label": "掲示者",
+            "value": "総務部"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "bullets",
+            "items": [
+              "机、椅子、プロジェクターの準備は、予約した部署が行ってください。",
+              "お客様がいらっしゃる場合は、総務部が飲み物を用意します。前日までに人数をお知らせください。",
+              "使ったあとの片付けは、使った部署が行ってください。"
+            ]
+          }
+        ]
+      },
+      "stem": "上司が掲示を見ながら、部下にこう言いました。「明日の十時から第二会議室でお客様と打ち合わせをする。お客様は三人だ。部屋は私たちの部で予約してある。準備は誰がやるのか、確認しておいてくれ。」準備は誰がすればいいですか。",
+      "options": [
+        {
+          "text": "机や椅子も飲み物も、すべて総務部に用意してもらう。",
+          "role": "wrong_action_owner",
+          "why": "総務部がするのは飲み物だけで、机や椅子などの準備は予約した部署がすると掲示にある。"
+        },
+        {
+          "text": "机や椅子も飲み物も、すべて自分たちの部署で用意する。",
+          "role": "ignores_the_document",
+          "why": "上司の指示だけを考えた答えで、お客様がいるときは総務部が飲み物を用意するという掲示を見ていない。"
+        },
+        {
+          "text": "使ったあとの片付けを、自分たちの部署で行う。",
+          "role": "ignores_the_request",
+          "why": "掲示のとおりではあるが、上司が聞いているのは準備のことで、片付けのことではない。"
+        },
+        {
+          "text": "机や椅子は自分たちの部署で準備し、飲み物は人数を伝えて総務部に用意してもらう。",
+          "role": "correct",
+          "why": "掲示は、準備は予約した部署、飲み物は来客のときに総務部と分けており、予約したのは自分たちの部で、お客様も来る。"
+        }
+      ],
+      "explanation_ja": "掲示では、準備は予約した部署、飲み物は来客のときに総務部、片付けは使った部署と、三つが分かれている。上司の話から、予約したのは自分たちの部で、お客様が三人来ると分かる。だから準備は自分たちで、飲み物は総務部に頼む。片付けの話は聞かれていない。",
+      "explanation_en": "The sign splits the work three ways; the manager's words say who booked the room and that guests are coming, which decides who does what.",
+      "vocab_notes": [
+        {
+          "term": "予約",
+          "reading": "よやく",
+          "meaning": "reservation / booking"
+        },
+        {
+          "term": "片付け",
+          "reading": "かたづけ",
+          "meaning": "tidying up"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "phone_with_notice+junior_to_senior+choose_action@J3",
+      "topic": "備品の貸し出し時間を過ぎている",
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "document": {
+        "template": "memo_notice",
+        "title": "備品の貸し出しについて",
+        "meta": [
+          {
+            "label": "発信者",
+            "value": "総務部"
+          },
+          {
+            "label": "発信日",
+            "value": "四月一日"
+          },
+          {
+            "label": "対象",
+            "value": "全社員"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "プロジェクターなどの備品を借りるときは、次のとおりお願いします。"
+          },
+          {
+            "type": "numbered",
+            "items": [
+              "使う日の正午までに、総務部の窓口で申し込んでください。",
+              "正午を過ぎた申し込みは、翌日以降の貸し出しになります。",
+              "返却は、使った日の十七時までにお願いします。"
+            ]
+          }
+        ]
+      },
+      "stem": "外出中の先輩から電話がありました。「今日の三時からの会議で使うプロジェクターを、総務で借りておいてもらえるかな。今、一時を過ぎたところだよね。」どうすればいいですか。",
+      "options": [
+        {
+          "text": "総務部に頼んで、会議室までプロジェクターを届けてもらう。",
+          "role": "wrong_action_owner",
+          "why": "通知は窓口で申し込むと定めており、総務部が届けるとは書かれていない。しかも時間の条件は変わらない。"
+        },
+        {
+          "text": "正午を過ぎているので今日は借りられないと、先輩に伝える。",
+          "role": "correct",
+          "why": "通知では正午を過ぎた申し込みは翌日以降になり、今は一時を過ぎているので、今日の三時には間に合わない。"
+        },
+        {
+          "text": "総務部の窓口に行って、今から今日の分を借りる。",
+          "role": "ignores_the_document",
+          "why": "先輩の頼みどおりにしているが、正午を過ぎた申し込みは翌日以降という通知に反している。"
+        },
+        {
+          "text": "明日の分として、総務部に申し込んでおく。",
+          "role": "right_action_wrong_condition",
+          "why": "正午を過ぎたあとの申し込み方としては正しいが、先輩が使うのは今日の三時で、明日では役に立たない。"
+        }
+      ],
+      "explanation_ja": "通知では、当日の貸し出しは正午までの申し込みが条件。電話で今が一時過ぎだと分かるので、今日は借りられない。明日の申し込みは今日の会議には役に立たない。まず先輩に借りられないことを伝えるのが先。",
+      "explanation_en": "The notice sets a noon cut-off; the call tells you it is already past one, so today's loan is impossible and the senior needs to know.",
+      "vocab_notes": [
+        {
+          "term": "備品",
+          "reading": "びひん",
+          "meaning": "office equipment"
+        },
+        {
+          "term": "正午",
+          "reading": "しょうご",
+          "meaning": "noon"
+        }
+      ]
+    }
+  ]
+}

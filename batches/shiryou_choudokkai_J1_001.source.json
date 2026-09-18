@@ -1,0 +1,194 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "shiryou_choudokkai",
+  "level": "J1",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "meeting_handout+superior_to_subordinate+choose_the_option@J1",
+      "topic": "条件に合う仕入先を選ぶ",
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person",
+      "document": {
+        "template": "quote_order",
+        "title": "部品X 仕入先比較（数量二百個の場合）",
+        "meta": [
+          {
+            "label": "宛先",
+            "value": "購買会議 出席者各位"
+          },
+          {
+            "label": "発行者",
+            "value": "購買部 川口"
+          },
+          {
+            "label": "発行日",
+            "value": "九月十六日"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "table",
+            "columns": [
+              "仕入先",
+              "単価",
+              "納期",
+              "最低注文数"
+            ],
+            "rows": [
+              [
+                "A社",
+                "1,400円",
+                "九月二十五日",
+                "500個"
+              ],
+              [
+                "B社",
+                "1,480円",
+                "九月三十日",
+                "100個"
+              ],
+              [
+                "C社",
+                "1,450円",
+                "九月二十九日",
+                "250個"
+              ],
+              [
+                "D社",
+                "1,430円",
+                "十月三日",
+                "200個"
+              ]
+            ]
+          },
+          {
+            "type": "callout",
+            "tone": "info",
+            "text": "最低注文数に満たない数量では、いずれの仕入先も受注しません。"
+          }
+        ]
+      },
+      "stem": "課長が配布資料を見ながらこう言いました。「条件を整理します。単価は千五百円まで、納期は今月中。それから、資料は二百個で作ってもらいましたが、数量は三百個に増えました。三百個で頼める先のうち、一番安いところにしましょう。」どこに頼むことになりますか。",
+      "options": [
+        {
+          "text": "C社",
+          "role": "correct",
+          "why": "三百個なら最低注文数二百五十個を満たし、単価千四百五十円は千五百円以内、納期九月二十九日は今月中。条件に合う中で最も安い。"
+        },
+        {
+          "text": "B社",
+          "role": "ignores_the_spoken_change",
+          "why": "資料どおり二百個で考えると条件に合う唯一の先だが、数量が三百個に増えたことでC社も候補に入り、そちらのほうが安い。"
+        },
+        {
+          "text": "A社",
+          "role": "reads_wrong_row",
+          "why": "表で最も安い行だが、最低注文数五百個を三百個では満たさず、注記のとおり受注されない。"
+        },
+        {
+          "text": "D社",
+          "role": "wrong_timeframe",
+          "why": "単価も最低注文数も条件に合うが、納期が十月三日で今月中に間に合わない。"
+        }
+      ],
+      "explanation_ja": "資料は二百個を前提に作られており、その前提ではB社しか残らない。課長の話で数量が三百個になると、最低注文数二百五十個のC社が候補に入り、B社より安いので採用される。A社は最低注文数、D社は納期で外れる。資料だけでは数量の変更が分からず、話だけでは各社の条件が分からない。",
+      "explanation_en": "The sheet assumes 200 units, under which only B qualifies; the spoken change to 300 brings C into range, and it is cheaper.",
+      "vocab_notes": [
+        {
+          "term": "仕入先",
+          "reading": "しいれさき",
+          "meaning": "supplier"
+        },
+        {
+          "term": "最低注文数",
+          "reading": "さいていちゅうもんすう",
+          "meaning": "minimum order quantity"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "delivery_email+staff_to_customer+find_the_quantity@J1",
+      "topic": "分納の初回に届く点数",
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "document": {
+        "template": "email_external",
+        "title": "納品予定のご連絡",
+        "meta": [
+          {
+            "label": "差出人",
+            "value": "山川商事 営業部 佐藤"
+          },
+          {
+            "label": "宛先",
+            "value": "みどり物産 総務部 田中様"
+          },
+          {
+            "label": "件名",
+            "value": "納品予定のご連絡"
+          },
+          {
+            "label": "日時",
+            "value": "九月五日 十四時"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "ご注文いただきました品の納品予定をご連絡いたします。"
+          },
+          {
+            "type": "bullets",
+            "items": [
+              "椅子六十脚は、九月十二日に四十脚、九月十九日に残りの二十脚を納品いたします。",
+              "机十台は、九月十二日に全数納品いたします。",
+              "椅子には、予備の座面カバーを一脚につき一枚ずつお付けします。"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "ご不明な点がございましたら、佐藤までお問い合わせください。"
+          }
+        ]
+      },
+      "stem": "お客様から電話がありました。「メールを拝見しました。十二日の分は倉庫で受け取りたいのですが、当日入るのは全部で何点になりますか。椅子のカバーは数に入れなくて結構です。」十二日に届くのは何点ですか。",
+      "options": [
+        {
+          "text": "七十点",
+          "role": "wrong_timeframe",
+          "why": "椅子六十脚と机十台の注文全体の数で、十九日に届く二十脚まで十二日の分に入れている。"
+        },
+        {
+          "text": "九十点",
+          "role": "surface_keyword_match",
+          "why": "「一脚につき一枚」に引かれて椅子四十脚分のカバーを足した数だが、電話でカバーは数に入れないと言われている。"
+        },
+        {
+          "text": "五十点",
+          "role": "correct",
+          "why": "十二日に届くのは椅子四十脚と机十台で、合わせて五十点。カバーは数えないと言われている。"
+        },
+        {
+          "text": "四十点",
+          "role": "reads_wrong_row",
+          "why": "椅子の十二日分だけを数えており、同じ日に全数届く机十台の行が抜けている。"
+        }
+      ],
+      "explanation_ja": "メールには椅子の分納、机の一括納品、カバーの同梱が書かれている。電話で問われたのは十二日に届く点数で、カバーは除く。十二日は椅子四十脚と机十台で五十点。十九日の二十脚は入れず、カバーも数えない。メールだけでは何を数えるか決まらず、電話だけでは数が分からない。",
+      "explanation_en": "The email gives the split by date and the covers; the call fixes the date and excludes the covers, leaving forty chairs plus ten desks.",
+      "vocab_notes": [
+        {
+          "term": "分納",
+          "reading": "ぶんのう",
+          "meaning": "delivery in instalments"
+        },
+        {
+          "term": "全数",
+          "reading": "ぜんすう",
+          "meaning": "the full quantity"
+        }
+      ]
+    }
+  ]
+}

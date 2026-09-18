@@ -1,0 +1,224 @@
+{
+  "bundle_version": 2,
+  "item_type": "joukyou_haaku",
+  "level": "J1",
+  "generated_at": "2026-09-18T08:50:49+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "5fea125b8c",
+      "item_type": "joukyou_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "office_notice+superior_to_subordinate+check_condition@J1",
+        "setting": "office_notice",
+        "relation": "superior_to_subordinate",
+        "function": "check_condition",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "在宅勤務の申請が条件を満たすか",
+      "stem": "課長が部下に、通知を見ながらこう言いました。「山田さんから、来週の木曜と金曜を在宅にしたいと相談があったんだ。山田さんは先月入社したばかりで、金曜はお客様の来訪もある。認めていいか、条件を確認してくれ。」どう答えればいいですか。",
+      "options": [
+        {
+          "text": "週二日以内なので、木曜と金曜の両方を認める。",
+          "role": "ignores_the_document",
+          "why": "相談の内容だけに答えており、通知にある来客日の除外も、入社後三か月未満の但し書きも見ていない。"
+        },
+        {
+          "text": "人事部から山田さんに直接、対象外だと伝えてもらう。",
+          "role": "wrong_action_owner",
+          "why": "判断の中身は合っているが、部下の相談に答えるのは所属長で、通知にも人事部が個別に伝えるとは書かれていない。"
+        },
+        {
+          "text": "先月入社で入社後三か月未満なので、どちらの日も対象外だと伝える。",
+          "role": "correct",
+          "why": "通知の但し書きが入社後三か月未満の人を対象外としており、課長の話から山田さんが先月入社だと分かる。日数や曜日を見る前に、そもそも対象にならない。"
+        },
+        {
+          "text": "金曜は来客対応の日にあたるので、木曜だけを認める。",
+          "role": "right_action_wrong_condition",
+          "why": "来客のある日を除く条件は本当だが、山田さんは入社後三か月未満で制度の対象外なので、木曜も認められない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "通知には三つの条件と、対象外を定める但し書きがある。課長の話から、山田さんは先月入社で三か月未満、金曜は来客日と分かる。曜日や日数の条件を当てはめる前に、但し書きで対象外になるので、木曜だけ認める答えも誤り。通知だけでは山田さんの入社時期が分からず、話だけでは但し書きが分からない。",
+      "explanation_en": "The notice's fine print excludes anyone under three months in; the manager's remark that Yamada joined last month is what triggers it, before the weekday rules even apply.",
+      "vocab_notes": [
+        {
+          "term": "試用期間",
+          "reading": "しようきかん",
+          "meaning": "probation period"
+        },
+        {
+          "term": "所属長",
+          "reading": "しょぞくちょう",
+          "meaning": "head of one's department"
+        }
+      ],
+      "audio": {
+        "narration": "ea03c75fb2d914f1",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "memo_notice",
+          "title": "在宅勤務制度の運用について",
+          "meta": [
+            {
+              "label": "発信者",
+              "value": "人事部"
+            },
+            {
+              "label": "発信日",
+              "value": "九月一日"
+            },
+            {
+              "label": "対象",
+              "value": "全社員"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "十月より、在宅勤務を次の条件で認めます。"
+            },
+            {
+              "type": "numbered",
+              "items": [
+                "週二日までとする。",
+                "前週の金曜日までに、所属長の承認を得て申請すること。",
+                "来客対応や外出の予定がある日は対象としない。"
+              ]
+            },
+            {
+              "type": "callout",
+              "tone": "warning",
+              "text": "なお、試用期間中の方および入社後三か月未満の方は、当面の間、対象外とします。"
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_office_open_floor",
+      "channel": "in_person"
+    },
+    {
+      "id": "b7865a8ee7",
+      "item_type": "joukyou_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "phone_with_notice+staff_to_customer+choose_destination@J1",
+        "setting": "phone_with_notice",
+        "relation": "staff_to_customer",
+        "function": "choose_destination",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "返品の持ち込み先を案内する",
+      "stem": "十月三日の金曜日、お客様から電話がありました。「先日そちらで購入した測定器を返品したいのですが、どこへ持って行けばいいでしょうか。明日、土曜にそちらの近くまで行く用事があるので、そのときに伺えればと思いまして。」どう案内すればいいですか。",
+      "options": [
+        {
+          "text": "本社三階のサービス窓口へ、平日の九時から十七時の間に持ち込むよう案内する。",
+          "role": "correct",
+          "why": "測定器は精密機器として本社の窓口が受け付けると通知にあり、土日は受け付けないので、明日の土曜ではなく平日を案内する。"
+        },
+        {
+          "text": "本社三階のサービス窓口へ、明日の土曜に持ち込むよう案内する。",
+          "role": "right_action_wrong_condition",
+          "why": "持ち込み先は合っているが、通知は土日祝の受け付けをしないと定めており、お客様の希望する日は使えない。"
+        },
+        {
+          "text": "港北物流センターへ、平日に持ち込むよう案内する。",
+          "role": "ignores_the_request",
+          "why": "返品の一般の持ち込み先としては正しいが、お客様が言っている測定器は精密機器で、通知は本社の窓口に分けている。"
+        },
+        {
+          "text": "物流センターの担当者から、お客様に折り返し連絡してもらう。",
+          "role": "wrong_action_owner",
+          "why": "案内は電話を受けた自分がその場でするもので、しかも測定器は物流センターの扱いではない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "通知は持ち込み先を物品の種類で分け、日にちを平日に限っている。お客様の電話から、品物が測定器で、希望が土曜だと分かる。品物の種類で本社の窓口が決まり、曜日の条件で土曜が外れる。通知だけでは品物が分からず、電話だけでは窓口も曜日の決まりも分からない。",
+      "explanation_en": "The notice splits the drop-off point by type of goods and limits it to weekdays; the call supplies the type and the customer's Saturday wish, and both rules bite.",
+      "vocab_notes": [
+        {
+          "term": "返品",
+          "reading": "へんぴん",
+          "meaning": "returning goods"
+        },
+        {
+          "term": "精密機器",
+          "reading": "せいみつきき",
+          "meaning": "precision instruments"
+        }
+      ],
+      "audio": {
+        "narration": "f3001ac88b61ccc9",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "memo_notice",
+          "title": "返品受付窓口の変更について",
+          "meta": [
+            {
+              "label": "発信者",
+              "value": "営業管理部"
+            },
+            {
+              "label": "発信日",
+              "value": "九月二十五日"
+            },
+            {
+              "label": "対象",
+              "value": "全社員"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "十月一日より、お客様からの返品を次のとおり受け付けます。"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "返品の持ち込み先は、本社受付から港北物流センターに変更します。",
+                "測定器などの精密機器は、従来どおり本社三階のサービス窓口で受け付けます。",
+                "持ち込みはいずれも平日の九時から十七時までとし、土日祝は受け付けません。"
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "ea03c75fb2d914f1",
+      "item_id": "5fea125b8c",
+      "kind": "narration",
+      "index": null,
+      "text": "課長が部下に、通知を見ながらこう言いました。「山田さんから、来週の木曜と金曜を在宅にしたいと相談があったんだ。山田さんは先月入社したばかりで、金曜はお客様の来訪もある。認めていいか、条件を確認してくれ。」どう答えればいいですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f3001ac88b61ccc9",
+      "item_id": "b7865a8ee7",
+      "kind": "narration",
+      "index": null,
+      "text": "十月三日の金曜日、お客様から電話がありました。「先日そちらで購入した測定器を返品したいのですが、どこへ持って行けばいいでしょうか。明日、土曜にそちらの近くまで行く用事があるので、そのときに伺えればと思いまして。」どう案内すればいいですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_office_open_floor",
+    "scene_phone_desk"
+  ]
+}

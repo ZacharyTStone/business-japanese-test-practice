@@ -1,0 +1,224 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "sougou_choudokkai",
+  "level": "J3",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "video_review+staff_to_client+identify_action_owner@J3",
+      "topic": "資料を送るのは誰か",
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "dialogue": [
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "画面の議事録をご覧ください。カタログの送付は、こちらの担当になっています。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "はい。ただ、サンプルのほうは、私どもで用意することになっていましたよね。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "そうでした。では、サンプルはそちらから、カタログはこちらから、それぞれ来週お送りするということで。"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "分かりました。あと、価格表もお願いできますか。"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "承知しました。価格表はカタログと一緒にお送りします。"
+        }
+      ],
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "打ち合わせ 議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "九月十日 十四時"
+            },
+            {
+              "label": "場所",
+              "value": "オンライン"
+            },
+            {
+              "label": "出席者",
+              "value": "山川商事 佐藤、あさひ工業 鈴木"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "項目",
+                "担当"
+              ],
+              "rows": [
+                [
+                  "カタログの送付",
+                  "山川商事"
+                ],
+                [
+                  "サンプルの用意",
+                  "あさひ工業"
+                ],
+                [
+                  "次回の日程調整",
+                  "あさひ工業"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "stem": "山川商事は、来週何を送ることになりましたか。",
+      "options": [
+        {
+          "text": "カタログだけ",
+          "role": "combines_wrong_pair",
+          "why": "議事録のとおりではあるが、会話の最後で価格表も送ることになった。"
+        },
+        {
+          "text": "サンプルと価格表",
+          "role": "wrong_action_owner",
+          "why": "サンプルは議事録でも会話でも、あさひ工業が用意することになっている。"
+        },
+        {
+          "text": "カタログとサンプル",
+          "role": "stated_by_wrong_speaker",
+          "why": "サンプルは取引先の担当者が「私どもで用意する」と述べたもので、山川商事が送るものではない。"
+        },
+        {
+          "text": "カタログと価格表",
+          "role": "correct",
+          "why": "議事録でカタログは山川商事の担当で、会話で価格表もカタログと一緒に送ると営業担当が引き受けた。"
+        }
+      ],
+      "explanation_ja": "議事録では、カタログは山川商事、サンプルと日程はあさひ工業の担当。会話で、それに価格表が加わり、カタログと一緒に山川商事が送ることになった。議事録だけでは価格表が分からず、会話だけではカタログの担当が分からない。",
+      "explanation_en": "The minutes assign the catalogue to one side and the samples to the other; the conversation adds the price list to the catalogue.",
+      "vocab_notes": [
+        {
+          "term": "送付",
+          "reading": "そうふ",
+          "meaning": "sending / dispatch"
+        },
+        {
+          "term": "価格表",
+          "reading": "かかくひょう",
+          "meaning": "price list"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "project_meeting+subordinate_to_superior+choose_revision@J3",
+      "topic": "どちらの日程案にするか",
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person",
+      "dialogue": [
+        {
+          "speaker_role": "部下",
+          "text": "工事の日程ですが、資料の案Aと案Bのどちらにしましょうか。"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "案Aは休日の工事ですね。費用は高くなりますが、業務に影響がありません。"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。案Bは平日ですので、その日は事務所が使えません。"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "その週は来客も多いですから、事務所が使えないのは困ります。費用がかかっても、休日にしましょう。"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "分かりました。では、業者に連絡します。"
+        }
+      ],
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "事務所 空調工事 日程案",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "十月"
+            },
+            {
+              "label": "作成者",
+              "value": "総務部 川口"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "案",
+                "日程",
+                "費用"
+              ],
+              "rows": [
+                [
+                  "案A",
+                  "十月十一日（土）",
+                  "四十万円"
+                ],
+                [
+                  "案B",
+                  "十月十四日（火）",
+                  "三十万円"
+                ]
+              ]
+            },
+            {
+              "type": "callout",
+              "tone": "info",
+              "text": "平日の工事の場合、当日は事務所が使えません。"
+            }
+          ]
+        }
+      ],
+      "stem": "工事はいつ行うことになりましたか。",
+      "options": [
+        {
+          "text": "業者が決める日",
+          "role": "wrong_action_owner",
+          "why": "日程を決めたのは課長で、部下は決まった日を業者に連絡するだけ。"
+        },
+        {
+          "text": "十月十一日の土曜日",
+          "role": "correct",
+          "why": "課長が費用がかかっても休日にすると決め、資料で休日の案Aは十月十一日の土曜日。"
+        },
+        {
+          "text": "十月十四日の火曜日",
+          "role": "combines_wrong_pair",
+          "why": "資料で安いほうの案Bの日程だが、平日で事務所が使えないため、課長が退けている。"
+        },
+        {
+          "text": "来客の少ない別の週の平日",
+          "role": "unsupported_but_plausible",
+          "why": "考えられる案ではあるが、資料にも会話にも別の週の話は出ていない。"
+        }
+      ],
+      "explanation_ja": "資料には二つの案があり、日付と費用が書いてある。会話では「休日にしましょう」と言うだけで、日付は言っていない。休日の案は資料の案Aで、十月十一日の土曜日。資料だけではどちらに決まったか分からず、会話だけでは日付が分からない。",
+      "explanation_en": "The manager says only 'the weekend option'; the sheet is what turns that into October 11.",
+      "vocab_notes": [
+        {
+          "term": "空調",
+          "reading": "くうちょう",
+          "meaning": "air conditioning"
+        },
+        {
+          "term": "業者",
+          "reading": "ぎょうしゃ",
+          "meaning": "contractor"
+        }
+      ]
+    }
+  ]
+}

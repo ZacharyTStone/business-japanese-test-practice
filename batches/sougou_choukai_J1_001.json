@@ -1,0 +1,337 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choukai",
+  "level": "J1",
+  "generated_at": "2026-09-18T08:50:50+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "f833f9f24b",
+      "item_type": "sougou_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "client_meeting+peer_to_peer+who_decides@J1",
+        "setting": "client_meeting",
+        "relation": "peer_to_peer",
+        "function": "who_decides",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "問い合わせ窓口を誰が持つか",
+      "stem": "問い合わせの窓口は、誰が担当することになりましたか。",
+      "options": [
+        {
+          "text": "来月から取引先に常駐する社員",
+          "role": "correct",
+          "why": "常駐するという申し出を取引先が歓迎し、設定担当の社員も「窓口はそちらに」と譲っている。"
+        },
+        {
+          "text": "設定を担当している社員",
+          "role": "superseded_by_later_turn",
+          "why": "最初に自分が窓口になるのが自然だと述べたが、常駐の話が出たあとで自ら譲り、後方の技術確認に回った。"
+        },
+        {
+          "text": "取引先の担当者",
+          "role": "stated_by_wrong_speaker",
+          "why": "窓口を尋ねたのはこの人で、窓口になるとは述べていない。"
+        },
+        {
+          "text": "二人の社員が交代で担当する",
+          "role": "unsupported_but_plausible",
+          "why": "分担としてはあり得るが、会話では窓口は一人に決まり、もう一人は後方に回っている。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "最初に手を挙げたのは設定担当の社員だが、常駐するという同僚の話に取引先が「そのほうが助かる」と応じ、設定担当は「窓口はそちらに」と譲った。決まったのは常駐する社員で、譲った側は後ろで技術確認を受け持つ。途中で出た候補をそのまま答えると誤る。",
+      "explanation_en": "The first volunteer withdraws once the client welcomes the on-site colleague; the decision is the later turn, not the first.",
+      "vocab_notes": [
+        {
+          "term": "常駐",
+          "reading": "じょうちゅう",
+          "meaning": "being stationed on site"
+        },
+        {
+          "term": "窓口",
+          "reading": "まどぐち",
+          "meaning": "point of contact"
+        }
+      ],
+      "audio": {
+        "narration": "65cf4a8882e7739a",
+        "options": [],
+        "dialogue": [
+          "b22643c081aa6662",
+          "8b748dd1583178f1",
+          "183e6464ad06c798",
+          "c21f314dc4905198",
+          "4f7719b70b80cb92",
+          "b84cf124c8f61c4c"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "導入後の問い合わせ窓口ですが、御社ではどなたになりますか。",
+          "clip_id": "b22643c081aa6662"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "設定まわりは私が見ておりますので、私が窓口になるのが自然かと思います。",
+          "clip_id": "8b748dd1583178f1"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "ただ、私のほうは来月から御社に常駐しますので、その場で受けられます。",
+          "clip_id": "183e6464ad06c798"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "常駐していただけるなら、そのほうが助かりますね。",
+          "clip_id": "c21f314dc4905198"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では、窓口はそちらにお願いします。私は後ろで技術的な確認を受け持ちます。",
+          "clip_id": "4f7719b70b80cb92"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "承知しました。",
+          "clip_id": "b84cf124c8f61c4c"
+        }
+      ],
+      "scene_id": "scene_client_meeting_room",
+      "channel": "in_person"
+    },
+    {
+      "id": "0ed5b25518",
+      "item_type": "sougou_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "video_meeting+staff_to_client+dates_and_numbers@J1",
+        "setting": "video_meeting",
+        "relation": "staff_to_client",
+        "function": "dates_and_numbers",
+        "level": "J1",
+        "channel": "video"
+      },
+      "topic": "初回納品の台数",
+      "stem": "二十日に納品する台数は、いくつになりましたか。",
+      "options": [
+        {
+          "text": "百台",
+          "role": "surface_keyword_match",
+          "why": "会話の冒頭に出る注文全体の数で、二十日に届く数ではない。"
+        },
+        {
+          "text": "四十台",
+          "role": "unsupported_but_plausible",
+          "why": "二十日の残りとして出た数で、しかも二十五日と月末に二十台ずつ分けると決まっており、二十日の話ではない。"
+        },
+        {
+          "text": "六十台",
+          "role": "correct",
+          "why": "取引先が二十日は六十台で足りると述べ、営業担当が「二十日に六十台」と受けており、その後この数は変わっていない。"
+        },
+        {
+          "text": "八十台",
+          "role": "superseded_by_later_turn",
+          "why": "営業担当が示した二十日の上限だが、その直後に取引先が六十台で足りると述べて数が下がった。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "二十日の数は百台から八十台、さらに六十台へと会話の中で二度変わり、六十台で確定する。残り四十台は二十五日と月末に分けられた。最後の発言は「そのように手配します」としか言わないので、途中の数の動きを追わないと答えられない。",
+      "explanation_en": "The figure for the twentieth drops twice and settles at sixty; the closing line only confirms without repeating it.",
+      "vocab_notes": [
+        {
+          "term": "部材",
+          "reading": "ぶざい",
+          "meaning": "components / materials"
+        },
+        {
+          "term": "手配",
+          "reading": "てはい",
+          "meaning": "arrangements"
+        }
+      ],
+      "audio": {
+        "narration": "c8690b84797bbf6f",
+        "options": [],
+        "dialogue": [
+          "ec250f17b2a14316",
+          "52214b37a5ae3fb2",
+          "b4038ebbc4a15f58",
+          "6354afece6c1151b",
+          "ec0dd13728ce48b0",
+          "1839bf4ace7dae98"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "初回は百台を二十日に、とお願いしていましたね。",
+          "clip_id": "ec250f17b2a14316"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "はい。ただ、部材の関係で二十日には八十台が限度でして、残りは月末になります。",
+          "clip_id": "52214b37a5ae3fb2"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "八十台ですか。実はこちらも現場の準備が遅れていまして、二十日は六十台あれば足ります。",
+          "clip_id": "b4038ebbc4a15f58"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "では二十日に六十台、残りの四十台を月末に、ということで。",
+          "clip_id": "6354afece6c1151b"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "月末の分は一度に受け取れないので、二十五日に二十台、月末に二十台と分けていただけますか。",
+          "clip_id": "ec0dd13728ce48b0"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "承知しました。そのように手配いたします。",
+          "clip_id": "1839bf4ace7dae98"
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "65cf4a8882e7739a",
+      "item_id": "f833f9f24b",
+      "kind": "narration",
+      "index": null,
+      "text": "問い合わせの窓口は、誰が担当することになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b22643c081aa6662",
+      "item_id": "f833f9f24b",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "導入後の問い合わせ窓口ですが、御社ではどなたになりますか。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8b748dd1583178f1",
+      "item_id": "f833f9f24b",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "設定まわりは私が見ておりますので、私が窓口になるのが自然かと思います。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "183e6464ad06c798",
+      "item_id": "f833f9f24b",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "ただ、私のほうは来月から御社に常駐しますので、その場で受けられます。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c21f314dc4905198",
+      "item_id": "f833f9f24b",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "常駐していただけるなら、そのほうが助かりますね。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4f7719b70b80cb92",
+      "item_id": "f833f9f24b",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "では、窓口はそちらにお願いします。私は後ろで技術的な確認を受け持ちます。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b84cf124c8f61c4c",
+      "item_id": "f833f9f24b",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "承知しました。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c8690b84797bbf6f",
+      "item_id": "0ed5b25518",
+      "kind": "narration",
+      "index": null,
+      "text": "二十日に納品する台数は、いくつになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ec250f17b2a14316",
+      "item_id": "0ed5b25518",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "初回は百台を二十日に、とお願いしていましたね。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "52214b37a5ae3fb2",
+      "item_id": "0ed5b25518",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "はい。ただ、部材の関係で二十日には八十台が限度でして、残りは月末になります。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "b4038ebbc4a15f58",
+      "item_id": "0ed5b25518",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "八十台ですか。実はこちらも現場の準備が遅れていまして、二十日は六十台あれば足ります。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "6354afece6c1151b",
+      "item_id": "0ed5b25518",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "では二十日に六十台、残りの四十台を月末に、ということで。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "ec0dd13728ce48b0",
+      "item_id": "0ed5b25518",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "月末の分は一度に受け取れないので、二十五日に二十台、月末に二十台と分けていただけますか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "1839bf4ace7dae98",
+      "item_id": "0ed5b25518",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "承知しました。そのように手配いたします。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    }
+  ],
+  "scenes": [
+    "scene_client_meeting_room",
+    "scene_video_call_laptop"
+  ]
+}
