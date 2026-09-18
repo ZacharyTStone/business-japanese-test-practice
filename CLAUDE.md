@@ -45,7 +45,10 @@ accident is not.
   job (`bjt batch`, or `bjt nightly` on a schedule); content ships as reviewable
   SQL (`bjt publish`). This is why the running cost is zero. The nightly job
   opens a pull request and never publishes — that branch is the review gate the
-  roadmap asks for, and it is the one exception to the rule above.
+  roadmap asks for, and it is the one exception to the rule above. Merging it
+  is the decision to ship: the **deploy database** workflow runs by itself
+  once `checks` is green on `main`, and publishes the items and their audio
+  together. The owner asked for this (2026-09-18).
 - **Variety comes from `seedtable/`, never from prompt wording.** 発言聴解 refuses
   to generate without a seed cell (`requires_cell`).
 - **The database grades answers, not the app.** The client posts `item_id` and
