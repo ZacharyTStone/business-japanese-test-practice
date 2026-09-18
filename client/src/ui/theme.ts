@@ -20,7 +20,7 @@
  * `tests/test_theme_contrast.py` holds the tokens to that; the rule about which
  * fills carry text is one a reader has to keep, so it is written here.
  */
-import { StyleSheet, type ViewStyle } from "react-native";
+import { StyleSheet, type TextStyle, type ViewStyle } from "react-native";
 
 export const colors = {
   bg: "#F4F5FB",
@@ -29,6 +29,10 @@ export const colors = {
   border: "#EAEAF4",
   text: "#1B1A2E",
   muted: "#6E6C89",
+  /** The edge of a card. A shadow alone reads as a smudge on a bright screen;
+   *  a hairline under it is what makes the edge a decision. Kept translucent
+   *  so it is the same tint on white and on the soft violet. */
+  hairline: "rgba(32, 30, 68, 0.07)",
 
   accent: "#6C5CE7",
   accentDeep: "#4B3BD4",
@@ -76,15 +80,59 @@ export const TAB_CLEARANCE = 104;
 
 export const radius = { sm: 10, md: 16, lg: 22, xl: 28, pill: 999 } as const;
 
+/**
+ * The typeface, named rather than left to the browser.
+ *
+ * Nothing is downloaded: a web font for Japanese is several megabytes, and the
+ * learner is on a train. What this does is put the *right* system face first
+ * for the script. Left to `sans-serif`, Windows draws kanji in whatever it
+ * finds after Segoe UI — often MS Gothic, bitmap-hinted and jagged — and
+ * Android may pick a Chinese-variant CJK face with the wrong glyph shapes for
+ * Japanese. The order here is the Latin face the platform designed for its
+ * own UI, then that platform's Japanese face, so mixed text sits on one
+ * baseline with one weight. Only the web reads this (see `app/+html.tsx`);
+ * a native build's system font already does it.
+ */
+export const fontStack =
+  '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", ' +
+  '"Segoe UI Variable", "Segoe UI", "Yu Gothic UI", "Meiryo", Roboto, "Noto Sans JP", ' +
+  '"Noto Sans CJK JP", "Helvetica Neue", Arial, sans-serif';
+
+/**
+ * How long things take to move, in milliseconds. Short enough that nobody
+ * waits for them; long enough to be seen. `useReducedMotion` in ui/motion.tsx
+ * turns every one of them off for a person who has asked the OS for that.
+ */
+export const motion = {
+  /** A card or a stage arriving. */
+  enter: 320,
+  /** A ring or a bar reaching its value. */
+  fill: 640,
+  /** A button answering a press. */
+  press: 120,
+} as const;
+
 /** Depth, kept shallow. A card lifts off the page; nothing shouts. */
-export const shadow: { card: ViewStyle; hero: ViewStyle; bar: ViewStyle } = {
-  card: { boxShadow: "0 6px 16px rgba(32, 30, 68, 0.06)" },
-  hero: { boxShadow: "0 12px 28px rgba(75, 59, 212, 0.28)" },
-  bar: { boxShadow: "0 -2px 14px rgba(32, 30, 68, 0.06)" },
+export const shadow: { card: ViewStyle; cardRaised: ViewStyle; hero: ViewStyle; bar: ViewStyle } = {
+  // Two shadows, not one: a tight one that draws the edge, and a wide soft one
+  // that lifts the card. A single mid-sized blur does neither and reads as a
+  // smudge.
+  card: { boxShadow: "0 1px 2px rgba(32, 30, 68, 0.04), 0 8px 24px rgba(32, 30, 68, 0.06)" },
+  /** The same card under a pointer: a little further off the page. */
+  cardRaised: { boxShadow: "0 2px 4px rgba(32, 30, 68, 0.05), 0 14px 32px rgba(32, 30, 68, 0.10)" },
+  hero: { boxShadow: "0 2px 6px rgba(59, 46, 179, 0.18), 0 16px 36px rgba(75, 59, 212, 0.28)" },
+  bar: { boxShadow: "0 -1px 0 rgba(32, 30, 68, 0.05), 0 -6px 20px rgba(32, 30, 68, 0.05)" },
 };
 
+/** Digits that all take the same width, so a counter does not jiggle as it
+ *  counts and a column of percentages lines up. Anything that is read as a
+ *  number rather than as a word gets it. */
+export const tabular: { fontVariant: TextStyle["fontVariant"] } = { fontVariant: ["tabular-nums"] };
+
 export const type = StyleSheet.create({
-  h1: { fontSize: 26, fontWeight: "700", color: colors.text, lineHeight: 36 },
+  // A headline set a touch tighter than the body: at 26px the default tracking
+  // reads loose, and the kanji in a title stand better shoulder to shoulder.
+  h1: { fontSize: 26, fontWeight: "700", color: colors.text, lineHeight: 36, letterSpacing: -0.3 },
   h2: { fontSize: 18, fontWeight: "700", color: colors.text, lineHeight: 27 },
   // Japanese needs more leading than Latin at the same size, or the kanji sit
   // on top of each other.
@@ -95,12 +143,14 @@ export const type = StyleSheet.create({
   /** The quiet label above a group of cards. */
   label: { fontSize: 12, fontWeight: "700", color: colors.muted, letterSpacing: 0.6 },
   /** A counted number, big enough to read at a glance and not a moment longer. */
-  stat: { fontSize: 22, fontWeight: "700", color: colors.text, lineHeight: 30 },
+  stat: { fontSize: 22, fontWeight: "700", color: colors.text, lineHeight: 30, ...tabular },
 });
 
 export const card = {
   backgroundColor: colors.surface,
   borderRadius: radius.lg,
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: colors.hairline,
   padding: space.lg,
   ...shadow.card,
 } as const;

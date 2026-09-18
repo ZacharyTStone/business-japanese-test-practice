@@ -1,9 +1,11 @@
 /**
  * The handful of pieces every screen uses.
  */
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Platform,
   Pressable,
   StyleSheet,
@@ -19,7 +21,8 @@ import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg"
 
 import { isIsoDate } from "../lib/exam";
 import { Icon, type IconName } from "./icons";
-import { badge, card, colors, radius, shadow, space, type } from "./theme";
+import { usePressScale, useReducedMotion, useTween } from "./motion";
+import { badge, card, colors, motion, radius, shadow, space, tabular, type } from "./theme";
 import type { BadgeTone } from "./theme";
 
 /** Anything else a View takes comes through — the accessibility props in
@@ -57,6 +60,12 @@ export function GradientCard({
           </LinearGradient>
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroFill)" />
+        {/* Two soft lights, low on the right, where no text sits. They are
+            what stops a flat fill reading as a coloured rectangle; at this
+            opacity they take nothing measurable off the contrast of the
+            lines in the top-left corner (see tests/test_theme_contrast.py). */}
+        <Circle cx="88%" cy="112%" r="52%" fill="rgba(255,255,255,0.09)" />
+        <Circle cx="104%" cy="18%" r="26%" fill="rgba(255,255,255,0.06)" />
       </Svg>
       {children}
     </View>
@@ -81,35 +90,73 @@ export function Button({
   const labelColor =
     tone === "primary" ? colors.onAccent : tone === "onAccent" ? colors.accentDeep : colors.accent;
   const subColor = tone === "primary" ? colors.onAccentMuted : colors.muted;
+  // The face of the button scales under the finger; the Pressable around it
+  // is the hit area and does not move, so a press that started on the edge
+  // is still on the button when it lifts.
+  const press = usePressScale();
+  const [hovered, setHovered] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.button,
-        tone === "primary" && styles.buttonPrimary,
-        tone === "secondary" && styles.buttonSecondary,
-        tone === "onAccent" && styles.buttonOnAccent,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-      ]}
+      style={disabled ? styles.disabled : undefined}
     >
-      <View style={styles.buttonRow}>
-        {icon ? <Icon name={icon} size={18} color={labelColor} strokeWidth={2} /> : null}
-        <Text style={[styles.buttonLabel, { color: labelColor }]}>{label}</Text>
-      </View>
-      {sub ? <Text style={[styles.buttonSub, { color: subColor }]}>{sub}</Text> : null}
+      {({ pressed }) => (
+        <Animated.View
+          style={[
+            styles.button,
+            tone === "primary" && styles.buttonPrimary,
+            tone === "secondary" && styles.buttonSecondary,
+            tone === "onAccent" && styles.buttonOnAccent,
+            hovered && !disabled && (tone === "primary" ? styles.buttonPrimaryHover : styles.buttonHover),
+            pressed && styles.pressed,
+            press.style,
+          ]}
+        >
+          <View style={styles.buttonRow}>
+            {icon ? <Icon name={icon} size={18} color={labelColor} strokeWidth={2} /> : null}
+            <Text style={[styles.buttonLabel, { color: labelColor }]}>{label}</Text>
+          </View>
+          {sub ? <Text style={[styles.buttonSub, { color: subColor }]}>{sub}</Text> : null}
+        </Animated.View>
+      )}
     </Pressable>
   );
 }
 
+/**
+ * A wait, shown only once it is one.
+ *
+ * Most loads finish inside a quarter of a second, and a spinner that appears
+ * and vanishes in that time is not information — it is a flicker between two
+ * screens that were going to look the same anyway. So the indicator holds
+ * off for that long, then fades in. A long wait still looks like a wait; a
+ * short one looks like nothing happened, which is the truth.
+ */
 export function Loading({ label }: { label?: string }) {
+  const reduced = useReducedMotion();
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const anim = Animated.timing(opacity, {
+      toValue: 1,
+      duration: reduced ? 0 : motion.enter,
+      delay: 250,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: Platform.OS !== "web",
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [reduced, opacity]);
   return (
-    <View style={styles.centered}>
+    <Animated.View style={[styles.centered, { opacity }]}>
       <ActivityIndicator color={colors.accent} />
       {label ? <Text style={[type.small, { marginTop: space.md }]}>{label}</Text> : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -241,6 +288,11 @@ export function ProgressRing({
   accessibilityLabel?: string;
 }) {
   const clamped = Math.max(0, Math.min(1, value));
+  // The arc is drawn to where the number is on its way to, from empty on the
+  // first frame: a ring that fills is read as "this much", a ring that is
+  // simply full when the screen appears is read as decoration. The
+  // accessibility value is the destination, not the frame.
+  const drawn = useTween(clamped, { from: 0 });
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
   return (
@@ -262,7 +314,7 @@ export function ProgressRing({
           strokeLinecap="round"
           fill="none"
           strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={circumference * (1 - clamped)}
+          strokeDashoffset={circumference * (1 - drawn)}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
@@ -272,6 +324,54 @@ export function ProgressRing({
           <Text style={[styles.ringCaption, { color: captionColor }]}>{caption}</Text>
         ) : null}
       </View>
+    </View>
+  );
+}
+
+/**
+ * A bar, for the same kind of thing as the ring: a fraction of something
+ * finite, or an accuracy laid beside others of its kind so the lengths can be
+ * compared. The fill moves to its value rather than jumping, and moves again
+ * when the value does — on the practice screen that is one question's width
+ * every answer, which is the whole of what the bar has to say.
+ */
+export function ProgressBar({
+  value,
+  height = 8,
+  color = colors.accent,
+  track = colors.border,
+  style,
+}: {
+  value: number;
+  height?: number;
+  color?: string;
+  track?: string;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const reduced = useReducedMotion();
+  const clamped = Math.max(0, Math.min(1, value));
+  const width = useRef(new Animated.Value(clamped)).current;
+  useEffect(() => {
+    const anim = Animated.timing(width, {
+      toValue: clamped,
+      duration: reduced ? 0 : motion.fill,
+      easing: Easing.out(Easing.cubic),
+      // Width is layout, which no native driver animates.
+      useNativeDriver: false,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [clamped, reduced, width]);
+  return (
+    <View style={[styles.track, { height, borderRadius: height / 2, backgroundColor: track }, style]}>
+      <Animated.View
+        style={{
+          height,
+          borderRadius: height / 2,
+          backgroundColor: color,
+          width: width.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
+        }}
+      />
     </View>
   );
 }
@@ -325,15 +425,19 @@ export function Chip({
   onPress: () => void;
   disabled?: boolean;
 }) {
+  const [hovered, setHovered] = useState(false);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
       style={({ pressed }) => [
         styles.chip,
         selected && styles.chipOn,
+        hovered && !selected && !disabled && styles.chipHover,
         pressed && styles.pressed,
         disabled && styles.disabled,
       ]}
@@ -464,10 +568,15 @@ const styles = StyleSheet.create({
   },
   buttonRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
   buttonPrimary: { backgroundColor: colors.accentDeep, ...shadow.card },
+  buttonPrimaryHover: { backgroundColor: colors.accentInk, ...shadow.cardRaised },
   buttonSecondary: { backgroundColor: colors.accentSoft },
   buttonOnAccent: { backgroundColor: colors.onAccent },
-  buttonLabel: { fontSize: 16, fontWeight: "700" },
-  buttonSub: { fontSize: 12 },
+  // A pointer over a light button: a shade deeper, not a shadow — the light
+  // ones sit flat on purpose, and lifting them would rank them with the
+  // primary.
+  buttonHover: { opacity: 0.92 },
+  buttonLabel: { fontSize: 16, fontWeight: "700", letterSpacing: 0.1 },
+  buttonSub: { fontSize: 12, ...tabular },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.45 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: space.xl },
@@ -491,13 +600,16 @@ const styles = StyleSheet.create({
     flexBasis: "46%",
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
     padding: space.lg,
     gap: 2,
     ...shadow.card,
   },
   ringCenter: { alignItems: "center", justifyContent: "center" },
-  ringLabel: { fontSize: 20, fontWeight: "700" },
+  ringLabel: { fontSize: 20, fontWeight: "700", ...tabular },
   ringCaption: { fontSize: 11, fontWeight: "600" },
+  track: { overflow: "hidden" },
   // No horizontal padding: the screen owns its gutter, and a header that added
   // its own would sit a notch further in than the cards under it.
   header: { flexDirection: "row", alignItems: "center", gap: space.md, paddingBottom: space.xs },
@@ -507,9 +619,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.hairline,
     ...shadow.card,
   },
   chipOn: { backgroundColor: colors.accentDeep },
+  chipHover: shadow.cardRaised,
   dateInput: {
     fontSize: 16,
     color: colors.text,
