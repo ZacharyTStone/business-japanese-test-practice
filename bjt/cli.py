@@ -1246,13 +1246,16 @@ def cmd_tester(args) -> int:
         print()
         print(f"delete from public.testers where email = {publish.lit(email)};")
     else:
-        print(f"-- Let {email} use the app while it is in testing.")
+        unlimited = "true" if args.unlimited else "false"
+        print(f"-- Let {email} use the app while it is in testing"
+              + (", with no daily ceiling." if args.unlimited else "."))
         print("-- Runs as the service role; a client cannot touch this table.")
-        print("-- Idempotent: re-running updates the note and nothing else.")
+        print("-- Idempotent: re-running updates the note and the ceiling flag, nothing else.")
         print()
-        print("insert into public.testers (email, note)")
-        print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')})")
-        print("on conflict (email) do update set note = excluded.note;")
+        print("insert into public.testers (email, note, unlimited)")
+        print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, {unlimited})")
+        print("on conflict (email) do update set note = excluded.note,")
+        print("                                  unlimited = excluded.unlimited;")
     return 0
 
 
@@ -1424,6 +1427,8 @@ def build_parser() -> argparse.ArgumentParser:
     te = sub.add_parser("tester", help="SQL adding or removing somebody on the tester list")
     te.add_argument("email", help="the email address they sign in with")
     te.add_argument("--note", help="who this is — shows up in the row")
+    te.add_argument("--unlimited", action="store_true",
+                    help="lift the daily ceiling for this account (a tester exercising the app)")
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 

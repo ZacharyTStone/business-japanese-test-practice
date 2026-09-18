@@ -44,7 +44,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from 
 import { useAuth } from "../src/lib/auth";
 import {
   clipUrl,
-  fetchProfile,
+  fetchDay,
   fetchQueue,
   fetchSectionLevels,
   finishSession,
@@ -59,6 +59,7 @@ import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supa
 import type { AnsweredItem, QueuedItem, SectionLevel } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer } from "../src/ui/audio";
 import { Button, Card, Loading, Notice, Tag } from "../src/ui/components";
+import { DayDone } from "../src/ui/done";
 import { DocumentView } from "../src/ui/document";
 import { Face, moodFor, moodLabel } from "../src/ui/face";
 import { HAS_KEYBOARD, optionForKey, useKeys } from "../src/ui/keys";
@@ -136,6 +137,8 @@ export default function Practice() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Today's count when the day's ceiling has been reached; null otherwise. */
+  const [blocked, setBlocked] = useState<number | null>(null);
 
   const startedAt = useRef(Date.now());
   const questionShownAt = useRef(Date.now());
@@ -164,11 +167,22 @@ export default function Practice() {
     let cancelled = false;
     (async () => {
       try {
-        const [profile, levels] = await Promise.all([fetchProfile(), fetchSectionLevels()]);
+        const [day, levels] = await Promise.all([fetchDay(), fetchSectionLevels()]);
         // Read before the first answer, so the result screen can name the
         // section whose level moved rather than just that something did.
         levelsBefore.current = levels;
-        const queue = await fetchQueue(profile?.daily_goal ?? 5);
+        // The size is what the day has left of its set, or the bonus set once
+        // the set is done: the rest of the allowance, or a full set for an
+        // account whose ceiling is lifted. Zero means the day is over, and the
+        // database would serve nothing anyway — the screen below says so.
+        const remaining =
+          day.answered_today < day.goal
+            ? day.goal - day.answered_today
+            : day.unlimited
+              ? day.goal
+              : (day.left_today ?? 0);
+        setBlocked(remaining <= 0 ? day.answered_today : null);
+        const queue = remaining > 0 ? await fetchQueue(remaining) : [];
         if (cancelled) return;
         setItems(queue);
         setSessionId(await startSession(session.user.id));
@@ -223,6 +237,14 @@ export default function Practice() {
   }
   if (!items) return <Loading label={t("preparing")} />;
 
+  if (blocked !== null) {
+    // The door, from this side: a deep link or a stale tab past the ceiling.
+    return (
+      <View style={styles.page}>
+        <DayDone answered={blocked} streak={0} onHome={() => router.replace("/")} />
+      </View>
+    );
+  }
   if (items.length === 0) {
     return (
       <View style={styles.page}>

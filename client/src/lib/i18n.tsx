@@ -55,7 +55,7 @@ const S = {
   wel_p2_title: ["弱いところを、狙って出します", "It aims at your weak spots"],
   wel_p2_body: ["正誤だけでなく、どのまちがえ方をしたかまで見ます。まちがえた問題は一晩おいて、できた問題も三日後・一週間後と間をあけて、もう一度出します。", "Not just right or wrong — which way you went wrong. A question that caught you comes back after a night's sleep; one you got right comes back in three days, then a week, then longer."],
   wel_p3_title: ["あなたがすることは、答えるだけ", "Your part is to answer"],
-  wel_p3_body: ["1日5問、3分ほど。続けるほど、出る問題があなたに合っていきます。", "Five questions a day, about three minutes. The longer you keep at it, the better the questions fit you."],
+  wel_p3_body: ["1日10問、6分ほど。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about six minutes. The longer you keep at it, the better the questions fit you."],
   wel_start: ["始める", "Get started"],
   wel_testers_note: ["いまはテスト中です。登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   wel_honesty: ["問題はすべて独自に作ったものです。過去問は使っていません。点数の予測は出しません。", "Every question is an original composition — no past papers. The app never predicts a score."],
@@ -70,8 +70,14 @@ const S = {
   streak_going: ["{n}日つづいています", "{n} day in a row|{n} days in a row"],
   start_today: ["今日から始めましょう", "Start today"],
   btn_more: ["もう一組やる", "One more set"],
+  btn_more_sub: ["あと{n}問", "{n} more question|{n} more questions"],
   btn_today: ["今日の練習をする", "Practice today"],
-  btn_today_sub: ["{goal}問・約3分", "{goal} questions · about 3 min"],
+  btn_today_sub: ["{n}問・約{min}分", "{n} questions · about {min} min"],
+  // The full stop. Shown once the day's ceiling is reached; nothing on it
+  // leads to a question.
+  day_done_title: ["今日のぶんは終わりました 🙂", "That's today done 🙂"],
+  day_done_body: ["{n}問、おつかれさまでした。", "{n} questions. Nicely done."],
+  day_done_next: ["次の問題は、明日の0時から出ます", "New questions from midnight"],
 
   // the door, while the app is in testing
   gate_title: ["ログインしてください", "Sign in to continue"],
