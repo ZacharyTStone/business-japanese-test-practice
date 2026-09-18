@@ -31,7 +31,8 @@ def test_haiku_gets_neither_because_it_would_refuse_both():
     assert p["max_tokens"] == 1200
     assert p["output_config"]["format"] == {"type": "json_schema", "schema": SCHEMA}
     assert p["messages"] == [{"role": "user", "content": "user"}]
-    assert p["system"] == "sys"
+    # The stable half of the request is marked cacheable, on every model.
+    assert p["system"] == [{"type": "text", "text": "sys", "cache_control": {"type": "ephemeral"}}]
 
 
 def test_the_default_proofreader_and_probe_model_is_one_haiku_accepts():

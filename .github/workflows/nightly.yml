@@ -74,11 +74,16 @@ on:
       budget:
         description: "Most items this run may write"
         required: false
-        default: "24"
+        default: "12"
       per_slot:
         description: "Most items into any one (type, level)"
         required: false
-        default: "6"
+        default: "4"
+      scenes:
+        description: "Also draw the scenes the bank is missing (the schedule does this on Sundays)"
+        type: boolean
+        required: false
+        default: false
       dry_run:
         description: "Print the work order and stop"
         type: boolean
@@ -98,8 +103,10 @@ jobs:
     name: survey the bank, and fill it if the keys are there
     runs-on: ubuntu-latest
     env:
-      BUDGET: ${{ github.event.inputs.budget || '24' }}
-      PER_SLOT: ${{ github.event.inputs.per_slot || '6' }}
+      # Twelve a night, four to a shelf: half the first night's order. The bank
+      # still fills its empty shelves in a few weeks, at half the bill.
+      BUDGET: ${{ github.event.inputs.budget || '12' }}
+      PER_SLOT: ${{ github.event.inputs.per_slot || '4' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -142,8 +149,23 @@ jobs:
         run: |
           echo "db=$HAVE_DB" >> "$GITHUB_OUTPUT"
           echo "storage=$HAVE_STORAGE" >> "$GITHUB_OUTPUT"
-          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
+          # Pictures are drawn once a week (the Sunday run), or when a manual
+          # run asks. Every night was the first ten dollars: a scene the
+          # reviewer rejects three times is rejected three times again the next
+          # night, and the bank has only two of those left to draw.
+          weekly=false
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" = "7" ]; then weekly=true; fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.scenes }}" = "true" ]; then weekly=true; fi
+          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ] && [ "$weekly" = "true" ]; then
             echo "art=true" >> "$GITHUB_OUTPUT"
+          elif [ "$weekly" != "true" ]; then
+            echo "art=false" >> "$GITHUB_OUTPUT"
+            {
+              echo
+              echo '### No scenes drawn tonight'
+              echo
+              echo 'Artwork is drawn on the Sunday run, or on a manual run with "scenes" ticked.'
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "art=false" >> "$GITHUB_OUTPUT"
             {

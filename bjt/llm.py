@@ -25,6 +25,19 @@ class LLMError(RuntimeError):
     pass
 
 
+class LLMBillingError(LLMError):
+    """The account cannot pay for the call. Nothing else will succeed either.
+
+    A run that meets this should stop, not carry on through forty more slots
+    of the same refusal — the first real night did exactly that, and the log
+    was pages of one error. Raised as its own class so the callers that
+    tolerate a failed call (one shelf, one probe) can let this one through.
+    """
+
+
+_BILLING_SIGNS = ("credit balance", "insufficient_quota", "billing")
+
+
 def _get_client():
     global _client
     if _client is None:
@@ -64,7 +77,13 @@ def request_params(
         "model": model,
         "max_tokens": max_tokens,
         "output_config": {"format": {"type": "json_schema", "schema": schema}},
-        "system": system,
+        # The system prompt is the stable half of every request — the task
+        # spec, the role list, the few-shot examples, the level descriptor —
+        # and it is identical across every attempt at a shelf. Marking it
+        # cacheable means the second attempt onward reads it at a tenth of the
+        # price. Below the model's minimum cacheable size the marker is simply
+        # ignored, so a short prompt costs nothing extra.
+        "system": [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
         "messages": [{"role": "user", "content": user}],
     }
     if not model.startswith("claude-haiku"):
@@ -88,6 +107,8 @@ def _structured(
         resp = client.messages.create(**request_params(
             model, system, user, schema, max_tokens=max_tokens, effort=effort))
     except Exception as e:  # surface API errors with context
+        if any(sign in str(e).lower() for sign in _BILLING_SIGNS):
+            raise LLMBillingError(f"API request failed: {e}") from e
         raise LLMError(f"API request failed: {e}") from e
 
     if resp.stop_reason == "refusal":
@@ -103,7 +124,8 @@ def _structured(
 
 
 def generate_structured(system: str, user: str, schema: dict, model: Optional[str] = None) -> dict:
-    return _structured(system, user, schema, model or config.GEN_MODEL, max_tokens=8000, effort="high")
+    return _structured(system, user, schema, model or config.GEN_MODEL,
+                       max_tokens=8000, effort=config.GEN_EFFORT)
 
 
 # ----- the proofreader --------------------------------------------------
