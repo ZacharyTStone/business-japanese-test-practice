@@ -53,11 +53,13 @@ GEN_EFFORT = _env("BJT_GEN_EFFORT", "medium")
 SLOT_PATIENCE = int(_env("BJT_SLOT_PATIENCE", "3"))
 
 # The model used for the answerability gate, the discriminator judge and the
-# scene reviewer. Kept strong on purpose, and no longer tied to the writer: the
-# cold/full test only means something if the model taking it is genuinely
-# capable ("a strong model should fail cold, succeed full"). Its calls are
-# short and run at low effort, so it is a small part of the bill.
-JUDGE_MODEL = _env("BJT_JUDGE_MODEL", "claude-opus-5")
+# scene reviewer. It must be genuinely capable — the cold/full test only means
+# something if the model taking it could pass it ("a strong model should fail
+# cold, succeed full") — and Sonnet 5 is. It was Opus for a day; six gate
+# calls per draft at Opus rates were the largest cost of a kept item, and the
+# owner asked for cheap (2026-09-18). BJT_JUDGE_MODEL=claude-opus-5 puts it
+# back.
+JUDGE_MODEL = _env("BJT_JUDGE_MODEL", "claude-sonnet-5")
 
 # The proofreader. It runs once per item the moment the item exists, before the
 # expensive gate, and it is deliberately the cheapest model in the family: what
@@ -85,9 +87,10 @@ SANITY_ENABLED = _env("BJT_SANITY", "1").strip().lower() not in ("0", "false", "
 # The most one process may spend, measured from the usage every response
 # reports and priced with the table in bjt/llm.py. Checked before each call;
 # reached, the run stops with what it has (LLMSpendLimitError, which the
-# nightly loop treats like an empty account). Three dollars is above a normal
-# night of twelve items on Sonnet and below anything worth being angry about.
-RUN_BUDGET_USD = float(_env("BJT_RUN_BUDGET_USD", "3"))
+# nightly loop treats like an empty account). Two dollars is a normal night
+# of eight items on Sonnet with room to spare, and below anything worth being
+# angry about.
+RUN_BUDGET_USD = float(_env("BJT_RUN_BUDGET_USD", "2"))
 
 # The most calls one process may make, whatever they cost. The dollar ceiling
 # depends on the price table being right; this one does not. Twelve items at
@@ -95,6 +98,19 @@ RUN_BUDGET_USD = float(_env("BJT_RUN_BUDGET_USD", "3"))
 # difficulty probes, is a little over four hundred; a loop that is still
 # calling after that is a loop that is wrong.
 RUN_MAX_CALLS = int(_env("BJT_RUN_MAX_CALLS", "500"))
+
+# The most minutes one process may run, counted from when it started and
+# checked before every call like the two above. A night is minutes: the
+# 2026-09-18 run generated for two and a half hours, and nothing in the
+# process knew. The workflow has its own clock (timeout-minutes) a little
+# above this one; this one stops with what it wrote, that one just stops.
+RUN_MAX_MINUTES = float(_env("BJT_RUN_MAX_MINUTES", "30"))
+
+# How long one API call may take before the SDK gives up on it, and how many
+# times it may retry a transient failure. A call that hangs is paid for in
+# minutes; a call retried many times is paid for in money.
+API_TIMEOUT_SECONDS = float(_env("BJT_API_TIMEOUT_SECONDS", "300"))
+API_MAX_RETRIES = int(_env("BJT_API_MAX_RETRIES", "2"))
 
 # No single call may ask for more output than this, and no generation may
 # think harder than this, whatever the caller or an environment variable

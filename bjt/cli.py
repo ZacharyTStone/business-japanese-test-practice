@@ -838,8 +838,9 @@ def cmd_nightly(args) -> int:
     order = plan.work_order(state, budget=budget, per_slot=per_slot)
     print(plan.render(state, order))
     print(f"\nCeilings this run: ${config.RUN_BUDGET_USD:.2f}, "
-          f"{config.RUN_MAX_CALLS} calls, {config.MAX_TOKENS_CEILING} output "
-          f"tokens per call, effort at most {config.EFFORT_CEILING!r}.")
+          f"{config.RUN_MAX_CALLS} calls, {config.RUN_MAX_MINUTES:g} minutes, "
+          f"{config.MAX_TOKENS_CEILING} output tokens per call, effort at most "
+          f"{config.EFFORT_CEILING!r}; writer {config.GEN_MODEL}, judge {config.JUDGE_MODEL}.")
     if args.dry_run or not order:
         return 0
 

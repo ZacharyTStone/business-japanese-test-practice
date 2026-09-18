@@ -51,8 +51,8 @@ accident is not.
   together. The owner asked for this (2026-09-18).
 - **A run has ceilings, and they are checked before the call, not after.**
   `bjt/llm.py` prices every response from the usage it reports and refuses the
-  next call once the process has spent `BJT_RUN_BUDGET_USD` (default $3) or
-  made `BJT_RUN_MAX_CALLS`; no call may ask for more than
+  next call once the process has spent `BJT_RUN_BUDGET_USD` (default $2), made
+  `BJT_RUN_MAX_CALLS`, or run for `BJT_RUN_MAX_MINUTES` (30); no call may ask for more than
   `BJT_MAX_TOKENS_CEILING` output or think above `BJT_EFFORT_CEILING`; a night
   is clamped to `BJT_NIGHT_MAX_BUDGET` / `_PER_SLOT` whatever the workflow input
   says; the job has a clock; the night's files are an artifact before any push;

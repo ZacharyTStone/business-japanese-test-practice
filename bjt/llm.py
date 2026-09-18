@@ -14,6 +14,7 @@ with neither the package nor an API key present.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -98,6 +99,11 @@ class Spend:
     usd: float = 0.0
     usd_by_model: dict[str, float] = field(default_factory=dict)
     calls_by_model: dict[str, int] = field(default_factory=dict)
+    started: float = field(default_factory=time.monotonic)
+
+    @property
+    def minutes(self) -> float:
+        return (time.monotonic() - self.started) / 60
 
     def add(self, model: str, usage: Any) -> float:
         cost = price_usd(model, usage)
@@ -123,12 +129,18 @@ class Spend:
                 f"spend ceiling reached: ${self.usd:.2f} of "
                 f"${config.RUN_BUDGET_USD:.2f} (BJT_RUN_BUDGET_USD) "
                 f"in {self.calls} calls")
+        if self.minutes >= config.RUN_MAX_MINUTES:
+            raise LLMSpendLimitError(
+                f"time ceiling reached: {self.minutes:.0f} minutes this run "
+                f"(BJT_RUN_MAX_MINUTES={config.RUN_MAX_MINUTES:g}); "
+                f"${self.usd:.2f} spent in {self.calls} calls")
 
     def report(self) -> str:
         """The bill, as a few lines for a summary."""
         lines = [
             f"Spent ${self.usd:.2f} of the ${config.RUN_BUDGET_USD:.2f} ceiling in "
-            f"{self.calls} call(s): {self.input_tokens:,} input, "
+            f"{self.calls} call(s) over {self.minutes:.0f} minute(s): "
+            f"{self.input_tokens:,} input, "
             f"{self.cache_write_tokens:,} cache-write, {self.cache_read_tokens:,} "
             f"cache-read, {self.output_tokens:,} output token(s).",
         ]
@@ -161,7 +173,8 @@ def _get_client():
                 "The 'anthropic' package is required for generation. "
                 "Install it with: pip install anthropic"
             ) from e
-        _client = anthropic.Anthropic()
+        _client = anthropic.Anthropic(timeout=config.API_TIMEOUT_SECONDS,
+                                      max_retries=config.API_MAX_RETRIES)
     return _client
 
 
