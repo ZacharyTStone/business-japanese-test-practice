@@ -38,32 +38,49 @@ same judgement that would be grading them.
 
 ---
 
-## 2. No TTS provider has been chosen
+## 2. The bank has a voice and no key to speak with
 
 **What exists.** `bjt synth` runs end to end: it plans clips from a checked
 bundle, synthesises the missing ones, applies the channel treatment, measures
-durations, writes the files and emits the SQL that points `audio_clips` at them.
-Two provider adapters are written (OpenAI, Google Cloud). A pronunciation
-dictionary covers the business readings a TTS model gets wrong in ways that would
-teach a learner something false.
+durations, writes the files, uploads them (`--upload`) and emits the SQL that
+points `audio_clips` at them. **The voice is OpenAI** — the owner chose it
+(2026-09-18) and `bjt/tts/providers.py` records the decision as the default —
+an instructable speech model given one house direction: native Tokyo office
+Japanese at a working pace, keigo said fluently rather than read off a list,
+no acting, no announcer voice. Seven roles are cast to seven of its voices. A
+pronunciation dictionary covers the business readings a model gets wrong in
+ways that would teach a learner something false. The **deploy database**
+workflow synthesises whatever the published bank still lacks, uploads it and
+points the rows at it, and never touches a clip that is already live. The app
+plays the narration, the conversation, and — for 発言聴解 — the four
+utterances themselves, shown as letters until the answer is in, as on the exam.
+Gemini and Google Cloud adapters remain for comparison only.
 
-**What is blocked.** Both adapters refuse to run, on purpose: neither has a cast
-voice mapped to a provider voice id. That mapping is the output of a decision
-nobody has made.
+**What is blocked.** One key, and one listen.
 
-**What unblocks it.** A vendor account, and then the listening comparison: the
-same twenty clips from both providers, judged by a native speaker on names,
-business terms, dates, 敬語 and contrastive emphasis — not on a generic
-naturalness score. Record the winner in `VOICE_IDS` on the chosen adapter.
+**What unblocks it.**
+
+1. `OPENAI_API_KEY` in `.env` — the same key that draws the scene artwork.
+2. Five minutes with headphones, before the library is synthesised:
+
+   ```bash
+   bjt audition --voices    # the cast, plus every voice saying one line
+   open media/audition/index.html
+   ```
+
+   Judge names, dates, numbers, the dictionary readings (代替・早急), whether
+   the keigo sounds like a person or a reading, and the telephone row. If a
+   role sounds accented, recast it in `OpenAIProvider.VOICE_IDS` now — a live
+   clip is never re-made, so a recast later is a library that sounds different
+   from one item to the next.
+3. `OPENAI_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as
+   repository secrets, then run **deploy database**: the run summary reports
+   how many clips are live.
 
 Until then `--provider silent` exercises the whole pipeline with valid, silent
-clips. They are pathed `silent/` so they can never be mistaken for real ones, and
-they prove nothing about how the Japanese sounds.
-
-**Why the decision cannot be deferred by picking one.** The cast is fixed for the
-life of the library — a learner who hears a different voice every question is
-doing speaker identification instead of listening to Japanese. A voice chosen
-carelessly is one every future item inherits.
+clips. They are pathed `silent/` so they can never be mistaken for real ones,
+and `--upload` refuses them, because a learner would hear nothing where the app
+now shows the text.
 
 ---
 

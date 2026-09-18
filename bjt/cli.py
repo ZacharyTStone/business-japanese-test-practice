@@ -992,13 +992,15 @@ def cmd_publish(args) -> int:
 def cmd_synth(args) -> int:
     """Bundle → audio files + the SQL that points the database at them.
 
-    Nothing uploads itself. Producing files and producing SQL are the job; making
-    either one live is a separate, deliberate act — which is why no key that can
-    write media has to exist on a build machine.
+    Producing files and producing SQL are the job. Uploading is opt-in
+    (`--upload`) and applying the SQL stays a separate act, so on a laptop no
+    key that can write media has to exist, and in the deploy workflow — the
+    one place all three happen together — each step is still its own line.
     """
     import pathlib
 
-    from .tts import synth
+    from . import scene_art
+    from .tts import providers, synth
 
     path = pathlib.Path(args.path)
     bundle = batchmod.load(path)
@@ -1012,29 +1014,57 @@ def cmd_synth(args) -> int:
         return 1
 
     try:
-        result = synth.synthesise_bundle(
-            bundle,
-            provider=args.provider,
-            out_dir=args.media_dir,
-            force=args.force_clips,
-            limit=args.limit,
-        )
+        provider = providers.get_provider(args.provider)
     except KeyError as exc:
-        print(str(exc), file=sys.stderr)
+        print(exc.args[0], file=sys.stderr)
         return 2
+
+    bucket = None
+    if args.upload:
+        if provider.name == "silent":
+            print("--upload with the silent provider would ship silence: a learner would "
+                  "hear nothing where the app now shows the text. Refusing.", file=sys.stderr)
+            return 2
+        bucket = scene_art.Bucket(name="audio")
+        if not bucket.configured:
+            print("--upload needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment",
+                  file=sys.stderr)
+            return 2
+
+    have = synth.read_have(pathlib.Path(args.have)) if args.have else None
+
+    result = synth.synthesise_bundle(
+        bundle,
+        provider=provider,
+        out_dir=args.media_dir,
+        force=args.force_clips,
+        limit=args.limit,
+        have=have,
+    )
 
     print(result.summary())
     for clip_id, error in result.failed:
         print(f"  FAILED {clip_id}: {error}", file=sys.stderr)
 
-    if args.provider == "silent":
+    if provider.name == "silent":
         print()
         print("  These are SILENT placeholder clips. They exercise the pipeline — "
               "planning,\n  channel treatment, durations, the SQL — and prove nothing "
               "about how the\n  Japanese sounds. Their storage path says `silent/` so "
-              "they can never be\n  mistaken for real recordings.")
+              "they can never be\n  mistaken for real recordings. Set GEMINI_API_KEY or "
+              "OPENAI_API_KEY for\n  real voices; `bjt audition` compares them.")
 
-    if not result.clips:
+    if bucket is not None and result.clips:
+        up = synth.upload_clips(result, bucket, args.media_dir)
+        print(f"uploaded {len(up.sent)} clip(s) to the `{bucket.name}` bucket")
+        for clip_path, why in up.failed:
+            print(f"not uploaded: {clip_path}: {why}", file=sys.stderr)
+        if up.failed:
+            # The SQL below must describe the bucket, not this machine.
+            result.drop({pathlib.Path(p).stem for p in up.failed_paths})
+            result.failed.extend((pathlib.Path(p).stem, why) for p, why in up.failed)
+
+    if not result.clips and not result.live:
         return 0
 
     out = pathlib.Path(args.out) if args.out else path.with_name(
@@ -1047,10 +1077,45 @@ def cmd_synth(args) -> int:
     synth.write_report(result, pathlib.Path(record))
     print(f"Wrote {record}")
 
-    print()
-    print("Next: upload media/audio/** to the `audio` bucket, then apply the SQL:")
-    print(f"  psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f {out}")
+    if result.clips:
+        print()
+        if bucket is None:
+            print("Next: upload media/audio/** to the `audio` bucket (or re-run with "
+                  "--upload), then apply the SQL:")
+        else:
+            print("Next: apply the SQL:")
+        print(f"  psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f {out}")
     return 1 if result.failed else 0
+
+
+def cmd_audition(args) -> int:
+    """The same lines, every cast voice, every configured provider — for a
+    person to listen to before the library is synthesised."""
+    from .tts import audition, providers
+
+    names = args.provider if args.provider else providers.available()
+    if not names and not args.voices:
+        print("No TTS provider is configured. Set one of:", file=sys.stderr)
+        for name, keys in providers.CREDENTIALS.items():
+            print(f"  {name:8} {' or '.join(keys)}", file=sys.stderr)
+        print("(`--provider silent` exercises the page with silent clips.)", file=sys.stderr)
+        return 2
+    unknown = sorted(set(names) - set(providers.PROVIDERS))
+    if unknown:
+        print(f"unknown provider(s): {', '.join(unknown)}; "
+              f"available: {sorted(providers.PROVIDERS)}", file=sys.stderr)
+        return 2
+
+    report = audition.run(names, media_dir=args.media_dir, force=args.force,
+                          voices=args.voices)
+    print(report.summary())
+    for name, voice, why in report.failed:
+        print(f"  FAILED {name} {voice}: {why}", file=sys.stderr)
+    print(f"\nOpen {report.root / 'index.html'} and listen.")
+    if args.voices:
+        print(f"Every {providers.DEFAULT} voice saying one line is under "
+              f"{report.root / 'openai-voices'}; a recast goes in OpenAIProvider.VOICE_IDS.")
+    return 1 if report.failed else 0
 
 
 def cmd_scenes(args) -> int:
@@ -1365,8 +1430,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     sy = sub.add_parser("synth", help="synthesise a bundle's audio and write the SQL for it")
     sy.add_argument("path", help="path to a checked bundle .json")
-    sy.add_argument("--provider", default="silent",
-                    help="TTS backend: silent (offline, placeholder), openai, google")
+    sy.add_argument("--provider", default="auto",
+                    help="TTS backend: auto (BJT_TTS_PROVIDER, else whichever of gemini, "
+                         "openai, google has credentials, else silent), or one of those "
+                         "by name; silent is an offline placeholder")
+    sy.add_argument("--have", metavar="FILE",
+                    help="clip ids already live (one per line): skipped entirely. "
+                         "The deploy workflow reads them out of the database")
+    sy.add_argument("--upload", action="store_true",
+                    help="put the clips in the `audio` bucket "
+                         "(needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)")
     sy.add_argument("--out", help="where to write the SQL (default: alongside the bundle)")
     sy.add_argument("--media-dir", type=pathlib.Path,
                     help=f"where audio files go (default: {config.MEDIA_DIR})")
@@ -1378,6 +1451,18 @@ def build_parser() -> argparse.ArgumentParser:
     sy.add_argument("--force", action="store_true",
                     help="synthesise even if the bundle fails its checks")
     sy.set_defaults(func=cmd_synth)
+
+    au = sub.add_parser("audition", help="the same lines in every cast voice from each "
+                                         "configured TTS provider, for a person to compare")
+    au.add_argument("--provider", nargs="*", metavar="NAME",
+                    help="which providers (default: every one with credentials)")
+    au.add_argument("--media-dir", type=pathlib.Path,
+                    help=f"where the clips go (default: {config.MEDIA_DIR}/audition)")
+    au.add_argument("--voices", action="store_true",
+                    help="also one line in every voice the library's provider offers, "
+                         "to recast a role by ear")
+    au.add_argument("--force", action="store_true", help="re-synthesise clips that exist")
+    au.set_defaults(func=cmd_audition)
 
     sc = sub.add_parser("scenes", help="what the scene bank needs, draw what is missing")
     sc.add_argument("--media-dir", type=pathlib.Path,

@@ -157,6 +157,18 @@ def duration_ms(wav_bytes: bytes) -> int:
         return round(1000 * w.getnframes() / w.getframerate())
 
 
+def wrap_pcm(pcm: bytes, rate: int) -> bytes:
+    """Raw 16-bit mono PCM → a WAV container. For providers that return the
+    samples without a header."""
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(pcm[: len(pcm) - len(pcm) % 2])
+    return buf.getvalue()
+
+
 def silence(seconds: float, rate: int = 24000) -> bytes:
     """A valid, silent WAV. Used by the offline provider."""
     return _encode([0] * max(1, int(seconds * rate)), rate)
