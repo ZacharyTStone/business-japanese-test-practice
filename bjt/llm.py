@@ -39,6 +39,40 @@ def _get_client():
     return _client
 
 
+def request_params(
+    model: str,
+    system: str,
+    user: "str | list",
+    schema: dict,
+    *,
+    max_tokens: int,
+    effort: str,
+) -> dict:
+    """The keyword arguments of one Messages request, shaped for the model.
+
+    The thinking and effort controls are a property of the model family, not of
+    the call. Opus and Sonnet take adaptive thinking and an effort level; Haiku
+    4.5 takes neither — it wants a fixed thinking budget, and sending it the
+    adaptive form or an effort level is a 400. The first real night lost every
+    proofread and every difficulty probe to exactly that: the cheap model was
+    asked in the expensive model's dialect, refused every call, and both steps
+    reported themselves as not having run. The calls Haiku makes here are
+    small judgements with a small ceiling, and they do not need thinking at
+    all, so for Haiku the two keys are simply left out.
+    """
+    params: dict = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "output_config": {"format": {"type": "json_schema", "schema": schema}},
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    }
+    if not model.startswith("claude-haiku"):
+        params["thinking"] = {"type": "adaptive"}
+        params["output_config"]["effort"] = effort
+    return params
+
+
 def _structured(
     system: str,
     user: "str | list",
@@ -51,14 +85,8 @@ def _structured(
     """One structured-output request. Returns the parsed JSON object."""
     client = _get_client()
     try:
-        resp = client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            thinking={"type": "adaptive"},
-            output_config={"effort": effort, "format": {"type": "json_schema", "schema": schema}},
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
+        resp = client.messages.create(**request_params(
+            model, system, user, schema, max_tokens=max_tokens, effort=effort))
     except Exception as e:  # surface API errors with context
         raise LLMError(f"API request failed: {e}") from e
 

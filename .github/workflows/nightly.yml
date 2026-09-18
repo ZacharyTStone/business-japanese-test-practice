@@ -299,7 +299,10 @@ jobs:
             echo "nothing new in batches/; no pull request" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          branch="content/nightly-$(date -u +%Y%m%d)"
+          # The run number keeps two runs on one date apart: a manual run in
+          # the afternoon and the scheduled one that night used to want the
+          # same branch, and the second push was refused with its items on it.
+          branch="content/nightly-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
           git config user.name  "bjt nightly"
           git config user.email "noreply@github.com"
           git checkout -b "$branch"
@@ -307,12 +310,28 @@ jobs:
           git commit \
             -m "Fill the emptiest shelves of the bank ($(date -u +%Y-%m-%d))" \
             -m "Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied. Scene artwork, if any, passed the review gate and is already in the bucket."
-          git push -u origin "$branch" --force-with-lease
+          git push -u origin "$branch"
           [ -f summary.md ] || echo "Nightly run: scene artwork only." > summary.md
           [ -f scenes.md ] && { echo; cat scenes.md; } >> summary.md
-          gh pr create \
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+          # The items are safe on the branch by now. If the repository does not
+          # let Actions open pull requests, say so and how to fix it, and hand
+          # over the link — a night's work is not lost over a settings toggle.
+          if ! gh pr create \
             --title "Nightly content: $(date -u +%Y-%m-%d)" \
             --body-file summary.md \
             --base "${{ github.event.repository.default_branch }}" \
-            --head "$branch"
-          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+            --head "$branch"; then
+            {
+              echo
+              echo '### Pull request not opened'
+              echo
+              echo "Tonight's items are pushed on \`$branch\`, but GitHub would not let this"
+              echo 'workflow open the pull request. Either open it by hand:'
+              echo
+              echo "https://github.com/${GITHUB_REPOSITORY}/pull/new/${branch}"
+              echo
+              echo 'or allow it once, under Settings → Actions → General → Workflow'
+              echo 'permissions → "Allow GitHub Actions to create and approve pull requests".'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

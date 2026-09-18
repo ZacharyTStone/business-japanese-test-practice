@@ -39,6 +39,23 @@ def test_discarded_leaky_when_cold_succeeds(monkeypatch, goi_item):
     assert res.cold_success_rate == 1.0
     assert res.verdict == "discarded:leaky"
     assert not res.kept
+    # The cold side decides, so the full side is never asked: no full trials,
+    # no full rate. Three strong-model calls saved per leaky item.
+    assert res.full_success_rate is None
+    assert [t.side for t in res.trials] == ["cold"] * 3
+
+
+def test_the_cold_side_runs_first_and_alone_when_it_leaks(monkeypatch, goi_item):
+    ci = schemas.correct_index(goi_item["options"])
+    asked = []
+
+    def answer(question, options, model=None):
+        asked.append("cold" if "withheld" in question else "full")
+        return {"choice": ci, "reason": "x"}
+
+    monkeypatch.setattr(answerability.llm, "answer_choice", answer)
+    answerability.run_gate(goi_item)
+    assert asked == ["cold", "cold", "cold"]
 
 
 def test_discarded_ambiguous_when_full_fails(monkeypatch, goi_item):

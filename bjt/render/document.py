@@ -161,6 +161,36 @@ REQUIRED_BY_TYPE: dict[str, tuple[str, ...]] = {
 }
 
 
+#: Block types whose whole content is one text field. A block of one of these
+#: with nothing in that field is nothing, and can be dropped without changing
+#: what the document says.
+_TEXT_ONLY = ("heading", "paragraph", "callout")
+
+
+def prune_empty_blocks(doc: Any) -> int:
+    """Drop text blocks the model left blank. Returns how many were dropped.
+
+    The generator sends a heading, a callout or a paragraph with no text often
+    enough that it cost a whole shelf on the first real night: three attempts,
+    each rejected for "block 3 (callout) is missing text", and the retry prompt
+    did not cure it. A blank heading carries no information, so removing it
+    loses none; a document that was nothing but blanks still fails validation,
+    as it should. Blocks of every other type are left for the validator, which
+    knows what a table without rows means.
+    """
+    if not isinstance(doc, dict) or not isinstance(doc.get("blocks"), list):
+        return 0
+    kept = [
+        b for b in doc["blocks"]
+        if not (isinstance(b, dict)
+                and b.get("type") in _TEXT_ONLY
+                and not str(b.get("text") or "").strip())
+    ]
+    dropped = len(doc["blocks"]) - len(kept)
+    doc["blocks"] = kept
+    return dropped
+
+
 def validate_document(doc: Any, *, template: str | None = None) -> list[str]:
     """Problems with a document (empty list == valid).
 
