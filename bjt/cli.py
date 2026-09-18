@@ -35,7 +35,7 @@ from . import (
     scenes as scenemod,
     seedtable,
 )
-from .llm import LLMError
+from .llm import LLMBillingError, LLMError
 from .db import Store
 from .fidelity import answerability, dedupe, difficulty, discriminator, roles, sanity, vocab
 from .generators import GENERATORS, get_generator
@@ -726,8 +726,16 @@ def run_batch(
     cells = _sample_cells(store, item_type, level, n)
     attempts = 0
     budget = n * 3
+    # Discards in a row. A shelf whose first three drafts all fail the gate is
+    # a shelf the generator cannot write tonight, and every further draft is
+    # the same money for the same answer. Reset by a keep.
+    strikes = 0
     idx = 0
     while len(kept_items) < n and attempts < budget:
+        if strikes >= config.SLOT_PATIENCE:
+            print(f"  [{len(kept_items)}/{n}] giving up on this shelf: "
+                  f"{strikes} discards in a row")
+            break
         attempts += 1
         cell = cells[idx % len(cells)] if cells else None
         idx += 1
@@ -735,17 +743,23 @@ def run_batch(
             item, iid, kept, detail = _generate_and_gate(
                 store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell
             )
+        except LLMBillingError:
+            raise  # nothing after this can succeed; the caller ends the run
         except LLMError as e:
             print(f"  [{len(kept_items)}/{n}] generation failed: {e}")
+            strikes += 1
             continue
         if not kept:
             print(f"  [{len(kept_items)}/{n}] dropped — {detail}")
+            strikes += 1
             continue
         close = dedupe.max_similarity(item, kept_items)
         if close >= dedupe.DEFAULT_THRESHOLD:
             print(f"  [{len(kept_items)}/{n}] dropped — near-duplicate "
                   f"of an item already in this batch ({close:.2f})")
+            strikes += 1
             continue
+        strikes = 0
         kept_items.append(item)
         print(f"  [{len(kept_items)}/{n}] kept  {item.get('topic','')!r}  {detail}")
 
@@ -834,6 +848,12 @@ def cmd_nightly(args) -> int:
                     store, w.item_type, w.level, w.n, gate=not args.no_gate,
                     sanity_check=not args.no_sanity, force=False,
                 )
+            except LLMBillingError as e:
+                # The account is empty. Every remaining shelf would fail the
+                # same way, so say it once and keep what was written.
+                print(f"  stopping the run: {e}", file=sys.stderr)
+                failures.append(f"{w.item_type} {w.level} and everything after it: {e}")
+                break
             except (LLMError, FileNotFoundError) as e:
                 # One shelf failing is not the run failing. A key that ran out of
                 # quota halfway through should still leave the batches it already

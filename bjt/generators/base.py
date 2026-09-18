@@ -61,7 +61,20 @@ class Generator:
             "three distractors (do not reuse a role). Mark the correct option with role "
             "'correct'. Every option also carries a `why`: one Japanese sentence naming "
             "the concrete reason THIS wording fails here — not a restatement of the role "
-            "label.\n" + "\n".join(lines)
+            "label.\n" + "\n".join(lines) + "\n\n"
+            # The answerability gate's cold side shows a strong reader the four
+            # options with the stem withheld and discards the item if the key
+            # can be picked anyway. On the first real night every draft of the
+            # three stem-less types failed it: the distractors were wrong on
+            # their own — a malformed conjugation, a phrase nobody says — so the
+            # key was the one option that read well. Saying so here is the
+            # cheapest fix there is, and it is exactly what the gate tests.
+            "The four options, read on their own with the situation hidden, must "
+            "look equally plausible: every distractor must be a real, well-formed "
+            "expression a native speaker would use in SOME other business situation, "
+            "and wrong only for this one. A distractor that is ungrammatical, "
+            "misspelled, or awkward in isolation gives the answer away and fails "
+            "review. The difficulty must live in the situation, never in the options."
         )
 
     def _fewshot_block(self) -> str:
