@@ -1,0 +1,393 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J3",
+  "generated_at": "2026-09-18T08:50:50+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "01948b5471",
+      "item_type": "sougou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "video_review+staff_to_client+identify_action_owner@J3",
+        "setting": "video_review",
+        "relation": "staff_to_client",
+        "function": "identify_action_owner",
+        "level": "J3",
+        "channel": "video"
+      },
+      "topic": "資料を送るのは誰か",
+      "stem": "山川商事は、来週何を送ることになりましたか。",
+      "options": [
+        {
+          "text": "カタログだけ",
+          "role": "combines_wrong_pair",
+          "why": "議事録のとおりではあるが、会話の最後で価格表も送ることになった。"
+        },
+        {
+          "text": "サンプルと価格表",
+          "role": "wrong_action_owner",
+          "why": "サンプルは議事録でも会話でも、あさひ工業が用意することになっている。"
+        },
+        {
+          "text": "カタログとサンプル",
+          "role": "stated_by_wrong_speaker",
+          "why": "サンプルは取引先の担当者が「私どもで用意する」と述べたもので、山川商事が送るものではない。"
+        },
+        {
+          "text": "カタログと価格表",
+          "role": "correct",
+          "why": "議事録でカタログは山川商事の担当で、会話で価格表もカタログと一緒に送ると営業担当が引き受けた。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "議事録では、カタログは山川商事、サンプルと日程はあさひ工業の担当。会話で、それに価格表が加わり、カタログと一緒に山川商事が送ることになった。議事録だけでは価格表が分からず、会話だけではカタログの担当が分からない。",
+      "explanation_en": "The minutes assign the catalogue to one side and the samples to the other; the conversation adds the price list to the catalogue.",
+      "vocab_notes": [
+        {
+          "term": "送付",
+          "reading": "そうふ",
+          "meaning": "sending / dispatch"
+        },
+        {
+          "term": "価格表",
+          "reading": "かかくひょう",
+          "meaning": "price list"
+        }
+      ],
+      "audio": {
+        "narration": "746d99f6e9d0ae31",
+        "options": [],
+        "dialogue": [
+          "974857861692bca4",
+          "154a24f23d460b91",
+          "be5dc87c707bc5a2",
+          "deb628edc9cb7828",
+          "ca87bcbc707d1e78"
+        ]
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "打ち合わせ 議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "九月十日 十四時"
+            },
+            {
+              "label": "場所",
+              "value": "オンライン"
+            },
+            {
+              "label": "出席者",
+              "value": "山川商事 佐藤、あさひ工業 鈴木"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "項目",
+                "担当"
+              ],
+              "rows": [
+                [
+                  "カタログの送付",
+                  "山川商事"
+                ],
+                [
+                  "サンプルの用意",
+                  "あさひ工業"
+                ],
+                [
+                  "次回の日程調整",
+                  "あさひ工業"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "画面の議事録をご覧ください。カタログの送付は、こちらの担当になっています。",
+          "clip_id": "974857861692bca4"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "はい。ただ、サンプルのほうは、私どもで用意することになっていましたよね。",
+          "clip_id": "154a24f23d460b91"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "そうでした。では、サンプルはそちらから、カタログはこちらから、それぞれ来週お送りするということで。",
+          "clip_id": "be5dc87c707bc5a2"
+        },
+        {
+          "speaker_role": "取引先の担当者",
+          "text": "分かりました。あと、価格表もお願いできますか。",
+          "clip_id": "deb628edc9cb7828"
+        },
+        {
+          "speaker_role": "自社の営業担当",
+          "text": "承知しました。価格表はカタログと一緒にお送りします。",
+          "clip_id": "ca87bcbc707d1e78"
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video"
+    },
+    {
+      "id": "dfb5fc07a2",
+      "item_type": "sougou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "project_meeting+subordinate_to_superior+choose_revision@J3",
+        "setting": "project_meeting",
+        "relation": "subordinate_to_superior",
+        "function": "choose_revision",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "どちらの日程案にするか",
+      "stem": "工事はいつ行うことになりましたか。",
+      "options": [
+        {
+          "text": "業者が決める日",
+          "role": "wrong_action_owner",
+          "why": "日程を決めたのは課長で、部下は決まった日を業者に連絡するだけ。"
+        },
+        {
+          "text": "十月十一日の土曜日",
+          "role": "correct",
+          "why": "課長が費用がかかっても休日にすると決め、資料で休日の案Aは十月十一日の土曜日。"
+        },
+        {
+          "text": "十月十四日の火曜日",
+          "role": "combines_wrong_pair",
+          "why": "資料で安いほうの案Bの日程だが、平日で事務所が使えないため、課長が退けている。"
+        },
+        {
+          "text": "来客の少ない別の週の平日",
+          "role": "unsupported_but_plausible",
+          "why": "考えられる案ではあるが、資料にも会話にも別の週の話は出ていない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "資料には二つの案があり、日付と費用が書いてある。会話では「休日にしましょう」と言うだけで、日付は言っていない。休日の案は資料の案Aで、十月十一日の土曜日。資料だけではどちらに決まったか分からず、会話だけでは日付が分からない。",
+      "explanation_en": "The manager says only 'the weekend option'; the sheet is what turns that into October 11.",
+      "vocab_notes": [
+        {
+          "term": "空調",
+          "reading": "くうちょう",
+          "meaning": "air conditioning"
+        },
+        {
+          "term": "業者",
+          "reading": "ぎょうしゃ",
+          "meaning": "contractor"
+        }
+      ],
+      "audio": {
+        "narration": "26971fe7ec13e98a",
+        "options": [],
+        "dialogue": [
+          "78f33f0791e4f1d2",
+          "2f01f044db69588a",
+          "9d84a8cd603292b2",
+          "d8440ebd2ab4c784",
+          "44b421eaab1d537a"
+        ]
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "事務所 空調工事 日程案",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "十月"
+            },
+            {
+              "label": "作成者",
+              "value": "総務部 川口"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "案",
+                "日程",
+                "費用"
+              ],
+              "rows": [
+                [
+                  "案A",
+                  "十月十一日（土）",
+                  "四十万円"
+                ],
+                [
+                  "案B",
+                  "十月十四日（火）",
+                  "三十万円"
+                ]
+              ]
+            },
+            {
+              "type": "callout",
+              "tone": "info",
+              "text": "平日の工事の場合、当日は事務所が使えません。"
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "部下",
+          "text": "工事の日程ですが、資料の案Aと案Bのどちらにしましょうか。",
+          "clip_id": "78f33f0791e4f1d2"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "案Aは休日の工事ですね。費用は高くなりますが、業務に影響がありません。",
+          "clip_id": "2f01f044db69588a"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。案Bは平日ですので、その日は事務所が使えません。",
+          "clip_id": "9d84a8cd603292b2"
+        },
+        {
+          "speaker_role": "課長",
+          "text": "その週は来客も多いですから、事務所が使えないのは困ります。費用がかかっても、休日にしましょう。",
+          "clip_id": "d8440ebd2ab4c784"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "分かりました。では、業者に連絡します。",
+          "clip_id": "44b421eaab1d537a"
+        }
+      ],
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "746d99f6e9d0ae31",
+      "item_id": "01948b5471",
+      "kind": "narration",
+      "index": null,
+      "text": "山川商事は、来週何を送ることになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "974857861692bca4",
+      "item_id": "01948b5471",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "画面の議事録をご覧ください。カタログの送付は、こちらの担当になっています。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "154a24f23d460b91",
+      "item_id": "01948b5471",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "はい。ただ、サンプルのほうは、私どもで用意することになっていましたよね。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "be5dc87c707bc5a2",
+      "item_id": "01948b5471",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "そうでした。では、サンプルはそちらから、カタログはこちらから、それぞれ来週お送りするということで。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "deb628edc9cb7828",
+      "item_id": "01948b5471",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "分かりました。あと、価格表もお願いできますか。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "ca87bcbc707d1e78",
+      "item_id": "01948b5471",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "承知しました。価格表はカタログと一緒にお送りします。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "26971fe7ec13e98a",
+      "item_id": "dfb5fc07a2",
+      "kind": "narration",
+      "index": null,
+      "text": "工事はいつ行うことになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "78f33f0791e4f1d2",
+      "item_id": "dfb5fc07a2",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "工事の日程ですが、資料の案Aと案Bのどちらにしましょうか。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "2f01f044db69588a",
+      "item_id": "dfb5fc07a2",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "案Aは休日の工事ですね。費用は高くなりますが、業務に影響がありません。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9d84a8cd603292b2",
+      "item_id": "dfb5fc07a2",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "はい。案Bは平日ですので、その日は事務所が使えません。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d8440ebd2ab4c784",
+      "item_id": "dfb5fc07a2",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "その週は来客も多いですから、事務所が使えないのは困ります。費用がかかっても、休日にしましょう。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "44b421eaab1d537a",
+      "item_id": "dfb5fc07a2",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "分かりました。では、業者に連絡します。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_meeting_room_table",
+    "scene_video_call_laptop"
+  ]
+}

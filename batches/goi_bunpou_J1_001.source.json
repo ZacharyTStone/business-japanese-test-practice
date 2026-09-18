@@ -1,0 +1,92 @@
+{
+  "_note": "Manual load, written in an interactive session standing in for the nightly job while no generator key is configured. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate and the difficulty probe did not run, so `model_p_correct` is absent on purpose.",
+  "item_type": "goi_bunpou",
+  "level": "J1",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "client_visit+staff_to_client+aspect_form@J1",
+      "topic": "訪問先で準備済みであることを伝える",
+      "channel": "in_person",
+      "stem": "本日ご説明する内容は、事前に御社の担当の方と＿＿＿ので、確認の形で進めさせていただければと存じます。",
+      "options": [
+        {
+          "text": "お世話になっております",
+          "role": "set_phrase_misfit",
+          "why": "「お世話になっております」は挨拶の定型句で、「担当の方と」に続けて事前の準備を述べる文の空欄には入らない。"
+        },
+        {
+          "text": "すり合わせてあります",
+          "role": "wrong_grammatical_category",
+          "why": "「〜てある」は物に対する結果の状態を表す形で、相手と行う「すり合わせる」には接続しにくく、しかも取引先への言い方として丁寧さが足りない。"
+        },
+        {
+          "text": "すり合わせてまいりました",
+          "role": "correct",
+          "why": "「〜てまいる」で、今日の訪問に至るまでに済ませてきた準備として述べており、「確認の形で進める」につながる。"
+        },
+        {
+          "text": "すり合わせておきます",
+          "role": "opposite_valence",
+          "why": "「〜ておく」はこれからの準備を表し、すでに済んでいて今日は確認だけという流れと矛盾する。"
+        }
+      ],
+      "explanation_ja": "「確認の形で進める」と言うからには、すり合わせはすでに済んでいる。過去に行ってきた準備を丁寧に述べるのは「〜てまいりました」。「〜ておきます」は未来の準備で流れが逆、「〜てあります」は物の状態を表す形で人と行う相談には据わらない。「お世話になっております」は挨拶の定型句で、この空欄の文法的な位置に入らない。",
+      "explanation_en": "〜てまいりました reports preparation already done; 〜ておく points forward and 〜てある describes the state of a thing.",
+      "vocab_notes": [
+        {
+          "term": "すり合わせる",
+          "reading": "すりあわせる",
+          "meaning": "to align (views) in advance"
+        },
+        {
+          "term": "事前に",
+          "reading": "じぜんに",
+          "meaning": "beforehand"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "meeting_floor+junior_to_senior+passive_adversity@J1",
+      "topic": "会議で先輩に報告する",
+      "channel": "in_person",
+      "stem": "実は先週、担当の方に急に＿＿＿、引き継ぎが十分にできておりません。",
+      "options": [
+        {
+          "text": "退職されまして",
+          "role": "correct",
+          "why": "「〜される」で相手の退職を丁寧に述べつつ、それが自分にとって不都合だったことを受身の形で含ませている。"
+        },
+        {
+          "text": "退職いたしまして",
+          "role": "opposite_valence",
+          "why": "「いたす」は自分の行為をへりくだる語で、辞めたのが自分だという意味になってしまう。"
+        },
+        {
+          "text": "退職させられまして",
+          "role": "real_form_wrong_context",
+          "why": "使役受身で「辞めさせられた」という意味になり、相手の会社の事情を勝手に決めつける言い方になる。"
+        },
+        {
+          "text": "退職なさられまして",
+          "role": "nonexistent_form",
+          "why": "「なさる」にさらに「〜られる」を重ねた二重敬語で、標準的な形ではない。"
+        }
+      ],
+      "explanation_ja": "相手が急に辞めて自分が困った、という迷惑の受身を丁寧に言うのが「退職されまして」。「いたしまして」は自分の行為になり、「させられまして」は辞めさせられたという別の意味、「なさられまして」は二重敬語で成立しない。",
+      "explanation_en": "退職される states the other person's resignation politely while the passive carries the sense that it inconvenienced the speaker.",
+      "vocab_notes": [
+        {
+          "term": "引き継ぎ",
+          "reading": "ひきつぎ",
+          "meaning": "handover"
+        },
+        {
+          "term": "退職",
+          "reading": "たいしょく",
+          "meaning": "resignation / leaving a job"
+        }
+      ]
+    }
+  ]
+}
