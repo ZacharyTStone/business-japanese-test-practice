@@ -11,8 +11,13 @@
  *
  *   scene   — who you are, who you are talking to, where. A picture, a
  *             document if there is one. Nothing to answer yet.
- *   listen  — the audio plays, once, by itself. No options on screen: the
- *             first listen is a listen, not a skim of the answers.
+ *   listen  — the audio plays, once, by itself. Nothing readable about the
+ *             answers is on screen: the first listen is a listen, not a skim.
+ *             When the options are spoken (発言聴解) they are on screen from
+ *             here as letters with a play button, and can be pressed — a
+ *             learner who knows the answer at the second turn should not have
+ *             to wait for the fourth. Options that are text wait for the
+ *             answer stage. The owner asked for this (2026-09-18).
  *   answer  — the four options, and a button to hear it again.
  *   reveal  — the other person's face, one sentence about what happened, and
  *             the explanation folded under it for those who want it.
@@ -107,12 +112,10 @@ type Stage = "scene" | "listen" | "answer" | "reveal";
  *
  * In the exam these are heard, never read: the answer sheet has four numbers
  * and nothing else. So when the audio exists the options are played after the
- * narration, and each option carries a replay button next to its text. The
- * text is on screen from the start: the owner asked for it (2026-09-18) —
- * practice is not the exam, and a learner who wants a pure listen can leave
- * the words unread. All four or none — a set where three are spoken and one
- * is printed would mark the odd one out, and the type table in bjt/tts/plan.py
- * is the only reason any other type would have option clips.
+ * narration and shown as letters with a replay button, and the text stays
+ * hidden until the answer is in. All four or none — a set where three are
+ * spoken and one is printed would mark the odd one out, and the type table in
+ * bjt/tts/plan.py is the only reason any other type would have option clips.
  */
 function spokenOptionUrls(item: QueuedItem): string[] | null {
   if (item.item_type !== "hatsugen_choukai") return null;
@@ -155,6 +158,10 @@ export default function Practice() {
   const [chosen, setChosen] = useState<number | null>(null);
   const [graded, setGraded] = useState<{ isCorrect: boolean; chosenRole: string } | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  // The learner asked to see spoken options as text before answering. Practice
+  // is not the exam, and the fourth listen sometimes needs the page; but it is
+  // off by default and resets with every item, so the listen comes first.
+  const [optionsAsText, setOptionsAsText] = useState(false);
   const [answers, setAnswers] = useState<AnsweredItem[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -289,7 +296,14 @@ export default function Practice() {
   const hasScene = listenable || Boolean(sceneImage);
   const stage: Stage =
     stageAt?.index === index ? stageAt.stage : hasScene ? "scene" : "answer";
-  const go = (next: Stage) => setStageAt({ index, stage: next });
+  // Never back out of a reveal: an answer given while the clips were still
+  // playing must not be undone by the playlist finishing and asking for the
+  // answer stage. Read from the setter so the check sees the latest state,
+  // not the render the playlist's callback was created in.
+  const go = (next: Stage) =>
+    setStageAt((prev) =>
+      prev?.index === index && prev.stage === "reveal" && next !== "reveal" ? prev : { index, stage: next }
+    );
 
   // Narration that exists only as text — a listening type whose clip has not
   // been synthesised, or a reading type, where the stem *is* the question.
@@ -345,11 +359,18 @@ export default function Practice() {
     setChosen(null);
     setGraded(null);
     setShowDetails(false);
+    setOptionsAsText(false);
     scrolledFor.current = null;
     questionShownAt.current = Date.now();
   }
 
   const revealed = stage === "reveal" && graded !== null;
+  // Spoken options are letters until the answer is in, unless asked for.
+  const optionTextHidden = spokenOptions !== null && !revealed && !optionsAsText;
+  // Options can be answered while the clips still play, but only when they
+  // show no text: letters and play buttons give nothing away, a printed
+  // sentence does.
+  const optionsShown = stage === "answer" || stage === "reveal" || (stage === "listen" && optionTextHidden);
   const chosenOption = chosen !== null ? options[chosen] : null;
   const correctOption = options[item.correct_index];
   const role = graded?.chosenRole || chosenOption?.role || "";
@@ -369,7 +390,7 @@ export default function Practice() {
 
   /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
   function onKey(key: string): boolean | void {
-    if (!revealed && stage === "answer" && chosen === null && !busy) {
+    if (!revealed && optionsShown && chosen === null && !busy) {
       const pick = optionForKey(key, options.length);
       if (pick >= 0) {
         void choose(pick);
@@ -467,9 +488,9 @@ export default function Practice() {
         <Text style={[type.small, styles.hint]}>{t("listen_hint")}</Text>
       ) : null}
 
-      {stage === "answer" || stage === "reveal" ? (
+      {optionsShown ? (
         <>
-          {!revealed ? (
+          {stage === "answer" ? (
             <Text style={[type.small, styles.hint]}>
               {t(PROMPT_KEY[item.item_type] ?? "prompt_default")}
             </Text>
@@ -480,6 +501,18 @@ export default function Practice() {
               key that works at this moment rather than both. */}
           {HAS_KEYBOARD && !revealed ? (
             <Text style={[type.mono, styles.hint]}>{t("key_hint_answer")}</Text>
+          ) : null}
+
+          {spokenOptions !== null && stage === "answer" ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setOptionsAsText((v) => !v)}
+              style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+            >
+              <Text style={[type.small, styles.toggle]}>
+                {optionsAsText ? t("hide_options_text") : t("show_options_text")}
+              </Text>
+            </Pressable>
           ) : null}
 
           <View style={{ gap: space.md }}>
@@ -497,7 +530,9 @@ export default function Practice() {
                   // then a sentence with nothing tying them together — and, once
                   // answered, says which one this was.
                   accessibilityLabel={
-                    `${LETTERS[i]}. ${option.text}` +
+                    (optionTextHidden
+                      ? t("option_spoken", { letter: LETTERS[i] })
+                      : `${LETTERS[i]}. ${option.text}`) +
                     (show ? ` — ${isAnswer ? t("mark_correct") : t("mark_chosen")}` : "")
                   }
                   accessibilityState={{ disabled: revealed || busy || chosen !== null }}
@@ -546,7 +581,7 @@ export default function Practice() {
                       </Text>
                     ) : null}
                   </View>
-                  <Text style={type.option}>{option.text}</Text>
+                  {optionTextHidden ? null : <Text style={type.option}>{option.text}</Text>}
                 </Pressable>
               );
             })}
