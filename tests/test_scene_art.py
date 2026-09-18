@@ -10,7 +10,7 @@ import zlib
 
 import pytest
 
-from bjt import scene_art, scenes
+from bjt import config, scene_art, scenes
 
 
 def _png_is_valid(data: bytes) -> bool:
@@ -165,14 +165,63 @@ def test_artwork_already_in_the_bucket_counts_and_is_not_resent(tmp_path, monkey
     assert have == {"scene_corridor": "scene_corridor.webp",
                     "scene_phone_desk": "scene_phone_desk.webp"}
 
-    sent = scene_art.upload_approved(survey, bucket, tmp_path)
-    assert sent == ["scene_phone_desk.webp"]  # the bucket's own file is not re-sent
+    up = scene_art.upload_approved(survey, bucket, tmp_path)
+    assert up.sent == ["scene_phone_desk.webp"]  # the bucket's own file is not re-sent
+    assert up.failed == []
     assert requests[-1] == ("POST", "https://p.supabase.co/storage/v1/object/scenes/scene_phone_desk.webp",
                             "image/webp", "true")
 
     # Both reach the SQL, so a scene drawn on an earlier night keeps its picture.
     sql = scenes.to_sql(survey)
     assert "scene_corridor.webp" in sql and "scene_phone_desk.webp" in sql
+
+
+def test_one_bad_upload_does_not_stop_the_rest(tmp_path, monkeypatch):
+    """The first real night: the fourth file was over the bucket's limit, the
+    exception ended the loop, and ten approved pictures never left the runner.
+    Now the oversized file is refused before a byte is sent, a refusal from the
+    bucket is recorded against its file, and every other file still goes."""
+    uploaded = []
+
+    def fake_raw(method, url, body, headers):
+        if url.endswith("scene_corridor.webp"):
+            raise RuntimeError(f"POST {url} → HTTP 400: EntityTooLarge")
+        uploaded.append(url.rsplit("/", 1)[1])
+        return b""
+
+    monkeypatch.setattr(scene_art, "_request", fake_raw)
+    monkeypatch.setattr(config, "SCENE_MAX_BYTES", 10)
+    (tmp_path / "scenes").mkdir()
+    (tmp_path / "scenes" / "scene_phone_desk.webp").write_bytes(b"x" * 11)   # too big
+    (tmp_path / "scenes" / "scene_corridor.webp").write_bytes(b"x" * 5)      # bucket says no
+    (tmp_path / "scenes" / "scene_elevator_hall.webp").write_bytes(b"x" * 5)  # fine
+    (tmp_path / "scenes" / "scene_izakaya_table.webp").write_bytes(b"x" * 5)  # fine
+
+    bucket = scene_art.Bucket(url="https://p.supabase.co", key="service")
+    survey = scenes.survey(tmp_path)
+    up = scene_art.upload_approved(survey, bucket, tmp_path)
+
+    assert sorted(up.sent) == ["scene_elevator_hall.webp", "scene_izakaya_table.webp"]
+    assert sorted(uploaded) == ["scene_elevator_hall.webp", "scene_izakaya_table.webp"]
+    assert up.failed_paths == {"scene_phone_desk.webp", "scene_corridor.webp"}
+    why = dict(up.failed)
+    assert "11 bytes is over the bucket's 10 byte limit" == why["scene_phone_desk.webp"]
+    assert "EntityTooLarge" in why["scene_corridor.webp"]
+    assert "scene_phone_desk.webp" in up.summary() and "Not uploaded" in up.summary()
+
+    # The SQL must describe the bucket, not this machine: the two files that
+    # did not get there read as "no picture", and the two that did are kept.
+    safe = scene_art.without(survey, up.failed_paths)
+    sql = scenes.to_sql(safe)
+    assert "scene_elevator_hall.webp" in sql and "scene_izakaya_table.webp" in sql
+    assert "scene_phone_desk" not in sql and "scene_corridor" not in sql
+    # ...and the survey itself is untouched.
+    assert {s.scene_id for s in survey if s.has_art} >= {"scene_phone_desk", "scene_corridor"}
+
+
+def test_nothing_failed_means_nothing_to_say():
+    assert scene_art.UploadResult().summary() == ""
+    assert scene_art.without([], set()) == []
 
 
 def test_a_local_file_wins_over_the_bucket(tmp_path):
@@ -205,6 +254,26 @@ def test_the_openai_provider_asks_for_webp_at_three_by_two(monkeypatch):
     assert captured["body"]["output_format"] == "webp"
     assert captured["body"]["size"] == "1536x1024"
     assert captured["body"]["n"] == 1
+    # Asked for compressed output, because the bucket has a size limit and a
+    # 1536×1024 "high" draft with no compression went over it.
+    assert captured["body"]["output_compression"] == config.IMAGE_COMPRESSION
+    assert 0 <= config.IMAGE_COMPRESSION <= 100
+
+
+def test_the_cli_writes_the_summary_even_when_there_is_nothing_to_draw(tmp_path):
+    """Once the bank is full every night is this night, and the workflow
+    appends the summary file whatever happened — so it has to exist."""
+    from bjt import cli
+
+    (tmp_path / "scenes").mkdir()
+    for scene in scenes.survey(tmp_path):
+        (tmp_path / "scenes" / f"{scene.scene_id}.webp").write_bytes(b"art")
+    summary = tmp_path / "s.md"
+    rc = cli.main(["scenes", "--generate", "--provider", "placeholder",
+                   "--media-dir", str(tmp_path), "--summary", str(summary)])
+    assert rc == 0
+    assert summary.is_file()
+    assert "nothing to draw" in summary.read_text()
 
 
 def test_the_cli_draws_offline_and_writes_the_summary(tmp_path, capsys):

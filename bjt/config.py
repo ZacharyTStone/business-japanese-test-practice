@@ -105,3 +105,12 @@ DIFFICULTY_ENABLED = _env("BJT_DIFFICULTY", "1").strip().lower() not in ("0", "f
 IMAGE_MODEL = _env("BJT_IMAGE_MODEL", "gpt-image-1")
 IMAGE_QUALITY = _env("BJT_IMAGE_QUALITY", "high")
 SCENE_ATTEMPTS = int(_env("BJT_SCENE_ATTEMPTS", "3"))
+
+# How hard the image API compresses the WebP it returns (0–100, higher is
+# larger). The `scenes` bucket refuses anything over SCENE_MAX_BYTES, which is
+# the file_size_limit in supabase/migrations/20260915000300_media_storage.sql;
+# the first real night produced a 1536×1024 "high" draft above it and the
+# upload step died. 80 keeps a flat illustration far under the limit with no
+# visible cost, and the limit is checked here before a byte is sent.
+IMAGE_COMPRESSION = int(_env("BJT_IMAGE_COMPRESSION", "80"))
+SCENE_MAX_BYTES = 2 * 1024 * 1024
