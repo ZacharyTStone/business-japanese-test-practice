@@ -38,56 +38,49 @@ same judgement that would be grading them.
 
 ---
 
-## 2. The bank has a voice pipeline and no key to speak with
+## 2. The bank has a voice and no key to speak with
 
 **What exists.** `bjt synth` runs end to end: it plans clips from a checked
 bundle, synthesises the missing ones, applies the channel treatment, measures
 durations, writes the files, uploads them (`--upload`) and emits the SQL that
-points `audio_clips` at them. Three adapters are cast and ready — Gemini
-(one AI Studio key), OpenAI (the scene-artwork key), Google Cloud
-Text-to-Speech (a Cloud project) — all of them the current generation of
-instructable speech models, given one house direction: native Tokyo office
+points `audio_clips` at them. **The voice is OpenAI** — the owner chose it
+(2026-09-18) and `bjt/tts/providers.py` records the decision as the default —
+an instructable speech model given one house direction: native Tokyo office
 Japanese at a working pace, keigo said fluently rather than read off a list,
-no acting, no announcer voice. A pronunciation dictionary covers the business
-readings a model gets wrong in ways that would teach a learner something
-false. The **deploy database** workflow synthesises whatever the published
-bank still lacks, uploads it and points the rows at it, and never touches a
-clip that is already live. The app plays the narration, the conversation,
-and — for 発言聴解 — the four utterances themselves, shown as letters until
-the answer is in, as on the exam.
+no acting, no announcer voice. Seven roles are cast to seven of its voices. A
+pronunciation dictionary covers the business readings a model gets wrong in
+ways that would teach a learner something false. The **deploy database**
+workflow synthesises whatever the published bank still lacks, uploads it and
+points the rows at it, and never touches a clip that is already live. The app
+plays the narration, the conversation, and — for 発言聴解 — the four
+utterances themselves, shown as letters until the answer is in, as on the exam.
+Gemini and Google Cloud adapters remain for comparison only.
 
-**What is blocked.** A key, and a person's ears.
+**What is blocked.** One key, and one listen.
 
 **What unblocks it.**
 
-1. A key. `GEMINI_API_KEY` from Google AI Studio is the quickest; `OPENAI_API_KEY`
-   is the one the scene artwork already uses. Put it in `.env`.
-2. The listening comparison, five minutes with headphones:
+1. `OPENAI_API_KEY` in `.env` — the same key that draws the scene artwork.
+2. Five minutes with headphones, before the library is synthesised:
 
    ```bash
-   bjt audition            # every configured provider, the same eight lines
+   bjt audition --voices    # the cast, plus every voice saying one line
    open media/audition/index.html
    ```
 
    Judge names, dates, numbers, the dictionary readings (代替・早急), whether
-   the keigo sounds like a person or a reading, and the telephone row. Not a
-   general sense of "nice".
-3. Pin the winner: `BJT_TTS_PROVIDER=<name>` in `.env`, and as a repository
-   **variable** (Settings → Secrets and variables → Actions → Variables) so the
-   workflow uses the same one. Then add that provider's key and the storage
-   pair (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) as repository secrets and
-   run **deploy database**: the run summary reports how many clips are live.
+   the keigo sounds like a person or a reading, and the telephone row. If a
+   role sounds accented, recast it in `OpenAIProvider.VOICE_IDS` now — a live
+   clip is never re-made, so a recast later is a library that sounds different
+   from one item to the next.
+3. `OPENAI_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as
+   repository secrets, then run **deploy database**: the run summary reports
+   how many clips are live.
 
 Until then `--provider silent` exercises the whole pipeline with valid, silent
 clips. They are pathed `silent/` so they can never be mistaken for real ones,
 and `--upload` refuses them, because a learner would hear nothing where the app
 now shows the text.
-
-**Why the pin, once made, is not to be revisited casually.** The cast is fixed
-for the life of the library — a learner who hears a different voice every
-question is doing speaker identification instead of listening to Japanese — and
-a live clip is never re-synthesised. Changing provider later means every clip
-is made again under a new path, and the library sounds different overnight.
 
 ---
 

@@ -21,7 +21,7 @@ from pathlib import Path
 from .. import config
 from . import channel as channel_mod
 from .plan import NARRATOR_VOICE
-from .providers import Provider, available, direction_for, get_provider
+from .providers import OpenAIProvider, Provider, available, direction_for, get_provider
 
 #: One line per cast voice. Original compositions, in the register the role
 #: speaks in, each carrying something a TTS model can get wrong: a surname, a
@@ -71,13 +71,40 @@ def file_name(voice: str, channel: str) -> str:
     return f"{voice}.wav" if channel == "in_person" else f"{voice}.{channel}.wav"
 
 
+#: For `--voices`: one line said by every voice the chosen provider offers, so
+#: a role can be recast by ear. A mid-career line rather than the narration,
+#: because register is what the cast is about.
+VOICES_LINE = LINES[3][2]
+
+
 def run(providers: list[str] | None = None, *, media_dir: Path | None = None,
-        force: bool = False) -> AuditionReport:
+        force: bool = False, voices: bool = False) -> AuditionReport:
     """Synthesise every line through every named provider (default: all that
-    have credentials) and write the comparison page."""
+    have credentials) and write the comparison page. With `voices`, also every
+    candidate voice of the library's provider saying one line."""
     names = providers if providers is not None else available()
     root = Path(media_dir or config.MEDIA_DIR) / "audition"
     report = AuditionReport(root=root, providers=list(names))
+
+    if voices:
+        provider = OpenAIProvider()
+        for candidate in OpenAIProvider.CANDIDATE_VOICES:
+            dest = root / "openai-voices" / f"{candidate}.wav"
+            if dest.exists() and not force:
+                report.written.append(dest)
+                continue
+            try:
+                # Every candidate is asked for as staff_mid_m so the direction is
+                # the same; only the voice id differs.
+                raw = provider.synthesize(VOICES_LINE, "staff_mid_m",
+                                          instructions=direction_for("staff_mid_m"),
+                                          provider_voice=candidate)
+            except Exception as exc:  # noqa: BLE001
+                report.failed.append(("openai-voices", candidate, str(exc)))
+                continue
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(channel_mod.apply_channel(raw, "in_person"))
+            report.written.append(dest)
 
     for name in names:
         provider: Provider = get_provider(name)
@@ -120,6 +147,16 @@ def page(report: AuditionReport) -> str:
             f"<tr><th>{escape(label)}</th><td class=\"t\">{escape(text)}</td>{''.join(cells)}</tr>"
         )
     head = "".join(f"<th>{escape(c)}</th>" for c in cols)
+    voices = ""
+    if (report.root / "openai-voices").is_dir():
+        items = "".join(
+            f"<tr><th>{escape(v)}</th>"
+            f'<td><audio controls preload="none" src="openai-voices/{escape(v)}.wav"></audio></td></tr>'
+            for v in OpenAIProvider.CANDIDATE_VOICES
+            if (report.root / "openai-voices" / f"{v}.wav").exists()
+        )
+        voices = (f"<h2>Every OpenAI voice, one line</h2><p>{escape(VOICES_LINE)}</p>"
+                  f"<table><tbody>{items}</tbody></table>")
     return f"""<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>Audition</title>
 <style>
@@ -134,8 +171,9 @@ def page(report: AuditionReport) -> str:
 <h1>Audition</h1>
 <p>The same lines from each provider. Judge names, dates, numbers, the dictionary readings
 (代替・早急), keigo said the way a person says it, and the telephone treatment on the last row —
-not a general sense of "nice". When one wins, pin it: <code>BJT_TTS_PROVIDER={escape(cols[0] if cols else 'gemini')}</code>.</p>
+not a general sense of "nice". The library's voice is OpenAI; the other columns are for comparison.</p>
 <table><thead><tr><th>voice</th><th>line</th>{head}</tr></thead>
 <tbody>{''.join(rows)}</tbody></table>
+{voices}
 </body></html>
 """

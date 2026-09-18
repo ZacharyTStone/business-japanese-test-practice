@@ -91,6 +91,12 @@ accident is not.
   is derived from it, and it is never displayed.
 - **`attempts` has no update or delete policy.** An answer already given is
   history.
+- **The voice is OpenAI, the cast is by role, and a live clip is never
+  re-made.** `bjt/tts/providers.py` records the provider as `DEFAULT` and the
+  seven roles as `VOICE_IDS`; a learner who hears a different voice every
+  question is doing speaker identification instead of listening to Japanese,
+  so neither follows whichever key happens to be set. The owner chose OpenAI
+  (2026-09-18). Recast a role before its clips are live or not at all.
 - **No ads during practice.** `AdSlot`'s placement type has exactly two members,
   so this is enforced by the type checker. Do not widen it.
 - **No estimated BJT score, anywhere.** There is no IRT calibration for generated
