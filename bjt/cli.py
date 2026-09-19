@@ -1137,6 +1137,10 @@ def cmd_synth(args) -> int:
             return 2
 
     have = synth.read_have(pathlib.Path(args.have)) if args.have else None
+    remake = synth.read_have(pathlib.Path(args.remake)) if args.remake else None
+    if remake:
+        print(f"Re-making {len(remake)} named clip(s) if this bundle asks for them — "
+              "the recording a learner already heard is being replaced.")
 
     result = synth.synthesise_bundle(
         bundle,
@@ -1145,6 +1149,7 @@ def cmd_synth(args) -> int:
         force=args.force_clips,
         limit=args.limit,
         have=have,
+        remake=remake,
     )
 
     print(result.summary())
@@ -1579,6 +1584,10 @@ def build_parser() -> argparse.ArgumentParser:
     sy.add_argument("--have", metavar="FILE",
                     help="clip ids already live (one per line): skipped entirely. "
                          "The deploy workflow reads them out of the database")
+    sy.add_argument("--remake", metavar="FILE",
+                    help="clip ids (one per line) to synthesise again even though they "
+                         "are live: for replacing clips made with the wrong delivery. "
+                         "Named clips only — never a blanket re-make of the library")
     sy.add_argument("--upload", action="store_true",
                     help="put the clips in the `audio` bucket "
                          "(needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)")

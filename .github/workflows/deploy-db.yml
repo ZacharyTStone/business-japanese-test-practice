@@ -32,6 +32,11 @@
 #                they keep hearing. Runs only with a TTS key and the storage
 #                secrets; without them the app keeps showing the text, which
 #                it was built to do.
+#                The one exception is by hand: `remake_list` on the run form
+#                names a committed file of clip ids to record again, for clips
+#                made with a delivery that was wrong. It is blank on every
+#                automatic run, so nothing is ever replaced unasked, and it
+#                replaces only the ids in that file.
 #
 # Needs one secret: SUPABASE_DB_URL, the session-pooler connection string with
 # the database password in it. The audio step additionally reads OPENAI_API_KEY
@@ -54,6 +59,10 @@ on:
         default: ""
       tester_note:
         description: "Who that is (goes in the row)"
+        required: false
+        default: ""
+      remake_list:
+        description: "Path to a committed file of clip ids to record AGAIN, replacing the live clip (e.g. batches/remake-20260919-pace.txt). Leave blank — this is for clips made with the wrong delivery"
         required: false
         default: ""
 
@@ -173,9 +182,21 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          REMAKE_LIST: ${{ github.event.inputs.remake_list }}
         run: |
           shopt -s nullglob
           failed=0
+          # Blank on every automatic run: only the run form can set it, so a
+          # merge can extend the library but never re-record part of it.
+          remake=()
+          if [ -n "$REMAKE_LIST" ]; then
+            if [ ! -f "$REMAKE_LIST" ]; then
+              echo "::error::remake_list: no such file in this checkout: $REMAKE_LIST"
+              exit 1
+            fi
+            remake=(--remake "$REMAKE_LIST")
+            echo "::notice::re-recording the clips named in $REMAKE_LIST"
+          fi
           for f in batches/*.json; do
             case "$f" in *.source.json) continue ;; esac
             out="${f%.json}.audio.sql"
@@ -184,7 +205,8 @@ jobs:
             # One bundle failing must not stop the rest: its clips are made on
             # the next run, and everything that did reach the bucket is pointed
             # at now.
-            python -m bjt synth "$f" --provider openai --have have.txt --upload --out "$out" || failed=1
+            python -m bjt synth "$f" --provider openai --have have.txt \
+              "${remake[@]}" --upload --out "$out" || failed=1
             if [ -f "$out" ]; then
               psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$out"
             fi
