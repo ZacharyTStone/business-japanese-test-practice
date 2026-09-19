@@ -61,6 +61,10 @@ class Trial:
     trial: int
     chosen: int | None
     correct: bool
+    #: The judge's one-sentence justification. Kept because on the cold side it
+    #: says exactly what gave the answer away, which is what the next draft on
+    #: the same shelf needs to hear (bjt/cli.py feeds it back).
+    reason: str = ""
 
 
 @dataclass
@@ -100,12 +104,15 @@ def run_trials(question: str, options: list[str], answer: int, side: str, *,
     """
     out: list[Trial] = []
     for t in range(trials):
+        reason = ""
         try:
             res = llm.answer_choice(question, options, model=model)
             chosen = int(res.get("choice", -1))
+            reason = str(res.get("reason", "") or "")
         except (llm.LLMError, ValueError, TypeError):
             chosen = None
-        out.append(Trial(side=side, trial=t, chosen=chosen, correct=chosen == answer))
+        out.append(Trial(side=side, trial=t, chosen=chosen, correct=chosen == answer,
+                         reason=reason))
         if decided and decided(sum(x.correct for x in out), len(out), trials):
             break
     return out
@@ -232,17 +239,31 @@ def questions(item: dict) -> tuple[str, str]:
     return full, cold
 
 
-def leak_description(item_type: str) -> str:
+def leak_description(item_type: str, result: "GateResult | None" = None) -> str:
     """What a leaky verdict means for this type, in one sentence for the
-    generator's next attempt (bjt/cli.py feeds it back)."""
+    generator's next attempt (bjt/cli.py feeds it back) — with the judge's own
+    words for how it found the answer, when the result is given. "The
+    distractors gave it away" was not enough on 2026-09-19: three drafts in a
+    row failed the same way on four shelves. "Option 2 was the only one in
+    humble form" is something a writer can act on.
+    """
     if item_type in _WITHHELD:
-        return (f"a reviewer picked the correct option without {_WITHHELD[item_type]}, "
+        what = (f"a reviewer picked the correct option without {_WITHHELD[item_type]}, "
                 "so the withheld half was decorative — the answer must depend on it")
-    if item_type == "hatsugen_choukai":
-        return ("a reviewer picked the correct utterance without hearing the situation, "
+    elif item_type == "hatsugen_choukai":
+        what = ("a reviewer picked the correct utterance without hearing the situation, "
                 "so the distractors gave the answer away on their own")
-    return ("a reviewer picked the correct option from the four options alone, with "
-            "the stem hidden, so the distractors gave the answer away on their own")
+    else:
+        what = ("a reviewer picked the correct option from the four options alone, with "
+                "the stem hidden, so the distractors gave the answer away on their own")
+    if result is not None:
+        tells = [t.reason.strip() for t in result.trials
+                 if t.side == "cold" and t.correct and t.reason.strip()]
+        if tells:
+            what += ". The reviewer's own words for how: " + " / ".join(
+                f"\u201c{r[:240]}\u201d" for r in dict.fromkeys(tells))
+            what += ". Rewrite the options so that reasoning no longer works"
+    return what
 
 
 def run_gate(item: dict) -> GateResult:

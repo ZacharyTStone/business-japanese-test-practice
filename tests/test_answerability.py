@@ -175,3 +175,17 @@ def test_a_stem_only_type_keeps_the_options_only_cold_view(goi_item):
     full, cold = answerability.questions(goi_item)
     assert goi_item["stem"] in full
     assert goi_item["stem"] not in cold and "withheld" in cold
+
+
+def test_the_judges_reason_is_kept_and_fed_back(monkeypatch, goi_item):
+    ci = schemas.correct_index(goi_item["options"])
+    monkeypatch.setattr(answerability.llm, "answer_choice",
+                        lambda q, o, model=None: {"choice": ci, "reason": "the only polite one"})
+    res = answerability.run_gate(goi_item)
+    assert res.verdict == "discarded:leaky"
+    assert all(t.reason == "the only polite one" for t in res.trials)
+    text = answerability.leak_description("goi_bunpou", res)
+    assert "the only polite one" in text and text.count("the only polite one") == 1
+    assert "stem hidden" in text
+    # No result, or no cold reasons: the plain sentence, as before.
+    assert "own words" not in answerability.leak_description("goi_bunpou")

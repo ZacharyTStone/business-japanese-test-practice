@@ -160,3 +160,42 @@ def test_a_discard_is_explained_to_the_next_draft(store, monkeypatch, quiet, tmp
     assert kept == 1 and len(prompts) == 2
     assert "REJECTED" not in prompts[0]
     assert "REJECTED by review" in prompts[1] and "stem hidden" in prompts[1]
+
+
+def test_a_refused_draft_is_retried_on_the_same_cell_with_the_judges_words(
+        store, monkeypatch, quiet, tmp_path):
+    """The situation was fine; the options gave it away. So the next draft is
+    the same cell, told how the reviewer found the answer."""
+    cells_seen = []
+
+    def fake(system, user, schema, model=None):
+        cells_seen.append(user.split("機能")[-1].split("\n")[0] if "機能" in user else user[:40])
+        return copy.deepcopy(fixtures.FIXTURES["goi_bunpou"])
+
+    answers = iter([0, 0, 1, 1])  # cold: right, right (leaky); then wrong, wrong
+
+    def judge(question, options, model=None):
+        ci = options.index(next(o["text"] for o in fixtures.FIXTURES["goi_bunpou"]["options"]
+                                if o["role"] == "correct"))
+        if "withheld" in question:
+            return {"choice": ci if next(answers) == 0 else (ci + 1) % 4,
+                    "reason": "only option B is in humble form"}
+        return {"choice": ci, "reason": "x"}
+
+    monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
+    monkeypatch.setattr(answerability.llm, "answer_choice", judge)
+    prompts = []
+    real_user_prompt = cli.get_generator("goi_bunpou").__class__.user_prompt
+
+    def spy(self, level, avoid, cell=None, feedback=None):
+        prompts.append((cell.id if cell else None, feedback))
+        return real_user_prompt(self, level, avoid, cell, feedback)
+
+    monkeypatch.setattr(cli.get_generator("goi_bunpou").__class__, "user_prompt", spy)
+    path, kept = cli.run_batch(store, "goi_bunpou", "J2", 1, gate=True, sanity_check=False,
+                               out=tmp_path / "b.json")
+    assert kept == 1 and len(prompts) == 2
+    assert prompts[0][0] == prompts[1][0], "the same cell, not the next one"
+    assert prompts[0][1] is None
+    assert "only option B is in humble form" in prompts[1][1]
+    assert "stem hidden" in prompts[1][1]
