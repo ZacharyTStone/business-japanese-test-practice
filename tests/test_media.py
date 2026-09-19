@@ -304,17 +304,26 @@ def test_the_openai_request_carries_the_direction_and_asks_for_wav(monkeypatch):
     assert sent["body"]["input"] == "だいたい案です"
     assert providers.HOUSE_STYLE in sent["body"]["instructions"]
     assert sent["headers"]["Authorization"] == "Bearer k"
-    # A shade over natural rate, and never below it: the first clips were a
-    # reader, not a person. Bounded, because a typo here is a library of
-    # chipmunks that is never re-made.
-    assert sent["body"]["speed"] == config.TTS_SPEED
-    assert 1.0 <= config.TTS_SPEED <= 1.25
+    # No rate multiplier. A `speed` of 1.1 shipped on 2026-09-19 and came back
+    # out the same day: it is a time-stretch of finished audio rather than a
+    # person speaking faster, and the owner heard it. Pace is asked for in the
+    # house style, in words, or not at all.
+    assert "speed" not in sent["body"]
 
 
-def test_the_direction_asks_for_a_person_talking_not_a_reader():
+def test_the_direction_asks_for_a_plain_delivery_not_a_performance():
+    """The regression this guards is audible, and its cause was a wish list.
+
+    Asking an instructable model for reductions and a rhythm that varies gets a
+    performance: swallowed syllables, and a theatrical beat before the phrase
+    the question turns on — which is a hint as well as a distraction. The
+    direction asks for ordinary business pace and stops.
+    """
     note = providers.direction_for("staff_mid_m")
-    for phrase in ("connected speech", "brisk", "not a narrator"):
+    for phrase in ("Ordinary business pace", "no theatrical acting", "exactly as written"):
         assert phrase in note
+    for wish in ("connected speech", "reductions", "brisk", "beat before the point"):
+        assert wish not in note
 
 
 def test_the_gemini_response_is_wrapped_into_wav(monkeypatch):
@@ -501,3 +510,111 @@ def test_a_picture_item_carries_its_brief_and_a_scene_of_its_own():
     # ...and re-validates as the model emitted it, without the derived scene id.
     from bjt import schemas
     assert schemas.validate_item("gazou_haaku", batchmod._as_generator_shape(out)) == []
+
+
+def test_a_live_clip_is_left_alone_unless_it_is_named_for_re_making(tmp_path):
+    """`have` is absolute except for the ids the caller writes down.
+
+    The two halves of the rule in one test: a clip the database already has is
+    not paid for again, and a clip named in `remake` is, because the recording
+    itself was wrong. A re-make is reported as one so a run that replaces part
+    of the library cannot read like a run that extended it.
+    """
+    bundle = {
+        "item_type": "hatsugen_choukai",
+        "audio_manifest": [
+            {"clip_id": "keep0", "voice": "narrator_f", "channel": "in_person",
+             "text": "お先に失礼します。"},
+            {"clip_id": "redo0", "voice": "staff_mid_m", "channel": "in_person",
+             "text": "承知いたしました。"},
+        ],
+    }
+    report = synth.synthesise_bundle(
+        bundle, provider="silent", out_dir=tmp_path,
+        have={"keep0", "redo0"}, remake={"redo0"},
+    )
+
+    assert report.live == ["keep0"]
+    assert report.remade == ["redo0"]
+    assert [c.clip_id for c in report.written] == ["redo0"]
+    # The SQL points the row at the new recording, and says that it is one.
+    sql = synth.to_sql(report)
+    assert "redo0" in sql and "keep0" not in sql
+    assert "replace a clip that was already live" in sql
+
+
+def test_naming_a_clip_for_re_making_overrides_a_copy_on_this_machine(tmp_path):
+    """Not just the database's list: a stale file in `media/` would otherwise be
+    reused and the wrong recording uploaded again."""
+    first = synth.synthesise_bundle(
+        {"item_type": "x", "audio_manifest": [
+            {"clip_id": "redo1", "voice": "narrator_f", "channel": "in_person",
+             "text": "少々お待ちください。"}]},
+        provider="silent", out_dir=tmp_path,
+    )
+    assert [c.clip_id for c in first.written] == ["redo1"]
+
+    again = synth.synthesise_bundle(
+        {"item_type": "x", "audio_manifest": [
+            {"clip_id": "redo1", "voice": "narrator_f", "channel": "in_person",
+             "text": "少々お待ちください。"}]},
+        provider="silent", out_dir=tmp_path, remake={"redo1"},
+    )
+    assert [c.clip_id for c in again.written] == ["redo1"]
+    assert again.reused == []
+    # Not live, so not a re-make — just a clip made again on this machine.
+    assert again.remade == []
+
+
+def test_the_clips_named_for_re_making_are_the_ones_the_bad_settings_made():
+    """The committed list is the 24 clips of the 2026-09-19 pace regression.
+
+    A list of ids is only reviewable if something checks it still refers to
+    clips the library actually asks for. Every id here must appear in a
+    committed bundle's manifest — otherwise the file is naming nothing and the
+    re-make would silently do nothing.
+    """
+    import glob
+    import json as jsonmod
+
+    named = synth.read_have(config.ROOT / "batches" / "remake-20260919-pace.txt")
+    assert len(named) == 24
+
+    in_library = set()
+    for f in glob.glob(str(config.ROOT / "batches" / "*.json")):
+        if f.endswith(".source.json"):
+            continue
+        for clip in (jsonmod.load(open(f, encoding="utf-8")).get("audio_manifest") or []):
+            in_library.add(clip["clip_id"])
+    assert named <= in_library, sorted(named - in_library)
+
+
+def test_the_deploy_workflow_only_re_records_when_a_hand_run_asks_it_to():
+    """A merge extends the library; only the run form may re-record part of it.
+
+    Read as text, in the style of the nightly workflow's guards: the check
+    needs no YAML library, and the point is one an edit could silently drop.
+    The automatic trigger is `workflow_run`, which carries no inputs, so the
+    variable is empty on every deploy that happens by itself.
+    """
+    import pathlib
+    import re
+
+    text = (config.ROOT / ".github/workflows/deploy-db.yml").read_text(encoding="utf-8")
+
+    assert "remake_list:" in text, "the run form offers it"
+    assert re.search(r"^\s+REMAKE_LIST: \$\{\{ github\.event\.inputs\.remake_list \}\}$",
+                     text, re.M), "and it is the only source of the value"
+    assert '--have have.txt' in text, "what is live is still read from the database"
+
+    step = text.index("name: give the bank its voice")
+    block = text[step:text.index("- name:", step + 1)]
+    assert 'if [ -n "$REMAKE_LIST" ]' in block, "blank means re-record nothing"
+    assert '--remake' in block and 'remake=(--remake "$REMAKE_LIST")' in block
+    assert "no such file in this checkout" in block, "a typo fails the run, not silently nothing"
+
+    # The file the list refers to is committed, or a hand-run would name
+    # nothing: the whole point is that the ids were written down and reviewed.
+    named = pathlib.Path(
+        re.search(r"e\.g\. (batches/remake-[\w-]+\.txt)", text).group(1))
+    assert (config.ROOT / named).is_file()

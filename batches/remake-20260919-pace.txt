@@ -1,0 +1,47 @@
+# Clips to re-make: the 24 recordings made with the wrong delivery.
+#
+# Between 2026-09-19 04:16 and 05:26 UTC, four deploy runs (#16-#19, the first
+# of them on the merge of "A voice that talks rather than reads") synthesised
+# audio with a 1.1x rate multiplier on the request and a house style that asked
+# for connected speech, everyday reductions and a rhythm that varies. The owner
+# heard the result and said it had stopped sounding like a Japanese person. Both
+# settings are out again; see bjt/tts/providers.py for why neither comes back.
+#
+# A clip id is a hash of (voice, channel, text), so the revert does not touch a
+# clip that already exists — these 24 keep the delivery they were made with
+# until they are named. The other 356 clips in the library were made before the
+# change and are the voice the owner approved, which is why this list is 24 ids
+# and not 380: the goal is one library that sounds like itself.
+#
+# Computed offline as the clips present in batches/ at 48ee582 but not at
+# f8899a4 (the head of deploy run #15, the last run at the old voice).
+#
+#   python -m bjt synth batches/<bundle>.json --provider openai \
+#       --have have.txt --remake batches/remake-20260919-pace.txt --upload
+#
+# Once these are re-made, uploaded and their SQL applied, this file has done its
+# job and can go.
+049d2b679a2d21ec
+0d0158d4833770f0
+12a6417d94fc1758
+1e71f4a4c3270528
+1f57603708c2ecb2
+29ae54fd4470a9cd
+3dad80b2e0eaaa5c
+56564e56403ead63
+67d2e6a8af4095dc
+69282f33f91fdb33
+7e8c0a5f1bcb6461
+87aa241f1529313d
+8e64c79fdcd93cc6
+99fb646d0ecebcbc
+a3990da6dc9586a1
+a810efe4a500aa1f
+abaf9651a101be6d
+ac6371692996e71c
+b4902132efe6c826
+b7a731f4df058d8f
+bc79d4b41309107d
+d3cbe53e6dc4565b
+dde8847bc9008cc9
+e15467a2cf5f15e0

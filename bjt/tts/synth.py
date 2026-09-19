@@ -53,6 +53,11 @@ class SynthReport:
     #: Clip ids the caller said are already live (see `have`). Nothing to make,
     #: upload or update for these; counted so the summary adds up.
     live: list[str] = field(default_factory=list)
+    #: Clip ids that were re-synthesised over a recording that was already
+    #: live, because the caller named them (see `remake`). Counted separately
+    #: from `written` — which also holds them — so a run that replaces part of
+    #: the library says so instead of reading like a run that extended it.
+    remade: list[str] = field(default_factory=list)
     failed: list[tuple[str, str]] = field(default_factory=list)
     provider: str = "silent"
 
@@ -65,6 +70,8 @@ class SynthReport:
         if not self.clips and not self.failed and not self.live:
             return f"{self.bundle}: no audio — this item type is read, not heard"
         parts = [f"{len(self.written)} synthesised", f"{len(self.reused)} reused"]
+        if self.remade:
+            parts.append(f"{len(self.remade)} RE-MADE over a live clip")
         if self.live:
             parts.append(f"{len(self.live)} already live")
         if self.failed:
@@ -98,6 +105,7 @@ def synthesise_bundle(
     force: bool = False,
     limit: int | None = None,
     have: set[str] | None = None,
+    remake: set[str] | None = None,
 ) -> SynthReport:
     """Synthesise every clip a bundle's manifest asks for that does not exist.
 
@@ -109,6 +117,16 @@ def synthesise_bundle(
     and pointed at by the database. They are skipped before anything else is
     looked at, so a run on a machine with an empty `media/` still makes only
     what the library lacks.
+
+    `remake` is the one exception to that, and it is deliberately a list of
+    named clips rather than a flag. A live clip is not re-made, because a
+    learner who hears one item in a different voice from the next is doing
+    speaker identification instead of listening to Japanese — but that reason
+    cuts both ways. When a handful of clips were made with the wrong delivery,
+    leaving them is what makes the library sound like two libraries; replacing
+    exactly those is what makes it one again. So the ids are written down,
+    reviewed and passed in, a re-make is reported as a re-make, and nothing is
+    replaced that was not named.
     """
     if isinstance(provider, str):
         provider = get_provider(provider)
@@ -119,13 +137,16 @@ def synthesise_bundle(
 
     made = 0
     for clip in manifest:
-        if have and clip["clip_id"] in have:
+        # Named for replacement: neither the database's list of live clips nor
+        # a copy sitting on this machine stands in the way.
+        named = bool(remake) and clip["clip_id"] in remake
+        if have and clip["clip_id"] in have and not named:
             report.live.append(clip["clip_id"])
             continue
         rel = storage_path(clip["clip_id"], provider.name)
         dest = out_dir / rel
 
-        if dest.exists() and not force:
+        if dest.exists() and not force and not named:
             report.reused.append(
                 ClipResult(clip["clip_id"], rel, _duration_of(dest), reused=True)
             )
@@ -150,6 +171,8 @@ def synthesise_bundle(
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(processed)
         made += 1
+        if named and have and clip["clip_id"] in have:
+            report.remade.append(clip["clip_id"])
         report.written.append(
             ClipResult(clip["clip_id"], rel, channel_mod.duration_ms(processed))
         )
@@ -229,6 +252,9 @@ def to_sql(report: SynthReport) -> str:
         f"-- Audio paths for {report.bundle}, synthesised by {report.provider}.",
         f"-- {len(report.written)} synthesised, {len(report.reused)} reused, "
         f"{len(report.live)} already live and left alone.",
+        *([f"-- {len(report.remade)} of them replace a clip that was already live, "
+           f"by name: the file in the bucket and the duration below are the new "
+           f"recording."] if report.remade else []),
         "-- Produced by `bjt synth`. Idempotent: re-running sets the same values.",
         "",
         "begin;",

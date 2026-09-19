@@ -39,7 +39,6 @@ import urllib.error
 import urllib.request
 from typing import Protocol
 
-from .. import config
 from . import channel
 
 
@@ -59,18 +58,33 @@ class Provider(Protocol):
 #: in practice: native pitch accent, an office pace, and phrases that run
 #: together the way speech does instead of a pause after every particle.
 HOUSE_STYLE = (
-    "Natural, native Japanese as spoken in a Tokyo office, by a person talking to "
-    "someone in the room — not a narrator reading to a microphone. Standard pitch "
-    "accent. Ordinary business pace, on the brisk side — do not slow down or "
-    "over-enunciate for a learner; phrases flow together the way a person actually "
-    "talks, with connected speech, the small natural reductions of everyday "
-    "Japanese, and no pause after every particle. Let the rhythm vary the way real "
-    "speech does: a quick run through the routine parts, a beat before the point. "
-    "Keigo comes out fluently, as from someone who says it every day, never stiffly "
-    "or as if reading a list. Plain, unaffected delivery: no theatrical acting, no "
-    "smiling announcer voice, no foreign accent. Read the text exactly as written "
-    "and say nothing else."
+    "Natural, native Japanese as spoken in a Tokyo office. Standard pitch accent. "
+    "Ordinary business pace — do not slow down or over-enunciate for a learner; "
+    "phrases flow together the way a person actually talks, with no pause after "
+    "every particle. Keigo comes out fluently, as from someone who says it every "
+    "day, never stiffly or as if reading a list. Plain, unaffected delivery: no "
+    "theatrical acting, no smiling announcer voice, no foreign accent. Read the "
+    "text exactly as written and say nothing else."
 )
+
+# Two things that sound like improvements here and are not. Both were tried on
+# 2026-09-19 and taken out the same day, because the owner heard the result and
+# said it had stopped sounding like a Japanese person:
+#
+#   * a rate multiplier on the request (`speed`, 1.1). It rescales audio that
+#     has already been spoken; it does not make the speaker speak differently.
+#     Pace is a property of a delivery, and the only honest lever we have on a
+#     delivery is the wording above.
+#   * asking for connected speech, "the small natural reductions of everyday
+#     Japanese", and a rhythm that varies — "a quick run through the routine
+#     parts, a beat before the point". A model that takes directions performs a
+#     direction like that rather than absorbing it, and the performance is both
+#     less natural than the plain reading and a hint: a beat before the phrase
+#     the question turns on tells the learner where to listen.
+#
+# So the house style asks for ordinary business pace and stops. If the clips
+# ever do need to be quicker, change that sentence and listen (`bjt audition`)
+# before a library is made from it — do not reach for a multiplier.
 
 #: How each cast voice should be delivered, on top of the house style. These are
 #: performance notes, not identities — the identity is the provider's voice id,
@@ -224,9 +238,6 @@ class OpenAIProvider:
             "voice": provider_voice,
             "input": apply_pronunciation(text),
             "instructions": instructions or direction_for(voice),
-            # A shade over natural rate: the difference between reading a
-            # line and saying it. BJT_TTS_SPEED, see config.
-            "speed": config.TTS_SPEED,
             "response_format": "wav",
         }
         return _post(
