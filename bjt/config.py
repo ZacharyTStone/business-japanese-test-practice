@@ -190,6 +190,22 @@ IMAGE_MODEL = _env("BJT_IMAGE_MODEL", "gpt-image-1")
 IMAGE_QUALITY = _env("BJT_IMAGE_QUALITY", "medium")
 SCENE_ATTEMPTS = int(_env("BJT_SCENE_ATTEMPTS", "3"))
 
+# How many drafts a scene may be refused over its whole life before the job
+# stops drawing it. Counted in the bucket (`rejected/<scene>-<n>.txt`, one
+# marker per refused draft), because the runner forgets everything each
+# night and the bucket is the only record it has. Without this, the one
+# scene the reviewer keeps refusing was redrawn three times every Sunday for
+# ever; with it, six refusals (two Sundays) and the scene ships on its
+# stand-in (bjt/scenes.py STAND_INS) until somebody draws it by hand. A
+# per-item picture (画像把握) has no stand-in: after this many its item stays
+# unserved, and the summary says so.
+SCENE_LIFETIME_ATTEMPTS = int(_env("BJT_SCENE_LIFETIME_ATTEMPTS", "6"))
+
+# The most per-item pictures one run may draft. A picture costs an image call
+# and a handful of vision calls per draft, so a night that found forty new
+# 画像把握 items in the tree must not draw forty pictures. Four is a night.
+NIGHT_MAX_PICTURES = int(_env("BJT_NIGHT_MAX_PICTURES", "4"))
+
 # How hard the image API compresses the WebP it returns (0–100, higher is
 # larger). The `scenes` bucket refuses anything over SCENE_MAX_BYTES, which is
 # the file_size_limit in supabase/migrations/20260915000300_media_storage.sql;

@@ -75,6 +75,11 @@ CHANNEL_PROFILES: dict[str, dict] = {
 #: `dialogue` — the multi-speaker exchange is played.
 TYPE_AUDIO: dict[str, dict] = {
     "bamen_haaku":        {"stem": True,  "options": False, "dialogue": False},
+    # The four descriptions of the picture are read by the narrator, as on the
+    # exam: nobody in the picture is speaking them. One voice across every
+    # item of the type is also what lets a description recur as one clip.
+    "gazou_haaku":        {"stem": True,  "options": True,  "dialogue": False,
+                           "options_by_narrator": True},
     "hatsugen_choukai":   {"stem": True,  "options": True,  "dialogue": False},
     "sougou_choukai":     {"stem": True,  "options": False, "dialogue": True},
     "joukyou_haaku":      {"stem": True,  "options": False, "dialogue": False},
@@ -202,6 +207,8 @@ def plan_item(item: dict, item_id: str) -> list[Clip]:
             )
 
     if policy["options"]:
+        if policy.get("options_by_narrator"):
+            voice, channel = NARRATOR_VOICE, "in_person"
         for i, opt in enumerate(item["options"]):
             clips.append(
                 Clip(

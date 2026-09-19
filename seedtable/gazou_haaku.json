@@ -1,0 +1,474 @@
+{
+  "item_type": "gazou_haaku",
+  "_note": "Original design, not licensed material. The picture is the stimulus, so the `function` axis is WHAT IS BEING DONE in the picture — the action the correct description names. Ten items are ten different actions by construction, and the `setting` says where the action is drawn. There is no scene bank: every cell gets a picture of its own, drawn from the item's brief and reviewed against its four descriptions (bjt/scene_art.py). The `relation` is who is doing the action to whom; the person on the left of the arrow is the one the question asks about, and the picture must make that person the obvious subject.",
+  "levels": [
+    "J3",
+    "J2",
+    "J1"
+  ],
+  "scenes": {},
+  "settings": [
+    {
+      "id": "reception",
+      "ja": "自社の受付",
+      "channel": "in_person",
+      "scenes": []
+    },
+    {
+      "id": "lobby",
+      "ja": "オフィスビルのエントランス",
+      "channel": "in_person",
+      "scenes": []
+    },
+    {
+      "id": "office_floor",
+      "ja": "執務フロア",
+      "channel": "in_person",
+      "scenes": []
+    },
+    {
+      "id": "meeting_room",
+      "ja": "社内の会議室",
+      "channel": "in_person",
+      "scenes": []
+    },
+    {
+      "id": "corridor",
+      "ja": "廊下・エレベーターホール",
+      "channel": "in_person",
+      "scenes": []
+    },
+    {
+      "id": "client_office",
+      "ja": "取引先の会議室・応接室",
+      "channel": "in_person",
+      "scenes": []
+    },
+    {
+      "id": "event_venue",
+      "ja": "展示会場・セミナー会場",
+      "channel": "in_person",
+      "scenes": []
+    },
+    {
+      "id": "copy_corner",
+      "ja": "コピー機・給湯室のあたり",
+      "channel": "in_person",
+      "scenes": []
+    }
+  ],
+  "relations": [
+    {
+      "id": "subordinate_to_superior",
+      "ja": "部下 → 上司",
+      "direction": "up"
+    },
+    {
+      "id": "junior_to_senior",
+      "ja": "後輩 → 先輩",
+      "direction": "up"
+    },
+    {
+      "id": "superior_to_subordinate",
+      "ja": "上司 → 部下",
+      "direction": "down"
+    },
+    {
+      "id": "peer_to_peer",
+      "ja": "同僚 → 同僚",
+      "direction": "level"
+    },
+    {
+      "id": "other_department",
+      "ja": "他部署の担当者へ",
+      "direction": "level"
+    },
+    {
+      "id": "staff_to_client",
+      "ja": "自社担当者 → 取引先",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_visitor",
+      "ja": "社員 → 来客",
+      "direction": "out"
+    },
+    {
+      "id": "staff_to_customer",
+      "ja": "社員 → 顧客",
+      "direction": "out"
+    }
+  ],
+  "functions": [
+    {
+      "id": "guiding_visitor",
+      "ja": "来客を奥へ案内している（手で方向を示す）",
+      "relations": [
+        "staff_to_visitor",
+        "staff_to_client",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "reception",
+        "lobby",
+        "corridor",
+        "client_office",
+        "event_venue"
+      ]
+    },
+    {
+      "id": "exchanging_business_cards",
+      "ja": "名刺を交換している（両手で差し出す）",
+      "relations": [
+        "staff_to_client",
+        "staff_to_visitor"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "reception",
+        "lobby",
+        "meeting_room",
+        "client_office",
+        "event_venue"
+      ]
+    },
+    {
+      "id": "serving_tea",
+      "ja": "お茶を出している（盆から湯のみを置く）",
+      "relations": [
+        "staff_to_visitor",
+        "staff_to_client",
+        "junior_to_senior"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "office_floor"
+      ]
+    },
+    {
+      "id": "handing_documents",
+      "ja": "書類を手渡している",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "office_floor",
+        "meeting_room",
+        "corridor",
+        "client_office",
+        "reception"
+      ]
+    },
+    {
+      "id": "presenting_at_whiteboard",
+      "ja": "ホワイトボードの前で説明している",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "event_venue"
+      ]
+    },
+    {
+      "id": "answering_desk_phone",
+      "ja": "机の電話を取って話している",
+      "relations": [
+        "peer_to_peer",
+        "staff_to_customer",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "office_floor",
+        "reception"
+      ]
+    },
+    {
+      "id": "bowing_apology",
+      "ja": "深く頭を下げて謝っている",
+      "relations": [
+        "staff_to_client",
+        "staff_to_customer",
+        "subordinate_to_superior"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "client_office",
+        "reception",
+        "lobby",
+        "office_floor",
+        "meeting_room"
+      ]
+    },
+    {
+      "id": "receiving_parcel",
+      "ja": "配達の荷物を受け取っている",
+      "relations": [
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "reception",
+        "office_floor",
+        "lobby"
+      ]
+    },
+    {
+      "id": "stamping_document",
+      "ja": "書類に印を押している",
+      "relations": [
+        "superior_to_subordinate",
+        "peer_to_peer"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "office_floor",
+        "meeting_room"
+      ]
+    },
+    {
+      "id": "seeing_off",
+      "ja": "エレベーターの前で来客を見送っている（お辞儀）",
+      "relations": [
+        "staff_to_visitor",
+        "staff_to_client",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "corridor",
+        "lobby",
+        "reception",
+        "client_office"
+      ]
+    },
+    {
+      "id": "making_copies",
+      "ja": "コピー機で書類をコピーしている",
+      "relations": [
+        "junior_to_senior",
+        "peer_to_peer",
+        "subordinate_to_superior"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "copy_corner",
+        "office_floor"
+      ]
+    },
+    {
+      "id": "pointing_at_screen",
+      "ja": "パソコンの画面を指して説明している",
+      "relations": [
+        "peer_to_peer",
+        "other_department",
+        "junior_to_senior",
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "office_floor",
+        "meeting_room",
+        "client_office"
+      ]
+    },
+    {
+      "id": "distributing_handouts",
+      "ja": "席を回って資料を配っている",
+      "relations": [
+        "junior_to_senior",
+        "peer_to_peer",
+        "subordinate_to_superior"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "meeting_room",
+        "event_venue",
+        "client_office"
+      ]
+    },
+    {
+      "id": "signing_visitor_book",
+      "ja": "来客に受付の記入を頼んでいる（用紙とペンを差し出す）",
+      "relations": [
+        "staff_to_visitor",
+        "staff_to_customer"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "reception",
+        "lobby",
+        "event_venue"
+      ]
+    },
+    {
+      "id": "carrying_boxes",
+      "ja": "段ボール箱を運んでいる",
+      "relations": [
+        "peer_to_peer",
+        "junior_to_senior"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "office_floor",
+        "corridor",
+        "copy_corner",
+        "event_venue"
+      ]
+    },
+    {
+      "id": "taking_notes_in_meeting",
+      "ja": "会議でメモを取っている",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "event_venue"
+      ]
+    },
+    {
+      "id": "showing_product",
+      "ja": "商品の実物を手に取って見せている",
+      "relations": [
+        "staff_to_client",
+        "staff_to_customer",
+        "staff_to_visitor"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "client_office",
+        "event_venue",
+        "meeting_room"
+      ]
+    },
+    {
+      "id": "checking_watch_waiting",
+      "ja": "腕時計を見ながら人を待っている",
+      "relations": [
+        "staff_to_visitor",
+        "staff_to_client",
+        "peer_to_peer"
+      ],
+      "channels": [
+        "in_person"
+      ],
+      "settings": [
+        "lobby",
+        "corridor",
+        "reception",
+        "event_venue"
+      ]
+    }
+  ],
+  "setting_relations": {
+    "reception": [
+      "staff_to_visitor",
+      "staff_to_customer",
+      "staff_to_client",
+      "peer_to_peer"
+    ],
+    "lobby": [
+      "staff_to_visitor",
+      "staff_to_client",
+      "staff_to_customer",
+      "peer_to_peer"
+    ],
+    "office_floor": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_customer"
+    ],
+    "meeting_room": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "corridor": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_visitor",
+      "staff_to_client",
+      "staff_to_customer"
+    ],
+    "client_office": [
+      "staff_to_client",
+      "staff_to_visitor",
+      "peer_to_peer"
+    ],
+    "event_venue": [
+      "staff_to_client",
+      "staff_to_customer",
+      "staff_to_visitor",
+      "peer_to_peer",
+      "junior_to_senior"
+    ],
+    "copy_corner": [
+      "junior_to_senior",
+      "peer_to_peer",
+      "subordinate_to_superior"
+    ]
+  }
+}

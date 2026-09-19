@@ -84,9 +84,12 @@ jobs:
         with:
           version: latest
       - name: install psql
+        # The runner image ships one; apt is only for the day it stops doing so.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          command -v psql >/dev/null || {
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          }
 
       # No project yet is an ordinary state on an automatic run — every merge
       # to main would otherwise be a red workflow — and an error on a run

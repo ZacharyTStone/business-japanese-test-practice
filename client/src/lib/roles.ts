@@ -47,6 +47,37 @@ const DEFAULT: Entry = {
 const ROLES: Record<string, Entry> = {
   correct: { rudeness: 0, miss: 0, ja: { label: "正解", advice: "" }, en: { label: "Correct", advice: "" } },
 
+  // 画像把握: the picture is the question, so a miss is about looking, never
+  // about manners. Nobody was offended; something in the drawing was not seen.
+  different_action: {
+    rudeness: 0,
+    miss: 3,
+    ja: {
+      label: "動作がちがう",
+      advice: "手に何を持っているか、体がどちらを向いているかを先に見ましょう。",
+      verdict: "絵の中の人は、それをしていませんでした",
+    },
+    en: {
+      label: "A different action",
+      advice: "Look first at what is in the hands and which way the body is turned.",
+      verdict: "That is not what the person in the picture is doing",
+    },
+  },
+  wrong_participants: {
+    rudeness: 0,
+    miss: 2,
+    ja: {
+      label: "人がちがう",
+      advice: "「誰が」「誰に」を絵で確かめましょう。動作は合っていても、向きが逆のことがあります。",
+      verdict: "動作は合っていましたが、している人がちがいました",
+    },
+    en: {
+      label: "Wrong person",
+      advice: "Check who is doing it to whom in the picture. The action can be right and the direction reversed.",
+      verdict: "Right action, wrong person doing it",
+    },
+  },
+
   register_too_casual: {
     rudeness: 3,
     miss: 1,

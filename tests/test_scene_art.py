@@ -131,6 +131,8 @@ def test_every_scene_has_a_brief_and_the_prompt_names_the_place(tmp_path):
     and the old "a Japanese office setting" gloss is gone — it put the
     restaurant and the outdoor phone call indoors."""
     for scene in scenes.survey(tmp_path):
+        if scene.is_picture:
+            continue  # drawn from its item's own brief, below
         assert scene.scene_id in scenes.SCENE_BRIEFS, scene.scene_id
         place, channel = scenes.SCENE_BRIEFS[scene.scene_id]
         assert channel in scenes.COMPOSITION
@@ -245,7 +247,11 @@ def test_one_bad_upload_does_not_stop_the_rest(tmp_path, monkeypatch):
     safe = scene_art.without(survey, up.failed_paths)
     sql = scenes.to_sql(safe)
     assert "scene_elevator_hall.webp" in sql and "scene_izakaya_table.webp" in sql
-    assert "scene_phone_desk" not in sql and "scene_corridor" not in sql
+    assert "scene_phone_desk.webp" not in sql and "scene_corridor.webp" not in sql
+    # The corridor, having no picture of its own in the bucket, borrows the
+    # elevator hall's until it does; the desk phone's stand-in has none to lend.
+    assert "('scene_corridor', 'オフィスの廊下', 'scene_elevator_hall.webp')" in sql
+    assert "'scene_phone_desk'" not in sql
     # ...and the survey itself is untouched.
     assert {s.scene_id for s in survey if s.has_art} >= {"scene_phone_desk", "scene_corridor"}
 
@@ -332,3 +338,147 @@ def test_the_cli_names_an_unknown_scene(tmp_path, monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     assert cli.main(["scenes", "--generate", "scene_nowhere", "--provider", "placeholder",
                      "--media-dir", str(tmp_path)]) == 2
+
+
+# ----- stand-ins and the refusal ledger ---------------------------------------
+
+def test_a_scene_without_a_picture_borrows_its_stand_ins(tmp_path):
+    (tmp_path / "scenes").mkdir()
+    (tmp_path / "scenes" / "scene_phone_desk.webp").write_bytes(b"art")
+    survey = scenes.survey(tmp_path)
+    outside = next(s for s in survey if s.scene_id == "scene_phone_mobile_outside")
+    assert not outside.has_art
+    assert scenes.stand_in_for(outside, survey).scene_id == "scene_phone_desk"
+    sql = scenes.to_sql(survey)
+    assert "('scene_phone_mobile_outside', '外出先で携帯電話', 'scene_phone_desk.webp')" in sql
+    assert "borrows scene_phone_desk's" in sql
+    # One hop only: the desk pair borrows from the open floor, which has nothing.
+    pair = next(s for s in survey if s.scene_id == "scene_office_desk_pair")
+    assert scenes.stand_in_for(pair, survey) is None
+    # A scene with its own picture lends and never borrows.
+    desk = next(s for s in survey if s.scene_id == "scene_phone_desk")
+    assert scenes.stand_in_for(desk, survey) is None
+
+
+def test_every_stand_in_is_a_bank_scene_with_a_brief():
+    for a, b in scenes.STAND_INS.items():
+        assert a in scenes.SCENE_BRIEFS and b in scenes.SCENE_BRIEFS
+        assert a != b
+
+
+def test_the_ledger_counts_refusals_and_records_new_ones(monkeypatch):
+    requests = []
+
+    def fake_json(method, url, body, headers):
+        requests.append(body["prefix"])
+        return [{"name": "scene_phone_mobile_outside-1.txt", "id": "1"},
+                {"name": "scene_phone_mobile_outside-3.txt", "id": "2"},
+                {"name": "scene_corridor-2.txt", "id": "3"},
+                {"name": "junk", "id": "4"}]
+
+    sent = []
+    monkeypatch.setattr(scene_art, "_json_request", fake_json)
+    monkeypatch.setattr(scene_art, "_request",
+                        lambda m, url, body, headers: sent.append((url, body, headers["Content-Type"])) or b"")
+    bucket = scene_art.Bucket(url="https://p.supabase.co", key="k")
+    assert bucket.refusals() == {"scene_phone_mobile_outside": 3, "scene_corridor": 2}
+    assert requests == ["rejected/"]
+    bucket.record_refusal("scene_corridor", 3, ("readable text", "wrong setting"))
+    assert sent[0][0].endswith("/object/scenes/rejected/scene_corridor-3.txt")
+    assert sent[0][1] == b"readable text\nwrong setting\n"
+
+
+def test_a_scene_at_its_lifetime_allowance_is_not_drawn_again(tmp_path):
+    wanted = [s for s in scenes.survey(tmp_path) if s.scene_id in
+              ("scene_phone_mobile_outside", "scene_corridor")]
+    provider = _Real()
+    refused = []
+    result = scene_art.draw(
+        wanted, provider=provider, media_dir=tmp_path, attempts=3, lifetime=6,
+        prior={"scene_phone_mobile_outside": 6, "scene_corridor": 5},
+        review=lambda img, mt, sc: scene_art.Verdict(False, ("readable text drawn in",)),
+        on_reject=lambda sid, n, why: refused.append((sid, n)),
+    )
+    by_id = {d.scene_id: d for d in result.drawn}
+    outside, corridor = by_id["scene_phone_mobile_outside"], by_id["scene_corridor"]
+    assert outside.given_up and outside.attempts == 0 and outside.prior == 6
+    # One draft left in the corridor's allowance, so one is drawn — not three.
+    assert not corridor.given_up and corridor.attempts == 1 and provider.calls == 1
+    assert refused == [("scene_corridor", 6)]
+    assert (tmp_path / "scenes" / "rejected" / "scene_corridor-6.txt").exists()
+    assert "given up" in result.summary() and "1 (5)" in result.summary()
+    assert result.failed and not result.approved
+
+
+# ----- per-item pictures (画像把握) --------------------------------------------
+
+def _pictures(tmp_path):
+    return [s for s in scenes.survey(tmp_path) if s.is_picture]
+
+
+def test_the_survey_lists_every_committed_picture_with_its_brief_and_options(tmp_path):
+    pics = _pictures(tmp_path)
+    assert pics, "the reference batch of 画像把握 ships four pictures"
+    for s in pics:
+        assert s.scene_id.startswith(scenes.PICTURE_PREFIX)
+        assert s.used_by == ("gazou_haaku",) and s.cell_count == 1
+        assert len(s.brief.split()) >= 25 and len(s.options) == 4
+        assert s.answer is not None and s.question
+        assert not s.has_art
+    # After the bank in the commissioning order: one picture serves one item.
+    order = scenes.survey(tmp_path)
+    assert all(not s.is_picture for s in order[:len(order) - len(pics)])
+
+
+def test_a_picture_prompt_is_the_brief_and_the_reviewer_sees_the_four_descriptions(tmp_path):
+    pic = _pictures(tmp_path)[0]
+    drawn = scenes.image_prompt(pic)
+    assert pic.brief in drawn and "must not contain" in drawn
+    assert "No words or letters" in drawn
+    reviewed = scenes.prompt_for(pic)
+    for opt in pic.options:
+        assert opt in reviewed
+    assert "✔" in reviewed and pic.question in reviewed
+
+
+def test_a_picture_has_no_stand_in(tmp_path):
+    survey = scenes.survey(tmp_path)
+    for pic in _pictures(tmp_path):
+        assert scenes.stand_in_for(pic, survey) is None
+
+
+def test_the_visual_gate_refuses_a_picture_a_reader_describes_differently(monkeypatch, tmp_path):
+    from bjt import llm
+    pic = _pictures(tmp_path)[0]
+    monkeypatch.setattr(llm, "review_scene_image",
+                        lambda image, mt, brief, rules: {r: False for r in rules} | {"notes": ""})
+    picks = iter([pic.answer, pic.answer, (pic.answer + 1) % 4])
+    asked = []
+    monkeypatch.setattr(llm, "answer_from_image",
+                        lambda image, mt, q, opts, model=None: asked.append(q) or {"choice": next(picks), "reason": "x"})
+    verdict = scene_art.review_with_model(b"img", "image/png", pic)
+    assert not verdict.approved and "rather than the marked description" in verdict.reasons[0]
+    assert asked == [pic.question] * 3, "three trials, stopped at the first miss"
+
+    picks = iter([pic.answer] * 3)
+    assert scene_art.review_with_model(b"img", "image/png", pic).approved
+
+
+def test_the_picture_rules_are_checked_before_the_reader_sits_it(monkeypatch, tmp_path):
+    from bjt import llm
+    pic = _pictures(tmp_path)[0]
+    monkeypatch.setattr(llm, "review_scene_image",
+                        lambda image, mt, brief, rules: {r: r == "unclear" for r in rules} | {"notes": ""})
+    monkeypatch.setattr(llm, "answer_from_image",
+                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("not asked")))
+    verdict = scene_art.review_with_model(b"img", "image/png", pic)
+    assert not verdict.approved and verdict.reasons == (scene_art.PICTURE_RULES["unclear"],)
+
+
+def test_a_night_draws_only_so_many_pictures(tmp_path, monkeypatch, capsys):
+    from bjt import cli, config
+    monkeypatch.setattr(config, "NIGHT_MAX_PICTURES", 2)
+    assert cli.main(["scenes", "--generate", "--provider", "placeholder", "--only", "pictures",
+                     "--media-dir", str(tmp_path)]) == 0
+    out = capsys.readouterr().out
+    assert out.count("| pic_") == 2

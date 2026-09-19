@@ -131,6 +131,32 @@ TYPE_EXTRAS: dict[str, dict] = {
             "channel": _channel_field(SPOKEN_CHANNELS),
         },
     },
+    # 画像把握 — a picture is shown, and four descriptions of it are heard.
+    # The picture is drawn from `image_brief` after the item is written, by
+    # the scene job, and reviewed against these very options (bjt/scene_art).
+    "gazou_haaku": {
+        "stem_description": (
+            "What the narrator asks about the picture, heard once （例:「男の人は何を"
+            "していますか。」「二人は何をしていますか。」）. One short sentence; it must "
+            "name who is being asked about when more than one person is drawn."
+        ),
+        "required": ["image_brief", "channel"],
+        "properties": {
+            "image_brief": {
+                "type": "string",
+                "description": (
+                    "The picture, in English, for an illustrator: 40-90 words, concrete "
+                    "and complete — the place, how many people, who they are by role and "
+                    "appearance, exactly what they are doing with their hands and bodies, "
+                    "the objects involved, and what is deliberately NOT happening. Written "
+                    "so that exactly one option is true of the drawing and each of the "
+                    "other three is contradicted by something visible in it. No text, "
+                    "signs, logos or real people."
+                ),
+            },
+            "channel": _channel_field(["in_person"]),
+        },
+    },
     # 総合聴解 — a conversation heard once, then a question about it.
     "sougou_choukai": {
         "stem_description": (
@@ -205,6 +231,30 @@ TYPE_EXTRAS: dict[str, dict] = {
     },
 }
 
+
+#: Which section of the exam each type belongs to. The database has the same
+#: table (public.item_types) and tests/test_plan.py asserts the two agree;
+#: the planner reads this one because the nightly job runs with no database.
+SECTIONS: dict[str, str] = {
+    "bamen_haaku": "choukai",
+    "gazou_haaku": "choukai",
+    "hatsugen_choukai": "choukai",
+    "sougou_choukai": "choukai",
+    "joukyou_haaku": "choudokkai",
+    "shiryou_choudokkai": "choudokkai",
+    "sougou_choudokkai": "choudokkai",
+    "goi_bunpou": "dokkai",
+    "hyougen": "dokkai",
+    "sougou_dokkai": "dokkai",
+}
+
+#: Types whose stimulus is a picture of their own: an item is not served until
+#: its picture is drawn and approved (public.item_types.needs_picture).
+PICTURE_TYPES: tuple[str, ...] = ("gazou_haaku",)
+
+#: The reading types: no audio, no picture, the cheapest item there is to
+#: ship, and the ones the owner asked to see written every night (2026-09-19).
+READING_TYPES: tuple[str, ...] = tuple(t for t, sec in SECTIONS.items() if sec == "dokkai")
 
 #: Which extra fields hold documents, per item type. Used by validation, by the
 #: TTS planner (a document is never spoken) and by the app.

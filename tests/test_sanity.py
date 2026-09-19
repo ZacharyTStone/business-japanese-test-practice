@@ -103,7 +103,7 @@ def test_a_flagged_item_never_reaches_the_gate(tmp_path, monkeypatch, store):
     monkeypatch.setattr("bjt.fidelity.answerability.run_gate",
                         lambda item: gate_calls.append(item) or None)
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "hyougen", "J2", gate=True)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "hyougen", "J2", gate=True)
 
     assert gate_calls == []
     assert not kept
@@ -123,7 +123,7 @@ def test_a_clean_item_goes_on_to_the_gate(tmp_path, monkeypatch, store):
     monkeypatch.setattr(sanity.llm, "sanity_check", _clean())
     monkeypatch.setattr("bjt.fidelity.answerability.run_gate", fake_gate)
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "hyougen", "J2", gate=True)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "hyougen", "J2", gate=True)
 
     assert len(gate_calls) == 1
     assert kept

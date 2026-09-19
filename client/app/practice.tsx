@@ -96,6 +96,7 @@ const CHANNEL_EMOJI: Record<string, string> = {
  *  instruction is not: "最も適切な言い方" makes no sense for a reading item. */
 const PROMPT_KEY: Record<string, Key> = {
   hatsugen_choukai: "prompt_hatsugen_choukai",
+  gazou_haaku: "prompt_gazou_haaku",
   hyougen: "prompt_hyougen",
   goi_bunpou: "prompt_goi_bunpou",
   bamen_haaku: "prompt_bamen_haaku",
@@ -108,8 +109,13 @@ const PROMPT_KEY: Record<string, Key> = {
 
 type Stage = "scene" | "listen" | "answer" | "reveal";
 
+/** The types whose four options are heard rather than read: the utterances
+ *  of 発言聴解, and the four descriptions of a 画像把握 picture. Must agree
+ *  with TYPE_AUDIO in bjt/tts/plan.py, which is where the clips come from. */
+const SPOKEN_OPTION_TYPES = new Set(["hatsugen_choukai", "gazou_haaku"]);
+
 /**
- * The four utterances of a 発言聴解 item, when every one of them has a clip.
+ * The four spoken options of an item, when every one of them has a clip.
  *
  * In the exam these are heard, never read: the answer sheet has four numbers
  * and nothing else. So when the audio exists the options are played after the
@@ -119,7 +125,7 @@ type Stage = "scene" | "listen" | "answer" | "reveal";
  * bjt/tts/plan.py is the only reason any other type would have option clips.
  */
 function spokenOptionUrls(item: QueuedItem): string[] | null {
-  if (item.item_type !== "hatsugen_choukai") return null;
+  if (!SPOKEN_OPTION_TYPES.has(item.item_type)) return null;
   const urls = [...item.options]
     .sort((a, b) => a.position - b.position)
     .map((o) => clipUrl(o.audio_path));
@@ -739,9 +745,10 @@ function SceneStrip({ item, big }: { item: QueuedItem; big: boolean }) {
 
 function SceneImage({ uri }: { uri: string }) {
   return (
-    // Decorative on purpose. The scene is one of sixteen shared drawings, so it
-    // cannot contain the answer — describing it to a screen reader would be
-    // describing a stock illustration, not the question.
+    // Not described to a screen reader on purpose. For most types the scene is
+    // one of sixteen shared drawings that cannot contain the answer, so a
+    // description would be of a stock illustration; for 画像把握 the picture IS
+    // the question, and a description would be the answer.
     <Image
       source={{ uri }}
       style={styles.scene}
