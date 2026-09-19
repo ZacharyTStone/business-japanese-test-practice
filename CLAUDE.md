@@ -55,8 +55,9 @@ accident is not.
   `BJT_RUN_MAX_CALLS`, or run for `BJT_RUN_MAX_MINUTES` (30); no call may ask for more than
   `BJT_MAX_TOKENS_CEILING` output or think above `BJT_EFFORT_CEILING`; a night
   is clamped to `BJT_NIGHT_MAX_BUDGET` / `_PER_SLOT` whatever the workflow input
-  says; the job has a clock; the night's files are an artifact before any push;
-  and no night writes while an earlier `content/nightly-*` branch is unmerged.
+  says; the job has a clock; and the night's files are an artifact before any
+  push. Whether a night runs is decided by these and by `main` alone — never by
+  the state of any other branch (the owner, 2026-09-19).
   They are independent on purpose, so a bug in one is caught by another. Two
   manual runs on 2026-09-18 spent $26 in three hours and shipped nothing; that
   morning is why. Raising a ceiling is fine; removing one, or moving the check
