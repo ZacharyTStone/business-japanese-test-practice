@@ -1,0 +1,83 @@
+{
+  "bundle_version": 2,
+  "item_type": "bamen_haaku",
+  "level": "J1",
+  "generated_at": "2026-09-19T05:25:46+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "c21b2af994",
+      "item_type": "bamen_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "meeting_room+superior_to_subordinate+identify_place@J1",
+        "setting": "meeting_room",
+        "relation": "superior_to_subordinate",
+        "function": "identify_place",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "人事評価の面談で会議室に入る",
+      "stem": "社内の会議室で、上司が部下に人事評価の資料を見せながら、こう話しています。「この部屋、さっき総務に頼んで鍵を借りてきたんだ。うちの部署でしばらく押さえてあるから、周りを気にせず話せるよ。壁のホワイトボードに書いてある来週の予定はそのままにしておいて。」ここはどこで話していますか。",
+      "options": [
+        {
+          "text": "上司の個人オフィス",
+          "role": "plausible_but_unmentioned",
+          "why": "個人的な部屋なら普通は本人の裁量で使え、「うちの部署で押さえてある」とはあえて言わない言い方であり、話の内容とも合わない。"
+        },
+        {
+          "text": "鍵を借りに行った総務課の窓口",
+          "role": "right_scene_wrong_moment",
+          "why": "鍵を借りるくだりは出てくるが「借りてきたんだ」と過去形で済んでおり、今いるのはすでに部屋に入った後の会議室である。"
+        },
+        {
+          "text": "社内の会議室",
+          "role": "correct",
+          "why": "「うちの部署でしばらく押さえてある」「壁のホワイトボード」という言い方から、自社内の、部署で確保した会議室だと分かる。"
+        },
+        {
+          "text": "取引先を迎える応接室",
+          "role": "wrong_participant",
+          "why": "応接室なら取引先を迎える場になるが、上司は「うちの部署で押さえてある」と社内利用の言い方をしており、取引先を迎える話は出ていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "「うちの部署でしばらく押さえてある」「壁のホワイトボード」という発言から、社内の、自分の部署が確保した会議室にいることが分かる。総務課の窓口は鍵を借りる段階の話で、すでに「借りてきた」と過去形になっているため今の場所ではない。応接室は取引先を迎える場所であり、社内利用とは矛盾する。個人オフィスなら「押さえてある」という部署単位の言い方は不自然。",
+      "explanation_en": "The phrase 'our department has it reserved' plus the whiteboard detail place the speakers in an internal meeting room, not the reception room, the general affairs desk, or a personal office.",
+      "vocab_notes": [
+        {
+          "term": "押さえる",
+          "reading": "おさえる",
+          "meaning": "to reserve/secure (a room, time)"
+        },
+        {
+          "term": "総務",
+          "reading": "そうむ",
+          "meaning": "general affairs department"
+        }
+      ],
+      "audio": {
+        "narration": "b7a731f4df058d8f",
+        "options": [],
+        "dialogue": []
+      },
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "b7a731f4df058d8f",
+      "item_id": "c21b2af994",
+      "kind": "narration",
+      "index": null,
+      "text": "社内の会議室で、上司が部下に人事評価の資料を見せながら、こう話しています。「この部屋、さっき総務に頼んで鍵を借りてきたんだ。うちの部署でしばらく押さえてあるから、周りを気にせず話せるよ。壁のホワイトボードに書いてある来週の予定はそのままにしておいて。」ここはどこで話していますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_meeting_room_table"
+  ]
+}

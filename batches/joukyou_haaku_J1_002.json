@@ -1,0 +1,121 @@
+{
+  "bundle_version": 2,
+  "item_type": "joukyou_haaku",
+  "level": "J1",
+  "generated_at": "2026-09-19T05:32:24+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "5f2adf082b",
+      "item_type": "joukyou_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "phone_with_notice+junior_to_senior+what_to_confirm@J1",
+        "setting": "phone_with_notice",
+        "relation": "junior_to_senior",
+        "function": "what_to_confirm",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "出張申請手続きの経過措置",
+      "stem": "後輩が電話を受けながら、この通知を見ています。先輩（営業部）からこう言われました。「来週の八日から名古屋に出張することになった。急いでいたから、もうトリップナビに出張申請を入力しておいたよ。念のため、これで大丈夫か確認してもらえる？」後輩は、先輩に何を確認する必要がありますか。",
+      "options": [
+        {
+          "text": "出発日が十月十四日以前にあたるため、システムではなく紙の申請書で出し直す必要があると伝える。",
+          "role": "correct",
+          "why": "名古屋出張は国内だが、出発日が来週の八日で十四日以前にあたり、通知の但し書きによりシステムではなく紙の申請書が必要だから。"
+        },
+        {
+          "text": "出発日が十月十五日以降の出張なので、システムのままで良いと伝える。",
+          "role": "right_action_wrong_condition",
+          "why": "システムでの申請が認められるのは出発日が十五日以降の場合であり、先輩の出張は来週の八日でこの条件を満たしていない。"
+        },
+        {
+          "text": "すでにトリップナビへの入力が済んでいるので、そのままで問題ないと伝える。",
+          "role": "ignores_the_document",
+          "why": "新方式での入力が済んでいることだけを見ており、出発日が十四日以前は紙の申請書が必要という但し書きを見落としている。"
+        },
+        {
+          "text": "総務部に連絡し、先輩の代わりにシステムの入力を紙の申請書に直してもらうよう依頼する。",
+          "role": "wrong_action_owner",
+          "why": "申請内容の訂正・出し直しは申請者本人が行うべきことで、後輩や総務部が代わりに手続きするものではない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "通知は、十月十五日から出張申請の方法を国内・海外で分けたうえで、出発日が十四日以前の出張は種類を問わず紙の申請書とする経過措置を定めている。先輩の電話から、出張先は国内（名古屋）だが、出発日は来週の八日で十四日以前にあたることが分かる。したがって、すでにシステムに入力していても、経過措置により紙の申請書で出し直す必要がある。「入力済みだから大丈夫」は但し書きを見ていない誤り、「十五日以降だから大丈夫」は日付の当てはめを誤っている、「総務部に代行させる」は訂正の主体を誤っている。通知だけでは先輩の出発日が分からず、電話だけでは経過措置の存在が分からない。",
+      "explanation_en": "The notice's transitional rule requires paper applications for any trip departing before Oct 14, regardless of destination; the call reveals the departure date falls into that window, overriding the fact that the trip is domestic and already entered into the new system.",
+      "vocab_notes": [
+        {
+          "term": "出張申請",
+          "reading": "しゅっちょうしんせい",
+          "meaning": "business trip application"
+        },
+        {
+          "term": "経過措置",
+          "reading": "けいかそち",
+          "meaning": "transitional measure"
+        },
+        {
+          "term": "出し直す",
+          "reading": "だしなおす",
+          "meaning": "to resubmit"
+        }
+      ],
+      "audio": {
+        "narration": "bc79d4b41309107d",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "memo_notice",
+          "title": "出張申請手続きの変更について",
+          "meta": [
+            {
+              "label": "発信者",
+              "value": "総務部"
+            },
+            {
+              "label": "発信日",
+              "value": "十月一日"
+            },
+            {
+              "label": "対象",
+              "value": "全社員"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "十月十五日より、出張申請の手続きを次のとおり変更します。"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "国内出張は、新システム「トリップナビ」から申請してください。",
+                "海外出張は、従来どおり紙の申請書を総務部に提出してください。"
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "bc79d4b41309107d",
+      "item_id": "5f2adf082b",
+      "kind": "narration",
+      "index": null,
+      "text": "後輩が電話を受けながら、この通知を見ています。先輩（営業部）からこう言われました。「来週の八日から名古屋に出張することになった。急いでいたから、もうトリップナビに出張申請を入力しておいたよ。念のため、これで大丈夫か確認してもらえる？」後輩は、先輩に何を確認する必要がありますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_phone_desk"
+  ]
+}
