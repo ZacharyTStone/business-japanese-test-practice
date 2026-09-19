@@ -18,7 +18,7 @@ import json
 import random
 from typing import Optional
 
-from .. import config, levels, llm, render, schemas, seedtable
+from .. import config, levels, llm, phrasebook, render, schemas, seedtable
 from ..fidelity import roles
 
 
@@ -135,12 +135,18 @@ class Generator:
         fs = self._fewshot_block()
         if fs:
             parts.insert(2, fs)
+        # For the spoken types only: the stock lines in the one wording the
+        # library already has a voice for (bjt/phrasebook.py).
+        stock = phrasebook.prompt_block(self.item_type)
+        if stock:
+            parts.insert(-1, stock)
         constraints = self._discriminator_constraints()
         if constraints:
             parts.insert(-1, constraints)  # just before the "return only JSON" line
         return "\n\n".join(parts)
 
-    def user_prompt(self, level: str, avoid_topics: list[str], cell=None) -> str:
+    def user_prompt(self, level: str, avoid_topics: list[str], cell=None,
+                    feedback: Optional[str] = None) -> str:
         u = [f"Write one {self.label} item at level {level}."]
         if cell is not None:
             u.append(self.cell_spec(cell))
@@ -149,6 +155,15 @@ class Generator:
             u.append(
                 "Do NOT reuse any of these recently used business scenarios; pick a "
                 f"clearly different one:\n{joined}"
+            )
+        if feedback:
+            # What review said about the last draft for this shelf. A generator
+            # that is wrong about a type is wrong about it all night unless it
+            # is told; this is the one sentence that tells it, and it costs a
+            # few tokens on the uncached half of the prompt.
+            u.append(
+                "The previous item written for this shelf tonight was REJECTED by "
+                f"review: {feedback}. Write this one so that cannot happen."
             )
         return "\n\n".join(u)
 
@@ -167,6 +182,7 @@ class Generator:
         cell=None,
         max_attempts: int = 3,
         seed: Optional[int] = None,
+        feedback: Optional[str] = None,
     ) -> dict:
         if cell is not None:
             level = cell.level
@@ -184,7 +200,7 @@ class Generator:
 
         schema = schemas.build_item_schema(self.item_type)
         system = self.system_prompt(level)
-        user = self.user_prompt(level, avoid, cell)
+        user = self.user_prompt(level, avoid, cell, feedback)
 
         last_errors: list[str] = []
         for attempt in range(max_attempts):
@@ -208,6 +224,7 @@ class Generator:
             # item; drop it rather than spend an attempt asking for it back.
             for doc in schemas.documents_of(item):
                 render.prune_empty_blocks(doc)
+            repair_surplus_options(item)
             errors = schemas.validate_item(self.item_type, item)
             errors.extend(self.validate_extra(item, cell))
             if not errors:
@@ -231,3 +248,39 @@ class Generator:
         if cell is not None:
             item["seed_cell"] = cell.to_dict()
         return item
+
+
+def repair_surplus_options(item: dict) -> list[str]:
+    """Trim a draft with more than four options down to four, in place.
+
+    A fifth option is the one schema fault the structured-output schema cannot
+    forbid (the API's JSON-schema subset has no `maxItems`), and it was costing
+    a whole generation per occurrence — three of them, on 2026-09-19, for a
+    shelf that then wrote nothing. The surplus is always a spare distractor:
+    keep the correct option and the first three distractors with distinct
+    roles, drop the rest, and let the ordinary validation and the gate judge
+    what is left. Returns the texts dropped, for the log. A draft with fewer
+    than four options, or with no single correct one, is left alone for the
+    validator to reject as before.
+    """
+    options = item.get("options")
+    if not isinstance(options, list) or len(options) <= 4:
+        return []
+    correct = [o for o in options if isinstance(o, dict) and o.get("role") == roles.CORRECT]
+    if len(correct) != 1:
+        return []
+    kept: list[dict] = [correct[0]]
+    seen_roles: set[str] = set()
+    dropped: list[str] = []
+    for o in options:
+        if o is correct[0]:
+            continue
+        role = o.get("role") if isinstance(o, dict) else None
+        if len(kept) < 4 and role and role not in seen_roles:
+            kept.append(o)
+            seen_roles.add(role)
+        else:
+            dropped.append(str((o or {}).get("text", "")) if isinstance(o, dict) else str(o))
+    # Keep the model's own order for what survives.
+    item["options"] = [o for o in options if any(o is k for k in kept)]
+    return dropped

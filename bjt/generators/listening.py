@@ -86,7 +86,9 @@ class SougouChoukaiGenerator(Generator):
         "`stated_by_wrong_speaker` is too.\n"
         "The question must NOT be answerable from the last turn alone. If it is, the "
         "item is testing whether somebody was still awake, not whether they followed "
-        "the conversation."
+        "the conversation. Review shows a reader the question and the four options "
+        "with the conversation withheld and rejects the item if the answer can be "
+        "picked: every option must be something the conversation could have settled."
     )
 
     def cell_spec(self, cell) -> str:

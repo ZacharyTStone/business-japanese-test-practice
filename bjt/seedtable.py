@@ -18,7 +18,9 @@ A cell is valid when all three constraints hold:
   * the setting's channel is one the function can occur over (``function.channels``)
 
 That last one is what stops "来客を迎えて案内する" from being generated over the
-phone.
+phone. A function may also list the ``settings`` it belongs in; the picture
+type needs that, because a picture of a whiteboard at the reception counter is
+a picture nobody can describe with a straight face.
 """
 from __future__ import annotations
 
@@ -89,6 +91,12 @@ class SeedTable:
             allowed_relations = set(self._setting_relations.get(s_id, []))
             for f_id, f in self._functions.items():
                 if s["channel"] not in f.get("channels", []):
+                    continue
+                # A function may name the settings it makes sense in (a
+                # whiteboard is not at the reception counter). Absent, any
+                # setting whose channel fits — which is how the older tables
+                # are written.
+                if f.get("settings") and s_id not in f["settings"]:
                     continue
                 for r_id in f.get("relations", []):
                     if r_id not in allowed_relations or r_id not in self._relations:

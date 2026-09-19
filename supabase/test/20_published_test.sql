@@ -170,8 +170,8 @@ begin
         (select coalesce(sum(answered), 0) from public.v_my_type_stats) = 5,
         'the radar picks them up immediately, whichever types they came from');
     perform test.check(
-        (select count(*) from public.v_my_type_stats) = 9,
-        'and still reports all nine types, including the ones not answered yet');
+        (select count(*) from public.v_my_type_stats) = 10,
+        'and still reports all ten types, including the ones not answered yet');
     perform test.check(public.my_streak() = 1, 'and the streak starts');
     perform test.check(
         (select count(*) from public.v_my_tag_stats where axis = 'function') > 0,
@@ -225,6 +225,57 @@ begin
          where o.role in (select chosen_role from public.attempts
                            where not is_correct and chosen_role <> '')) > 0,
         'and it serves items carrying the traps that have caught them');
+end
+$$;
+
+-- ---------------------------------------------------------- 画像把握 waits
+
+-- A picture item is published like any other, but the queue withholds it
+-- until its picture exists: the picture is the question, and an item with no
+-- picture would be four descriptions of nothing.
+do $$
+declare
+    n int;
+begin
+    raise notice 'a picture item waits for its picture';
+    select count(*) into n from public.items where item_type = 'gazou_haaku' and is_published;
+    perform test.check(n = 4, 'the reference batch of 画像把握 is published');
+    perform test.check(
+        (select count(*) from public.scenes s
+           join public.items i on i.scene_id = s.id
+          where i.item_type = 'gazou_haaku' and s.image_path is null) = 4,
+        'each with a scene of its own, and no picture yet');
+    perform test.check(
+        (select count(*) from public.next_items(1000) where item_type = 'gazou_haaku') = 0,
+        'and none of them is served without it');
+    perform test.check(
+        (select bool_and(needs_picture) from public.item_types where id = 'gazou_haaku')
+        and (select count(*) from public.item_types where needs_picture) = 1,
+        'because the type, and only this type, says the picture is the stimulus');
+end
+$$;
+
+reset role;
+
+-- The scene job points the database at one picture (the service role does
+-- this from the workflow); that item, and only that item, becomes servable.
+-- The tester's ceiling is lifted for the check, so the whole eligible pool
+-- comes back rather than the five the day has left.
+update public.scenes set image_path = id || '.webp'
+ where id = (select scene_id from public.items where item_type = 'gazou_haaku'
+              order by id limit 1);
+update public.testers set unlimited = true where email = 'c@example.com';
+
+do $$ begin perform test.become('33333333-3333-3333-3333-333333333333'); end $$;
+set role authenticated;
+
+do $$
+begin
+    perform test.check(
+        (select count(*) from public.next_items(1000) where item_type = 'gazou_haaku') = 1
+        and (select count(*) from public.next_items(1000)
+              where item_type = 'gazou_haaku' and scene_image_path is null) = 0,
+        'once its picture exists the item is served, with the picture');
 end
 $$;
 

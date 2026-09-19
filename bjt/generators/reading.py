@@ -25,7 +25,10 @@ _BOTH_SOURCES = (
     "between them, and one who hears only the audio cannot either. The usual way to "
     "achieve this is for the audio to change, qualify, or select against something the "
     "document states — a revised quantity, a cancelled slot, a condition that turns out "
-    "not to apply. If you can answer your own item from one source, it is the wrong item."
+    "not to apply. If you can answer your own item from one source, it is the wrong item. "
+    "Review checks exactly this: a reader is shown the document(s) and the four options "
+    "with the audio withheld, and the item is rejected if they can pick the answer; a "
+    "second reader with everything must then answer it with confidence."
 )
 
 
@@ -176,7 +179,9 @@ class SougouDokkaiGenerator(_DocumentGenerator):
         "not this type; 「この後、まず何をすべきですか」 and 「なぜ変更になったのですか」 are. "
         "The answer must be genuinely derivable from the document — a reasonable reader "
         "should agree it is the only defensible reading — while never being a sentence "
-        "you can point at.\n"
+        "you can point at. Review shows a reader the question and the four options with "
+        "the passage withheld and rejects the item if the answer can be picked; the "
+        "distractors must each be a reading somebody could take of SOME passage.\n"
         "The four traps for this type are all near-misses against the passage: something "
         "true of the world but unstated, something stated but answering a different "
         "question, something from the wrong point in time, and something that reuses a "

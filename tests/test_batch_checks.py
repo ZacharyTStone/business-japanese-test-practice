@@ -117,7 +117,10 @@ def test_the_library_reuses_its_scenes():
     picture cannot contain the answer, and an illustration specific enough to
     give the situation away would make the listening optional.
     """
-    scenes = [it["scene_id"] for _, it in _library() if it.get("scene_id")]
+    # A 画像把握 picture is one per item by design, and is not what the bank
+    # is for; it is left out of the count rather than diluting it.
+    scenes = [it["scene_id"] for _, it in _library()
+              if it.get("scene_id") and not it.get("image_brief")]
     assert scenes
     assert len(set(scenes)) < len(scenes) / 2, (
         f"{len(set(scenes))} scenes for {len(scenes)} items — that is close to "
