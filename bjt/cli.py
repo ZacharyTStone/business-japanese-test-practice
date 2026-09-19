@@ -161,13 +161,15 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_
         item["model_p_correct"] = full
 
     detail = _gate_detail(cold, full, gate_verdict, vres, sres, dres)
-    return item, item_id, kept, detail, _rejection_reason(item_type, gate_verdict, sres, vres)
+    gres_for_reason = gres if gate and gate_verdict != "discarded:sanity" else None
+    return item, item_id, kept, detail, _rejection_reason(
+        item_type, gate_verdict, sres, vres, gres_for_reason)
 
 
-def _rejection_reason(item_type: str, verdict: str, sres, vres) -> "str | None":
+def _rejection_reason(item_type: str, verdict: str, sres, vres, gres=None) -> "str | None":
     """Why review rejected this draft, as one sentence for the next one."""
     if verdict == "discarded:leaky":
-        return answerability.leak_description(item_type)
+        return answerability.leak_description(item_type, gres)
     if verdict == "discarded:ambiguous":
         return ("a reviewer with the whole stimulus could not pick the marked answer "
                 "consistently — another option was just as defensible, or the stimulus "
@@ -756,6 +758,14 @@ def run_batch(
     # one. A shelf's second and third drafts used to be written blind, and
     # they failed the same way as the first (2026-09-19: three leaky
     # 状況把握 drafts in a row, one shelf, nothing written).
+    #
+    # And told about the SAME cell: a draft the gate refused was a fine
+    # situation with options that gave it away, so the next draft is that
+    # situation again with the reviewer's reason in hand. Moving to a new
+    # cell on every discard — as the loop did until 2026-09-19 — threw the
+    # reason at a different situation, and the fresh draft failed the same
+    # way. Only a keep or a near-duplicate (the situation itself collides)
+    # moves the shelf on to its next cell.
     feedback: "str | None" = None
     while len(kept_items) < n and attempts < budget:
         if strikes >= config.SLOT_PATIENCE:
@@ -764,7 +774,6 @@ def run_batch(
             break
         attempts += 1
         cell = cells[idx % len(cells)] if cells else None
-        idx += 1
         try:
             item, iid, kept, detail, reason = _generate_and_gate(
                 store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell,
@@ -787,10 +796,12 @@ def run_batch(
             print(f"  [{len(kept_items)}/{n}] dropped — near-duplicate "
                   f"of an item already in this batch ({close:.2f})")
             strikes += 1
+            idx += 1
             feedback = ("it was a near-duplicate of another item in this batch "
                         f"({item.get('topic', '')!r}); write a clearly different situation")
             continue
         strikes = 0
+        idx += 1
         feedback = None
         kept_items.append(item)
         print(f"  [{len(kept_items)}/{n}] kept  {item.get('topic','')!r}  {detail}")
