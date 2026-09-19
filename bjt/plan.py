@@ -7,15 +7,22 @@ one of those promises is empty when the library is 40 items of one type at one
 level and six of everything else. A queue cannot interleave what is not there.
 
 So the bank has 30 shelves — ten problem types × three levels — and the job of
-the nightly run is to **fill the emptiest shelf first**. That is the whole
-algorithm:
+the nightly run is to **fill the shelf that is furthest behind its share of the
+exam**. That is the whole algorithm:
 
     give the first few items to the emptiest READING shelves (the floor);
     while there is budget left:
-        give the next item to the shelf with the fewest items,
+        give the next item to the shelf furthest behind its share,
         skipping any shelf that has no unspent seed cells
         or has already taken its share of this run
         or belongs to a type that has had its night's allowance
+
+"Furthest behind its share" rather than "fewest items" because the exam does not
+ask the same number of every type: 場面把握 and 状況把握 are five-question types
+where the other seven are ten (`schemas.EXAM_QUESTIONS`). Levelling all thirty
+shelves flat therefore builds a bank in the wrong shape — deepest, in
+proportional terms, in exactly the two types a learner meets least often. The
+rule is otherwise unchanged, and with equal shares it *is* the old rule.
 
 It has three properties worth the plainness. It is *deterministic*: the same
 library produces the same work order, so a run is reviewable before it is made.
@@ -48,9 +55,11 @@ from typing import Iterable, Optional
 from . import batch as batchmod
 from . import schemas, seedtable
 
-#: Below this many items, a shelf is thin enough that the queue notices: a set
-#: of five cannot avoid repeating a type that only has a handful published.
-#: Reporting only — the greedy fill needs no threshold.
+#: Below this many items, a shelf of a ten-question type is thin enough that the
+#: queue notices: a set of five cannot avoid repeating a type that only has a
+#: handful published. A five-question type is held to half of it, for the same
+#: reason the fill is share-relative — see `Shelf.target`. Reporting only; the
+#: greedy fill needs no threshold.
 DEFAULT_FLOOR = 12
 
 #: Most items one run may write into one (type, level) shelf.
@@ -92,8 +101,19 @@ class Shelf:
     cells_left: int
 
     @property
+    def target(self) -> int:
+        """How deep this shelf should be before it stops being thin.
+
+        Scaled by the type's share of the exam, so a five-question type is not
+        held to the depth of a ten-question one. A learner meets 場面把握 half as
+        often as 発言聴解, so half the shelf goes half as far in exactly the same
+        sense.
+        """
+        return max(1, round(DEFAULT_FLOOR * schemas.EXAM_QUESTIONS.get(self.item_type, 10) / 10))
+
+    @property
     def thin(self) -> bool:
-        return self.have < DEFAULT_FLOOR
+        return self.have < self.target
 
     @property
     def exhausted(self) -> bool:
@@ -186,13 +206,13 @@ def work_order(
     per_slot: int = DEFAULT_PER_SLOT,
     reading_min: int = DEFAULT_READING_MIN,
 ) -> list[WorkItem]:
-    """Fill the emptiest shelf first, until the budget runs out.
+    """Fill the shelf furthest behind its share, until the budget runs out.
 
     Two passes of the same greedy rule. The first hands `reading_min` items to
-    the reading shelves alone (emptiest first among them); the second hands the
-    rest of the budget to every shelf, emptiest first, counting what the first
-    pass placed. A reading floor that cannot be filled — every reading shelf
-    out of cells, or capped — gives its remainder back to the second pass.
+    the reading shelves alone (furthest behind first among them); the second
+    hands the rest of the budget to every shelf on the same rule, counting what
+    the first pass placed. A reading floor that cannot be filled — every reading
+    shelf out of cells, or capped — gives its remainder back to the second pass.
 
     Ties are broken by item type and then by level, so the order is a function of
     the library and nothing else — run it twice on the same tree and you get the
@@ -204,6 +224,21 @@ def work_order(
 
     def by_type(item_type: str) -> int:
         return sum(n for (t, _), n in assigned.items() if t == item_type)
+
+    def fullness(s: Shelf) -> float:
+        """How full this shelf is, measured against the exam rather than against
+        the other shelves.
+
+        "Emptiest first" used to mean the smallest `have`, which levels all
+        thirty shelves to the same depth — and the exam does not ask the same
+        number of every type. 場面把握 and 状況把握 are five-question types where
+        the rest are ten, so a bank levelled flat over-supplies exactly the two
+        types a learner meets least. Dividing by the share turns "emptiest" into
+        "furthest behind its share", which levels the bank into the shape of the
+        exam and is the same greedy rule otherwise.
+        """
+        have = s.have + assigned.get((s.item_type, s.level), 0)
+        return have / schemas.EXAM_QUESTIONS.get(s.item_type, 10)
 
     def place(n: int, candidates: list[Shelf]) -> int:
         placed = 0
@@ -219,7 +254,7 @@ def work_order(
             target = min(
                 eligible,
                 key=lambda s: (
-                    s.have + assigned.get((s.item_type, s.level), 0),
+                    fullness(s),
                     s.item_type,
                     s.level,
                 ),
@@ -242,10 +277,14 @@ def work_order(
             have=by_key[(item_type, level)].have,
             cells_left=by_key[(item_type, level)].cells_left,
         )
-        # Emptiest first in the output too, so a truncated run still does the
-        # most useful work.
+        # Furthest behind first in the output too, so a truncated run still does
+        # the most useful work.
         for (item_type, level), n in sorted(
-            assigned.items(), key=lambda kv: (by_key[kv[0]].have, kv[0])
+            assigned.items(),
+            key=lambda kv: (
+                by_key[kv[0]].have / schemas.EXAM_QUESTIONS.get(kv[0][0], 10),
+                kv[0],
+            ),
         )
     ]
 
@@ -301,7 +340,7 @@ def render(survey_result: Survey, order: list[WorkItem]) -> str:
     lines.append(
         f"  {survey_result.items} item(s) published; "
         f"{len(survey_result.empty)} empty shelf/shelves, "
-        f"{len(survey_result.thin)} below {DEFAULT_FLOOR}; "
+        f"{len(survey_result.thin)} below the type's share of {DEFAULT_FLOOR}; "
         f"{survey_result.cells_left} seed cell(s) left."
     )
     lines.append("")
@@ -311,7 +350,8 @@ def render(survey_result: Survey, order: list[WorkItem]) -> str:
         return "\n".join(lines)
 
     reading = sum(w.n for w in order if w.item_type in schemas.READING_TYPES)
-    lines.append(f"Work order — {sum(w.n for w in order)} item(s), emptiest shelf first; "
+    lines.append(f"Work order — {sum(w.n for w in order)} item(s), furthest behind its "
+                 f"share of the exam first; "
                  f"{reading} of them 読解 (reading first, then the rest)")
     lines.append("")
     for w in order:

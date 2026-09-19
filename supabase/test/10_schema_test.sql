@@ -190,6 +190,106 @@ begin
 end
 $$;
 
+-- --- the reading clock ------------------------------------------------------
+
+do $$
+declare
+    v record;
+    ok boolean := false;
+begin
+    raise notice 'the reading clock';
+
+    -- The budget is a property of the type, and it exists exactly where the
+    -- exam leaves the pacing to the candidate: the three 読解 types. Everywhere
+    -- else the audio sets the pace and a countdown would disagree with it.
+    perform test.check(
+        (select count(*) from public.item_types
+          where seconds_per_item is not null) = 3,
+        'exactly three types carry a time budget');
+    perform test.check(
+        (select bool_and(it.section = 'dokkai') from public.item_types it
+          where it.seconds_per_item is not null),
+        '...and they are the 読解 ones');
+    perform test.check(
+        (select sum(it.seconds_per_item * 10) from public.item_types it
+          where it.seconds_per_item is not null) = 1800,
+        'ten of each fills the exam''s own 30-minute reading block exactly');
+    perform test.check(
+        (select bool_and((seconds_per_item is null) = (typical_chars is null))
+           from public.item_types),
+        'a type has both numbers or neither — one without the other cannot be scaled');
+
+    -- A question the clock took: no option was chosen, and the database says so
+    -- rather than the app deciding what an unanswered question means.
+    insert into public.attempts (item_id, chosen_index) values ('itm_phone', -1);
+    select * into v from public.attempts order by id desc limit 1;
+    perform test.check(not v.is_correct, 'a question the clock took is wrong');
+    perform test.check(v.chosen_role = 'timed_out',
+                       '...and is recorded as timed_out, not as a distractor');
+
+    -- -1 is the only value outside 0..3 that means anything.
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_phone', -2);
+        ok := false;
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'no other out-of-range answer is accepted');
+
+    perform test.check(
+        (select timed_reading from public.profiles where id = (select auth.uid())),
+        'the clock is on by default: the reading block is timed either way');
+end
+$$;
+
+-- --- reporting a bad question -----------------------------------------------
+
+do $$
+declare
+    v record;
+    ok boolean := false;
+begin
+    raise notice 'reporting a bad question';
+
+    insert into public.item_feedback (item_id, reason, note)
+    values ('itm_phone', 'unnatural', 'だれもこんな言い方はしない');
+    select * into v from public.item_feedback order by id desc limit 1;
+    perform test.check(v.user_id = (select auth.uid()),
+                       'the reporter comes from the session, not from the insert');
+    perform test.check(v.reason = 'unnatural', 'the reason is kept');
+
+    -- One report per person per item: a second press corrects the first rather
+    -- than counting twice, which is what keeps "how many people reported this"
+    -- a true number.
+    begin
+        insert into public.item_feedback (item_id, reason) values ('itm_phone', 'audio');
+        ok := false;
+    exception when unique_violation then
+        ok := true;
+    end;
+    perform test.check(ok, 'the same person cannot report the same item twice');
+
+    update public.item_feedback set reason = 'ambiguous' where item_id = 'itm_phone';
+    perform test.check(
+        (select reason from public.item_feedback where item_id = 'itm_phone') = 'ambiguous',
+        'but they can correct what they said — unlike an answer, an opinion may change');
+
+    -- No delete policy, for the same reason attempts has none.
+    begin
+        delete from public.item_feedback where item_id = 'itm_phone';
+        ok := (select count(*) from public.item_feedback where item_id = 'itm_phone') = 1;
+    exception when insufficient_privilege then
+        ok := true;
+    end;
+    perform test.check(ok, 'a report that was made was made');
+
+    -- A reported item is still served. Unpublishing is a person''s decision.
+    perform test.check(
+        (select is_published from public.items where id = 'itm_phone'),
+        'reporting an item does not withdraw it');
+end
+$$;
+
 -- --- isolation --------------------------------------------------------------
 
 do $$ begin perform test.become('22222222-2222-2222-2222-222222222222'); end $$;

@@ -2,7 +2,7 @@
   "bundle_version": 2,
   "item_type": "sougou_choukai",
   "level": "J1",
-  "generated_at": "2026-09-18T08:50:50+00:00",
+  "generated_at": "2026-09-19T17:03:52+00:00",
   "generator_model": "manual-load",
   "items": [
     {
@@ -58,7 +58,12 @@
       ],
       "audio": {
         "narration": "65cf4a8882e7739a",
-        "options": [],
+        "options": [
+          "7d3d4f0cf12c33f3",
+          "bd512d2d5eef6008",
+          "da9b1e734101077f",
+          "4ada26a99c384818"
+        ],
         "dialogue": [
           "b22643c081aa6662",
           "8b748dd1583178f1",
@@ -156,7 +161,12 @@
       ],
       "audio": {
         "narration": "c8690b84797bbf6f",
-        "options": [],
+        "options": [
+          "5dc8c727c787e03a",
+          "08e5f869b65cf6af",
+          "ba0be0de91b5094b",
+          "ebe5eec5fd0fd745"
+        ],
         "dialogue": [
           "ec250f17b2a14316",
           "52214b37a5ae3fb2",
@@ -267,6 +277,42 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "7d3d4f0cf12c33f3",
+      "item_id": "f833f9f24b",
+      "kind": "option",
+      "index": 0,
+      "text": "来月から取引先に常駐する社員",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "bd512d2d5eef6008",
+      "item_id": "f833f9f24b",
+      "kind": "option",
+      "index": 1,
+      "text": "設定を担当している社員",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da9b1e734101077f",
+      "item_id": "f833f9f24b",
+      "kind": "option",
+      "index": 2,
+      "text": "取引先の担当者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4ada26a99c384818",
+      "item_id": "f833f9f24b",
+      "kind": "option",
+      "index": 3,
+      "text": "二人の社員が交代で担当する",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "c8690b84797bbf6f",
       "item_id": "0ed5b25518",
       "kind": "narration",
@@ -328,6 +374,42 @@
       "text": "承知しました。そのように手配いたします。",
       "voice": "staff_junior_m",
       "channel": "video"
+    },
+    {
+      "clip_id": "5dc8c727c787e03a",
+      "item_id": "0ed5b25518",
+      "kind": "option",
+      "index": 0,
+      "text": "百台",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "08e5f869b65cf6af",
+      "item_id": "0ed5b25518",
+      "kind": "option",
+      "index": 1,
+      "text": "四十台",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ba0be0de91b5094b",
+      "item_id": "0ed5b25518",
+      "kind": "option",
+      "index": 2,
+      "text": "六十台",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ebe5eec5fd0fd745",
+      "item_id": "0ed5b25518",
+      "kind": "option",
+      "index": 3,
+      "text": "八十台",
+      "voice": "narrator_f",
+      "channel": "in_person"
     }
   ],
   "scenes": [

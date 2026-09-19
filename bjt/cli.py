@@ -1468,7 +1468,7 @@ def cmd_tester(args) -> int:
 
 
 def _print_bundle_report(bundle: dict, report) -> None:
-    marks = {"pass": "OK  ", "warn": "WARN", "fail": "FAIL"}
+    marks = {"pass": "OK  ", "note": "NOTE", "warn": "WARN", "fail": "FAIL"}
     print("\n" + "=" * 62)
     print(f"BUNDLE CHECK — {bundle['item_type']} / {bundle['level']} / "
           f"{len(bundle['items'])} item(s)")
@@ -1476,7 +1476,8 @@ def _print_bundle_report(bundle: dict, report) -> None:
     for c in report.checks:
         print(f"  [{marks[c.status]}] {c.name}: {c.detail}")
     print("-" * 62)
-    print(f"  {len(report.failed)} failure(s), {len(report.warned)} warning(s) — "
+    print(f"  {len(report.failed)} failure(s), {len(report.warned)} warning(s), "
+          f"{len(report.noted)} note(s) — "
           f"{'SHIPPABLE' if report.ok else 'NOT SHIPPABLE'}")
     print("  (offline checks only: the answerability gate and the discriminator "
           "need an API key)")

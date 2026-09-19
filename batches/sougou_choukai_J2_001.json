@@ -2,7 +2,7 @@
   "bundle_version": 2,
   "item_type": "sougou_choukai",
   "level": "J2",
-  "generated_at": "2026-09-15T17:52:02+00:00",
+  "generated_at": "2026-09-19T17:03:52+00:00",
   "generator_model": "author-composed",
   "items": [
     {
@@ -58,7 +58,12 @@
       ],
       "audio": {
         "narration": "e8078990730d2494",
-        "options": [],
+        "options": [
+          "37d1c1197647f26e",
+          "38514cc8ea12f032",
+          "4acf7f7296f7d3c9",
+          "42e249f0a811d695"
+        ],
         "dialogue": [
           "3795edbd23a1def0",
           "4856b028c164b382",
@@ -150,7 +155,12 @@
       ],
       "audio": {
         "narration": "eb2409b511d86590",
-        "options": [],
+        "options": [
+          "ef9e70c8a41cffcd",
+          "ba9897bfc946b048",
+          "8f9d9b5cb2f8b566",
+          "ad46f55980cb0115"
+        ],
         "dialogue": [
           "1374320693346177",
           "8659f5961fc3d238",
@@ -242,7 +252,12 @@
       ],
       "audio": {
         "narration": "a336102a62c5f18f",
-        "options": [],
+        "options": [
+          "f15ce79da033f79a",
+          "ef109c18347bea2d",
+          "d8678c498cd0a7c1",
+          "ef58c10a2f6f1c1d"
+        ],
         "dialogue": [
           "50c3ca30fc47b30c",
           "6b4962d44ab4bc07",
@@ -334,7 +349,12 @@
       ],
       "audio": {
         "narration": "f75de607b76ff1f5",
-        "options": [],
+        "options": [
+          "f7a9055874dfea21",
+          "e247a25ab3b60375",
+          "4fb66fcdcdfdb929",
+          "20deff34267f4234"
+        ],
         "dialogue": [
           "7e4aec108b24baa4",
           "d7faf313036cc39f",
@@ -426,7 +446,12 @@
       ],
       "audio": {
         "narration": "2f32a020fae39a6f",
-        "options": [],
+        "options": [
+          "a3de8593f6d16fe2",
+          "70b49cd2bbc4c842",
+          "02405a9688849674",
+          "574c94aa2d8b7e4c"
+        ],
         "dialogue": [
           "ae1e971c423a541d",
           "786d2b079f4d85fe",
@@ -518,7 +543,12 @@
       ],
       "audio": {
         "narration": "28dde1b2c8756c6f",
-        "options": [],
+        "options": [
+          "46d0bd8e736c0b68",
+          "1362314b485730b6",
+          "131cf20416b6da23",
+          "89791fcc0f5f2957"
+        ],
         "dialogue": [
           "48971d4c54401230",
           "dfd70558ea0ce0dc",
@@ -614,6 +644,42 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "37d1c1197647f26e",
+      "item_id": "8f4b311918",
+      "kind": "option",
+      "index": 0,
+      "text": "一区画に減らして出展する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "38514cc8ea12f032",
+      "item_id": "8f4b311918",
+      "kind": "option",
+      "index": 1,
+      "text": "予算を一割増やして備品を借りる。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4acf7f7296f7d3c9",
+      "item_id": "8f4b311918",
+      "kind": "option",
+      "index": 2,
+      "text": "二区画のまま出展し、備品は社内から運ぶ。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "42e249f0a811d695",
+      "item_id": "8f4b311918",
+      "kind": "option",
+      "index": 3,
+      "text": "備品の運搬を外部の業者に頼む。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "eb2409b511d86590",
       "item_id": "0534e27128",
       "kind": "narration",
@@ -668,6 +734,42 @@
       "channel": "video"
     },
     {
+      "clip_id": "ef9e70c8a41cffcd",
+      "item_id": "0534e27128",
+      "kind": "option",
+      "index": 0,
+      "text": "仕様が変わり、図面を引き直しているから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ba9897bfc946b048",
+      "item_id": "0534e27128",
+      "kind": "option",
+      "index": 1,
+      "text": "部品がまだ届いていないから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8f9d9b5cb2f8b566",
+      "item_id": "0534e27128",
+      "kind": "option",
+      "index": 2,
+      "text": "組み立てを担当する人が足りないから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ad46f55980cb0115",
+      "item_id": "0534e27128",
+      "kind": "option",
+      "index": 3,
+      "text": "先輩社員が図面の確認に時間をかけているから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "a336102a62c5f18f",
       "item_id": "1122d7e730",
       "kind": "narration",
@@ -719,6 +821,42 @@
       "index": 4,
       "text": "はい、それで結構です。",
       "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f15ce79da033f79a",
+      "item_id": "1122d7e730",
+      "kind": "option",
+      "index": 0,
+      "text": "内容によって、営業部と他部署が振り分けて受ける。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ef109c18347bea2d",
+      "item_id": "1122d7e730",
+      "kind": "option",
+      "index": 1,
+      "text": "技術的な内容は、はじめから他部署が受ける。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d8678c498cd0a7c1",
+      "item_id": "1122d7e730",
+      "kind": "option",
+      "index": 2,
+      "text": "課長がすべての問い合わせを受ける。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ef58c10a2f6f1c1d",
+      "item_id": "1122d7e730",
+      "kind": "option",
+      "index": 3,
+      "text": "営業部が受け、技術的な内容だけ他部署に回す。",
+      "voice": "narrator_f",
       "channel": "in_person"
     },
     {
@@ -776,6 +914,42 @@
       "channel": "phone"
     },
     {
+      "clip_id": "f7a9055874dfea21",
+      "item_id": "bf56a09591",
+      "kind": "option",
+      "index": 0,
+      "text": "四十個を十日に納入する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e247a25ab3b60375",
+      "item_id": "bf56a09591",
+      "kind": "option",
+      "index": 1,
+      "text": "六十個を十五日に納入する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4fb66fcdcdfdb929",
+      "item_id": "bf56a09591",
+      "kind": "option",
+      "index": 2,
+      "text": "六十個を十日に納入する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "20deff34267f4234",
+      "item_id": "bf56a09591",
+      "kind": "option",
+      "index": 3,
+      "text": "五十個を十五日に納入する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "2f32a020fae39a6f",
       "item_id": "ba7233ff60",
       "kind": "narration",
@@ -830,6 +1004,42 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "a3de8593f6d16fe2",
+      "item_id": "ba7233ff60",
+      "kind": "option",
+      "index": 0,
+      "text": "支払いの合計金額が上がった点",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "70b49cd2bbc4c842",
+      "item_id": "ba7233ff60",
+      "kind": "option",
+      "index": 1,
+      "text": "支払いの期限が早まった点",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "02405a9688849674",
+      "item_id": "ba7233ff60",
+      "kind": "option",
+      "index": 2,
+      "text": "経理の担当者が変わった点",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "574c94aa2d8b7e4c",
+      "item_id": "ba7233ff60",
+      "kind": "option",
+      "index": 3,
+      "text": "支払いの回数が三回から二回に減った点",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "28dde1b2c8756c6f",
       "item_id": "e42ed7e923",
       "kind": "narration",
@@ -881,6 +1091,42 @@
       "index": 4,
       "text": "助かります。会議は来週の火曜です。",
       "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "46d0bd8e736c0b68",
+      "item_id": "e42ed7e923",
+      "kind": "option",
+      "index": 0,
+      "text": "価格の内訳を明日中に先方へ送る。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1362314b485730b6",
+      "item_id": "e42ed7e923",
+      "kind": "option",
+      "index": 1,
+      "text": "本日の資料一式を改めて先方へ送る。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "131cf20416b6da23",
+      "item_id": "e42ed7e923",
+      "kind": "option",
+      "index": 2,
+      "text": "来週の火曜の会議に出席する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "89791fcc0f5f2957",
+      "item_id": "e42ed7e923",
+      "kind": "option",
+      "index": 3,
+      "text": "社内の会議に本日の内容をかける。",
+      "voice": "narrator_f",
       "channel": "in_person"
     }
   ],

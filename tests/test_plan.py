@@ -224,6 +224,52 @@ def test_the_section_map_matches_the_database():
     assert rows == schemas.SECTIONS
 
 
+def test_the_exam_question_counts_match_the_database():
+    """Same argument as the section map: the planner needs the counts with no
+    database, the queue reads them from one, and a drift between the two would
+    quietly build a bank in one shape and serve it in another."""
+    import re
+    sql = "\n".join(
+        p.read_text(encoding="utf-8")
+        for p in sorted((ROOT_DIR / "supabase" / "migrations").glob("*.sql"))
+    )
+    # The column arrives with a default and is then set per type, so the
+    # authority is the default plus every update that overrides it.
+    default = re.search(
+        r"add column exam_questions smallint not null default (\d+)", sql
+    )
+    assert default, "the migration should declare exam_questions with a default"
+    counts = {t: int(default.group(1)) for t in schemas.SECTIONS}
+    for value, ids in re.findall(
+        r"update public\.item_types set exam_questions = (\d+) where id (?:=|in) \(?([^;)]*)\)?;",
+        sql,
+    ):
+        for item_type in re.findall(r"'([a-z_]+)'", ids):
+            counts[item_type] = int(value)
+    assert counts == schemas.EXAM_QUESTIONS
+
+
+def test_the_planner_fills_against_the_share_not_the_depth():
+    """場面把握 is a five-question type and 発言聴解 a ten-question one, so six
+    of the first is as deep as twelve of the second — and a night with both on
+    the shelf writes 発言聴解."""
+    order = plan.work_order(
+        _survey(("bamen_haaku", "J2", 6, 100), ("hatsugen_choukai", "J2", 6, 100)),
+        budget=2, per_slot=2, reading_min=0,
+    )
+    by_type = {w.item_type: w.n for w in order}
+    assert by_type == {"hatsugen_choukai": 2}, (
+        "6/5 is fuller than 6/10; the flat rule would have split these evenly"
+    )
+
+
+def test_a_thin_shelf_is_thin_against_its_share():
+    """Six 場面把握 items is not thin; six 発言聴解 items is."""
+    survey = _survey(("bamen_haaku", "J2", 6, 10), ("hatsugen_choukai", "J2", 6, 10))
+    thin = {s.item_type for s in survey.thin}
+    assert thin == {"hatsugen_choukai"}
+
+
 def test_render_says_how_many_are_reading():
     text = plan.render(_mixed_survey(), plan.work_order(_mixed_survey(), budget=8))
     assert "3 of them 読解" in text

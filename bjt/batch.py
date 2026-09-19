@@ -27,6 +27,7 @@ from typing import Optional
 
 from . import config, schemas, seedtable
 from .fidelity import dedupe, roles
+from .render import document
 from .tts import plan as tts_plan
 
 #: 2 — audio clip ids are filed by role (`narration` / `options` / `dialogue`)
@@ -39,6 +40,46 @@ BUNDLE_VERSION = 2
 #: situation; longer and the test-taker is being tested on memory.
 STEM_MIN_CHARS = 20
 STEM_MAX_CHARS = 140
+
+#: How long the exam's own questions are, per type and per part, in characters.
+#:
+#: An item can be correct, answerable, un-leaky and still not feel like the
+#: exam, and length is most of the difference. The 語彙・文法 options on the real
+#: paper are two to six characters — 「こそ／のみ／だけ／まで」, 「使いきり／使いはじめ／
+#: 使いよう／使いづくめ」 — so a set of fifteen-character options has drifted into
+#: 表現読解 whatever else is right about it. A 総合読解 passage is described by the
+#: level guide as two to three minutes of reading, which is four hundred to nine
+#: hundred characters; ours have been running under three hundred, which makes
+#: the type a comprehension question rather than the sustained read it is.
+#:
+#: `stem` is measured on OUR stem field, which is not always the exam's question:
+#: for the narrated types it carries the whole narration, so those bands are
+#: wider than the published question lengths. `document` is the rendered text of
+#: every document on the item together.
+#:
+#: These are bands, not rules, and they report as `note` rather than `warn` —
+#: see `Check.status`. Provenance: the exam's published sample material and the
+#: endorsed publisher's workbooks, read at second hand (the official pages could
+#: not be fetched directly), so treat them as a calibration to re-measure rather
+#: than as a specification.
+LENGTH_BANDS: dict[str, dict[str, tuple[int, int]]] = {
+    # 第1部 聴解 — heard once, so the narration carries the whole situation.
+    "bamen_haaku":        {"stem": (50, 160), "option": (6, 30)},
+    "gazou_haaku":        {"stem": (8, 40), "option": (8, 30)},
+    "hatsugen_choukai":   {"stem": (STEM_MIN_CHARS, STEM_MAX_CHARS), "option": (8, 45)},
+    "sougou_choukai":     {"stem": (12, 45), "option": (5, 35)},
+    # 第2部 聴読解 — a document on screen and a prompt in the ear. 資料聴読解's
+    # options are the document's own field labels on the real paper, which is
+    # why its band is so much shorter than the others'.
+    "joukyou_haaku":      {"stem": (50, 160), "option": (5, 50), "document": (80, 320)},
+    "shiryou_choudokkai": {"stem": (40, 150), "option": (2, 20), "document": (80, 320)},
+    "sougou_choudokkai":  {"stem": (12, 45), "option": (4, 45), "document": (80, 400)},
+    # 第3部 読解 — nothing is heard. 語彙・文法 is a blank and four short fillers;
+    # 総合読解 is the long one, and the only type on the paper that is.
+    "goi_bunpou":         {"stem": (20, 60), "option": (1, 10)},
+    "hyougen":            {"stem": (35, 110), "option": (8, 32)},
+    "sougou_dokkai":      {"stem": (15, 45), "option": (8, 40), "document": (350, 950)},
+}
 
 
 def item_id(item: dict) -> str:
@@ -213,7 +254,17 @@ def default_path(item_type: str, level: str) -> Path:
 @dataclass
 class Check:
     name: str
-    status: str  # "pass" | "warn" | "fail"
+    #: "pass" | "note" | "warn" | "fail".
+    #:
+    #: `note` is weaker than `warn` on purpose. A warning says the bundle has
+    #: something wrong with it; a note says it differs from the exam in a way
+    #: worth knowing about but does not make the item defective. The one thing
+    #: that reports notes today is the length band, and the distinction matters
+    #: there: a 総合読解 item with a 200-character passage is a perfectly good
+    #: question that is nothing like the 400-to-900-character passage the exam
+    #: sets, and calling that a fault would mean either shipping nothing or
+    #: silencing the check.
+    status: str
     detail: str
 
 
@@ -228,6 +279,10 @@ class BundleReport:
     @property
     def warned(self) -> list[Check]:
         return [c for c in self.checks if c.status == "warn"]
+
+    @property
+    def noted(self) -> list[Check]:
+        return [c for c in self.checks if c.status == "note"]
 
     @property
     def ok(self) -> bool:
@@ -333,14 +388,31 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
     add("per-option why", "fail" if thin else "pass",
         f"too thin: {thin}" if thin else "every option explains itself")
 
-    # 8. Listening-specific: stem length, and the scene must exist in the bank.
-    if item_type == "hatsugen_choukai":
-        bad_len = [f"{it['id']}({len(it['stem'])}字)" for it in items
-                   if not STEM_MIN_CHARS <= len(it["stem"]) <= STEM_MAX_CHARS]
-        add("stem length for listening", "warn" if bad_len else "pass",
-            f"outside {STEM_MIN_CHARS}-{STEM_MAX_CHARS}字: {bad_len}" if bad_len
-            else f"all stems within {STEM_MIN_CHARS}-{STEM_MAX_CHARS}字")
+    # 8. Length against the exam's own shapes. A note rather than a warning:
+    #    see LENGTH_BANDS and Check.status for why being unlike the exam is not
+    #    the same as being wrong.
+    bands = LENGTH_BANDS.get(item_type)
+    if bands:
+        out_of_band: list[str] = []
+        summary: list[str] = []
+        for field_name, (low, high) in bands.items():
+            lengths = _measured_lengths(field_name, items)
+            if not lengths:
+                continue
+            outside = [n for n in lengths if not low <= n <= high]
+            summary.append(
+                f"{field_name} {min(lengths)}–{max(lengths)}字 (band {low}–{high})"
+            )
+            if outside:
+                out_of_band.append(
+                    f"{len(outside)}/{len(lengths)} {field_name}(s) outside {low}-{high}字"
+                )
+        add("length matches the exam", "note" if out_of_band else "pass",
+            "; ".join(out_of_band) + f" — {', '.join(summary)}" if out_of_band
+            else ", ".join(summary))
 
+    # 9. Listening-specific: the scene must exist in the bank.
+    if item_type == "hatsugen_choukai":
         try:
             bank = set(seedtable.load(item_type).scene_bank)
         except FileNotFoundError:
@@ -353,7 +425,7 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
                 f"not in the bank: {unknown}" if unknown
                 else f"{n_scenes} scene(s) reused across {n} items")
 
-    # 9. Shared utterances are supposed to collapse into one file, so the
+    # 10. Shared utterances are supposed to collapse into one file, so the
     #    manifest should be smaller than the clips the items ask for between
     #    them. The old form of this check assumed five clips per item —
     #    narration plus four spoken options — which is true of exactly one of
@@ -377,6 +449,28 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
             + (f" — {saved} shared utterance(s) collapsed" if saved else ""))
 
     return report
+
+
+def _measured_lengths(field_name: str, items: list[dict]) -> list[int]:
+    """Character counts for one measured field, across a bundle.
+
+    One number per stem, one per option, and — for `document` — one per ITEM
+    rather than per document, because what a reader faces is everything on the
+    page at once and the two-document types would otherwise each look half as
+    long as they are.
+    """
+    if field_name == "stem":
+        return [len(it.get("stem", "")) for it in items]
+    if field_name == "option":
+        return [len(o.get("text", "")) for it in items for o in it.get("options", [])]
+    if field_name == "document":
+        out = []
+        for it in items:
+            docs = schemas.documents_of(_as_generator_shape(it))
+            if docs:
+                out.append(sum(len(document.text_of(d)) for d in docs))
+        return out
+    return []
 
 
 def _as_generator_shape(bundle_item: dict) -> dict:
