@@ -125,6 +125,15 @@ EFFORT_CEILING = _env("BJT_EFFORT_CEILING", "high")
 NIGHT_MAX_BUDGET = int(_env("BJT_NIGHT_MAX_BUDGET", "24"))
 NIGHT_MAX_PER_SLOT = int(_env("BJT_NIGHT_MAX_PER_SLOT", "6"))
 
+# How fast the voice speaks, as a multiple of the provider's natural rate.
+# The first clips came out a shade too clear and slow — a reader, not a
+# person — and the owner asked for a touch more pace (2026-09-19). A tenth
+# over is about the difference between reading a line and saying it; the
+# direction in bjt/tts/providers.py does the rest. Clips already live keep
+# the pace they were made at (a live clip is never re-made), so change this
+# before a library is synthesised, not halfway through one.
+TTS_SPEED = float(_env("BJT_TTS_SPEED", "1.1"))
+
 DB_PATH = Path(_env("BJT_DB_PATH", str(ROOT / "bjt.db")))
 
 # Licensed few-shot examples, official sample items, vocab lists, and level

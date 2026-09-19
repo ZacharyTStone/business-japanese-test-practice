@@ -125,6 +125,18 @@ def test_the_image_prompt_carries_every_prohibition(tmp_path):
     assert scenes.STYLE in prompt
 
 
+def test_the_brief_says_who_is_talking_to_whom(tmp_path):
+    """Two principals, one with the floor, everyone else scenery — in both the
+    illustrator's brief and the image model's prompt, and a reviewer rule that
+    fails a crowd of equals."""
+    scene = scenes.survey(tmp_path)[0]
+    for text in (scenes.prompt_for(scene), scenes.image_prompt(scene)):
+        assert scenes.COMPOSITION in text
+        assert "who has the floor" in text
+    assert "no_focus" in scene_art.RULES
+    assert any("who is talking to whom" in clause for clause in scenes.FORBIDDEN)
+
+
 # ----- the bucket -----------------------------------------------------------
 
 def test_the_bucket_refuses_without_its_two_variables(monkeypatch):
