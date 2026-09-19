@@ -238,16 +238,22 @@ declare
     n int;
 begin
     raise notice 'a picture item waits for its picture';
+    -- Counted, not hardcoded. This block used to assert "four items, four
+    -- scenes, none of them drawn", which was true on the day 画像把握 shipped and
+    -- false the moment the scene job drew its first picture — and would have
+    -- gone stale again on the next batch and the next drawing. What the type
+    -- actually promises is a property, and the property is what is asserted
+    -- here: one picture per item, and nothing served before its picture exists.
     select count(*) into n from public.items where item_type = 'gazou_haaku' and is_published;
-    perform test.check(n = 4, 'the reference batch of 画像把握 is published');
+    perform test.check(n > 0, 'the 画像把握 batch is published');
     perform test.check(
-        (select count(*) from public.scenes s
-           join public.items i on i.scene_id = s.id
-          where i.item_type = 'gazou_haaku' and s.image_path is null) = 4,
-        'each with a scene of its own, and no picture yet');
+        (select count(distinct i.scene_id) from public.items i
+          where i.item_type = 'gazou_haaku' and i.is_published) = n,
+        'each with a scene of its own — no two share a picture');
     perform test.check(
-        (select count(*) from public.next_items(1000) where item_type = 'gazou_haaku') = 0,
-        'and none of them is served without it');
+        not exists (select 1 from public.next_items(1000)
+                     where item_type = 'gazou_haaku' and scene_image_path is null),
+        'and none of them is served while its picture is missing');
     perform test.check(
         (select bool_and(needs_picture) from public.item_types where id = 'gazou_haaku')
         and (select count(*) from public.item_types where needs_picture) = 1,
@@ -257,13 +263,20 @@ $$;
 
 reset role;
 
--- The scene job points the database at one picture (the service role does
--- this from the workflow); that item, and only that item, becomes servable.
--- The tester's ceiling is lifted for the check, so the whole eligible pool
--- comes back rather than the five the day has left.
+-- The scene job points the database at one more picture (the service role does
+-- this from the workflow); that item joins the servable ones. The tester's
+-- ceiling is lifted for the check, so the whole eligible pool comes back rather
+-- than the five the day has left.
+--
+-- It draws the one that has NO picture, rather than the lowest id: some of the
+-- committed scenes already carry artwork, and picking a scene that is already
+-- drawn would make this a test of an UPDATE that changed nothing.
 update public.scenes set image_path = id || '.webp'
- where id = (select scene_id from public.items where item_type = 'gazou_haaku'
-              order by id limit 1);
+ where id = (select i.scene_id
+               from public.items i
+               join public.scenes s on s.id = i.scene_id
+              where i.item_type = 'gazou_haaku' and s.image_path is null
+              order by i.id limit 1);
 update public.testers set unlimited = true where email = 'c@example.com';
 
 do $$ begin perform test.become('33333333-3333-3333-3333-333333333333'); end $$;
@@ -271,8 +284,14 @@ set role authenticated;
 
 do $$
 begin
+    -- Counted from the scenes rather than fixed at one, for the same reason as
+    -- above: what is promised is "every drawn item, and only the drawn ones".
     perform test.check(
-        (select count(*) from public.next_items(1000) where item_type = 'gazou_haaku') = 1
+        (select count(*) from public.next_items(1000) where item_type = 'gazou_haaku')
+          = (select count(*) from public.items i
+               join public.scenes s on s.id = i.scene_id
+              where i.item_type = 'gazou_haaku' and i.is_published
+                and s.image_path is not null)
         and (select count(*) from public.next_items(1000)
               where item_type = 'gazou_haaku' and scene_image_path is null) = 0,
         'once its picture exists the item is served, with the picture');
