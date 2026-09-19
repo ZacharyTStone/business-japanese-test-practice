@@ -88,11 +88,6 @@ on:
         description: "Most dollars this run may spend on the Anthropic API (measured from usage; the run stops with what it has)"
         required: false
         default: "2"
-      force:
-        description: "Write tonight even though an earlier night's content branch is still unmerged"
-        type: boolean
-        required: false
-        default: false
       dry_run:
         description: "Print the work order and stop"
         type: boolean
@@ -194,35 +189,7 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "seeds=$HAVE_SEEDS" >> "$GITHUB_OUTPUT"
-          # A night's work is a branch waiting for a person. While one is
-          # still waiting, another night of generation is money spent on
-          # items nobody has looked at yet — and if the review has stalled,
-          # every night after it would be. One unreviewed night at a time;
-          # a manual run may say "force" to write anyway.
-          # A branch already merged into the default branch is a night that
-          # was reviewed; only one whose commits are not on main is waiting.
-          # (Merged, not deleted, is the common case when auto-delete is off.)
-          default="${{ github.event.repository.default_branch }}"
-          git fetch -q origin "$default" '+refs/heads/content/nightly-*:refs/remotes/origin/content/nightly-*' || true
-          waiting=""
-          for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/content/nightly-*'); do
-            if ! git merge-base --is-ancestor "$ref" "origin/$default"; then
-              waiting="$waiting${ref#origin/}"$'\n'
-            fi
-          done
-          waiting="$(printf '%s' "$waiting" | sed '/^$/d')"
-          if [ -n "$waiting" ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
-            echo "go=false" >> "$GITHUB_OUTPUT"
-            {
-              echo
-              echo '### Nothing written: an earlier night is still waiting for review'
-              echo
-              echo 'These content branches are still on the remote. Merge or delete them and'
-              echo 'the next night writes again; or run this workflow by hand with "force".'
-              echo
-              echo "$waiting" | sed 's/^/- `/; s/$/`/'
-            } >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$HAVE_API_KEY" = "true" ]; then
+          if [ "$HAVE_API_KEY" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
             echo "go=false" >> "$GITHUB_OUTPUT"

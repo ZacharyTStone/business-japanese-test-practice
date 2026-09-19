@@ -255,7 +255,7 @@ def test_the_workflow_keeps_its_guards():
     assert int(clock.group(1)) > config.RUN_MAX_MINUTES, "the process stops itself first"
 
     assert re.search(r"^\s+BJT_RUN_BUDGET_USD:", text, re.M), "the dollar ceiling is set for the run"
-    assert re.search(r"^\s+max_usd:", text, re.M) and re.search(r"^\s+force:", text, re.M)
+    assert re.search(r"^\s+max_usd:", text, re.M)
 
     keep = text.index("name: keep tonight's work whatever happens next")
     keep_block = text[keep:text.index("- name:", keep + 1)]
@@ -266,6 +266,9 @@ def test_the_workflow_keeps_its_guards():
     pr_block = text[pr:]
     assert "git rebase" in pr_block and "git fetch origin" in pr_block, "tonight's commit sits on today's main"
 
+    # What a night may spend is bounded by the ceilings above and nothing
+    # else: no check on other branches decides whether it runs. The owner
+    # asked for that (2026-09-19) after a leftover branch held a night back.
     unlocked = text.index("name: which of tonight's work is unlocked")
     unlocked_block = text[unlocked:text.index("- name:", unlocked + 1)]
-    assert "content/nightly-*" in unlocked_block, "one unreviewed night at a time"
+    assert "content/nightly-*" not in unlocked_block
