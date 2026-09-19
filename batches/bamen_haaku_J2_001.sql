@@ -1,11 +1,12 @@
 -- bamen_haaku_J2_001: 6 × bamen_haaku (J2)
--- generated 2026-09-15T17:50:12+00:00 by author-composed
+-- generated 2026-09-19T17:03:52+00:00 by author-composed
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_corridor', 'オフィスの廊下'),
        ('scene_expo_booth', '展示会のブース'),
@@ -19,18 +20,42 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('b0ee6487f832174e', '会社の廊下で、部下が上司に呼び止められました。「例の報告書ですが、数字を直したものを先方に送る前に一度見せてください。」部下はこのあと何をしますか。', 'narrator_f', 'in_person'),
+       ('b3f94ffb21163d9d', '数字を直した報告書を、先方に送ってから上司に見せる。', 'narrator_f', 'in_person'),
+       ('12e5f968b1ae5963', '報告書の数字をこれから直す。', 'narrator_f', 'in_person'),
+       ('041310e45a6f0276', '数字を直した報告書を、先に上司に見せる。', 'narrator_f', 'in_person'),
+       ('5252e3fa63ee429e', '先方に報告書の送り先を確認する。', 'narrator_f', 'in_person'),
        ('a79b34a57d0e972e', '会社で、ある人が電話でこう話しています。「いつもお世話になっております。山川商事の佐藤でございます。先日ご注文いただいた品物の納期の件で、ご連絡いたしました。」この人はどの立場の人ですか。', 'narrator_f', 'in_person'),
+       ('83c820c902d97002', '品物を納める側の会社の担当者', 'narrator_f', 'in_person'),
+       ('26f49f46b73c595e', '品物を注文した側の会社の担当者', 'narrator_f', 'in_person'),
+       ('98049e7b76a7bf7f', '山川商事に品物を運ぶ運送会社の担当者', 'narrator_f', 'in_person'),
+       ('6aff1a3086ac07ba', '山川商事の受付担当者', 'narrator_f', 'in_person'),
        ('5df209a88719e6c3', '料理店の個室で、ある人が話しています。「本日は、三年間の取引にお礼を申し上げたく、ささやかですが席を設けました。来月から担当が代わりますので、その引き継ぎもかねております。」この場面は何のためのものですか。', 'narrator_f', 'in_person'),
+       ('4144a92851aafd54', '新しい取引を始めるための顔合わせ', 'narrator_f', 'in_person'),
+       ('ad87c5561d892881', '取引を終わらせることを伝えるための会食', 'narrator_f', 'in_person'),
+       ('9d04ae039cfcfbcb', '新しい担当者を紹介するためだけの会食', 'narrator_f', 'in_person'),
+       ('33b41af622a20950', 'これまでの取引への礼と、担当交代の知らせを兼ねた会食', 'narrator_f', 'in_person'),
        ('d9c7b6f8d85f4061', '展示会のブースで、社員がこう話しています。「恐れ入ります、お名刺を一枚頂戴できますでしょうか。あとで資料をお送りいたしますので、ご住所もこちらにご記入ください。」この人は誰に向かって話していますか。', 'narrator_f', 'in_person'),
+       ('d123a914ddd306aa', '同じブースで働いている同僚', 'narrator_f', 'in_person'),
+       ('919ba92f5e660179', 'ブースに立ち寄った来場者', 'narrator_f', 'in_person'),
+       ('a53702cbc5e82758', '会場の設営を担当している業者', 'narrator_f', 'in_person'),
+       ('8400159c579527d3', 'あとで資料を送る先の配送業者', 'narrator_f', 'in_person'),
        ('76a5ac56baf558db', '執務フロアで、課長が部下に話しています。「先月の集計、数字そのものは合っているんです。ただ、出てくるのが締切の当日でしてね。会議で使うには遅すぎるんですよ。」何が問題になっていますか。', 'narrator_f', 'in_person'),
-       ('df22875660f76c21', 'オンライン会議で、ある人がこう話しています。「では、本日決まったことを確認いたします。まず日程は十日に変更、担当は私が引き続き。次回までに先方の返事をいただいておきます。」これはやりとりのどの段階ですか。', 'narrator_f', 'in_person')
+       ('1c313aa1c999853b', '集計の数字が間違っていること', 'narrator_f', 'in_person'),
+       ('4993c7314b9584d7', '今月の集計にまだ取りかかっていないこと', 'narrator_f', 'in_person'),
+       ('e944dafb81bbbb70', '会議の日程が早すぎること', 'narrator_f', 'in_person'),
+       ('daed530bcf6d9c0e', '集計が出来上がる時期が遅いこと', 'narrator_f', 'in_person'),
+       ('df22875660f76c21', 'オンライン会議で、ある人がこう話しています。「では、本日決まったことを確認いたします。まず日程は十日に変更、担当は私が引き続き。次回までに先方の返事をいただいておきます。」これはやりとりのどの段階ですか。', 'narrator_f', 'in_person'),
+       ('5491a7873f3c513a', '話し合いが終わり、決まったことをまとめている段階', 'narrator_f', 'in_person'),
+       ('0771af06c99e3294', '議題を示して話し合いを始める段階', 'narrator_f', 'in_person'),
+       ('339c8f0b68ffef4f', '日程について意見が分かれている段階', 'narrator_f', 'in_person'),
+       ('13e93551a213aeb7', '次回の会議の日程を決めている段階', 'narrator_f', 'in_person')
 on conflict (id) do update set
        text = excluded.text,
        voice = excluded.voice,
        channel = excluded.channel;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('bamen_haaku_J2_001', 'bamen_haaku', 'J2', 'author-composed', '2026-09-15T17:50:12+00:00')
+values ('bamen_haaku_J2_001', 'bamen_haaku', 'J2', 'author-composed', '2026-09-19T17:03:52+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -72,30 +97,30 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('771f316560', '3051f79b53', '5bcdfbb584', '96e5f5b389', '071dec33a5', '5c05ab4b5f');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('771f316560', 0, '数字を直した報告書を、先方に送ってから上司に見せる。', 'right_scene_wrong_moment', '見せること自体は合っているが、順序が逆で、指示の「送る前に」に反する。', null),
-       ('771f316560', 1, '報告書の数字をこれから直す。', 'plausible_but_unmentioned', '自然な流れではあるが、上司は「数字を直したもの」と言っており、修正はすでに終わっている。', null),
-       ('771f316560', 2, '数字を直した報告書を、先に上司に見せる。', 'correct', '「先方に送る前に一度見せてください」と、送る前に見せる順序まで指示されている。', null),
-       ('771f316560', 3, '先方に報告書の送り先を確認する。', 'wrong_participant', '先方は話に出てくるが、確認するよう言われているのは上司への提示であって、送り先ではない。', null),
-       ('3051f79b53', 0, '品物を納める側の会社の担当者', 'correct', '「ご注文いただいた」と相手の注文を受けた側の言い方をしており、納期を知らせる側でもある。', null),
-       ('3051f79b53', 1, '品物を注文した側の会社の担当者', 'wrong_participant', '注文したのは「ご注文いただいた」の相手のほうで、この話し手ではない。', null),
-       ('3051f79b53', 2, '山川商事に品物を運ぶ運送会社の担当者', 'plausible_but_unmentioned', '納期の話から運送を連想しやすいが、運送については何も述べられていない。', null),
-       ('3051f79b53', 3, '山川商事の受付担当者', 'adjacent_setting', '同じ会社の人ではあるが、自分から取引先に納期の連絡をしており、受付の役割ではない。', null),
-       ('5bcdfbb584', 0, '新しい取引を始めるための顔合わせ', 'plausible_but_unmentioned', '会食の目的としてはありそうだが、三年間の取引がすでにあると述べられており、始まりの場面ではない。', null),
-       ('5bcdfbb584', 1, '取引を終わらせることを伝えるための会食', 'right_scene_wrong_moment', '担当が代わるとは言っているが、取引そのものが終わるとは述べていない。', null),
-       ('5bcdfbb584', 2, '新しい担当者を紹介するためだけの会食', 'wrong_participant', '引き継ぎには触れているが、目的はそれだけではなく、礼を述べることが先に挙げられている。', null),
-       ('5bcdfbb584', 3, 'これまでの取引への礼と、担当交代の知らせを兼ねた会食', 'correct', '「お礼を申し上げたく」と「引き継ぎもかねております」の両方が述べられており、目的は二つある。', null),
-       ('96e5f5b389', 0, '同じブースで働いている同僚', 'wrong_participant', '同僚に名刺を求め、住所を書かせることはない。', null),
-       ('96e5f5b389', 1, 'ブースに立ち寄った来場者', 'correct', '名刺をもらい、あとで資料を送るという流れは、初めて会った来場者に対するもの。', null),
-       ('96e5f5b389', 2, '会場の設営を担当している業者', 'adjacent_setting', '同じ会場にはいるが、資料を送る相手として話しかけられてはいない。', null),
-       ('96e5f5b389', 3, 'あとで資料を送る先の配送業者', 'plausible_but_unmentioned', '資料の発送は話に出るが、配送業者に住所を記入させる場面ではない。', null),
-       ('071dec33a5', 0, '集計の数字が間違っていること', 'plausible_but_unmentioned', '集計の問題として最も想像しやすいが、「数字そのものは合っている」と明確に否定されている。', null),
-       ('071dec33a5', 1, '今月の集計にまだ取りかかっていないこと', 'right_scene_wrong_moment', '同じ集計の話ではあるが、課長が取り上げているのは先月の集計であって、今月のことは話に出ていない。', null),
-       ('071dec33a5', 2, '会議の日程が早すぎること', 'wrong_participant', '遅すぎると言われているのは集計のほうで、会議の日程が問題にされてはいない。', null),
-       ('071dec33a5', 3, '集計が出来上がる時期が遅いこと', 'correct', '「数字そのものは合っている」と正確さを認めたうえで、「出てくるのが締切の当日」「遅すぎる」と時期を問題にしている。', null),
-       ('5c05ab4b5f', 0, '話し合いが終わり、決まったことをまとめている段階', 'correct', '「本日決まったことを確認いたします」と述べ、決定事項を並べているので、締めくくりの段階。', null),
-       ('5c05ab4b5f', 1, '議題を示して話し合いを始める段階', 'right_scene_wrong_moment', '同じ会議の中の場面だが、これから話すのではなく、決まったことを振り返っている。', null),
-       ('5c05ab4b5f', 2, '日程について意見が分かれている段階', 'plausible_but_unmentioned', '日程は話に出るが、すでに十日に決まっており、意見が分かれている様子はない。', null),
-       ('5c05ab4b5f', 3, '次回の会議の日程を決めている段階', 'wrong_participant', '「次回までに」とは言っているが、次回の日程を決めているわけではない。', null)
+values ('771f316560', 0, '数字を直した報告書を、先方に送ってから上司に見せる。', 'right_scene_wrong_moment', '見せること自体は合っているが、順序が逆で、指示の「送る前に」に反する。', 'b3f94ffb21163d9d'),
+       ('771f316560', 1, '報告書の数字をこれから直す。', 'plausible_but_unmentioned', '自然な流れではあるが、上司は「数字を直したもの」と言っており、修正はすでに終わっている。', '12e5f968b1ae5963'),
+       ('771f316560', 2, '数字を直した報告書を、先に上司に見せる。', 'correct', '「先方に送る前に一度見せてください」と、送る前に見せる順序まで指示されている。', '041310e45a6f0276'),
+       ('771f316560', 3, '先方に報告書の送り先を確認する。', 'wrong_participant', '先方は話に出てくるが、確認するよう言われているのは上司への提示であって、送り先ではない。', '5252e3fa63ee429e'),
+       ('3051f79b53', 0, '品物を納める側の会社の担当者', 'correct', '「ご注文いただいた」と相手の注文を受けた側の言い方をしており、納期を知らせる側でもある。', '83c820c902d97002'),
+       ('3051f79b53', 1, '品物を注文した側の会社の担当者', 'wrong_participant', '注文したのは「ご注文いただいた」の相手のほうで、この話し手ではない。', '26f49f46b73c595e'),
+       ('3051f79b53', 2, '山川商事に品物を運ぶ運送会社の担当者', 'plausible_but_unmentioned', '納期の話から運送を連想しやすいが、運送については何も述べられていない。', '98049e7b76a7bf7f'),
+       ('3051f79b53', 3, '山川商事の受付担当者', 'adjacent_setting', '同じ会社の人ではあるが、自分から取引先に納期の連絡をしており、受付の役割ではない。', '6aff1a3086ac07ba'),
+       ('5bcdfbb584', 0, '新しい取引を始めるための顔合わせ', 'plausible_but_unmentioned', '会食の目的としてはありそうだが、三年間の取引がすでにあると述べられており、始まりの場面ではない。', '4144a92851aafd54'),
+       ('5bcdfbb584', 1, '取引を終わらせることを伝えるための会食', 'right_scene_wrong_moment', '担当が代わるとは言っているが、取引そのものが終わるとは述べていない。', 'ad87c5561d892881'),
+       ('5bcdfbb584', 2, '新しい担当者を紹介するためだけの会食', 'wrong_participant', '引き継ぎには触れているが、目的はそれだけではなく、礼を述べることが先に挙げられている。', '9d04ae039cfcfbcb'),
+       ('5bcdfbb584', 3, 'これまでの取引への礼と、担当交代の知らせを兼ねた会食', 'correct', '「お礼を申し上げたく」と「引き継ぎもかねております」の両方が述べられており、目的は二つある。', '33b41af622a20950'),
+       ('96e5f5b389', 0, '同じブースで働いている同僚', 'wrong_participant', '同僚に名刺を求め、住所を書かせることはない。', 'd123a914ddd306aa'),
+       ('96e5f5b389', 1, 'ブースに立ち寄った来場者', 'correct', '名刺をもらい、あとで資料を送るという流れは、初めて会った来場者に対するもの。', '919ba92f5e660179'),
+       ('96e5f5b389', 2, '会場の設営を担当している業者', 'adjacent_setting', '同じ会場にはいるが、資料を送る相手として話しかけられてはいない。', 'a53702cbc5e82758'),
+       ('96e5f5b389', 3, 'あとで資料を送る先の配送業者', 'plausible_but_unmentioned', '資料の発送は話に出るが、配送業者に住所を記入させる場面ではない。', '8400159c579527d3'),
+       ('071dec33a5', 0, '集計の数字が間違っていること', 'plausible_but_unmentioned', '集計の問題として最も想像しやすいが、「数字そのものは合っている」と明確に否定されている。', '1c313aa1c999853b'),
+       ('071dec33a5', 1, '今月の集計にまだ取りかかっていないこと', 'right_scene_wrong_moment', '同じ集計の話ではあるが、課長が取り上げているのは先月の集計であって、今月のことは話に出ていない。', '4993c7314b9584d7'),
+       ('071dec33a5', 2, '会議の日程が早すぎること', 'wrong_participant', '遅すぎると言われているのは集計のほうで、会議の日程が問題にされてはいない。', 'e944dafb81bbbb70'),
+       ('071dec33a5', 3, '集計が出来上がる時期が遅いこと', 'correct', '「数字そのものは合っている」と正確さを認めたうえで、「出てくるのが締切の当日」「遅すぎる」と時期を問題にしている。', 'daed530bcf6d9c0e'),
+       ('5c05ab4b5f', 0, '話し合いが終わり、決まったことをまとめている段階', 'correct', '「本日決まったことを確認いたします」と述べ、決定事項を並べているので、締めくくりの段階。', '5491a7873f3c513a'),
+       ('5c05ab4b5f', 1, '議題を示して話し合いを始める段階', 'right_scene_wrong_moment', '同じ会議の中の場面だが、これから話すのではなく、決まったことを振り返っている。', '0771af06c99e3294'),
+       ('5c05ab4b5f', 2, '日程について意見が分かれている段階', 'plausible_but_unmentioned', '日程は話に出るが、すでに十日に決まっており、意見が分かれている様子はない。', '339c8f0b68ffef4f'),
+       ('5c05ab4b5f', 3, '次回の会議の日程を決めている段階', 'wrong_participant', '「次回までに」とは言っているが、次回の日程を決めているわけではない。', '13e93551a213aeb7')
 on conflict (item_id, position) do update set
        text = excluded.text,
        role = excluded.role,

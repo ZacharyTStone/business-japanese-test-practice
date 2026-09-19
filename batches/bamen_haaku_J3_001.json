@@ -2,7 +2,7 @@
   "bundle_version": 2,
   "item_type": "bamen_haaku",
   "level": "J3",
-  "generated_at": "2026-09-18T08:50:48+00:00",
+  "generated_at": "2026-09-19T17:03:52+00:00",
   "generator_model": "manual-load",
   "items": [
     {
@@ -58,7 +58,12 @@
       ],
       "audio": {
         "narration": "004fa50818a8258a",
-        "options": [],
+        "options": [
+          "640d84d8044b8a4d",
+          "7bb63e3c4b9827f2",
+          "0d607d81478dfa98",
+          "69f556d7510421e5"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_office_open_floor",
@@ -117,7 +122,12 @@
       ],
       "audio": {
         "narration": "6fd5ad68198fc535",
-        "options": [],
+        "options": [
+          "03037804a4f80b7c",
+          "0556719ed59b9f4e",
+          "28e923817b11b472",
+          "e3b20f3db9cb6e85"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_phone_mobile_outside",
@@ -135,11 +145,83 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "640d84d8044b8a4d",
+      "item_id": "b9e1673422",
+      "kind": "option",
+      "index": 0,
+      "text": "相手のほうが、時間を取ってほしいと頼んでいる段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "7bb63e3c4b9827f2",
+      "item_id": "b9e1673422",
+      "kind": "option",
+      "index": 1,
+      "text": "これから話を始めようとしている段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0d607d81478dfa98",
+      "item_id": "b9e1673422",
+      "kind": "option",
+      "index": 2,
+      "text": "話が終わって、礼を言っている段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "69f556d7510421e5",
+      "item_id": "b9e1673422",
+      "kind": "option",
+      "index": 3,
+      "text": "メールの内容について意見が分かれている段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "6fd5ad68198fc535",
       "item_id": "32efa89696",
       "kind": "narration",
       "index": null,
       "text": "外出中の部下が、会社の上司に電話をかけています。「課長、お疲れさまです。今、駅に着きました。先方との打ち合わせは三時からですが、資料を会社に忘れてしまいました。」「分かった。資料は今から私が先方にメールで送っておく。君はそのまま向かいなさい。」部下はこのあと何をしますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "03037804a4f80b7c",
+      "item_id": "32efa89696",
+      "kind": "option",
+      "index": 0,
+      "text": "会社に戻って、資料を取ってくる。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0556719ed59b9f4e",
+      "item_id": "32efa89696",
+      "kind": "option",
+      "index": 1,
+      "text": "先方に資料をメールで送る。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "28e923817b11b472",
+      "item_id": "32efa89696",
+      "kind": "option",
+      "index": 2,
+      "text": "駅の近くで資料を印刷してから、先方へ向かう。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e3b20f3db9cb6e85",
+      "item_id": "32efa89696",
+      "kind": "option",
+      "index": 3,
+      "text": "そのまま先方の会社へ向かう。",
       "voice": "narrator_f",
       "channel": "in_person"
     }

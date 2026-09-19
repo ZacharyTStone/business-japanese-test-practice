@@ -13,6 +13,7 @@
  *    not eleven — and on a phone on a train that difference is the difference
  *    between usable and not.
  */
+import type { TypePace } from "./pace";
 import { supabase } from "./supabase";
 import type {
   DayStatus,
@@ -103,15 +104,49 @@ export async function fetchSectionLevels(): Promise<SectionLevel[]> {
 export async function fetchProfile(): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, target_level, daily_goal, exam_date, is_anonymous, linked_at")
+    .select(
+      "id, display_name, target_level, daily_goal, exam_date, is_anonymous, linked_at, timed_reading"
+    )
     .maybeSingle();
   if (error) throw error;
   return (data as Profile) ?? null;
 }
 
+/**
+ * What the exam affords each problem type: the seconds a typical item gets, and
+ * how much reading a typical item carries. The exam's own pacing, not a
+ * preference — see `src/lib/pace.ts`, which turns the pair into a budget for a
+ * particular question.
+ *
+ * Both are null for every type whose stimulus is heard: there the audio decides
+ * how long the question takes and a countdown would only be a second clock
+ * disagreeing with the first. A row here therefore means two things at once —
+ * "this type is self-paced" and "this is the pace" — which is why the practice
+ * screen asks this one question rather than asking for a section and a duration
+ * separately.
+ *
+ * Three rows today. Fetched with the set rather than baked into the app, so
+ * changing the pace is one UPDATE and not a release.
+ */
+export async function fetchPace(): Promise<Record<string, TypePace>> {
+  const { data, error } = await supabase
+    .from("item_types")
+    .select("id, seconds_per_item, typical_chars")
+    .not("seconds_per_item", "is", null);
+  if (error) throw error;
+  const out: Record<string, TypePace> = {};
+  for (const row of data ?? []) {
+    out[row.id as string] = {
+      seconds: (row.seconds_per_item as number) ?? 0,
+      typicalChars: (row.typical_chars as number) ?? 0,
+    };
+  }
+  return out;
+}
+
 export async function updateProfile(
   // Not target_level: the database moves that, on the evidence of the answers.
-  patch: Partial<Pick<Profile, "daily_goal" | "display_name" | "exam_date">>
+  patch: Partial<Pick<Profile, "daily_goal" | "display_name" | "exam_date" | "timed_reading">>
 ) {
   // PostgREST refuses an unfiltered update, and row-level security would narrow
   // it to this row anyway — but saying which row is clearer than relying on a
@@ -120,6 +155,48 @@ export async function updateProfile(
   if (!auth.user) throw new Error("not signed in");
   const { error } = await supabase.from("profiles").update(patch).eq("id", auth.user.id);
   if (error) throw error;
+}
+
+/** Why a question is being reported. A closed set, so that reports are a number
+ *  the generator loop can act on rather than prose nobody counts; `other` carries
+ *  its meaning in the note. Must match the check constraint on
+ *  `item_feedback.reason`. */
+export type FeedbackReason =
+  | "unnatural"
+  | "wrong_answer"
+  | "ambiguous"
+  | "unclear"
+  | "audio"
+  | "other";
+
+/**
+ * Report that a question is wrong or odd.
+ *
+ * One row per person per item, so pressing again corrects the earlier report
+ * rather than counting twice. Done as an insert and then, on the unique
+ * violation, an update — rather than an upsert — because the conflict target is
+ * a column the client deliberately does not send: `user_id` is filled in by a
+ * trigger from the session, exactly as it is for an attempt.
+ *
+ * Nothing about this reaches the queue. A reported item keeps being served until
+ * a person reads the report, which is the only way "some tester pressed a
+ * button" does not become a way to empty the bank.
+ */
+export async function reportItem(args: {
+  itemId: string;
+  reason: FeedbackReason;
+  note?: string;
+}): Promise<void> {
+  const row = { item_id: args.itemId, reason: args.reason, note: (args.note ?? "").trim() };
+  const { error } = await supabase.from("item_feedback").insert(row);
+  if (!error) return;
+  // 23505 — this person has already reported this item. Replace what they said.
+  if (error.code !== "23505") throw error;
+  const { error: updateError } = await supabase
+    .from("item_feedback")
+    .update({ reason: row.reason, note: row.note })
+    .eq("item_id", args.itemId);
+  if (updateError) throw updateError;
 }
 
 /** The radar. All nine types come back, including untouched ones — "not tried

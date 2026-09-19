@@ -69,19 +69,34 @@ CHANNEL_PROFILES: dict[str, dict] = {
 #: nothing to listen to.
 #:
 #: `stem` — the narrator reads the situation or the question.
-#: `options` — the four options are spoken (only 発言聴解: there, the options ARE
-#:   the utterances under test; everywhere else they are statements on the page
-#:   and speaking them would turn a reading choice into a memory test).
+#: `options` — the four options are spoken rather than printed. **Every type in
+#:   第1部 聴解 does this**: the exam shows the picture and the bare numerals 1–4
+#:   and reads the four candidates aloud （「…質問のあと、４つの選択肢を読み上げ
+#:   ます」), and in 総合聴解 there is nothing on the screen at all. Printing them
+#:   turns a listening item into a reading item with a soundtrack, which is the
+#:   single biggest way a practice app drifts from this exam. The 聴読解 and 読解
+#:   types print theirs, as the exam does — there, speaking them would turn a
+#:   reading choice into a memory test.
+#: `options_by_narrator` — the options are read by the narrator rather than in
+#:   the voice of the person speaking. True wherever the options are statements
+#:   about a situation rather than utterances somebody makes: only 発言聴解 has
+#:   the learner choosing what to *say*.
 #: `dialogue` — the multi-speaker exchange is played.
 TYPE_AUDIO: dict[str, dict] = {
-    "bamen_haaku":        {"stem": True,  "options": False, "dialogue": False},
+    # The four candidate readings of the moment, read by the narrator: nobody in
+    # the scene is saying them.
+    "bamen_haaku":        {"stem": True,  "options": True,  "dialogue": False,
+                           "options_by_narrator": True},
     # The four descriptions of the picture are read by the narrator, as on the
     # exam: nobody in the picture is speaking them. One voice across every
     # item of the type is also what lets a description recur as one clip.
     "gazou_haaku":        {"stem": True,  "options": True,  "dialogue": False,
                            "options_by_narrator": True},
     "hatsugen_choukai":   {"stem": True,  "options": True,  "dialogue": False},
-    "sougou_choukai":     {"stem": True,  "options": False, "dialogue": True},
+    # Nothing is on screen for this one on the exam — conversation, question and
+    # all four answers exist only as audio — so the options are narrated too.
+    "sougou_choukai":     {"stem": True,  "options": True,  "dialogue": True,
+                           "options_by_narrator": True},
     "joukyou_haaku":      {"stem": True,  "options": False, "dialogue": False},
     "shiryou_choudokkai": {"stem": True,  "options": False, "dialogue": False},
     "sougou_choudokkai":  {"stem": True,  "options": False, "dialogue": True},

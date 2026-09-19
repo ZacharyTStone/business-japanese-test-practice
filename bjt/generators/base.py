@@ -18,6 +18,7 @@ import json
 import random
 from typing import Optional
 
+from .. import batch as batchmod
 from .. import config, levels, llm, phrasebook, render, schemas, seedtable
 from ..fidelity import roles
 
@@ -91,6 +92,39 @@ class Generator:
             + "\n\n".join(rendered)
         )
 
+    def _length_spec(self) -> str:
+        """How long an item of this type is on the real paper.
+
+        Read from the same table the offline check measures against
+        (`batch.LENGTH_BANDS`), so the instruction and the check cannot disagree
+        — and so that re-calibrating the exam's shapes moves both at once.
+
+        Length is worth spending prompt on because it is most of what makes an
+        item feel like the exam rather than like a textbook exercise, and it is
+        the part a model gets wrong by default in a consistent direction: asked
+        for a business reading passage it writes two hundred characters where
+        the paper sets seven hundred, and asked for four options it writes four
+        sentences where the paper prints four words.
+        """
+        bands = batchmod.LENGTH_BANDS.get(self.item_type)
+        if not bands:
+            return ""
+        names = {
+            "stem": "the stem (`stem`)",
+            "option": "each option",
+            "document": "all the documents together",
+        }
+        lines = [
+            f"- {names.get(f, f)}: {low}–{high} characters"
+            for f, (low, high) in bands.items()
+        ]
+        return (
+            "Length, in Japanese characters, as the real paper sets it. These are "
+            "the ranges an item of this type falls in; write to them rather than to "
+            "whatever length the content happens to come out at, because length is "
+            "most of what makes an item feel like the exam:\n" + "\n".join(lines)
+        )
+
     def _discriminator_constraints(self) -> str:
         """Fold the judge's most recent tells back into the prompt as explicit
         constraints — this is what closes the discriminator loop (fidelity #3)."""
@@ -132,6 +166,11 @@ class Generator:
             "gloss. List any business vocabulary worth noting.",
             "Return only the structured JSON object.",
         ]
+        lengths = self._length_spec()
+        if lengths:
+            # After the task spec and the role spec, before the level: it is a
+            # constraint on the shape rather than on the difficulty.
+            parts.insert(3, lengths)
         fs = self._fewshot_block()
         if fs:
             parts.insert(2, fs)

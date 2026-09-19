@@ -61,11 +61,10 @@ export default function Result() {
   const total = summary.answers.length;
   const correct = summary.answers.filter((a) => a.isCorrect).length;
   const minutes = Math.max(1, Math.round((summary.finishedAt - summary.startedAt) / 60000));
-  const trap = worstTrap(
-    summary.answers
-      .filter((a) => !a.isCorrect)
-      .map((a) => a.item.options[a.chosenIndex]?.role ?? "")
-  );
+  // The graded role, as the database wrote it — including `timed_out`, which no
+  // option carries and which is worth naming: on a timed set, "you ran out of
+  // time four times" is the most actionable thing this screen can say.
+  const trap = worstTrap(summary.answers.filter((a) => !a.isCorrect).map((a) => a.role));
 
   // Which SECTION moved, not merely that something did. "聴解のレベルが上がりま
   // した" is a fact somebody can act on; "レベルが上がりました" leaves them
@@ -165,7 +164,9 @@ export default function Result() {
                   { color: a.isCorrect ? colors.correct : colors.wrong },
                 ]}
               >
-                {a.isCorrect ? "○" : "×"}
+                {/* A clock rather than a cross for the ones time took: both are
+                    wrong, and only one of them is about the Japanese. */}
+                {a.isCorrect ? "○" : a.role === "timed_out" ? "⏱" : "×"}
               </Text>
               <Text style={[type.small, { flex: 1 }]}>
                 {i + 1}. {a.item.topic}

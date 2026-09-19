@@ -164,6 +164,10 @@ export type Profile = {
   /** True until a real identity is linked. Drives the "keep your progress" nudge. */
   is_anonymous: boolean;
   linked_at: string | null;
+  /** Whether the reading questions are timed at exam pace. The one thing in the
+   *  app a learner chooses, and it is about how they practise rather than about
+   *  which questions they are served — `next_items()` has never heard of it. */
+  timed_reading: boolean;
 };
 
 export type TypeStat = {
@@ -220,9 +224,20 @@ export type ReviewLoad = {
 /** An answered question, held in memory for the duration of one session. */
 export type AnsweredItem = {
   item: QueuedItem;
+  /** Which option was touched, or `NO_ANSWER` when the clock ran out first. */
   chosenIndex: number;
   isCorrect: boolean;
+  /** The role the database graded this answer with — `timed_out` for a question
+   *  the clock took. Carried rather than looked up from `chosenIndex`, because
+   *  a timeout has no option to look up. */
+  role: string;
 };
+
+/** What `chosen_index` is for a question nobody answered: the clock ran out.
+ *  The column allows it (see the migration that added the reading clock) and the
+ *  grading trigger reads it as wrong with the role `timed_out`. Every screen
+ *  that indexes `options` by it gets `undefined`, which is the truth. */
+export const NO_ANSWER = -1;
 
 /** A past answer, for the review screen. */
 export type HistoryEntry = {

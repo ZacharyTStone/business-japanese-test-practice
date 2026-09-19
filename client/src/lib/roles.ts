@@ -47,6 +47,28 @@ const DEFAULT: Entry = {
 const ROLES: Record<string, Entry> = {
   correct: { rudeness: 0, miss: 0, ja: { label: "正解", advice: "" }, en: { label: "Correct", advice: "" } },
 
+  // Not a distractor role at all: the database writes it when the question
+  // clock ran out with nothing chosen (chosen_index = -1). It is here because
+  // every screen that reads a wrong answer's role reaches through roleInfo,
+  // and a timeout would otherwise print the generic "doesn't fit the scene",
+  // which is a sentence about the Japanese when the fact is about the clock.
+  // Both meters read zero: nobody was offended and nothing was misread.
+  timed_out: {
+    rudeness: 0,
+    miss: 0,
+    ja: {
+      label: "時間切れ",
+      advice: "本番の読解は自分で時間を配ります。長い問題は先に全体を見て、迷ったら決めて進みましょう。",
+      verdict: "時間内に答えられませんでした",
+    },
+    en: {
+      label: "Ran out of time",
+      advice:
+        "The reading section is self-paced: skim the whole thing first, decide, and move on.",
+      verdict: "Time ran out before you answered",
+    },
+  },
+
   // 画像把握: the picture is the question, so a miss is about looking, never
   // about manners. Nobody was offended; something in the drawing was not seen.
   different_action: {
