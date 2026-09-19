@@ -164,8 +164,9 @@ RULES: dict[str, str] = {
     "real_likeness": "a recognisable likeness of a real person",
     "gives_scenario_away": "the picture fixes the situation more tightly than the setting does",
     "anatomy": "malformed hands, extra limbs, or more people than the setting calls for",
-    "no_focus": "it is not clear who is talking to whom: more than two figures at "
-                "principal weight, or extras as prominent as the two in the exchange",
+    "no_focus": "a second principal figure — a listener or partner drawn as prominently "
+                "as the speaker, or a crowd of equals — so it is not clear who is "
+                "speaking to the viewer",
     "wrong_setting": "the picture does not show the setting the brief names",
 }
 
