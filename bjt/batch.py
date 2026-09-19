@@ -371,15 +371,25 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
 
     # 6. Distractor roles actually get exercised — an enum of eight used as three
     #    is a prompt that has settled into a rut.
+    #
+    #    Held to what the bundle could possibly manage, not to a flat four. An
+    #    item has exactly three distractors, so a one-item bundle cannot show
+    #    more than three distinct roles however varied its prompt is, and the
+    #    nightly job writes one-item bundles all the time. Warning about that
+    #    was warning about arithmetic: four such bundles sat red in CI saying
+    #    "only 3/4 roles used" about items that had used every slot they had.
     enum = roles.DISTRACTOR_ROLES.get(item_type, [])
     used_roles = {o["role"] for it in items for o in it["options"] if o["role"] != roles.CORRECT}
     unused = [r for r in enum if r not in used_roles]
-    if enum and len(used_roles) < min(4, len(enum)):
+    reachable = min(4, len(enum), 3 * n)
+    if enum and len(used_roles) < reachable:
         add("distractor role coverage", "warn",
             f"only {len(used_roles)}/{len(enum)} roles used; unused: {unused}")
     else:
         add("distractor role coverage", "pass",
-            f"{len(used_roles)}/{len(enum)} roles used" + (f"; unused: {unused}" if unused else ""))
+            f"{len(used_roles)}/{len(enum)} roles used"
+            + (f" (at most {reachable} fit in {n} item(s))" if reachable < min(4, len(enum)) else "")
+            + (f"; unused: {unused}" if unused else ""))
 
     # 7. The per-option reason has to say something. An empty or one-word `why`
     #    means the app has nothing to show after a wrong answer.

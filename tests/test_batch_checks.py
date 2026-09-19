@@ -19,6 +19,18 @@ REFERENCE = BATCHES / "hatsugen_choukai_J2_001.json"
 COMMITTED = sorted(p for p in BATCHES.glob("*.json") if not p.name.endswith(".source.json"))
 
 
+def _source_of(path):
+    return path.with_name(path.name.replace(".json", ".source.json"))
+
+
+#: The bundles a person wrote by hand, which are the only ones with a source
+#: file to rebuild from. The nightly job writes its bundles directly — there is
+#: no hand-edited original behind them — so the round-trip test below has
+#: nothing to compare those against, and asserting over them was asserting that
+#: a file which was never meant to exist exists.
+HAND_WRITTEN = [p for p in COMMITTED if _source_of(p).exists()]
+
+
 def _bundle_id(path):
     return path.stem
 
@@ -80,10 +92,22 @@ def test_every_committed_batch_still_ships(path):
 
 @pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
 def test_every_committed_batch_uses_every_distractor_role(path):
+    """...as far as it has room to.
+
+    An item carries exactly three distractors, so a bundle of `n` items can show
+    at most `3n` distinct roles however varied its prompt is. The nightly job
+    writes one-item bundles, and demanding four roles of three slots is a demand
+    about arithmetic rather than about the items.
+    """
     from bjt.fidelity import roles
     bundle = batch.load(path)
+    enum = set(roles.DISTRACTOR_ROLES[bundle["item_type"]])
     used = {o["role"] for it in bundle["items"] for o in it["options"] if o["role"] != "correct"}
-    assert used == set(roles.DISTRACTOR_ROLES[bundle["item_type"]])
+    reachable = min(len(enum), 3 * len(bundle["items"]))
+    assert used <= enum, f"roles outside the enum: {used - enum}"
+    assert len(used) >= reachable, (
+        f"{len(used)} of a reachable {reachable} roles used; unused: {sorted(enum - used)}"
+    )
 
 
 @pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
@@ -318,15 +342,19 @@ def test_checkbatch_exits_zero_on_the_reference_bundle(capsys):
     assert "SHIPPABLE" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("path", COMMITTED, ids=_bundle_id)
+@pytest.mark.parametrize("path", HAND_WRITTEN, ids=_bundle_id)
 def test_importbatch_reproduces_the_committed_bundle(path, tmp_path, monkeypatch):
     """The source file is the thing a human edits; the bundle is derived. If the
-    two ever drift, the committed bundle is stale."""
+    two ever drift, the committed bundle is stale.
+
+    Only the hand-written bundles — the nightly job's have no source to drift
+    from. See HAND_WRITTEN.
+    """
     from bjt import cli
 
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "t.db")
     out = tmp_path / "rebuilt.json"
-    src = path.with_name(path.name.replace(".json", ".source.json"))
+    src = _source_of(path)
     assert cli.main(["importbatch", str(src), "--out", str(out)]) == 0
     rebuilt, committed = batch.load(out), batch.load(path)
     assert rebuilt["items"] == committed["items"]
