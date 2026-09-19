@@ -1,11 +1,12 @@
 -- sougou_choukai_J2_001: 6 × sougou_choukai (J2)
--- generated 2026-09-15T17:52:02+00:00 by author-composed
+-- generated 2026-09-19T17:03:52+00:00 by author-composed
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_client_meeting_room', '取引先の会議室'),
        ('scene_meeting_room_table', '社内の会議室のテーブル'),
@@ -24,43 +25,67 @@ values ('e8078990730d2494', '展示会の出展について、結論はどうな
        ('33a77b8d8fa0d517', 'では一区画に減らしますか。', 'manager_m', 'in_person'),
        ('37607d40998c2c37', 'いや、区画は二つのままでいきましょう。備品は社内にあるものを運びます。', 'staff_mid_f', 'in_person'),
        ('631ecc3a8f82c865', '承知しました。運搬の手配をいたします。', 'staff_junior_m', 'in_person'),
+       ('37d1c1197647f26e', '一区画に減らして出展する。', 'narrator_f', 'in_person'),
+       ('38514cc8ea12f032', '予算を一割増やして備品を借りる。', 'narrator_f', 'in_person'),
+       ('4acf7f7296f7d3c9', '二区画のまま出展し、備品は社内から運ぶ。', 'narrator_f', 'in_person'),
+       ('42e249f0a811d695', '備品の運搬を外部の業者に頼む。', 'narrator_f', 'in_person'),
        ('eb2409b511d86590', '試作品が遅れているのは、今は何が原因ですか。', 'narrator_f', 'in_person'),
        ('1374320693346177', '試作品、今週中に上がる予定でしたよね。どうなっていますか。', 'manager_m', 'video'),
        ('8659f5961fc3d238', 'すみません、来週に延びそうです。最初は部品の入荷待ちだったのですが。', 'staff_junior_m', 'video'),
        ('939053d7445a8873', '部品は届いたんですか。', 'manager_m', 'video'),
        ('bd80737a971399c5', 'はい、月曜に届きました。ただ、仕様の変更が先週入りまして、図面の引き直しに時間がかかっています。', 'staff_junior_m', 'video'),
        ('154189057d94315c', 'なるほど。では図面が上がり次第、すぐ組み立てに入れますね。', 'manager_m', 'video'),
+       ('ef9e70c8a41cffcd', '仕様が変わり、図面を引き直しているから', 'narrator_f', 'in_person'),
+       ('ba9897bfc946b048', '部品がまだ届いていないから', 'narrator_f', 'in_person'),
+       ('8f9d9b5cb2f8b566', '組み立てを担当する人が足りないから', 'narrator_f', 'in_person'),
+       ('ad46f55980cb0115', '先輩社員が図面の確認に時間をかけているから', 'narrator_f', 'in_person'),
        ('a336102a62c5f18f', '外からの問い合わせは、まずどこが受けることになりましたか。', 'narrator_f', 'in_person'),
        ('50c3ca30fc47b30c', '新しい手順について、外からの問い合わせが増えると思います。窓口を決めておきましょう。', 'manager_m', 'in_person'),
        ('6b4962d44ab4bc07', '内容によっては、こちらの部署で受けたほうが早いものもありますが。', 'staff_junior_m', 'in_person'),
        ('428ac52972723145', 'そうですね。ただ、入り口は一つにしたいので、まず営業部で受けます。', 'manager_m', 'in_person'),
        ('3c48304745c92c40', 'では営業部で受けて、技術的な内容だけそちらにお回しする形でよろしいですか。', 'staff_mid_f', 'in_person'),
        ('b97dd9bbb8469fa6', 'はい、それで結構です。', 'staff_junior_m', 'in_person'),
+       ('f15ce79da033f79a', '内容によって、営業部と他部署が振り分けて受ける。', 'narrator_f', 'in_person'),
+       ('ef109c18347bea2d', '技術的な内容は、はじめから他部署が受ける。', 'narrator_f', 'in_person'),
+       ('d8678c498cd0a7c1', '課長がすべての問い合わせを受ける。', 'narrator_f', 'in_person'),
+       ('ef58c10a2f6f1c1d', '営業部が受け、技術的な内容だけ他部署に回す。', 'narrator_f', 'in_person'),
        ('f75de607b76ff1f5', '納入はどうなりましたか。', 'narrator_f', 'in_person'),
        ('7e4aec108b24baa4', '先月の注文ですが、五十個を六十個に増やしたいのです。', 'manager_m', 'phone'),
        ('d7faf313036cc39f', '六十個ですね。納期は十五日のままでよろしいでしょうか。', 'staff_junior_m', 'phone'),
        ('5075ddd6856f30a0', 'できれば十日に早めていただきたいのですが。', 'manager_m', 'phone'),
        ('11542aca3bcc8ffe', '十日ですと、四十個までしかご用意できません。六十個でしたら十五日になります。', 'staff_junior_m', 'phone'),
        ('164116fcb0d7a434', '分かりました。では数のほうを優先します。', 'manager_m', 'phone'),
+       ('f7a9055874dfea21', '四十個を十日に納入する。', 'narrator_f', 'in_person'),
+       ('e247a25ab3b60375', '六十個を十五日に納入する。', 'narrator_f', 'in_person'),
+       ('4fb66fcdcdfdb929', '六十個を十日に納入する。', 'narrator_f', 'in_person'),
+       ('20deff34267f4234', '五十個を十五日に納入する。', 'narrator_f', 'in_person'),
        ('2f32a020fae39a6f', '前回の資料から変わったのはどこですか。', 'narrator_f', 'in_person'),
        ('ae1e971c423a541d', '先方から新しい資料が届きました。前回と比べて、金額は同じでした。', 'manager_m', 'in_person'),
        ('786d2b079f4d85fe', 'では中身は変わっていないということですか。', 'staff_junior_m', 'in_person'),
        ('4fa483dc90eb7966', 'いえ、支払いの回数が三回から二回になっています。金額の合計は同じですが。', 'manager_m', 'in_person'),
        ('4adc82156c2d485a', '一回あたりが増えるわけですね。経理に伝えておいてください。', 'staff_junior_m', 'in_person'),
        ('70a013f6e97c4297', 'はい、すぐに連絡します。', 'manager_m', 'in_person'),
+       ('a3de8593f6d16fe2', '支払いの合計金額が上がった点', 'narrator_f', 'in_person'),
+       ('70b49cd2bbc4c842', '支払いの期限が早まった点', 'narrator_f', 'in_person'),
+       ('02405a9688849674', '経理の担当者が変わった点', 'narrator_f', 'in_person'),
+       ('574c94aa2d8b7e4c', '支払いの回数が三回から二回に減った点', 'narrator_f', 'in_person'),
        ('28dde1b2c8756c6f', '自社の営業担当は、このあとまず何をしますか。', 'narrator_f', 'in_person'),
        ('48971d4c54401230', '本日の内容で、社内の会議にかけてみます。', 'manager_m', 'in_person'),
        ('dfd70558ea0ce0dc', 'ありがとうございます。資料をお送りしたほうがよろしいでしょうか。', 'staff_junior_m', 'in_person'),
        ('49b42789fc979189', '本日いただいたもので足ります。ただ、価格の内訳だけ、別にいただけますか。', 'manager_m', 'in_person'),
        ('b1ac00ea5f5bce60', '承知しました。明日中にお送りいたします。', 'staff_junior_m', 'in_person'),
-       ('6e68aec21d9ca4c7', '助かります。会議は来週の火曜です。', 'manager_m', 'in_person')
+       ('6e68aec21d9ca4c7', '助かります。会議は来週の火曜です。', 'manager_m', 'in_person'),
+       ('46d0bd8e736c0b68', '価格の内訳を明日中に先方へ送る。', 'narrator_f', 'in_person'),
+       ('1362314b485730b6', '本日の資料一式を改めて先方へ送る。', 'narrator_f', 'in_person'),
+       ('131cf20416b6da23', '来週の火曜の会議に出席する。', 'narrator_f', 'in_person'),
+       ('89791fcc0f5f2957', '社内の会議に本日の内容をかける。', 'narrator_f', 'in_person')
 on conflict (id) do update set
        text = excluded.text,
        voice = excluded.voice,
        channel = excluded.channel;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('sougou_choukai_J2_001', 'sougou_choukai', 'J2', 'author-composed', '2026-09-15T17:52:02+00:00')
+values ('sougou_choukai_J2_001', 'sougou_choukai', 'J2', 'author-composed', '2026-09-19T17:03:52+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -102,30 +127,30 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('8f4b311918', '0534e27128', '1122d7e730', 'bf56a09591', 'ba7233ff60', 'e42ed7e923');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('8f4b311918', 0, '一区画に減らして出展する。', 'superseded_by_later_turn', '先輩が案として出したが、課長が「いや」と明確に否定して二区画のままに決めている。', null),
-       ('8f4b311918', 1, '予算を一割増やして備品を借りる。', 'unsupported_but_plausible', '予算が一割減ったことは述べられているが、増やすという話は誰もしていない。', null),
-       ('8f4b311918', 2, '二区画のまま出展し、備品は社内から運ぶ。', 'correct', '課長が「区画は二つのまま」「備品は社内にあるものを運びます」と決めており、後輩もそれを受けている。', null),
-       ('8f4b311918', 3, '備品の運搬を外部の業者に頼む。', 'stated_by_wrong_speaker', '運搬の手配をすると言ったのは後輩で、社内から運ぶという課長の決定に沿った話。外部業者には触れていない。', null),
-       ('0534e27128', 0, '仕様が変わり、図面を引き直しているから', 'correct', '後輩が「ただ、仕様の変更が先週入りまして、図面の引き直しに時間がかかっています」と、今の原因として述べている。', null),
-       ('0534e27128', 1, '部品がまだ届いていないから', 'superseded_by_later_turn', '最初の原因ではあったが、「月曜に届きました」と解消済みであることが述べられている。', null),
-       ('0534e27128', 2, '組み立てを担当する人が足りないから', 'unsupported_but_plausible', '遅れの原因としてはありうるが、人手については誰も触れていない。', null),
-       ('0534e27128', 3, '先輩社員が図面の確認に時間をかけているから', 'stated_by_wrong_speaker', '図面の話をしているのは後輩で、先輩は確認を担当しているとは述べていない。', null),
-       ('1122d7e730', 0, '内容によって、営業部と他部署が振り分けて受ける。', 'superseded_by_later_turn', '他部署の担当者がそう提案したが、課長が「入り口は一つにしたい」と述べて採らなかった。', null),
-       ('1122d7e730', 1, '技術的な内容は、はじめから他部署が受ける。', 'surface_keyword_match', '「技術的な内容」は会話に出てくるが、それは営業部が受けたあとに回す分であって、入り口ではない。', null),
-       ('1122d7e730', 2, '課長がすべての問い合わせを受ける。', 'stated_by_wrong_speaker', '課長は窓口を決める側であって、自分が受けるとは述べていない。', null),
-       ('1122d7e730', 3, '営業部が受け、技術的な内容だけ他部署に回す。', 'correct', '課長が「まず営業部で受けます」と決め、先輩の整理に他部署の担当者も同意している。', null),
-       ('bf56a09591', 0, '四十個を十日に納入する。', 'superseded_by_later_turn', '早めた場合の条件として示されたが、取引先が数を優先すると述べて選ばなかった。', null),
-       ('bf56a09591', 1, '六十個を十五日に納入する。', 'correct', '「数のほうを優先します」という取引先の言葉が、六十個・十五日という組み合わせを選んだことを意味する。', null),
-       ('bf56a09591', 2, '六十個を十日に納入する。', 'unsupported_but_plausible', '取引先の当初の希望を両方かなえた形だが、営業担当が十日では四十個までと明確に述べている。', null),
-       ('bf56a09591', 3, '五十個を十五日に納入する。', 'surface_keyword_match', '五十個は先月の注文の数で、会話の冒頭で六十個に増やすと述べられている。', null),
-       ('ba7233ff60', 0, '支払いの合計金額が上がった点', 'surface_keyword_match', '「一回あたりが増える」とは言われているが、合計は「同じ」と二度述べられている。', null),
-       ('ba7233ff60', 1, '支払いの期限が早まった点', 'unsupported_but_plausible', '支払い条件の変更として想像しやすいが、期限については何も述べられていない。', null),
-       ('ba7233ff60', 2, '経理の担当者が変わった点', 'stated_by_wrong_speaker', '経理は連絡先として出てくるだけで、担当が変わったとは誰も言っていない。', null),
-       ('ba7233ff60', 3, '支払いの回数が三回から二回に減った点', 'correct', '後輩が「支払いの回数が三回から二回になっています」と、変わった点として明確に述べている。', null),
-       ('e42ed7e923', 0, '価格の内訳を明日中に先方へ送る。', 'correct', '「価格の内訳だけ、別にいただけますか」という依頼に「明日中にお送りいたします」と答えている。', null),
-       ('e42ed7e923', 1, '本日の資料一式を改めて先方へ送る。', 'superseded_by_later_turn', '営業担当が申し出たが、「本日いただいたもので足ります」と断られている。', null),
-       ('e42ed7e923', 2, '来週の火曜の会議に出席する。', 'surface_keyword_match', '会議の日は述べられているが、出席するのは先方の社内会議で、営業担当が呼ばれてはいない。', null),
-       ('e42ed7e923', 3, '社内の会議に本日の内容をかける。', 'stated_by_wrong_speaker', '社内の会議にかけると言ったのは取引先の担当者で、自社側の行動ではない。', null)
+values ('8f4b311918', 0, '一区画に減らして出展する。', 'superseded_by_later_turn', '先輩が案として出したが、課長が「いや」と明確に否定して二区画のままに決めている。', '37d1c1197647f26e'),
+       ('8f4b311918', 1, '予算を一割増やして備品を借りる。', 'unsupported_but_plausible', '予算が一割減ったことは述べられているが、増やすという話は誰もしていない。', '38514cc8ea12f032'),
+       ('8f4b311918', 2, '二区画のまま出展し、備品は社内から運ぶ。', 'correct', '課長が「区画は二つのまま」「備品は社内にあるものを運びます」と決めており、後輩もそれを受けている。', '4acf7f7296f7d3c9'),
+       ('8f4b311918', 3, '備品の運搬を外部の業者に頼む。', 'stated_by_wrong_speaker', '運搬の手配をすると言ったのは後輩で、社内から運ぶという課長の決定に沿った話。外部業者には触れていない。', '42e249f0a811d695'),
+       ('0534e27128', 0, '仕様が変わり、図面を引き直しているから', 'correct', '後輩が「ただ、仕様の変更が先週入りまして、図面の引き直しに時間がかかっています」と、今の原因として述べている。', 'ef9e70c8a41cffcd'),
+       ('0534e27128', 1, '部品がまだ届いていないから', 'superseded_by_later_turn', '最初の原因ではあったが、「月曜に届きました」と解消済みであることが述べられている。', 'ba9897bfc946b048'),
+       ('0534e27128', 2, '組み立てを担当する人が足りないから', 'unsupported_but_plausible', '遅れの原因としてはありうるが、人手については誰も触れていない。', '8f9d9b5cb2f8b566'),
+       ('0534e27128', 3, '先輩社員が図面の確認に時間をかけているから', 'stated_by_wrong_speaker', '図面の話をしているのは後輩で、先輩は確認を担当しているとは述べていない。', 'ad46f55980cb0115'),
+       ('1122d7e730', 0, '内容によって、営業部と他部署が振り分けて受ける。', 'superseded_by_later_turn', '他部署の担当者がそう提案したが、課長が「入り口は一つにしたい」と述べて採らなかった。', 'f15ce79da033f79a'),
+       ('1122d7e730', 1, '技術的な内容は、はじめから他部署が受ける。', 'surface_keyword_match', '「技術的な内容」は会話に出てくるが、それは営業部が受けたあとに回す分であって、入り口ではない。', 'ef109c18347bea2d'),
+       ('1122d7e730', 2, '課長がすべての問い合わせを受ける。', 'stated_by_wrong_speaker', '課長は窓口を決める側であって、自分が受けるとは述べていない。', 'd8678c498cd0a7c1'),
+       ('1122d7e730', 3, '営業部が受け、技術的な内容だけ他部署に回す。', 'correct', '課長が「まず営業部で受けます」と決め、先輩の整理に他部署の担当者も同意している。', 'ef58c10a2f6f1c1d'),
+       ('bf56a09591', 0, '四十個を十日に納入する。', 'superseded_by_later_turn', '早めた場合の条件として示されたが、取引先が数を優先すると述べて選ばなかった。', 'f7a9055874dfea21'),
+       ('bf56a09591', 1, '六十個を十五日に納入する。', 'correct', '「数のほうを優先します」という取引先の言葉が、六十個・十五日という組み合わせを選んだことを意味する。', 'e247a25ab3b60375'),
+       ('bf56a09591', 2, '六十個を十日に納入する。', 'unsupported_but_plausible', '取引先の当初の希望を両方かなえた形だが、営業担当が十日では四十個までと明確に述べている。', '4fb66fcdcdfdb929'),
+       ('bf56a09591', 3, '五十個を十五日に納入する。', 'surface_keyword_match', '五十個は先月の注文の数で、会話の冒頭で六十個に増やすと述べられている。', '20deff34267f4234'),
+       ('ba7233ff60', 0, '支払いの合計金額が上がった点', 'surface_keyword_match', '「一回あたりが増える」とは言われているが、合計は「同じ」と二度述べられている。', 'a3de8593f6d16fe2'),
+       ('ba7233ff60', 1, '支払いの期限が早まった点', 'unsupported_but_plausible', '支払い条件の変更として想像しやすいが、期限については何も述べられていない。', '70b49cd2bbc4c842'),
+       ('ba7233ff60', 2, '経理の担当者が変わった点', 'stated_by_wrong_speaker', '経理は連絡先として出てくるだけで、担当が変わったとは誰も言っていない。', '02405a9688849674'),
+       ('ba7233ff60', 3, '支払いの回数が三回から二回に減った点', 'correct', '後輩が「支払いの回数が三回から二回になっています」と、変わった点として明確に述べている。', '574c94aa2d8b7e4c'),
+       ('e42ed7e923', 0, '価格の内訳を明日中に先方へ送る。', 'correct', '「価格の内訳だけ、別にいただけますか」という依頼に「明日中にお送りいたします」と答えている。', '46d0bd8e736c0b68'),
+       ('e42ed7e923', 1, '本日の資料一式を改めて先方へ送る。', 'superseded_by_later_turn', '営業担当が申し出たが、「本日いただいたもので足ります」と断られている。', '1362314b485730b6'),
+       ('e42ed7e923', 2, '来週の火曜の会議に出席する。', 'surface_keyword_match', '会議の日は述べられているが、出席するのは先方の社内会議で、営業担当が呼ばれてはいない。', '131cf20416b6da23'),
+       ('e42ed7e923', 3, '社内の会議に本日の内容をかける。', 'stated_by_wrong_speaker', '社内の会議にかけると言ったのは取引先の担当者で、自社側の行動ではない。', '89791fcc0f5f2957')
 on conflict (item_id, position) do update set
        text = excluded.text,
        role = excluded.role,

@@ -21,7 +21,17 @@ class HyougenGenerator(Generator):
         "Exactly one is appropriate; each distractor is grammatical Japanese that is "
         "wrong for this situation on honorific direction, register, or speech act. The "
         "situation must be specific enough that appropriateness is unambiguous, but the "
-        "utterances alone (without the situation) must not reveal which is correct."
+        "utterances alone (without the situation) must not reveal which is correct.\n"
+        "What separates this type from 語彙・文法 is what decides the answer. There, the "
+        "language system decides — that suffix does not exist. Here, the RELATIONSHIP "
+        "decides: every one of the four options is real, attested, grammatical Japanese "
+        "that a native speaker uses, and exactly one of them fits this speaker saying it "
+        "to this listener. If a distractor is wrong in a way you could explain without "
+        "knowing who is talking to whom, it belongs in 語彙・文法.\n"
+        "The exam's own advice to candidates names the axis: work out whether this is "
+        "社内 or 社外, and if 社内, whether it is 上司⇄部下 or 同僚⇄同僚. Build the four "
+        "options so they differ along that axis — height of politeness, directness, how "
+        "much cushioning — rather than along topic."
     )
 
     def cell_spec(self, cell) -> str:

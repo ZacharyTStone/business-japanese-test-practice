@@ -25,7 +25,18 @@ class GoiBunpouGenerator(Generator):
         "correct; the sentence must be genuinely natural business Japanese with the "
         "correct filler and clearly wrong with each distractor. The carrier sentence "
         "must supply enough context that the answer is unambiguous WITH the sentence, "
-        "but the option set alone must not give the answer away."
+        "but the option set alone must not give the answer away.\n"
+        "This type is MORPHOLOGY AND FUNCTION, not business vocabulary. On the real "
+        "paper the four options are short and adjacent to each other: one stem with "
+        "four endings （使いきり／使いはじめ／使いよう／使いづくめ), four particles or focus "
+        "markers （こそ／のみ／だけ／まで), or a set phrase against its near neighbours "
+        "（せい／おかげ／ごくろうさま／おせわさま). Four different business nouns is the "
+        "wrong item: the difficulty must sit in which FORM the sentence licenses, not "
+        "in whether the test-taker knows four words.\n"
+        "At least one distractor should be morphologically plausible and not an actual "
+        "word — that is the `nonexistent_form` role, and it is a real feature of this "
+        "type rather than a trick. The business setting lives in the carrier sentence; "
+        "the options themselves are usually ordinary Japanese."
     )
 
     def cell_spec(self, cell) -> str:

@@ -2,7 +2,7 @@
   "bundle_version": 2,
   "item_type": "bamen_haaku",
   "level": "J2",
-  "generated_at": "2026-09-15T17:50:12+00:00",
+  "generated_at": "2026-09-19T17:03:52+00:00",
   "generator_model": "author-composed",
   "items": [
     {
@@ -58,7 +58,12 @@
       ],
       "audio": {
         "narration": "b0ee6487f832174e",
-        "options": [],
+        "options": [
+          "b3f94ffb21163d9d",
+          "12e5f968b1ae5963",
+          "041310e45a6f0276",
+          "5252e3fa63ee429e"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_corridor",
@@ -117,7 +122,12 @@
       ],
       "audio": {
         "narration": "a79b34a57d0e972e",
-        "options": [],
+        "options": [
+          "83c820c902d97002",
+          "26f49f46b73c595e",
+          "98049e7b76a7bf7f",
+          "6aff1a3086ac07ba"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_phone_desk",
@@ -176,7 +186,12 @@
       ],
       "audio": {
         "narration": "5df209a88719e6c3",
-        "options": [],
+        "options": [
+          "4144a92851aafd54",
+          "ad87c5561d892881",
+          "9d04ae039cfcfbcb",
+          "33b41af622a20950"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_restaurant_private",
@@ -235,7 +250,12 @@
       ],
       "audio": {
         "narration": "d9c7b6f8d85f4061",
-        "options": [],
+        "options": [
+          "d123a914ddd306aa",
+          "919ba92f5e660179",
+          "a53702cbc5e82758",
+          "8400159c579527d3"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_expo_booth",
@@ -294,7 +314,12 @@
       ],
       "audio": {
         "narration": "76a5ac56baf558db",
-        "options": [],
+        "options": [
+          "1c313aa1c999853b",
+          "4993c7314b9584d7",
+          "e944dafb81bbbb70",
+          "daed530bcf6d9c0e"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_office_open_floor",
@@ -353,7 +378,12 @@
       ],
       "audio": {
         "narration": "df22875660f76c21",
-        "options": [],
+        "options": [
+          "5491a7873f3c513a",
+          "0771af06c99e3294",
+          "339c8f0b68ffef4f",
+          "13e93551a213aeb7"
+        ],
         "dialogue": []
       },
       "scene_id": "scene_video_call_laptop",
@@ -371,11 +401,83 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "b3f94ffb21163d9d",
+      "item_id": "771f316560",
+      "kind": "option",
+      "index": 0,
+      "text": "数字を直した報告書を、先方に送ってから上司に見せる。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "12e5f968b1ae5963",
+      "item_id": "771f316560",
+      "kind": "option",
+      "index": 1,
+      "text": "報告書の数字をこれから直す。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "041310e45a6f0276",
+      "item_id": "771f316560",
+      "kind": "option",
+      "index": 2,
+      "text": "数字を直した報告書を、先に上司に見せる。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5252e3fa63ee429e",
+      "item_id": "771f316560",
+      "kind": "option",
+      "index": 3,
+      "text": "先方に報告書の送り先を確認する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "a79b34a57d0e972e",
       "item_id": "3051f79b53",
       "kind": "narration",
       "index": null,
       "text": "会社で、ある人が電話でこう話しています。「いつもお世話になっております。山川商事の佐藤でございます。先日ご注文いただいた品物の納期の件で、ご連絡いたしました。」この人はどの立場の人ですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "83c820c902d97002",
+      "item_id": "3051f79b53",
+      "kind": "option",
+      "index": 0,
+      "text": "品物を納める側の会社の担当者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "26f49f46b73c595e",
+      "item_id": "3051f79b53",
+      "kind": "option",
+      "index": 1,
+      "text": "品物を注文した側の会社の担当者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "98049e7b76a7bf7f",
+      "item_id": "3051f79b53",
+      "kind": "option",
+      "index": 2,
+      "text": "山川商事に品物を運ぶ運送会社の担当者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6aff1a3086ac07ba",
+      "item_id": "3051f79b53",
+      "kind": "option",
+      "index": 3,
+      "text": "山川商事の受付担当者",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -389,11 +491,83 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "4144a92851aafd54",
+      "item_id": "5bcdfbb584",
+      "kind": "option",
+      "index": 0,
+      "text": "新しい取引を始めるための顔合わせ",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ad87c5561d892881",
+      "item_id": "5bcdfbb584",
+      "kind": "option",
+      "index": 1,
+      "text": "取引を終わらせることを伝えるための会食",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9d04ae039cfcfbcb",
+      "item_id": "5bcdfbb584",
+      "kind": "option",
+      "index": 2,
+      "text": "新しい担当者を紹介するためだけの会食",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "33b41af622a20950",
+      "item_id": "5bcdfbb584",
+      "kind": "option",
+      "index": 3,
+      "text": "これまでの取引への礼と、担当交代の知らせを兼ねた会食",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "d9c7b6f8d85f4061",
       "item_id": "96e5f5b389",
       "kind": "narration",
       "index": null,
       "text": "展示会のブースで、社員がこう話しています。「恐れ入ります、お名刺を一枚頂戴できますでしょうか。あとで資料をお送りいたしますので、ご住所もこちらにご記入ください。」この人は誰に向かって話していますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d123a914ddd306aa",
+      "item_id": "96e5f5b389",
+      "kind": "option",
+      "index": 0,
+      "text": "同じブースで働いている同僚",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "919ba92f5e660179",
+      "item_id": "96e5f5b389",
+      "kind": "option",
+      "index": 1,
+      "text": "ブースに立ち寄った来場者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a53702cbc5e82758",
+      "item_id": "96e5f5b389",
+      "kind": "option",
+      "index": 2,
+      "text": "会場の設営を担当している業者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8400159c579527d3",
+      "item_id": "96e5f5b389",
+      "kind": "option",
+      "index": 3,
+      "text": "あとで資料を送る先の配送業者",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -407,11 +581,83 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "1c313aa1c999853b",
+      "item_id": "071dec33a5",
+      "kind": "option",
+      "index": 0,
+      "text": "集計の数字が間違っていること",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4993c7314b9584d7",
+      "item_id": "071dec33a5",
+      "kind": "option",
+      "index": 1,
+      "text": "今月の集計にまだ取りかかっていないこと",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e944dafb81bbbb70",
+      "item_id": "071dec33a5",
+      "kind": "option",
+      "index": 2,
+      "text": "会議の日程が早すぎること",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "daed530bcf6d9c0e",
+      "item_id": "071dec33a5",
+      "kind": "option",
+      "index": 3,
+      "text": "集計が出来上がる時期が遅いこと",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "df22875660f76c21",
       "item_id": "5c05ab4b5f",
       "kind": "narration",
       "index": null,
       "text": "オンライン会議で、ある人がこう話しています。「では、本日決まったことを確認いたします。まず日程は十日に変更、担当は私が引き続き。次回までに先方の返事をいただいておきます。」これはやりとりのどの段階ですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5491a7873f3c513a",
+      "item_id": "5c05ab4b5f",
+      "kind": "option",
+      "index": 0,
+      "text": "話し合いが終わり、決まったことをまとめている段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0771af06c99e3294",
+      "item_id": "5c05ab4b5f",
+      "kind": "option",
+      "index": 1,
+      "text": "議題を示して話し合いを始める段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "339c8f0b68ffef4f",
+      "item_id": "5c05ab4b5f",
+      "kind": "option",
+      "index": 2,
+      "text": "日程について意見が分かれている段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "13e93551a213aeb7",
+      "item_id": "5c05ab4b5f",
+      "kind": "option",
+      "index": 3,
+      "text": "次回の会議の日程を決めている段階",
       "voice": "narrator_f",
       "channel": "in_person"
     }

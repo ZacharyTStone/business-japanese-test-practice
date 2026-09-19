@@ -50,6 +50,8 @@ import { useAuth } from "../src/lib/auth";
 import {
   clipUrl,
   fetchDay,
+  fetchPace,
+  fetchProfile,
   fetchQueue,
   fetchSectionLevels,
   finishSession,
@@ -58,11 +60,13 @@ import {
   startSession,
 } from "../src/lib/db";
 import { useLang, type Key } from "../src/lib/i18n";
+import { budgetSeconds, type TypePace } from "../src/lib/pace";
 import { verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import type { AnsweredItem, QueuedItem, SectionLevel } from "../src/lib/types";
+import { NO_ANSWER, type AnsweredItem, type QueuedItem, type SectionLevel } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer, MiniPlay } from "../src/ui/audio";
+import { QuestionClock } from "../src/ui/clock";
 import { Button, Card, Loading, Notice, ProgressBar, Tag } from "../src/ui/components";
 import { DayDone } from "../src/ui/done";
 import { DocumentView } from "../src/ui/document";
@@ -70,6 +74,7 @@ import { Face, moodFor, moodLabel } from "../src/ui/face";
 import { HAS_KEYBOARD, optionForKey, useKeys } from "../src/ui/keys";
 import { RudenessMeter } from "../src/ui/meters";
 import { FadeIn } from "../src/ui/motion";
+import { ReportQuestion } from "../src/ui/report";
 import { colors, radius, shadow, space, tabular, type } from "../src/ui/theme";
 
 const LETTERS = ["A", "B", "C", "D"];
@@ -109,10 +114,18 @@ const PROMPT_KEY: Record<string, Key> = {
 
 type Stage = "scene" | "listen" | "answer" | "reveal";
 
-/** The types whose four options are heard rather than read: the utterances
- *  of 発言聴解, and the four descriptions of a 画像把握 picture. Must agree
- *  with TYPE_AUDIO in bjt/tts/plan.py, which is where the clips come from. */
-const SPOKEN_OPTION_TYPES = new Set(["hatsugen_choukai", "gazou_haaku"]);
+/** The types whose four options are heard rather than read — which on the exam
+ *  is **all of 第1部 聴解**: the screen shows the picture and the bare numerals,
+ *  the four candidates are read aloud, and in 総合聴解 there is nothing on the
+ *  screen at all. Must agree with TYPE_AUDIO in bjt/tts/plan.py, which is where
+ *  the clips come from; an item whose clips do not exist yet falls back to
+ *  printed options on its own (see spokenOptionUrls). */
+const SPOKEN_OPTION_TYPES = new Set([
+  "bamen_haaku",
+  "gazou_haaku",
+  "hatsugen_choukai",
+  "sougou_choukai",
+]);
 
 /**
  * The four spoken options of an item, when every one of them has a clip.
@@ -177,6 +190,11 @@ export default function Practice() {
   const [busy, setBusy] = useState(false);
   /** Today's count when the day's ceiling has been reached; null otherwise. */
   const [blocked, setBlocked] = useState<number | null>(null);
+  /** What the exam affords each self-paced type, and whether this learner wants
+   *  it counted. Both are furniture: if either fails to load the set is
+   *  practised without a clock rather than not at all. */
+  const [pace, setPace] = useState<Record<string, TypePace>>({});
+  const [timed, setTimed] = useState(false);
 
   const startedAt = useRef(Date.now());
   const questionShownAt = useRef(Date.now());
@@ -205,10 +223,19 @@ export default function Practice() {
     let cancelled = false;
     (async () => {
       try {
-        const [day, levels] = await Promise.all([fetchDay(), fetchSectionLevels()]);
+        const [day, levels, profile, paces] = await Promise.all([
+          fetchDay(),
+          fetchSectionLevels(),
+          // The clock is furniture. A set that cannot be timed is still a set,
+          // so neither of these is allowed to fail the screen.
+          fetchProfile().catch(() => null),
+          fetchPace().catch(() => ({}) as Record<string, TypePace>),
+        ]);
         // Read before the first answer, so the result screen can name the
         // section whose level moved rather than just that something did.
         levelsBefore.current = levels;
+        setPace(paces);
+        setTimed(profile?.timed_reading ?? false);
         // The size is what the day has left of its set, or the bonus set once
         // the set is done: the rest of the allowance, or a full set for an
         // account whose ceiling is lifted. Zero means the day is over, and the
@@ -299,6 +326,11 @@ export default function Practice() {
   if (!item) return <Loading />;
 
   const sceneImage = sceneUrl(item.scene_image_path);
+  // How long this question gets, from the exam's budget for its type and the
+  // amount there is to read in this particular one. Zero means no clock — see
+  // budgetSeconds — and the learner's switch is the only part of it that is
+  // about the learner rather than about the question.
+  const clockSeconds = timed ? budgetSeconds(item, pace) : 0;
   const listenable = playlist.length > 0;
   // A scene is worth a pause of its own when there is something to hear or
   // something to look at. A bare reading item goes straight to the question.
@@ -320,11 +352,24 @@ export default function Practice() {
   const stemAsText = !narrationUrl;
   const dialogueAsText = (item.dialogue?.length ?? 0) > 0 && !listenable;
 
+  /**
+   * Answer the question — or, with `NO_ANSWER`, record that the clock took it.
+   *
+   * The two paths are deliberately the same path. A question the clock took is
+   * a question that was got wrong, and it belongs in the record on exactly the
+   * same terms as any other: it counts against the day, it drops to the bottom
+   * of the spacing ladder, and `adjust_level()` weighs it. The only difference
+   * is that the database grades it from `chosen_index = -1` rather than from an
+   * option, and hands back the role `timed_out`.
+   */
   async function choose(position: number) {
     if (chosen !== null || busy || !item) return;
     if (answeredFor.current === index) return;
     answeredFor.current = index;
-    buzz(12);
+    const ranOut = position === NO_ANSWER;
+    // A longer single buzz for the clock: it is the one verdict that arrives
+    // without anybody having pressed anything, so it announces itself.
+    buzz(ranOut ? 60 : 12);
     setBusy(true);
     setChosen(position);
     try {
@@ -335,14 +380,18 @@ export default function Practice() {
         elapsedMs: Date.now() - questionShownAt.current,
       });
       setGraded(result);
-      setAnswers((prev) => [...prev, { item, chosenIndex: position, isCorrect: result.isCorrect }]);
+      setAnswers((prev) => [
+        ...prev,
+        { item, chosenIndex: position, isCorrect: result.isCorrect, role: result.chosenRole },
+      ]);
       buzz(result.isCorrect ? [0, 18, 60, 18] : 40);
     } catch (e) {
       // Let them see the answer even if recording failed; grading locally here
       // is a display fallback only, and nothing is written from it.
-      const isCorrect = position === item.correct_index;
-      setGraded({ isCorrect, chosenRole: options[position]?.role ?? "" });
-      setAnswers((prev) => [...prev, { item, chosenIndex: position, isCorrect }]);
+      const isCorrect = !ranOut && position === item.correct_index;
+      const role = ranOut ? "timed_out" : (options[position]?.role ?? "");
+      setGraded({ isCorrect, chosenRole: role });
+      setAnswers((prev) => [...prev, { item, chosenIndex: position, isCorrect, role }]);
     } finally {
       setBusy(false);
       go("reveal");
@@ -384,6 +433,10 @@ export default function Practice() {
   const chosenOption = chosen !== null ? options[chosen] : null;
   const correctOption = options[item.correct_index];
   const role = graded?.chosenRole || chosenOption?.role || "";
+  // The clock took it. Not a wrong answer about the Japanese, so the screen says
+  // something different and the 失礼度メーター stays out of it: nobody was
+  // offended, because nobody said anything.
+  const ranOut = role === "timed_out";
   const mood = graded ? moodFor(role, graded.isCorrect) : "happy";
   const explanation = lang === "en" && item.explanation_en ? item.explanation_en : item.explanation_ja;
   // The one line under the verdict. For a right answer it is why that option
@@ -395,7 +448,9 @@ export default function Practice() {
       ? lang === "en" && item.explanation_en
         ? item.explanation_en
         : correctOption?.why
-      : moodLabel(mood, lang)
+      : ranOut
+        ? t("time_up_sub")
+        : moodLabel(mood, lang)
     : "";
 
   /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
@@ -443,6 +498,20 @@ export default function Practice() {
         />
         {item.times_seen > 0 ? <Tag tone="amber">{t("again_tag")}</Tag> : null}
       </View>
+
+      {/* The clock, on the reading questions only, directly under the counter:
+          both of them answer "where am I", and a learner scrolling a long
+          passage scrolls back to one place rather than two. It keeps running
+          until the answer is in and then freezes at what was left, which is the
+          number worth seeing on the way to the next question. */}
+      {clockSeconds > 0 ? (
+        <QuestionClock
+          seconds={clockSeconds}
+          running={stage === "answer" && chosen === null && !busy}
+          runKey={item.id}
+          onExpire={() => void choose(NO_ANSWER)}
+        />
+      ) : null}
 
       <SceneStrip item={item} big={stage === "scene"} />
 
@@ -634,12 +703,16 @@ export default function Practice() {
               <Face mood={mood} size={68} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[type.h2, graded.isCorrect && { color: colors.correct }]}>
-                  {graded.isCorrect ? t("correct_title") : verdictFor(role, item.listener_role, lang)}
+                  {graded.isCorrect
+                    ? t("correct_title")
+                    : ranOut
+                      ? t("time_up")
+                      : verdictFor(role, item.listener_role, lang)}
                 </Text>
                 <Text style={type.small}>{verdictSub}</Text>
               </View>
             </View>
-            {!graded.isCorrect ? <RudenessMeter role={role} showLabel={false} /> : null}
+            {!graded.isCorrect && !ranOut ? <RudenessMeter role={role} showLabel={false} /> : null}
           </Card>
 
           <Pressable
@@ -689,6 +762,11 @@ export default function Practice() {
               ) : null}
             </Card>
           ) : null}
+
+          {/* Every question gets one, and it is the last thing above the button
+              to leave: a report is worth making at the moment the oddness is
+              still in view, and worth nobody's attention before then. */}
+          <ReportQuestion key={`${item.id}-report`} itemId={item.id} />
 
           <Button
             label={index + 1 >= items.length ? t("btn_result") : t("btn_next")}
