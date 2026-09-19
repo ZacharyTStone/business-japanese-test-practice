@@ -133,3 +133,30 @@ def test_the_defaults_are_the_cheaper_ones():
     assert config.IMAGE_QUALITY == "medium"
     assert config.SLOT_PATIENCE == 3
     assert (plan.DEFAULT_BUDGET, plan.DEFAULT_PER_SLOT) == (8, 3)
+
+
+def test_a_discard_is_explained_to_the_next_draft(store, monkeypatch, quiet, tmp_path):
+    """The second draft for a shelf is told why the first was rejected. It
+    used to be written blind, and it failed the same way."""
+    prompts = []
+
+    def fake(system, user, schema, model=None):
+        prompts.append(user)
+        return copy.deepcopy(fixtures.FIXTURES["goi_bunpou"])
+
+    verdicts = iter([True, False])  # leaky, then kept
+
+    def gate(item):
+        leaky = next(verdicts)
+        return answerability.GateResult(
+            cold_success_rate=1.0 if leaky else 0.0,
+            full_success_rate=None if leaky else 1.0,
+            verdict="discarded:leaky" if leaky else "kept", trials=[])
+
+    monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
+    monkeypatch.setattr(answerability, "run_gate", gate)
+    path, kept = cli.run_batch(store, "goi_bunpou", "J2", 1, gate=True, sanity_check=False,
+                               out=tmp_path / "b.json")
+    assert kept == 1 and len(prompts) == 2
+    assert "REJECTED" not in prompts[0]
+    assert "REJECTED by review" in prompts[1] and "stem hidden" in prompts[1]

@@ -10,11 +10,14 @@ survives the round trip into SQL.
 from __future__ import annotations
 
 import json
+import pathlib
 
 import pytest
 
 from bjt import batch as batchmod
 from bjt import config, fixtures, plan, publish, schemas
+
+ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
 
 
 def _survey(*shelves) -> plan.Survey:
@@ -86,9 +89,9 @@ def test_work_order_is_empty_when_every_shelf_is_exhausted():
 def test_survey_counts_the_committed_library():
     """The bundles are the ledger, so the real tree is what this reports on."""
     survey = plan.survey()
-    assert survey.shelves, "nine types × three levels should not be empty"
+    assert survey.shelves, "ten types × three levels should not be empty"
     # Every type with a seed table gets a shelf per level in that table.
-    assert len({s.item_type for s in survey.shelves}) == 9
+    assert len({s.item_type for s in survey.shelves}) == 10
     assert survey.items > 0
     hatsugen = {s.level: s for s in survey.shelves if s.item_type == "hatsugen_choukai"}
     assert hatsugen["J2"].have > 0
@@ -158,3 +161,83 @@ def test_every_committed_bundle_still_checks_out_with_the_new_field():
         bundle = batchmod.load(path)
         report = batchmod.check_bundle(bundle)
         assert report.ok, f"{path.name}: {[c.detail for c in report.failed]}"
+
+
+# ----- the reading floor ------------------------------------------------------
+
+def _mixed_survey():
+    return _survey(
+        ("bamen_haaku", "J2", 0, 100), ("sougou_choukai", "J1", 0, 100),
+        ("joukyou_haaku", "J3", 1, 100),
+        ("goi_bunpou", "J2", 6, 100), ("hyougen", "J1", 5, 100), ("sougou_dokkai", "J3", 9, 100),
+    )
+
+
+def test_reading_items_are_written_every_night_even_when_deeper():
+    """Three listening shelves are emptier than every reading shelf, and the
+    reading floor still takes its three first — emptiest reading shelf first."""
+    order = plan.work_order(_mixed_survey(), budget=8, per_slot=3, reading_min=3)
+    by_type = {w.item_type: w.n for w in order}
+    assert sum(by_type.get(t, 0) for t in schemas.READING_TYPES) == 3
+    assert by_type["hyougen"] >= by_type["goi_bunpou"] >= by_type.get("sougou_dokkai", 0)
+    assert sum(by_type.values()) == 8
+    # ...and the rest still goes to the emptiest shelves of all, levelled.
+    assert by_type["bamen_haaku"] == 2 and by_type["sougou_choukai"] == 2
+    assert by_type["joukyou_haaku"] == 1
+
+
+def test_the_floor_yields_what_it_cannot_place():
+    order = plan.work_order(
+        _survey(("bamen_haaku", "J2", 0, 100), ("goi_bunpou", "J2", 0, 1)),
+        budget=4, per_slot=3, reading_min=3,
+    )
+    by_type = {w.item_type: w.n for w in order}
+    assert by_type["goi_bunpou"] == 1, "one cell left, one item"
+    assert by_type["bamen_haaku"] == 3, "the two unplaceable reading items go elsewhere"
+
+
+def test_the_floor_never_exceeds_the_budget():
+    order = plan.work_order(_mixed_survey(), budget=2, per_slot=3, reading_min=3)
+    assert sum(w.n for w in order) == 2
+    assert all(w.item_type in schemas.READING_TYPES for w in order)
+
+
+def test_a_floor_of_zero_is_the_old_rule():
+    survey = _mixed_survey()
+    assert plan.work_order(survey, budget=5, per_slot=3, reading_min=0) == \
+        plan.work_order(survey, budget=5, per_slot=3, reading_min=-4)
+    order = plan.work_order(survey, budget=5, per_slot=3, reading_min=0)
+    assert all(w.item_type not in schemas.READING_TYPES for w in order)
+
+
+def test_the_section_map_matches_the_database():
+    """The planner needs the sections without a database; the migration is the
+    authority. The two are asserted equal so neither can drift."""
+    import re
+    sql = "\n".join(
+        p.read_text(encoding="utf-8")
+        for p in sorted((ROOT_DIR / "supabase" / "migrations").glob("*.sql"))
+    )
+    rows: dict[str, str] = {}
+    for stmt in re.findall(r"insert into public\.item_types\b.*?;", sql, re.S):
+        rows.update(re.findall(r"\('([a-z_]+)',\s*'(choukai|choudokkai|dokkai)',", stmt))
+    assert rows == schemas.SECTIONS
+
+
+def test_render_says_how_many_are_reading():
+    text = plan.render(_mixed_survey(), plan.work_order(_mixed_survey(), budget=8))
+    assert "3 of them 読解" in text
+
+
+def test_a_rare_type_gets_at_most_its_cap_a_night():
+    """画像把握 has three empty shelves and would otherwise be every night's
+    emptiest; a night writes one of it, and the rest goes elsewhere."""
+    order = plan.work_order(
+        _survey(("gazou_haaku", "J3", 0, 50), ("gazou_haaku", "J2", 0, 50),
+                ("gazou_haaku", "J1", 0, 50), ("bamen_haaku", "J2", 4, 50)),
+        budget=6, per_slot=3, reading_min=0,
+    )
+    by_type = {}
+    for w in order:
+        by_type[w.item_type] = by_type.get(w.item_type, 0) + w.n
+    assert by_type == {"gazou_haaku": 1, "bamen_haaku": 3}

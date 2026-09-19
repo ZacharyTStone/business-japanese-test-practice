@@ -6,14 +6,16 @@ five 語彙・文法 in a row, and slips in one item from the level above — an
 one of those promises is empty when the library is 40 items of one type at one
 level and six of everything else. A queue cannot interleave what is not there.
 
-So the bank has 27 shelves — nine problem types × three levels — and the job of
+So the bank has 30 shelves — ten problem types × three levels — and the job of
 the nightly run is to **fill the emptiest shelf first**. That is the whole
 algorithm:
 
+    give the first few items to the emptiest READING shelves (the floor);
     while there is budget left:
         give the next item to the shelf with the fewest items,
         skipping any shelf that has no unspent seed cells
         or has already taken its share of this run
+        or belongs to a type that has had its night's allowance
 
 It has three properties worth the plainness. It is *deterministic*: the same
 library produces the same work order, so a run is reviewable before it is made.
@@ -44,7 +46,7 @@ from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
 from . import batch as batchmod
-from . import seedtable
+from . import schemas, seedtable
 
 #: Below this many items, a shelf is thin enough that the queue notices: a set
 #: of five cannot avoid repeating a type that only has a handful published.
@@ -59,6 +61,23 @@ DEFAULT_PER_SLOT = 3
 #: owner asked for cheap (2026-09-18). The night's real throttle is the
 #: review gate: nothing is written while an earlier night waits unmerged.
 DEFAULT_BUDGET = 8
+
+#: How many of the night's items go to the reading shelves (語彙・文法, 表現読解,
+#: 総合読解) before the emptiest-first rule sees the rest. The owner asked for
+#: reading items every night (2026-09-19): they need no audio and no picture,
+#: so they are the cheapest item to ship and the one kind a night should never
+#: come back without. Three of eight is one per reading type on an ordinary
+#: night; the floor takes the emptiest reading shelves first, exactly as the
+#: main rule does, and yields whatever it cannot place back to the main rule.
+DEFAULT_READING_MIN = 3
+
+#: Most items a night may write of a type that should stay uncommon. 画像把握
+#: is one: each item needs a picture of its own, drawn and reviewed at a cost
+#: no shared-bank item has, and the owner asked for it to be a rare question
+#: rather than a common one (2026-09-19). Without this, three empty shelves of
+#: a new type are the emptiest in the bank and would take every night for a
+#: week.
+NIGHT_TYPE_CAPS: dict[str, int] = {"gazou_haaku": 1}
 
 
 @dataclass(frozen=True)
@@ -165,8 +184,15 @@ def work_order(
     *,
     budget: int = DEFAULT_BUDGET,
     per_slot: int = DEFAULT_PER_SLOT,
+    reading_min: int = DEFAULT_READING_MIN,
 ) -> list[WorkItem]:
     """Fill the emptiest shelf first, until the budget runs out.
+
+    Two passes of the same greedy rule. The first hands `reading_min` items to
+    the reading shelves alone (emptiest first among them); the second hands the
+    rest of the budget to every shelf, emptiest first, counting what the first
+    pass placed. A reading floor that cannot be filled — every reading shelf
+    out of cells, or capped — gives its remainder back to the second pass.
 
     Ties are broken by item type and then by level, so the order is a function of
     the library and nothing else — run it twice on the same tree and you get the
@@ -174,25 +200,38 @@ def work_order(
     """
     assigned: dict[tuple[str, str], int] = {}
     shelves = list(survey_result.shelves)
+    budget = max(budget, 0)
 
-    for _ in range(max(budget, 0)):
-        eligible = [
-            s
-            for s in shelves
-            if assigned.get((s.item_type, s.level), 0) < min(per_slot, s.cells_left)
-        ]
-        if not eligible:
-            break
-        target = min(
-            eligible,
-            key=lambda s: (
-                s.have + assigned.get((s.item_type, s.level), 0),
-                s.item_type,
-                s.level,
-            ),
-        )
-        key = (target.item_type, target.level)
-        assigned[key] = assigned.get(key, 0) + 1
+    def by_type(item_type: str) -> int:
+        return sum(n for (t, _), n in assigned.items() if t == item_type)
+
+    def place(n: int, candidates: list[Shelf]) -> int:
+        placed = 0
+        for _ in range(n):
+            eligible = [
+                s
+                for s in candidates
+                if assigned.get((s.item_type, s.level), 0) < min(per_slot, s.cells_left)
+                and by_type(s.item_type) < NIGHT_TYPE_CAPS.get(s.item_type, budget)
+            ]
+            if not eligible:
+                break
+            target = min(
+                eligible,
+                key=lambda s: (
+                    s.have + assigned.get((s.item_type, s.level), 0),
+                    s.item_type,
+                    s.level,
+                ),
+            )
+            key = (target.item_type, target.level)
+            assigned[key] = assigned.get(key, 0) + 1
+            placed += 1
+        return placed
+
+    reading = [s for s in shelves if s.item_type in schemas.READING_TYPES]
+    placed = place(min(max(reading_min, 0), budget), reading)
+    place(budget - placed, shelves)
 
     by_key = {(s.item_type, s.level): s for s in shelves}
     return [
@@ -239,6 +278,7 @@ def to_json(survey_result: Survey, order: list[WorkItem]) -> dict:
             for w in order
         ],
         "planned_items": sum(w.n for w in order),
+        "reading_items": sum(w.n for w in order if w.item_type in schemas.READING_TYPES),
     }
 
 
@@ -270,7 +310,9 @@ def render(survey_result: Survey, order: list[WorkItem]) -> str:
         lines.append("Nothing to write: every shelf is out of seed cells.")
         return "\n".join(lines)
 
-    lines.append(f"Work order — {sum(w.n for w in order)} item(s), emptiest shelf first")
+    reading = sum(w.n for w in order if w.item_type in schemas.READING_TYPES)
+    lines.append(f"Work order — {sum(w.n for w in order)} item(s), emptiest shelf first; "
+                 f"{reading} of them 読解 (reading first, then the rest)")
     lines.append("")
     for w in order:
         lines.append(

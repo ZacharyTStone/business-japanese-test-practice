@@ -39,7 +39,7 @@ def test_generate_and_gate_kept(store, monkeypatch):
 
     monkeypatch.setattr("bjt.fidelity.answerability.llm.answer_choice", fake_answer)
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
     assert kept
     stored = store.get_item(iid)
     assert stored["gate_verdict"] == "kept"
@@ -50,7 +50,7 @@ def test_generate_and_gate_kept(store, monkeypatch):
 def test_generate_and_gate_skipped(store, monkeypatch):
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("hyougen"))
-    item, iid, kept, detail = cli._generate_and_gate(store, "hyougen", "J2", gate=False)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "hyougen", "J2", gate=False)
     assert kept
     assert store.get_item(iid)["gate_verdict"] == "skipped"
 

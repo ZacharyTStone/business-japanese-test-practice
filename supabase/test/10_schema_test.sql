@@ -277,8 +277,8 @@ begin
         'type stats add up to the attempts behind them');
 
     perform test.check(
-        (select count(*) from public.v_my_type_stats) = 9,
-        'all nine types appear on the radar, including untouched ones');
+        (select count(*) from public.v_my_type_stats) = 10,
+        'all ten types appear on the radar, including untouched ones');
 
     select * into v from public.v_my_tag_stats where axis = 'channel' and tag = 'phone';
     perform test.check(v.accuracy = 0, 'the telephone shows up as its own weakness');
@@ -470,9 +470,9 @@ begin
     perform test.become('11111111-1111-1111-1111-111111111111');
     set local role authenticated;
     perform test.check(public.is_tester(), 'is a tester');
-    -- The fixture items were cleaned up by the tests above; the nine problem
+    -- The fixture items were cleaned up by the tests above; the ten problem
     -- types and the scene are content that is always there.
-    perform test.check((select count(*) from public.item_types) = 9, 'sees the content');
+    perform test.check((select count(*) from public.item_types) = 10, 'sees the content');
     perform test.check((select count(*) from public.scenes) > 0, 'sees the scenes');
     perform test.check((select count(*) from public.profiles) = 1, 'sees their own profile');
 end

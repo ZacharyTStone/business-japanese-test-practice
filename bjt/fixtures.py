@@ -160,6 +160,43 @@ FIXTURES["bamen_haaku"] = {
     ],
 }
 
+FIXTURES["gazou_haaku"] = {
+    "item_type": "gazou_haaku",
+    "level": "J2",
+    "topic": "受付で来客を案内する",
+    "channel": "in_person",
+    "image_brief": (
+        "The reception counter of a Japanese company, seen from the visitor's side. A "
+        "receptionist in a dark suit stands behind the counter, body turned toward a "
+        "corridor on the right, one arm extended with an open palm pointing down that "
+        "corridor, looking at the visitor. In front of the counter stands one visitor "
+        "in a coat holding a briefcase, facing the corridor, having just arrived. "
+        "No badge is being handed over; nobody is bowing; the visitor is not leaving "
+        "toward the entrance. Counter surface bare; no signs, no readable text."
+    ),
+    "stem": "受付の人は何をしていますか。",
+    "options": [
+        {"text": "来客を会議室のほうへ案内しています。", "role": "correct",
+         "why": "受付の人は廊下のほうへ手を伸ばして方向を示しており、来客はその方向を向いている。"},
+        {"text": "来客に入館証を渡しています。", "role": "different_action",
+         "why": "受付でよくある行動だが、絵の中で手渡されている物はなく、手は方向を示している。"},
+        {"text": "来客が受付の人に行き方を教えています。", "role": "wrong_participants",
+         "why": "方向を示しているのは受付の人のほうで、来客はかばんを持って立っているだけ。"},
+        {"text": "打ち合わせを終えた来客を見送っています。", "role": "right_scene_wrong_moment",
+         "why": "同じ受付の場面だが、来客は出口ではなく奥の廊下を向いていて、これから入る場面。"},
+    ],
+    "explanation_ja": (
+        "受付の人が廊下のほうに手のひらを向けて方向を示し、来客がそちらを向いているので、"
+        "来客を奥へ案内している場面。入館証などの受け渡しは描かれておらず、方向を示しているのは"
+        "受付の人。来客は出口ではなく奥を向いているので、見送りではなく、これから通す場面である。"
+    ),
+    "explanation_en": "The receptionist's open-palm gesture down the corridor, with the visitor facing that way, shows the visitor being shown in.",
+    "vocab_notes": [
+        {"term": "案内する", "reading": "あんないする", "meaning": "to show someone the way"},
+        {"term": "入館証", "reading": "にゅうかんしょう", "meaning": "visitor badge"},
+    ],
+}
+
 FIXTURES["sougou_choukai"] = {
     "item_type": "sougou_choukai",
     "level": "J2",

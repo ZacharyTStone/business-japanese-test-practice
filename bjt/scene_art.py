@@ -170,12 +170,51 @@ RULES: dict[str, str] = {
     "wrong_setting": "the picture does not show the setting the brief names",
 }
 
+#: The rules for a per-item picture. Fewer than the bank's: this picture is
+#: allowed — required — to fix the situation, and to have as many people in it
+#: as the moment needs. What it may not do is be unclear about it.
+PICTURE_RULES: dict[str, str] = {
+    "readable_text": "readable text, signage, a chart or a user interface is drawn in",
+    "logo_or_brand": "a logo or brand mark is drawn in",
+    "real_likeness": "a recognisable likeness of a real person",
+    "anatomy": "malformed hands, extra limbs, or more people than the brief calls for",
+    "not_the_brief": "the picture does not clearly show what the brief describes",
+    "unclear": "what is happening is not readable at a glance — the action, or who is "
+               "doing it to whom, could be taken more than one way",
+}
+
 Reviewer = Callable[[bytes, str, scenes.Scene], Verdict]
 
 
 def review_with_model(image: bytes, media_type: str, scene: scenes.Scene) -> Verdict:
-    """Show the draft to the judge model with the brief, and read its flags."""
-    from . import llm
+    """Show the draft to the judge model with the brief, and read its flags.
+
+    A per-item picture then sits the item itself: the judge is shown the
+    picture with the question and the four descriptions, a few times, and the
+    draft is refused unless every trial picks the marked one. That is the
+    picture's answerability gate — the text gate cannot see it — and it is
+    strict on purpose: the owner asked for pictures that are clear and not
+    generic (2026-09-19), and a picture two readers describe differently is
+    neither.
+    """
+    from . import config, llm
+
+    if scene.is_picture:
+        flags = llm.review_scene_image(image, media_type, scenes.prompt_for(scene), PICTURE_RULES)
+        broken = [PICTURE_RULES[rule] for rule in PICTURE_RULES if flags.get(rule)]
+        if not broken and scene.options and scene.answer is not None:
+            for _ in range(config.GATE_TRIALS):
+                try:
+                    res = llm.answer_from_image(image, media_type, scene.question, list(scene.options))
+                    chosen = int(res.get("choice", -1))
+                except (llm.LLMError, ValueError, TypeError):
+                    chosen = -1
+                if chosen != scene.answer:
+                    picked = scene.options[chosen] if 0 <= chosen < len(scene.options) else "nothing"
+                    broken.append(f"a reader shown the picture chose {chosen} ({picked}) "
+                                  f"rather than the marked description {scene.answer}")
+                    break
+        return Verdict(approved=not broken, reasons=tuple(broken))
 
     flags = llm.review_scene_image(image, media_type, scenes.prompt_for(scene), RULES)
     broken = tuple(RULES[rule] for rule in RULES if flags.get(rule))
@@ -199,6 +238,12 @@ class Drawn:
     #: Reasons each rejected attempt was rejected, in order.
     rejected: list[tuple[str, ...]] = field(default_factory=list)
     error: str | None = None
+    #: Refused drafts before tonight, from the bucket's ledger.
+    prior: int = 0
+    #: True when the scene was not drawn because its lifetime allowance of
+    #: refused drafts is spent. Not an error: the summary names it and the
+    #: scene ships on its stand-in, or (a per-item picture) its item waits.
+    given_up: bool = False
 
     @property
     def ok(self) -> bool:
@@ -229,13 +274,21 @@ class DrawResult:
             lines.append("**Placeholder provider: nothing here is artwork.** Files are "
                          "under `placeholder/` and are never uploaded.")
         lines.append("")
-        lines.append("| scene | result | attempts | rejected because |")
+        lines.append("| scene | result | attempts (before tonight) | rejected because |")
         lines.append("|---|---|---:|---|")
         for d in self.drawn:
-            result = d.path if d.ok else (f"error: {d.error}" if d.error else "no draft passed")
+            if d.given_up:
+                result = "given up: lifetime allowance of refused drafts spent"
+            else:
+                result = d.path if d.ok else (f"error: {d.error}" if d.error else "no draft passed")
             why = "; ".join(" / ".join(r) for r in d.rejected) or "—"
-            lines.append(f"| {d.scene_id} | {result} | {d.attempts} | {why} |")
+            lines.append(f"| {d.scene_id} | {result} | {d.attempts} ({d.prior}) | {why} |")
         return "\n".join(lines)
+
+
+#: Told about each refused draft: (scene_id, lifetime attempt number, reasons).
+#: The bucket's ledger is written through this.
+OnReject = Callable[[str, int, tuple[str, ...]], None]
 
 
 def draw(
@@ -245,6 +298,9 @@ def draw(
     review: Reviewer,
     media_dir: Path | None = None,
     attempts: int | None = None,
+    prior: dict[str, int] | None = None,
+    lifetime: int | None = None,
+    on_reject: OnReject | None = None,
 ) -> DrawResult:
     """Draft, review and write each wanted scene.
 
@@ -253,8 +309,15 @@ def draw(
     from then on. Rejected drafts go to `media/scenes/rejected/` with a text
     file beside each saying which rule it broke. A provider that is not real
     writes under `placeholder/` instead and its drafts are not reviewed.
+
+    `prior` is how many drafts of each scene were refused on earlier runs
+    (the bucket's ledger); a scene at or over `lifetime` is not drawn again,
+    and says so. `on_reject` is called for every refused draft with its
+    lifetime number, which is how the ledger grows.
     """
     attempts = attempts or config.SCENE_ATTEMPTS
+    lifetime = lifetime or config.SCENE_LIFETIME_ATTEMPTS
+    prior = prior or {}
     root = Path(media_dir or config.MEDIA_DIR) / "scenes"
     out_dir = root if provider.real else root / "placeholder"
     rejected_dir = root / "rejected"
@@ -264,9 +327,17 @@ def draw(
 
     drawn: list[Drawn] = []
     for scene in wanted:
-        record = Drawn(scene_id=scene.scene_id, path=None, attempts=0)
+        before = prior.get(scene.scene_id, 0)
+        record = Drawn(scene_id=scene.scene_id, path=None, attempts=0, prior=before)
+        if provider.real and before >= lifetime:
+            record.given_up = True
+            drawn.append(record)
+            continue
         prompt = scenes.image_prompt(scene)
-        for n in range(1, attempts + 1):
+        # Tonight's drafts stop at the per-run allowance or at the lifetime
+        # one, whichever comes first.
+        tonight = min(attempts, lifetime - before) if provider.real else attempts
+        for n in range(1, tonight + 1):
             record.attempts = n
             try:
                 image = provider.generate(prompt)
@@ -281,10 +352,15 @@ def draw(
                 break
             record.rejected.append(verdict.reasons)
             rejected_dir.mkdir(parents=True, exist_ok=True)
-            stem = rejected_dir / f"{scene.scene_id}-{n}"
+            stem = rejected_dir / f"{scene.scene_id}-{before + n}"
             stem.with_suffix(provider.suffix).write_bytes(image)
             stem.with_suffix(".txt").write_text(
                 "\n".join(verdict.reasons) + "\n", encoding="utf-8")
+            if on_reject is not None:
+                try:
+                    on_reject(scene.scene_id, before + n, verdict.reasons)
+                except RuntimeError as exc:  # the ledger is a courtesy, not the job
+                    record.error = f"could not record the refusal: {exc}"
         drawn.append(record)
     return DrawResult(drawn=drawn, provider=provider.name)
 
@@ -314,21 +390,42 @@ class Bucket:
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.key}", "apikey": self.key}
 
-    def list(self) -> set[str]:
-        """Names of the files at the bucket root — the artwork already shipped."""
+    def list(self, prefix: str = "") -> set[str]:
+        """Names of the files at the bucket root — the artwork already shipped.
+
+        With a prefix, the names under that folder (without the folder)."""
         if not self.configured:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
         rows = _json_request(
             "POST", f"{self.url}/storage/v1/object/list/{self.name}",
-            {"prefix": "", "limit": 1000, "offset": 0,
+            {"prefix": prefix, "limit": 1000, "offset": 0,
              "sortBy": {"column": "name", "order": "asc"}},
             headers=self._headers(),
         )
-        return {
-            row["name"] for row in rows
-            if row.get("id") is not None  # folders come back with no id
-            and Path(row["name"]).suffix in scenes.IMAGE_EXTENSIONS
-        }
+        names = {row["name"] for row in rows if row.get("id") is not None}  # folders have no id
+        if prefix:
+            return names
+        return {n for n in names if Path(n).suffix in scenes.IMAGE_EXTENSIONS}
+
+    # The ledger of refused drafts: one small text file per refusal, under
+    # `rejected/`, named `<scene_id>-<n>.txt`. The runner forgets everything
+    # each night; this is how it knows a scene has been refused six times
+    # already and is not worth a seventh dollar.
+    LEDGER = "rejected/"
+
+    def refusals(self) -> dict[str, int]:
+        """scene_id → how many drafts have been refused, over all time."""
+        counts: dict[str, int] = {}
+        for name in self.list(self.LEDGER):
+            stem = Path(name).stem
+            scene_id, _, n = stem.rpartition("-")
+            if scene_id and n.isdigit():
+                counts[scene_id] = max(counts.get(scene_id, 0), int(n))
+        return counts
+
+    def record_refusal(self, scene_id: str, n: int, reasons: tuple[str, ...]) -> None:
+        body = ("\n".join(reasons) + "\n").encode("utf-8")
+        self.upload(f"{self.LEDGER}{scene_id}-{n}.txt", body, "text/plain; charset=utf-8")
 
     def upload(self, path: str, data: bytes, content_type: str) -> None:
         """Put one file at `path`, replacing whatever is there."""

@@ -128,3 +128,68 @@ def test_blank_document_block_is_pruned_not_retried(monkeypatch):
     assert item["item_type"] == "joukyou_haaku"
     assert all(b.get("text") for b in item["document"]["blocks"] if b["type"] == "callout")
     assert schemas.validate_item("joukyou_haaku", item) == []
+
+
+# ----- cheaper drafts: repair, feedback, stock lines ---------------------------
+
+def test_a_fifth_option_is_trimmed_not_regenerated(monkeypatch, goi_cell):
+    """The schema cannot say maxItems, so a spare distractor is the one shape
+    fault the model can still produce. It used to cost three generations for
+    a shelf that then wrote nothing; now the spare is dropped and the draft
+    goes on to the checks."""
+    from bjt.generators.base import repair_surplus_options
+    calls = {"n": 0}
+
+    def fake(*a, **k):
+        calls["n"] += 1
+        item = _valid("goi_bunpou")
+        spare = dict(item["options"][1])
+        spare["text"] = "余分な選択肢"
+        item["options"].append(spare)  # a duplicate role, so it is the one to drop
+        return item
+
+    monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
+    item = get_generator("goi_bunpou").generate(cell=goi_cell, seed=0)
+    assert calls["n"] == 1
+    assert len(item["options"]) == 4
+    assert "余分な選択肢" not in [o["text"] for o in item["options"]]
+    assert schemas.validate_item("goi_bunpou", item) == []
+
+    # Fewer than four, or two correct, is left for the validator to reject.
+    short = _valid("goi_bunpou"); short["options"].pop()
+    assert repair_surplus_options(short) == [] and len(short["options"]) == 3
+    two = _valid("goi_bunpou"); two["options"].append(dict(two["options"][0], text="x"))
+    assert repair_surplus_options(two) == [] and len(two["options"]) == 5
+
+
+def test_review_feedback_reaches_the_next_prompt(monkeypatch, goi_cell):
+    seen = {}
+
+    def fake(system, user, schema, model=None):
+        seen["user"] = user
+        return _valid("goi_bunpou")
+
+    monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
+    get_generator("goi_bunpou").generate(cell=goi_cell, seed=0,
+                                         feedback="the distractors gave the answer away")
+    assert "REJECTED by review: the distractors gave the answer away" in seen["user"]
+    get_generator("goi_bunpou").generate(cell=goi_cell, seed=0)
+    assert "REJECTED" not in seen["user"]
+
+
+def test_the_stock_lines_are_shown_to_the_spoken_types_only():
+    from bjt import phrasebook
+    spoken = get_generator("hatsugen_choukai").system_prompt("J2")
+    assert phrasebook.STOCK_LINES[0] in spoken
+    read = get_generator("goi_bunpou").system_prompt("J2")
+    assert phrasebook.STOCK_LINES[0] not in read
+    assert "Stock phrases" not in read
+
+
+def test_library_lines_are_the_ones_the_bank_already_repeats():
+    from bjt import phrasebook
+    for line in phrasebook.library_lines(min_count=2):
+        assert line not in phrasebook.STOCK_LINES
+    # With the bar at one, every spoken line of the bank qualifies, and the
+    # list is capped so the prompt stays small.
+    assert len(phrasebook.library_lines(min_count=1, limit=5)) <= 5

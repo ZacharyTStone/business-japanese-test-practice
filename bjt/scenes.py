@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from . import batch as batchmod
 from . import config, publish, seedtable
 
 #: Extensions accepted as artwork, in the order preferred when more than one
@@ -42,16 +43,76 @@ class Scene:
     #: How many seed cells can land on it — the demand for this picture.
     cell_count: int
     #: The approved file, relative to the `scenes` bucket. None means the item
-    #: ships without a picture, which is allowed.
+    #: ships without a picture, which is allowed for a bank scene and is why a
+    #: per-item picture's item is not served until it exists.
     path: str | None = None
+    #: Set for a per-item picture (画像把握): the English brief the item was
+    #: written with, and the question it must answer visibly. A bank scene has
+    #: none of these — it is drawn from SCENE_BRIEFS and must give nothing away.
+    brief: str | None = None
+    question: str = ""
+    options: tuple[str, ...] = ()
+    answer: int | None = None
 
     @property
     def has_art(self) -> bool:
         return self.path is not None
 
+    @property
+    def is_picture(self) -> bool:
+        return self.brief is not None
+
 
 def storage_path(scene_id: str, suffix: str) -> str:
     return f"{scene_id}{suffix}"
+
+
+#: Per-item pictures are scenes whose id is the item's id under this prefix,
+#: so they use the same table, bucket and SQL as the bank and nothing else in
+#: the app had to learn a second kind of picture.
+PICTURE_PREFIX = "pic_"
+
+
+def picture_scene_id(item_id: str) -> str:
+    return f"{PICTURE_PREFIX}{item_id}"
+
+
+#: A bank scene with no picture of its own borrows its neighbour's, so an item
+#: shows a related room rather than nothing while the real drawing is pending
+#: (or given up on). The pairs are settings a listener would not tell apart
+#: from the narration: the narration says where you are, the picture only
+#: sets a tone. Never the other way round for the per-item pictures, which ARE
+#: the question. The owner asked for more reuse of the pictures (2026-09-19).
+STAND_INS: dict[str, str] = {
+    "scene_phone_mobile_outside": "scene_phone_desk",
+    "scene_phone_desk": "scene_office_desk_pair",
+    "scene_entrance_lobby": "scene_reception_counter",
+    "scene_reception_counter": "scene_entrance_lobby",
+    "scene_elevator_hall": "scene_corridor",
+    "scene_corridor": "scene_elevator_hall",
+    "scene_client_office_sofa": "scene_client_meeting_room",
+    "scene_client_meeting_room": "scene_meeting_room_table",
+    "scene_meeting_room_table": "scene_client_meeting_room",
+    "scene_izakaya_table": "scene_restaurant_private",
+    "scene_restaurant_private": "scene_izakaya_table",
+    "scene_expo_booth": "scene_seminar_hall",
+    "scene_seminar_hall": "scene_meeting_room_table",
+    "scene_office_open_floor": "scene_office_desk_pair",
+    "scene_office_desk_pair": "scene_office_open_floor",
+}
+
+
+def stand_in_for(scene: Scene, survey_result: list[Scene]) -> Scene | None:
+    """The scene whose picture this one may borrow tonight, if any: its named
+    stand-in when that has art of its own. One hop only, so a chain of
+    missing pictures never lands on something unrelated."""
+    if scene.has_art or scene.is_picture:
+        return None
+    other = STAND_INS.get(scene.scene_id)
+    if other is None:
+        return None
+    match = next((s for s in survey_result if s.scene_id == other), None)
+    return match if match is not None and match.has_art else None
 
 
 def survey(media_dir: Path | None = None, remote: Iterable[str] = ()) -> list[Scene]:
@@ -83,30 +144,65 @@ def survey(media_dir: Path | None = None, remote: Iterable[str] = ()) -> list[Sc
                 used_by.setdefault(scene_id, set()).add(item_type)
                 demand[scene_id] = demand.get(scene_id, 0) + 1
 
+    def existing(scene_id: str) -> str | None:
+        for ext in IMAGE_EXTENSIONS:
+            if (media_dir / f"{scene_id}{ext}").exists():
+                return storage_path(scene_id, ext)
+        for ext in IMAGE_EXTENSIONS:
+            if storage_path(scene_id, ext) in remote:
+                return storage_path(scene_id, ext)
+        return None
+
     scenes = []
     for scene_id in sorted(used_by):
-        path = None
-        for ext in IMAGE_EXTENSIONS:
-            candidate = media_dir / f"{scene_id}{ext}"
-            if candidate.exists():
-                path = storage_path(scene_id, ext)
-                break
-        if path is None:
-            for ext in IMAGE_EXTENSIONS:
-                if storage_path(scene_id, ext) in remote:
-                    path = storage_path(scene_id, ext)
-                    break
         scenes.append(
             Scene(
                 scene_id=scene_id,
                 label_ja=labels.get(scene_id, scene_id),
                 used_by=tuple(sorted(used_by[scene_id])),
                 cell_count=demand[scene_id],
-                path=path,
+                path=existing(scene_id),
+            )
+        )
+    # Then the per-item pictures the committed bundles ask for. They come
+    # after the bank in the commissioning order: a bank picture serves many
+    # items, one of these serves one.
+    for item_type, item in picture_items():
+        scene_id = item["scene_id"]
+        scenes.append(
+            Scene(
+                scene_id=scene_id,
+                label_ja=item.get("topic", "") or scene_id,
+                used_by=(item_type,),
+                cell_count=1,
+                path=existing(scene_id),
+                brief=item["image_brief"],
+                question=item.get("stem", ""),
+                options=tuple(o["text"] for o in item.get("options", [])),
+                answer=item.get("correct_index"),
             )
         )
     # Most-wanted first: this list is a commissioning order.
-    return sorted(scenes, key=lambda s: (s.has_art, -s.cell_count, s.scene_id))
+    return sorted(scenes, key=lambda s: (s.has_art, s.is_picture, -s.cell_count, s.scene_id))
+
+
+def picture_items() -> list[tuple[str, dict]]:
+    """Every committed item that carries its own picture brief, with its type.
+
+    Read from the bundles rather than the seed tables, because a per-item
+    picture is decided by the item (the generator writes the brief with the
+    options) and not by the setting.
+    """
+    out: list[tuple[str, dict]] = []
+    for path in batchmod.bundles():
+        try:
+            bundle = batchmod.load(path)
+        except (OSError, ValueError):
+            continue
+        for item in bundle.get("items", []):
+            if item.get("image_brief") and str(item.get("scene_id", "")).startswith(PICTURE_PREFIX):
+                out.append((bundle.get("item_type", ""), item))
+    return out
 
 
 #: The style every scene shares. One sentence, so that sixteen pictures drawn
@@ -237,8 +333,25 @@ FORBIDDEN = (
 )
 
 
+#: What a per-item picture may not contain. Shorter than the bank's list on
+#: purpose: this picture is the question, so "gives the scenario away" and
+#: "a second principal figure" are not faults here — they are the point.
+PICTURE_FORBIDDEN = (
+    "any readable text, signage, logo, brand mark, chart or user interface "
+    "(the app overlays nothing on these, but drawn text gets the kanji wrong and "
+    "a sign would answer the question for the listener)",
+    "a recognisable likeness of any real person",
+    "malformed hands, extra limbs, or more people than the brief calls for",
+    "anything the brief does not describe that a viewer could take for the "
+    "action being asked about — one clear thing is happening, and nothing "
+    "else in the picture competes with it",
+)
+
+
 def prompt_for(scene: Scene) -> str:
     """The brief for one scene, as a contract rather than a wish."""
+    if scene.is_picture:
+        return picture_prompt_for(scene)
     return "\n".join([
         f"scene_id: {scene.scene_id}",
         f"設定: {scene.label_ja}",
@@ -255,6 +368,29 @@ def prompt_for(scene: Scene) -> str:
     ])
 
 
+def picture_prompt_for(scene: Scene) -> str:
+    """The brief for a per-item picture, for the reviewer: what it must show,
+    and the four descriptions it must separate."""
+    numbered = "\n".join(f"  {i}. {o}" for i, o in enumerate(scene.options))
+    return "\n".join([
+        f"scene_id: {scene.scene_id}  (a picture drawn for one 画像把握 item)",
+        f"題材: {scene.label_ja}",
+        "",
+        STYLE,
+        "",
+        "What the picture must show, unmistakably, so that exactly one of the "
+        "descriptions below is true of it and the other three are visibly false:",
+        scene.brief or "",
+        "",
+        f"The question the learner hears: {scene.question}",
+        "The four descriptions (the correct one is marked):",
+        numbered.replace(f"  {scene.answer}. ", f"  {scene.answer}. ✔ ") if scene.answer is not None else numbered,
+        "",
+        "Must NOT contain:",
+        *(f"  - {clause};" for clause in PICTURE_FORBIDDEN),
+    ])
+
+
 def image_prompt(scene: Scene) -> str:
     """The same brief, addressed to an image model rather than a person.
 
@@ -262,6 +398,23 @@ def image_prompt(scene: Scene) -> str:
     model draws; the prohibitions follow in the same words the reviewer uses,
     so a draft is judged by the rule it was given.
     """
+    if scene.is_picture:
+        return "\n".join([
+            f"{STYLE} This picture is a test question: it must show one clear, "
+            "specific moment at work, readable at a glance, and nothing generic.",
+            "",
+            f"Show exactly this: {scene.brief}",
+            "",
+            "The people are in ordinary Japanese office clothing, drawn clearly, with "
+            "their action and posture unmistakable; the setting is recognisable and "
+            "uncluttered. Everything in the frame supports the one action described.",
+            "",
+            "The image must not contain:",
+            *(f"- {clause}." for clause in PICTURE_FORBIDDEN),
+            "",
+            "No words or letters anywhere in the picture, in any language. Signs, "
+            "screens, papers and whiteboards are blank.",
+        ])
     return "\n".join([
         f"{STYLE} The setting: {scene.label_ja} — {brief_for(scene.scene_id)[0]}. "
         "Show that place, unmistakably, mid-moment, with nothing that says what "
@@ -285,18 +438,28 @@ def to_sql(scenes: list[Scene]) -> str:
     nothing about that is an error.
     """
     with_art = [s for s in scenes if s.has_art]
+    borrowed = [(s, stand_in_for(s, scenes)) for s in scenes]
+    borrowed = [(s, other) for s, other in borrowed if other is not None]
     if not with_art:
         return (
             "-- No approved scene artwork found. Nothing to apply.\n"
             "-- Put files in media/scenes/<scene_id>.webp and re-run `bjt scenes`.\n"
         )
 
+    rows = [(s.scene_id, s.label_ja, s.path) for s in with_art]
+    # A scene without a picture of its own shows its stand-in's until its own
+    # is drawn; the upsert overwrites the borrowed path the night that happens.
+    rows += [(s.scene_id, s.label_ja, other.path) for s, other in borrowed]
     values = ",\n       ".join(
-        f"({publish.lit(s.scene_id)}, {publish.lit(s.label_ja)}, {publish.lit(s.path)})"
-        for s in sorted(with_art, key=lambda s: s.scene_id)
+        f"({publish.lit(sid)}, {publish.lit(label)}, {publish.lit(path)})"
+        for sid, label, path in sorted(rows)
     )
+    notes = [f"-- Artwork for {len(with_art)} scene(s)."]
+    for s, other in sorted(borrowed, key=lambda pair: pair[0].scene_id):
+        notes.append(f"-- {s.scene_id} has no picture of its own and borrows "
+                     f"{other.scene_id}'s until it does.")
     return "\n".join([
-        f"-- Artwork for {len(with_art)} scene(s).",
+        *notes,
         "-- Produced by `bjt scenes --sql`. Idempotent: re-running sets the same values.",
         "",
         "begin;",

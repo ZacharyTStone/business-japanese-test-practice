@@ -54,6 +54,16 @@ DISTRACTOR_ROLES: dict[str, list[str]] = {
         "right_scene_wrong_moment",    # the right situation, at the wrong stage of it
         "plausible_but_unmentioned",   # something that would make sense, but was not said
     ],
+    # 画像把握問題 — a picture is shown, four descriptions of it are heard, and
+    # the test-taker picks the one that is true of the picture. The picture is
+    # the whole stimulus, so every distractor has to be VISIBLY false: not
+    # unsaid, but contradicted by what is drawn.
+    "gazou_haaku": [
+        "different_action",            # the same people and things, doing something else
+        "wrong_participants",          # the right action, done by or to the wrong person
+        "adjacent_setting",            # a place next door that the picture rules out
+        "right_scene_wrong_moment",    # the same scene, a moment earlier or later
+    ],
     # 総合聴解問題 — a meeting or presentation heard once, then questions about
     # it. Everything here is a memory trap: each distractor was true at some
     # point, or true of somebody else.
@@ -119,6 +129,8 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
     "register_insulting": "grammatical but demeaning to the listener",
     "correct_keigo_wrong_speech_act": "correct honorific verb, but the wrong illocutionary act",
     "wrong_participant": "a person who is present in the situation, but not the one asked about",
+    "different_action": "the same people and objects, but visibly doing something else",
+    "wrong_participants": "the right action, but done by or to the wrong person — or by the wrong number of people",
     "adjacent_setting": "a setting next door to the real one (受付 for 応接室)",
     "right_scene_wrong_moment": "the right situation, but at the wrong stage of it",
     "plausible_but_unmentioned": "something that would make sense here, but was never said",

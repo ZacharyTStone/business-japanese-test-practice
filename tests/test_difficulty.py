@@ -142,7 +142,7 @@ def test_kept_item_ships_with_the_probes_rate_not_the_gates(store, monkeypatch, 
         _gate_answerer(kept=True),
         _answerer([True, False, False, True, False], probe_calls)))
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert kept
     assert len(probe_calls) == 5
@@ -151,7 +151,8 @@ def test_kept_item_ships_with_the_probes_rate_not_the_gates(store, monkeypatch, 
     assert stored["full_success_rate"] == 1.0, "the gate's own number is untouched"
     assert "difficulty=40% (weak-model)" in detail
     sides = [r["side"] for r in store.conn.execute("SELECT side FROM gate_trials WHERE item_id=?", (iid,))]
-    assert sides.count("difficulty") == 5 and sides.count("full") == 3
+    # Two agreeing full trials settle the gate; the probe always runs its five.
+    assert sides.count("difficulty") == 5 and sides.count("full") == 2
 
 
 def test_unmeasured_item_falls_back_to_the_gates_rate(store, monkeypatch, generated):
@@ -160,7 +161,7 @@ def test_unmeasured_item_falls_back_to_the_gates_rate(store, monkeypatch, genera
 
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(_gate_answerer(kept=True), down))
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert kept
     assert item["model_p_correct"] == 1.0
@@ -175,7 +176,7 @@ def test_switched_off_leaves_the_gates_rate_and_makes_no_call(store, monkeypatch
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(
         _gate_answerer(kept=True), _answerer([True] * 5, probe_calls)))
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert kept
     assert probe_calls == []
@@ -189,7 +190,7 @@ def test_discarded_item_is_never_probed(store, monkeypatch, generated):
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(
         _gate_answerer(kept=False), _answerer([True] * 5, probe_calls)))
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert not kept and "discarded:leaky" in detail
     assert probe_calls == []
@@ -203,7 +204,7 @@ def test_probe_runs_when_the_gate_is_skipped(store, monkeypatch, generated):
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(
         _gate_answerer(kept=True), _answerer([True, True, True, True, False], probe_calls)))
 
-    item, iid, kept, detail = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=False)
+    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=False)
 
     assert kept and len(probe_calls) == 5
     assert item["model_p_correct"] == pytest.approx(4 / 5)

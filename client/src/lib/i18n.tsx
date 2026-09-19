@@ -154,6 +154,7 @@ const S = {
   prompt_hyougen: ["この場面で最も適切な表現を選んでください。", "Choose the most appropriate expression here."],
   prompt_goi_bunpou: ["空欄に入る最も適切なものを選んでください。", "Choose what best fills the blank."],
   prompt_bamen_haaku: ["聞いた内容に合うものを選んでください。", "Choose what matches what you heard."],
+  prompt_gazou_haaku: ["絵に合う説明を選んでください。", "Choose the description that matches the picture."],
   prompt_sougou_choukai: ["会話の内容に合うものを選んでください。", "Choose what matches the conversation."],
   prompt_joukyou_haaku: ["掲示と依頼の両方をふまえて選んでください。", "Choose using both the notice and the request."],
   prompt_shiryou_choudokkai: ["資料と音声の両方をふまえて選んでください。", "Choose using both the document and the audio."],

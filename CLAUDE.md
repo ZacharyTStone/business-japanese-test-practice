@@ -64,6 +64,26 @@ accident is not.
   after the call, is not.
 - **Variety comes from `seedtable/`, never from prompt wording.** 発言聴解 refuses
   to generate without a seed cell (`requires_cell`).
+- **The gate sees the whole stimulus, and the cold view withholds the half the
+  type is testing.** The full view carries every document and every turn of
+  the dialogue; the cold view shows a document type its document without the
+  audio, a dialogue type its question without the conversation, 総合読解 its
+  question without the passage, and the stem-only types their options alone
+  (`bjt/fidelity/answerability.py`). That is how "the answer needs both the
+  document and the audio" is enforced rather than asked for. Until 2026-09-19
+  the full view was the narration alone and the gate selected for exactly the
+  items the README forbids. Trials stop as soon as the verdict is settled;
+  the verdict is by count over the planned trials, so stopping early never
+  changes it.
+- **A rejected draft's reason is told to the next draft on that shelf.** The
+  gate, the proofreader and the dedupe check each say why in one sentence
+  and `run_batch` passes it on; a shelf's second and third drafts are not
+  written blind. A draft with a fifth option is trimmed, not regenerated.
+- **Reading items are written every night.** The work order hands the first
+  `--reading-min` (3) items to the emptiest reading shelves before the
+  emptiest-first rule sees the rest; they need no audio and no picture. The
+  owner asked for this (2026-09-19). A type in `plan.NIGHT_TYPE_CAPS` (画像把握:
+  one) never takes more than its allowance a night, however empty its shelves.
 - **The database grades answers, not the app.** The client posts `item_id` and
   `chosen_index`; a trigger fills in who, whether it was right, and which
   distractor role caught them. Never add client-side grading that writes.
@@ -107,6 +127,23 @@ accident is not.
   is derived from it, and it is never displayed.
 - **`attempts` has no update or delete policy.** An answer already given is
   history.
+- **画像把握 is the one type whose picture is the question, and its item is not
+  served until the picture exists.** The generator writes an English
+  `image_brief` with the four descriptions; the scene job draws it, one picture
+  per item under `pic_<item id>`, and refuses a draft unless a reviewer shown
+  the picture and the four descriptions picks the marked one every time
+  (`bjt/scene_art.py`). `item_types.needs_picture` makes `next_items()` hold
+  the item back until `scenes.image_path` is set. Every other type keeps
+  shipping without a picture. A picture refused `BJT_SCENE_LIFETIME_ATTEMPTS`
+  times over its life (the bucket's `rejected/` ledger remembers) is given up
+  on; a bank scene in that state shows its stand-in (`scenes.STAND_INS`), a
+  per-item picture's item stays unserved. The owner asked for the type, rare
+  and with pictures that are clear and not generic (2026-09-19).
+- **Spoken formulas are spelled one way.** `bjt/phrasebook.py` shows the
+  spoken types the stock lines in the wording the library already has a clip
+  for, so 「少々お待ちください。」 is one file rather than five. A nudge, never a
+  quota: a distractor that must be wrong in a particular way is still written
+  fresh.
 - **The voice is OpenAI, the cast is by role, and a live clip is never
   re-made.** `bjt/tts/providers.py` records the provider as `DEFAULT` and the
   seven roles as `VOICE_IDS`; a learner who hears a different voice every
