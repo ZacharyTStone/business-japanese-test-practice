@@ -114,6 +114,25 @@ def survey(media_dir: Path | None = None, remote: Iterable[str] = ()) -> list[Sc
 STYLE = ("A clean editorial illustration of a Japanese workplace, flat colour, consistent "
          "line weight across the whole bank, neutral professional clothing, landscape 3:2.")
 
+#: Who is in the picture, and how they are weighted. Every item that uses a
+#: scene is somebody saying something to somebody, so the picture shows that
+#: and only that: the two people in the exchange, unmistakably the subject,
+#: and it should be readable at a glance which of them has the floor. Anyone
+#: else is scenery. The first drafts were crowds of equals in a generic
+#: office, and a learner could not tell who the question was about (the
+#: owner, 2026-09-19). What is being said stays invisible — this is who, not
+#: what.
+COMPOSITION = (
+    "Composition: at most two principal figures — the person speaking and the "
+    "person being spoken to — placed together in the foreground, turned toward "
+    "each other, mid-exchange. Make it clear at a glance who has the floor: one "
+    "with an open, addressing posture, the other listening. Nobody else at the "
+    "same visual weight; if the setting needs other people, they are small, "
+    "further back, muted, and plainly not part of the conversation. Their "
+    "expressions and gestures are neutral and give nothing away about what is "
+    "being said."
+)
+
 #: What a draft may not contain. Each clause is here because its absence
 #: produces an unusable image: readable text ruins reuse and gets the kanji
 #: wrong, a recognisable face makes the picture a person, and a scene that
@@ -128,6 +147,9 @@ FORBIDDEN = (
     "picture is shared by many items, and an illustration that gives the scenario "
     "away makes the listening optional",
     "malformed hands, extra limbs, or more people than the setting calls for",
+    "a crowd of equals — more than two figures at principal weight, or extras "
+    "drawn as prominently as the two in the exchange, so that it is not clear "
+    "who is talking to whom",
 )
 
 
@@ -139,6 +161,8 @@ def prompt_for(scene: Scene) -> str:
         f"使用する問題タイプ: {'、'.join(scene.used_by)}",
         "",
         STYLE,
+        "",
+        COMPOSITION,
         "",
         "Must NOT contain:",
         *(f"  - {clause};" for clause in FORBIDDEN),
@@ -156,6 +180,8 @@ def image_prompt(scene: Scene) -> str:
         f"{STYLE} The setting: {scene.label_ja} (a Japanese office setting; "
         "show the place and the kind of people who would be there, mid-moment, "
         "with nothing that says what they are saying).",
+        "",
+        COMPOSITION,
         "",
         "The image must not contain:",
         *(f"- {clause}." for clause in FORBIDDEN),

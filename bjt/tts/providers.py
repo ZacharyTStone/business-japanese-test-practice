@@ -39,6 +39,7 @@ import urllib.error
 import urllib.request
 from typing import Protocol
 
+from .. import config
 from . import channel
 
 
@@ -58,13 +59,17 @@ class Provider(Protocol):
 #: in practice: native pitch accent, an office pace, and phrases that run
 #: together the way speech does instead of a pause after every particle.
 HOUSE_STYLE = (
-    "Natural, native Japanese as spoken in a Tokyo office. Standard pitch accent. "
-    "Ordinary business pace — do not slow down or over-enunciate for a learner; "
-    "phrases flow together the way a person actually talks, with no pause after "
-    "every particle. Keigo comes out fluently, as from someone who says it every "
-    "day, never stiffly or as if reading a list. Plain, unaffected delivery: no "
-    "theatrical acting, no smiling announcer voice, no foreign accent. Read the "
-    "text exactly as written and say nothing else."
+    "Natural, native Japanese as spoken in a Tokyo office, by a person talking to "
+    "someone in the room — not a narrator reading to a microphone. Standard pitch "
+    "accent. Ordinary business pace, on the brisk side — do not slow down or "
+    "over-enunciate for a learner; phrases flow together the way a person actually "
+    "talks, with connected speech, the small natural reductions of everyday "
+    "Japanese, and no pause after every particle. Let the rhythm vary the way real "
+    "speech does: a quick run through the routine parts, a beat before the point. "
+    "Keigo comes out fluently, as from someone who says it every day, never stiffly "
+    "or as if reading a list. Plain, unaffected delivery: no theatrical acting, no "
+    "smiling announcer voice, no foreign accent. Read the text exactly as written "
+    "and say nothing else."
 )
 
 #: How each cast voice should be delivered, on top of the house style. These are
@@ -219,6 +224,9 @@ class OpenAIProvider:
             "voice": provider_voice,
             "input": apply_pronunciation(text),
             "instructions": instructions or direction_for(voice),
+            # A shade over natural rate: the difference between reading a
+            # line and saying it. BJT_TTS_SPEED, see config.
+            "speed": config.TTS_SPEED,
             "response_format": "wav",
         }
         return _post(

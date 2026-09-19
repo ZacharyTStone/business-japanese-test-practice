@@ -304,6 +304,17 @@ def test_the_openai_request_carries_the_direction_and_asks_for_wav(monkeypatch):
     assert sent["body"]["input"] == "だいたい案です"
     assert providers.HOUSE_STYLE in sent["body"]["instructions"]
     assert sent["headers"]["Authorization"] == "Bearer k"
+    # A shade over natural rate, and never below it: the first clips were a
+    # reader, not a person. Bounded, because a typo here is a library of
+    # chipmunks that is never re-made.
+    assert sent["body"]["speed"] == config.TTS_SPEED
+    assert 1.0 <= config.TTS_SPEED <= 1.25
+
+
+def test_the_direction_asks_for_a_person_talking_not_a_reader():
+    note = providers.direction_for("staff_mid_m")
+    for phrase in ("connected speech", "brisk", "not a narrator"):
+        assert phrase in note
 
 
 def test_the_gemini_response_is_wrapped_into_wav(monkeypatch):
