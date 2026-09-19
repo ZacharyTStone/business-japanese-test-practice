@@ -114,24 +114,108 @@ def survey(media_dir: Path | None = None, remote: Iterable[str] = ()) -> list[Sc
 STYLE = ("A clean editorial illustration of a Japanese workplace, flat colour, consistent "
          "line weight across the whole bank, neutral professional clothing, landscape 3:2.")
 
-#: Who is in the picture, and how they are weighted. Every item that uses a
-#: scene is somebody saying something to somebody, so the picture shows that
-#: and only that: the two people in the exchange, unmistakably the subject,
-#: and it should be readable at a glance which of them has the floor. Anyone
-#: else is scenery. The first drafts were crowds of equals in a generic
-#: office, and a learner could not tell who the question was about (the
-#: owner, 2026-09-19). What is being said stays invisible — this is who, not
-#: what.
-COMPOSITION = (
-    "Composition: at most two principal figures — the person speaking and the "
-    "person being spoken to — placed together in the foreground, turned toward "
-    "each other, mid-exchange. Make it clear at a glance who has the floor: one "
-    "with an open, addressing posture, the other listening. Nobody else at the "
-    "same visual weight; if the setting needs other people, they are small, "
-    "further back, muted, and plainly not part of the conversation. Their "
-    "expressions and gestures are neutral and give nothing away about what is "
-    "being said."
-)
+#: What each scene is, in the words an image model draws from. The seed
+#: tables carry only a Japanese label, and the first brief glossed every one
+#: of them as "a Japanese office setting" — so the restaurant's private room
+#: came out as a meeting room and the outdoor phone call was drawn indoors,
+#: three times, and rightly rejected each time (2026-09-19). The place is
+#: stated here, once per scene, with the channel the picture must show.
+#: Channel: in_person — the speaker is in the room with the viewer;
+#: phone — the speaker is on a call, the viewer is the other end of the line;
+#: video — the speaker is on the viewer's screen.
+SCENE_BRIEFS: dict[str, tuple[str, str]] = {
+    "scene_phone_desk": ("at their own desk in a Japanese office, on the desk telephone "
+                         "(a handset, cord to a desk phone), other desks behind", "phone"),
+    "scene_phone_mobile_outside": ("outdoors on a city street or a station concourse in "
+                                   "Japan, daytime, on a mobile phone; buildings or a "
+                                   "platform behind, no office interior", "phone"),
+    "scene_meeting_room_table": ("a meeting room in a Japanese office, across the table, "
+                                 "whiteboard blank, glass wall to the corridor", "in_person"),
+    "scene_office_desk_pair": ("two desks facing each other on an open office floor in "
+                               "Japan; the speaker has turned from their desk toward the "
+                               "viewer's", "in_person"),
+    "scene_video_call_laptop": ("seen on a laptop screen in a video call, head and "
+                                "shoulders in a small home-office or meeting-room "
+                                "background, as the viewer's screen shows them", "video"),
+    "scene_corridor": ("a corridor in a Japanese office building, stopped for a word, "
+                       "doors and a window along the wall", "in_person"),
+    "scene_seminar_hall": ("a seminar hall with rows of chairs and a lectern, the "
+                           "speaker at the front or in the aisle", "in_person"),
+    "scene_office_open_floor": ("an open-plan office floor in Japan, standing between the "
+                                "desks, colleagues working further back", "in_person"),
+    "scene_izakaya_table": ("a table at a Japanese izakaya after work: wooden interior, "
+                            "lanterns, small dishes and glasses on the table, no readable "
+                            "menu", "in_person"),
+    "scene_restaurant_private": ("a private room (個室) in a Japanese restaurant: tatami "
+                                 "or a low table, closed sliding doors, no other diners "
+                                 "visible at all — only the people at this table",
+                                 "in_person"),
+    "scene_elevator_hall": ("an elevator hall in an office building, elevator doors and "
+                            "a call button, waiting for the lift", "in_person"),
+    "scene_client_meeting_room": ("a meeting room at a client company, across the table, "
+                                  "business cards and a glass of water on the table",
+                                  "in_person"),
+    "scene_expo_booth": ("a trade-show booth in an exhibition hall, a counter with "
+                         "brochures (blank), banners without text, visitors in the "
+                         "distance", "in_person"),
+    "scene_entrance_lobby": ("the entrance lobby of a Japanese office building: high "
+                             "ceiling, security gates, a reception counter further back",
+                             "in_person"),
+    "scene_reception_counter": ("the reception counter of the viewer's own company, the "
+                                "speaker standing at the counter", "in_person"),
+    "scene_client_office_sofa": ("a reception room at a client company: sofas and a low "
+                                 "table, tea served, the speaker seated opposite",
+                                 "in_person"),
+}
+
+
+def brief_for(scene_id: str) -> tuple[str, str]:
+    """The English setting and the channel, or a safe generic for a scene the
+    table does not know yet (a new seed table lands before its brief does)."""
+    return SCENE_BRIEFS.get(scene_id, ("a Japanese business setting", "in_person"))
+
+
+#: Who is in the picture. Every item that uses a scene is somebody speaking
+#: to the learner: in 発言聴解 the learner chooses the reply, so the learner is
+#: the one spoken to and is never in the picture — the viewer is the camera.
+#: The speaker is the one principal figure, addressing the viewer. On the
+#: phone the other end of the line is the viewer, so the speaker is alone;
+#: on a video call the speaker is on the viewer's screen. Anyone else is
+#: scenery. The first drafts were crowds of equals, and then, briefly, a
+#: speaker and a listener drawn side by side even on the phone (the owner,
+#: 2026-09-19). What is being said stays invisible — this is who, not what.
+COMPOSITION: dict[str, str] = {
+    "in_person": (
+        "Composition: one principal figure — the person speaking — in the "
+        "foreground, turned toward the viewer and addressing them, mid-sentence, "
+        "with an open, addressing posture. The viewer is the person being spoken "
+        "to and is NOT drawn: no second figure faces the speaker, no listener in "
+        "the frame. If the setting needs other people, they are small, further "
+        "back, muted, and plainly not part of the conversation. The speaker's "
+        "expression and gesture are neutral and give nothing away about what is "
+        "being said."
+    ),
+    "phone": (
+        "Composition: one principal figure — the person speaking — on the phone, "
+        "mid-call, in the foreground. The person they are talking to is the viewer, "
+        "on the other end of the line, so nobody in the picture is being addressed: "
+        "no listener beside them, no second principal figure. Others, if the "
+        "setting needs them, are small, distant and uninvolved. Expression and "
+        "gesture neutral; nothing about what is being said."
+    ),
+    "video": (
+        "Composition: one principal figure — the person speaking — as they appear "
+        "in a video-call window on the viewer's screen: head and shoulders, facing "
+        "the camera and addressing it. The viewer is the other participant and is "
+        "not drawn. No readable interface, no text, no second person on screen. "
+        "Expression neutral; nothing about what is being said."
+    ),
+}
+
+
+def composition_for(scene_id: str) -> str:
+    return COMPOSITION[brief_for(scene_id)[1]]
+
 
 #: What a draft may not contain. Each clause is here because its absence
 #: produces an unusable image: readable text ruins reuse and gets the kanji
@@ -147,9 +231,9 @@ FORBIDDEN = (
     "picture is shared by many items, and an illustration that gives the scenario "
     "away makes the listening optional",
     "malformed hands, extra limbs, or more people than the setting calls for",
-    "a crowd of equals — more than two figures at principal weight, or extras "
-    "drawn as prominently as the two in the exchange, so that it is not clear "
-    "who is talking to whom",
+    "a second principal figure — a listener or partner drawn as prominently as "
+    "the speaker, or a crowd of equals — so that it is not clear who is speaking "
+    "to the viewer (the viewer is the one spoken to and is never in the picture)",
 )
 
 
@@ -162,7 +246,9 @@ def prompt_for(scene: Scene) -> str:
         "",
         STYLE,
         "",
-        COMPOSITION,
+        f"The place: {brief_for(scene.scene_id)[0]}.",
+        "",
+        composition_for(scene.scene_id),
         "",
         "Must NOT contain:",
         *(f"  - {clause};" for clause in FORBIDDEN),
@@ -177,11 +263,11 @@ def image_prompt(scene: Scene) -> str:
     so a draft is judged by the rule it was given.
     """
     return "\n".join([
-        f"{STYLE} The setting: {scene.label_ja} (a Japanese office setting; "
-        "show the place and the kind of people who would be there, mid-moment, "
-        "with nothing that says what they are saying).",
+        f"{STYLE} The setting: {scene.label_ja} — {brief_for(scene.scene_id)[0]}. "
+        "Show that place, unmistakably, mid-moment, with nothing that says what "
+        "is being said.",
         "",
-        COMPOSITION,
+        composition_for(scene.scene_id),
         "",
         "The image must not contain:",
         *(f"- {clause}." for clause in FORBIDDEN),

@@ -125,16 +125,35 @@ def test_the_image_prompt_carries_every_prohibition(tmp_path):
     assert scenes.STYLE in prompt
 
 
-def test_the_brief_says_who_is_talking_to_whom(tmp_path):
-    """Two principals, one with the floor, everyone else scenery — in both the
-    illustrator's brief and the image model's prompt, and a reviewer rule that
-    fails a crowd of equals."""
-    scene = scenes.survey(tmp_path)[0]
-    for text in (scenes.prompt_for(scene), scenes.image_prompt(scene)):
-        assert scenes.COMPOSITION in text
-        assert "who has the floor" in text
+def test_every_scene_has_a_brief_and_the_prompt_names_the_place(tmp_path):
+    """The seed tables carry only a Japanese label; the image model draws
+    from the English brief, so every scene the tables can ask for has one,
+    and the old "a Japanese office setting" gloss is gone — it put the
+    restaurant and the outdoor phone call indoors."""
+    for scene in scenes.survey(tmp_path):
+        assert scene.scene_id in scenes.SCENE_BRIEFS, scene.scene_id
+        place, channel = scenes.SCENE_BRIEFS[scene.scene_id]
+        assert channel in scenes.COMPOSITION
+        for text in (scenes.prompt_for(scene), scenes.image_prompt(scene)):
+            assert place in text
+            assert scenes.COMPOSITION[channel] in text
+            assert "office setting" not in text
+
+
+def test_the_speaker_addresses_the_viewer_and_nobody_else_is_principal(tmp_path):
+    """The learner chooses the reply, so the learner is the one spoken to and
+    is never drawn: one speaker facing the viewer in person, alone on the
+    phone, on screen for a video call. A reviewer rule fails a listener."""
+    by_id = {s.scene_id: s for s in scenes.survey(tmp_path)}
+    in_person = scenes.image_prompt(by_id["scene_corridor"])
+    assert "one principal figure" in in_person and "NOT drawn" in in_person
+    phone = scenes.image_prompt(by_id["scene_phone_mobile_outside"])
+    assert "on the phone" in phone and "no listener beside them" in phone
+    assert "outdoors" in phone and "no office interior" in phone
+    video = scenes.image_prompt(by_id["scene_video_call_laptop"])
+    assert "video-call window" in video
     assert "no_focus" in scene_art.RULES
-    assert any("who is talking to whom" in clause for clause in scenes.FORBIDDEN)
+    assert any("never in the picture" in clause for clause in scenes.FORBIDDEN)
 
 
 # ----- the bucket -----------------------------------------------------------
