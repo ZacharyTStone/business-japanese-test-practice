@@ -1,11 +1,12 @@
 -- sougou_choukai_J1_001: 2 × sougou_choukai (J1)
--- generated 2026-09-18T08:50:50+00:00 by manual-load
+-- generated 2026-09-19T17:03:52+00:00 by manual-load
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_client_meeting_room', '取引先の会議室'),
        ('scene_video_call_laptop', 'ノートPCでオンライン会議')
@@ -21,20 +22,28 @@ values ('65cf4a8882e7739a', '問い合わせの窓口は、誰が担当するこ
        ('c21f314dc4905198', '常駐していただけるなら、そのほうが助かりますね。', 'manager_m', 'in_person'),
        ('4f7719b70b80cb92', 'では、窓口はそちらにお願いします。私は後ろで技術的な確認を受け持ちます。', 'staff_junior_m', 'in_person'),
        ('b84cf124c8f61c4c', '承知しました。', 'staff_mid_f', 'in_person'),
+       ('7d3d4f0cf12c33f3', '来月から取引先に常駐する社員', 'narrator_f', 'in_person'),
+       ('bd512d2d5eef6008', '設定を担当している社員', 'narrator_f', 'in_person'),
+       ('da9b1e734101077f', '取引先の担当者', 'narrator_f', 'in_person'),
+       ('4ada26a99c384818', '二人の社員が交代で担当する', 'narrator_f', 'in_person'),
        ('c8690b84797bbf6f', '二十日に納品する台数は、いくつになりましたか。', 'narrator_f', 'in_person'),
        ('ec250f17b2a14316', '初回は百台を二十日に、とお願いしていましたね。', 'manager_m', 'video'),
        ('52214b37a5ae3fb2', 'はい。ただ、部材の関係で二十日には八十台が限度でして、残りは月末になります。', 'staff_junior_m', 'video'),
        ('b4038ebbc4a15f58', '八十台ですか。実はこちらも現場の準備が遅れていまして、二十日は六十台あれば足ります。', 'manager_m', 'video'),
        ('6354afece6c1151b', 'では二十日に六十台、残りの四十台を月末に、ということで。', 'staff_junior_m', 'video'),
        ('ec0dd13728ce48b0', '月末の分は一度に受け取れないので、二十五日に二十台、月末に二十台と分けていただけますか。', 'manager_m', 'video'),
-       ('1839bf4ace7dae98', '承知しました。そのように手配いたします。', 'staff_junior_m', 'video')
+       ('1839bf4ace7dae98', '承知しました。そのように手配いたします。', 'staff_junior_m', 'video'),
+       ('5dc8c727c787e03a', '百台', 'narrator_f', 'in_person'),
+       ('08e5f869b65cf6af', '四十台', 'narrator_f', 'in_person'),
+       ('ba0be0de91b5094b', '六十台', 'narrator_f', 'in_person'),
+       ('ebe5eec5fd0fd745', '八十台', 'narrator_f', 'in_person')
 on conflict (id) do update set
        text = excluded.text,
        voice = excluded.voice,
        channel = excluded.channel;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('sougou_choukai_J1_001', 'sougou_choukai', 'J1', 'manual-load', '2026-09-18T08:50:50+00:00')
+values ('sougou_choukai_J1_001', 'sougou_choukai', 'J1', 'manual-load', '2026-09-19T17:03:52+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -72,14 +81,14 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('f833f9f24b', '0ed5b25518');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('f833f9f24b', 0, '来月から取引先に常駐する社員', 'correct', '常駐するという申し出を取引先が歓迎し、設定担当の社員も「窓口はそちらに」と譲っている。', null),
-       ('f833f9f24b', 1, '設定を担当している社員', 'superseded_by_later_turn', '最初に自分が窓口になるのが自然だと述べたが、常駐の話が出たあとで自ら譲り、後方の技術確認に回った。', null),
-       ('f833f9f24b', 2, '取引先の担当者', 'stated_by_wrong_speaker', '窓口を尋ねたのはこの人で、窓口になるとは述べていない。', null),
-       ('f833f9f24b', 3, '二人の社員が交代で担当する', 'unsupported_but_plausible', '分担としてはあり得るが、会話では窓口は一人に決まり、もう一人は後方に回っている。', null),
-       ('0ed5b25518', 0, '百台', 'surface_keyword_match', '会話の冒頭に出る注文全体の数で、二十日に届く数ではない。', null),
-       ('0ed5b25518', 1, '四十台', 'unsupported_but_plausible', '二十日の残りとして出た数で、しかも二十五日と月末に二十台ずつ分けると決まっており、二十日の話ではない。', null),
-       ('0ed5b25518', 2, '六十台', 'correct', '取引先が二十日は六十台で足りると述べ、営業担当が「二十日に六十台」と受けており、その後この数は変わっていない。', null),
-       ('0ed5b25518', 3, '八十台', 'superseded_by_later_turn', '営業担当が示した二十日の上限だが、その直後に取引先が六十台で足りると述べて数が下がった。', null)
+values ('f833f9f24b', 0, '来月から取引先に常駐する社員', 'correct', '常駐するという申し出を取引先が歓迎し、設定担当の社員も「窓口はそちらに」と譲っている。', '7d3d4f0cf12c33f3'),
+       ('f833f9f24b', 1, '設定を担当している社員', 'superseded_by_later_turn', '最初に自分が窓口になるのが自然だと述べたが、常駐の話が出たあとで自ら譲り、後方の技術確認に回った。', 'bd512d2d5eef6008'),
+       ('f833f9f24b', 2, '取引先の担当者', 'stated_by_wrong_speaker', '窓口を尋ねたのはこの人で、窓口になるとは述べていない。', 'da9b1e734101077f'),
+       ('f833f9f24b', 3, '二人の社員が交代で担当する', 'unsupported_but_plausible', '分担としてはあり得るが、会話では窓口は一人に決まり、もう一人は後方に回っている。', '4ada26a99c384818'),
+       ('0ed5b25518', 0, '百台', 'surface_keyword_match', '会話の冒頭に出る注文全体の数で、二十日に届く数ではない。', '5dc8c727c787e03a'),
+       ('0ed5b25518', 1, '四十台', 'unsupported_but_plausible', '二十日の残りとして出た数で、しかも二十五日と月末に二十台ずつ分けると決まっており、二十日の話ではない。', '08e5f869b65cf6af'),
+       ('0ed5b25518', 2, '六十台', 'correct', '取引先が二十日は六十台で足りると述べ、営業担当が「二十日に六十台」と受けており、その後この数は変わっていない。', 'ba0be0de91b5094b'),
+       ('0ed5b25518', 3, '八十台', 'superseded_by_later_turn', '営業担当が示した二十日の上限だが、その直後に取引先が六十台で足りると述べて数が下がった。', 'ebe5eec5fd0fd745')
 on conflict (item_id, position) do update set
        text = excluded.text,
        role = excluded.role,

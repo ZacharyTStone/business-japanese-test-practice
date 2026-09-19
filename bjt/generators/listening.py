@@ -45,7 +45,13 @@ class BamenHaakuGenerator(Generator):
         "is answerable without listening at all.\n"
         "Keep the four options parallel in form and length. The correct one is the only "
         "one the audio supports; each distractor is defensible until you remember what "
-        "was actually said."
+        "was actually said.\n"
+        "**The four options are HEARD, not read.** On the exam the screen shows the "
+        "picture and the bare numerals 1–4, and the candidates are read aloud after the "
+        "question. Write them to survive that: short, parallel, distinguishable from "
+        "each other in the first few syllables, and free of anything that only works on "
+        "a page — no parenthesised glosses, no 「A社」 as a written abbreviation, nothing "
+        "whose meaning turns on which kanji was used."
     )
 
     def cell_spec(self, cell) -> str:
@@ -88,7 +94,16 @@ class SougouChoukaiGenerator(Generator):
         "item is testing whether somebody was still awake, not whether they followed "
         "the conversation. Review shows a reader the question and the four options "
         "with the conversation withheld and rejects the item if the answer can be "
-        "picked: every option must be something the conversation could have settled."
+        "picked: every option must be something the conversation could have settled.\n"
+        "**Nothing is on the screen for this type — not even the options.** The "
+        "conversation, the question and all four answers are heard, once. Write options "
+        "that can be held in the ear: on the real paper they are compound clauses "
+        "（「監査役を社外から迎え、取締役の数を減らす」), where each option gets one half "
+        "right and the other half wrong, so that following only part of the exchange is "
+        "not enough. Nothing may depend on how a word is written.\n"
+        "This is the hardest listening type and its register is the highest: the real "
+        "paper reaches 役員体制・監査役・取締役・前年比 here, not 会議室の予約. At J1 in "
+        "particular, write the business the company is actually deciding."
     )
 
     def cell_spec(self, cell) -> str:

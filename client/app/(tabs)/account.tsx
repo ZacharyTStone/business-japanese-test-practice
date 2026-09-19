@@ -71,6 +71,15 @@ export default function Account() {
     }
   }
 
+  async function setTimedReading(on: boolean) {
+    setProfile((p) => (p ? { ...p, timed_reading: on } : p));
+    try {
+      await updateProfile({ timed_reading: on });
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }
+
   function retry() {
     setProfileError(null);
     setReloads((n) => n + 1);
@@ -163,6 +172,33 @@ export default function Account() {
               <Chip label={t("clear")} selected={false} onPress={() => setExamDate(null)} />
             </View>
           ) : null}
+        </Card>
+      </View>
+
+      {/* The only thing in the app anybody chooses, and it is about how they
+          practise rather than about which questions they get: the queue has
+          never heard of it. On by default, because the reading block is timed
+          whether or not it was practised that way. */}
+      <View style={{ gap: space.md }}>
+        <SectionLabel>{t("acc_timer")}</SectionLabel>
+        <Card style={{ gap: space.md }}>
+          <View style={styles.head}>
+            <IconBadge name="clock" tone="violet" />
+            <Text style={[type.small, { flex: 1 }]}>{t("acc_timer_body")}</Text>
+          </View>
+          <View style={styles.chips}>
+            <Chip
+              label={t("acc_timer_on")}
+              selected={profile.timed_reading}
+              onPress={() => setTimedReading(true)}
+            />
+            <Chip
+              label={t("acc_timer_off")}
+              selected={!profile.timed_reading}
+              onPress={() => setTimedReading(false)}
+            />
+          </View>
+          <Text style={type.small}>{t("acc_timer_sub")}</Text>
         </Card>
       </View>
 

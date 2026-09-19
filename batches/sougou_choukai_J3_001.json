@@ -2,7 +2,7 @@
   "bundle_version": 2,
   "item_type": "sougou_choukai",
   "level": "J3",
-  "generated_at": "2026-09-18T08:50:50+00:00",
+  "generated_at": "2026-09-19T17:03:52+00:00",
   "generator_model": "manual-load",
   "items": [
     {
@@ -58,7 +58,12 @@
       ],
       "audio": {
         "narration": "b4ec14f1473c4de6",
-        "options": [],
+        "options": [
+          "3bd105b75311e9bc",
+          "bef6e01d7e220f55",
+          "c75a2febc5e8cb72",
+          "21851b3be541eb26"
+        ],
         "dialogue": [
           "81895b53cfc0cd40",
           "5e61179310ac7e27",
@@ -156,7 +161,12 @@
       ],
       "audio": {
         "narration": "14b6815909b5129d",
-        "options": [],
+        "options": [
+          "bd91d768d5eb3056",
+          "04bea37aa697ab21",
+          "6492ae0776fdcbc1",
+          "c8e4a4385c854e08"
+        ],
         "dialogue": [
           "1bc13ccf8628238f",
           "b52bbeaa967fa9ab",
@@ -261,6 +271,42 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "3bd105b75311e9bc",
+      "item_id": "eabb6f222a",
+      "kind": "option",
+      "index": 0,
+      "text": "部下がほかの仕事で忙しいから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "bef6e01d7e220f55",
+      "item_id": "eabb6f222a",
+      "kind": "option",
+      "index": 1,
+      "text": "グラフを作るソフトが動かないから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c75a2febc5e8cb72",
+      "item_id": "eabb6f222a",
+      "kind": "option",
+      "index": 2,
+      "text": "データがまだ届いていないから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "21851b3be541eb26",
+      "item_id": "eabb6f222a",
+      "kind": "option",
+      "index": 3,
+      "text": "システム部からの返事を待っているから",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "14b6815909b5129d",
       "item_id": "b2498c2196",
       "kind": "narration",
@@ -312,6 +358,42 @@
       "index": 4,
       "text": "はい、私が引き続き担当いたします。",
       "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "bd91d768d5eb3056",
+      "item_id": "b2498c2196",
+      "kind": "option",
+      "index": 0,
+      "text": "金額が安くなった点",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "04bea37aa697ab21",
+      "item_id": "b2498c2196",
+      "kind": "option",
+      "index": 1,
+      "text": "担当者が代わった点",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6492ae0776fdcbc1",
+      "item_id": "b2498c2196",
+      "kind": "option",
+      "index": 2,
+      "text": "数量が増えた点",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c8e4a4385c854e08",
+      "item_id": "b2498c2196",
+      "kind": "option",
+      "index": 3,
+      "text": "納期が一週間早くなった点",
+      "voice": "narrator_f",
       "channel": "in_person"
     }
   ],

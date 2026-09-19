@@ -1,11 +1,12 @@
 -- bamen_haaku_J3_001: 2 × bamen_haaku (J3)
--- generated 2026-09-18T08:50:48+00:00 by manual-load
+-- generated 2026-09-19T17:03:52+00:00 by manual-load
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_office_open_floor', '執務フロア全体'),
        ('scene_phone_mobile_outside', '外出先で携帯電話')
@@ -15,14 +16,22 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('004fa50818a8258a', '執務フロアで、他の部署の人が席に来て、こう話しています。「お忙しいところすみません。先ほどメールでお送りした件ですが、今、少しお時間よろしいでしょうか。」これはやりとりのどの段階ですか。', 'narrator_f', 'in_person'),
-       ('6fd5ad68198fc535', '外出中の部下が、会社の上司に電話をかけています。「課長、お疲れさまです。今、駅に着きました。先方との打ち合わせは三時からですが、資料を会社に忘れてしまいました。」「分かった。資料は今から私が先方にメールで送っておく。君はそのまま向かいなさい。」部下はこのあと何をしますか。', 'narrator_f', 'in_person')
+       ('640d84d8044b8a4d', '相手のほうが、時間を取ってほしいと頼んでいる段階', 'narrator_f', 'in_person'),
+       ('7bb63e3c4b9827f2', 'これから話を始めようとしている段階', 'narrator_f', 'in_person'),
+       ('0d607d81478dfa98', '話が終わって、礼を言っている段階', 'narrator_f', 'in_person'),
+       ('69f556d7510421e5', 'メールの内容について意見が分かれている段階', 'narrator_f', 'in_person'),
+       ('6fd5ad68198fc535', '外出中の部下が、会社の上司に電話をかけています。「課長、お疲れさまです。今、駅に着きました。先方との打ち合わせは三時からですが、資料を会社に忘れてしまいました。」「分かった。資料は今から私が先方にメールで送っておく。君はそのまま向かいなさい。」部下はこのあと何をしますか。', 'narrator_f', 'in_person'),
+       ('03037804a4f80b7c', '会社に戻って、資料を取ってくる。', 'narrator_f', 'in_person'),
+       ('0556719ed59b9f4e', '先方に資料をメールで送る。', 'narrator_f', 'in_person'),
+       ('28e923817b11b472', '駅の近くで資料を印刷してから、先方へ向かう。', 'narrator_f', 'in_person'),
+       ('e3b20f3db9cb6e85', 'そのまま先方の会社へ向かう。', 'narrator_f', 'in_person')
 on conflict (id) do update set
        text = excluded.text,
        voice = excluded.voice,
        channel = excluded.channel;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('bamen_haaku_J3_001', 'bamen_haaku', 'J3', 'manual-load', '2026-09-18T08:50:48+00:00')
+values ('bamen_haaku_J3_001', 'bamen_haaku', 'J3', 'manual-load', '2026-09-19T17:03:52+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -60,14 +69,14 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('b9e1673422', '32efa89696');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('b9e1673422', 0, '相手のほうが、時間を取ってほしいと頼んでいる段階', 'wrong_participant', '時間を頼んでいるのは話しかけた側で、相手はまだ何も言っていない。', null),
-       ('b9e1673422', 1, 'これから話を始めようとしている段階', 'correct', '「今、少しお時間よろしいでしょうか」は、話を始める前に相手の都合を確かめる言い方。', null),
-       ('b9e1673422', 2, '話が終わって、礼を言っている段階', 'right_scene_wrong_moment', '「お忙しいところすみません」は話の終わりにも使うが、ここでは続けて時間があるかを聞いており、まだ話は始まっていない。', null),
-       ('b9e1673422', 3, 'メールの内容について意見が分かれている段階', 'plausible_but_unmentioned', 'メールの件だとは言っているが、内容も意見の違いも何も述べられていない。', null),
-       ('32efa89696', 0, '会社に戻って、資料を取ってくる。', 'right_scene_wrong_moment', '忘れ物をしたときに考えやすい行動だが、上司はそうせず、そのまま向かうように言っている。', null),
-       ('32efa89696', 1, '先方に資料をメールで送る。', 'wrong_participant', 'メールで送るのは上司のほうで、部下がすることではない。', null),
-       ('32efa89696', 2, '駅の近くで資料を印刷してから、先方へ向かう。', 'adjacent_setting', '駅の近くで済ませる方法としてはありそうだが、資料は上司がメールで送ることになっており、印刷の話は出ていない。', null),
-       ('32efa89696', 3, 'そのまま先方の会社へ向かう。', 'correct', '上司が「君はそのまま向かいなさい」と、部下のすることをはっきり指示している。', null)
+values ('b9e1673422', 0, '相手のほうが、時間を取ってほしいと頼んでいる段階', 'wrong_participant', '時間を頼んでいるのは話しかけた側で、相手はまだ何も言っていない。', '640d84d8044b8a4d'),
+       ('b9e1673422', 1, 'これから話を始めようとしている段階', 'correct', '「今、少しお時間よろしいでしょうか」は、話を始める前に相手の都合を確かめる言い方。', '7bb63e3c4b9827f2'),
+       ('b9e1673422', 2, '話が終わって、礼を言っている段階', 'right_scene_wrong_moment', '「お忙しいところすみません」は話の終わりにも使うが、ここでは続けて時間があるかを聞いており、まだ話は始まっていない。', '0d607d81478dfa98'),
+       ('b9e1673422', 3, 'メールの内容について意見が分かれている段階', 'plausible_but_unmentioned', 'メールの件だとは言っているが、内容も意見の違いも何も述べられていない。', '69f556d7510421e5'),
+       ('32efa89696', 0, '会社に戻って、資料を取ってくる。', 'right_scene_wrong_moment', '忘れ物をしたときに考えやすい行動だが、上司はそうせず、そのまま向かうように言っている。', '03037804a4f80b7c'),
+       ('32efa89696', 1, '先方に資料をメールで送る。', 'wrong_participant', 'メールで送るのは上司のほうで、部下がすることではない。', '0556719ed59b9f4e'),
+       ('32efa89696', 2, '駅の近くで資料を印刷してから、先方へ向かう。', 'adjacent_setting', '駅の近くで済ませる方法としてはありそうだが、資料は上司がメールで送ることになっており、印刷の話は出ていない。', '28e923817b11b472'),
+       ('32efa89696', 3, 'そのまま先方の会社へ向かう。', 'correct', '上司が「君はそのまま向かいなさい」と、部下のすることをはっきり指示している。', 'e3b20f3db9cb6e85')
 on conflict (item_id, position) do update set
        text = excluded.text,
        role = excluded.role,

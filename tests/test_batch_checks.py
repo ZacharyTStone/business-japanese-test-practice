@@ -239,10 +239,48 @@ def test_scene_outside_the_bank_fails(bundle):
     assert _status(batch.check_bundle(b), "scenes come from the bank") == "fail"
 
 
-def test_an_overlong_stem_warns(bundle):
+def test_an_overlong_stem_is_noted(bundle):
     b = copy.deepcopy(bundle)
     b["items"][0]["stem"] = "あ" * (batch.STEM_MAX_CHARS + 1)
-    assert _status(batch.check_bundle(b), "stem length for listening") == "warn"
+    assert _status(batch.check_bundle(b), "length matches the exam") == "note"
+
+
+def test_a_bundle_inside_every_band_passes(bundle):
+    """The band reports `pass` rather than merely not failing, so that a clean
+    bundle is distinguishable from one nobody measured."""
+    b = copy.deepcopy(bundle)
+    bands = batch.LENGTH_BANDS["hatsugen_choukai"]
+    mid = lambda f: "あ" * ((bands[f][0] + bands[f][1]) // 2)  # noqa: E731
+    for it in b["items"]:
+        it["stem"] = mid("stem")
+        for i, o in enumerate(it["options"]):
+            # Distinct, or the no-duplicate-text check fires instead.
+            o["text"] = mid("option")[:-1] + "アイウエ"[i]
+    assert _status(batch.check_bundle(b), "length matches the exam") == "pass"
+
+
+def test_options_are_measured_against_their_own_band(bundle):
+    """語彙・文法 options are two to six characters on the real paper. A
+    fifteen-character filler is a 表現読解 option in the wrong type, and the band
+    is what says so — for the options, not only for the stem."""
+    b = copy.deepcopy(bundle)
+    low, high = batch.LENGTH_BANDS["hatsugen_choukai"]["option"]
+    b["items"][0]["options"][0]["text"] = "あ" * (high + 10)
+    note = next(c for c in batch.check_bundle(b).checks if c.name == "length matches the exam")
+    assert note.status == "note"
+    assert "option" in note.detail
+
+
+def test_a_length_note_is_not_a_warning(bundle):
+    """A note says the item is unlike the exam; a warning says it is wrong. The
+    committed bundles lean on that distinction — several of them are shorter
+    than the exam and every one of them still ships."""
+    b = copy.deepcopy(bundle)
+    b["items"][0]["stem"] = "あ" * (batch.STEM_MAX_CHARS + 1)
+    report = batch.check_bundle(b)
+    assert report.ok
+    assert [c.name for c in report.noted] == ["length matches the exam"]
+    assert "length matches the exam" not in [c.name for c in report.warned]
 
 
 # ----- bundle round trip --------------------------------------------------

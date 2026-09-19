@@ -1,11 +1,12 @@
 -- bamen_haaku_J1_001: 2 × bamen_haaku (J1)
--- generated 2026-09-18T08:50:48+00:00 by manual-load
+-- generated 2026-09-19T17:03:51+00:00 by manual-load
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_expo_booth', '展示会のブース'),
        ('scene_restaurant_private', '料理店の個室')
@@ -15,14 +16,22 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('7d3635c26223c62e', '展示会のブースで、担当者が取引先の人と話しています。「新型のカタログですが、あいにく手元の分が切れてしまいまして。ご住所を頂戴できれば戻り次第お送りしますし、お急ぎでしたら会場の端末でデータをご覧いただくこともできます。」「では、データで結構です。」担当者はこのあと何をしますか。', 'narrator_f', 'in_person'),
-       ('9b54696b8cd116ea', '取引先との会食の席で、先方が席を外している間に、ある社員が小声でこう話しています。「さっきはフォローしていただいて助かりました。納期の話はうちの課だけでは答えられませんので。戻ったら、そちらの部からも部長に一言添えていただけますか。」この人は誰に向かって話していますか。', 'narrator_f', 'in_person')
+       ('805a2f7b6a18cada', '会場の端末で、カタログのデータをその場で見せる。', 'narrator_f', 'in_person'),
+       ('94e17fbd744096fe', '住所を控えて、会社に戻ってからカタログを送る。', 'narrator_f', 'in_person'),
+       ('e3f0fd5ece48002c', '隣のブースからカタログを一部借りてくる。', 'narrator_f', 'in_person'),
+       ('b330fd6dd2fc4c64', '取引先に、カタログのデータを送ってもらう。', 'narrator_f', 'in_person'),
+       ('9b54696b8cd116ea', '取引先との会食の席で、先方が席を外している間に、ある社員が小声でこう話しています。「さっきはフォローしていただいて助かりました。納期の話はうちの課だけでは答えられませんので。戻ったら、そちらの部からも部長に一言添えていただけますか。」この人は誰に向かって話していますか。', 'narrator_f', 'in_person'),
+       ('689037efa7da27ac', '料理を運んできた店の人', 'narrator_f', 'in_person'),
+       ('cef581e2dfb676b4', '同じ課の先輩', 'narrator_f', 'in_person'),
+       ('8cd46dc82602e0a6', '同じ会食に出ている、他の部署の社員', 'narrator_f', 'in_person'),
+       ('da9b1e734101077f', '取引先の担当者', 'narrator_f', 'in_person')
 on conflict (id) do update set
        text = excluded.text,
        voice = excluded.voice,
        channel = excluded.channel;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('bamen_haaku_J1_001', 'bamen_haaku', 'J1', 'manual-load', '2026-09-18T08:50:48+00:00')
+values ('bamen_haaku_J1_001', 'bamen_haaku', 'J1', 'manual-load', '2026-09-19T17:03:51+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -60,14 +69,14 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('72ff3a7b7c', '64619d5452');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('72ff3a7b7c', 0, '会場の端末で、カタログのデータをその場で見せる。', 'correct', '二つの案のうち、取引先が「データで結構です」と選んだのは会場で見るほうで、担当者はその場で見せることになる。', null),
-       ('72ff3a7b7c', 1, '住所を控えて、会社に戻ってからカタログを送る。', 'right_scene_wrong_moment', '担当者が最初に示した案だが、取引先はそれを採らずデータを選んでおり、送る段取りには進まない。', null),
-       ('72ff3a7b7c', 2, '隣のブースからカタログを一部借りてくる。', 'adjacent_setting', '同じ会場の中で済ませる案としてはありそうだが、隣のブースの話は一度も出ていない。', null),
-       ('72ff3a7b7c', 3, '取引先に、カタログのデータを送ってもらう。', 'wrong_participant', 'データを見せるのは担当者の側で、取引先に何かを送ってもらう向きの話ではない。', null),
-       ('64619d5452', 0, '料理を運んできた店の人', 'adjacent_setting', '同じ個室にいるが、納期の話やフォローへの礼は店の人に向けるものではない。', null),
-       ('64619d5452', 1, '同じ課の先輩', 'plausible_but_unmentioned', '礼を言う相手として自然だが、「うちの課だけでは答えられない」と言っており、相手は同じ課の人ではない。', null),
-       ('64619d5452', 2, '同じ会食に出ている、他の部署の社員', 'correct', '「うちの課だけでは」「そちらの部からも」と言い分けており、相手は自社の別の部署の人だと分かる。', null),
-       ('64619d5452', 3, '取引先の担当者', 'wrong_participant', '会食の相手ではあるが、先方が席を外している間の話で、「部長に一言添えて」と頼む相手でもない。', null)
+values ('72ff3a7b7c', 0, '会場の端末で、カタログのデータをその場で見せる。', 'correct', '二つの案のうち、取引先が「データで結構です」と選んだのは会場で見るほうで、担当者はその場で見せることになる。', '805a2f7b6a18cada'),
+       ('72ff3a7b7c', 1, '住所を控えて、会社に戻ってからカタログを送る。', 'right_scene_wrong_moment', '担当者が最初に示した案だが、取引先はそれを採らずデータを選んでおり、送る段取りには進まない。', '94e17fbd744096fe'),
+       ('72ff3a7b7c', 2, '隣のブースからカタログを一部借りてくる。', 'adjacent_setting', '同じ会場の中で済ませる案としてはありそうだが、隣のブースの話は一度も出ていない。', 'e3f0fd5ece48002c'),
+       ('72ff3a7b7c', 3, '取引先に、カタログのデータを送ってもらう。', 'wrong_participant', 'データを見せるのは担当者の側で、取引先に何かを送ってもらう向きの話ではない。', 'b330fd6dd2fc4c64'),
+       ('64619d5452', 0, '料理を運んできた店の人', 'adjacent_setting', '同じ個室にいるが、納期の話やフォローへの礼は店の人に向けるものではない。', '689037efa7da27ac'),
+       ('64619d5452', 1, '同じ課の先輩', 'plausible_but_unmentioned', '礼を言う相手として自然だが、「うちの課だけでは答えられない」と言っており、相手は同じ課の人ではない。', 'cef581e2dfb676b4'),
+       ('64619d5452', 2, '同じ会食に出ている、他の部署の社員', 'correct', '「うちの課だけでは」「そちらの部からも」と言い分けており、相手は自社の別の部署の人だと分かる。', '8cd46dc82602e0a6'),
+       ('64619d5452', 3, '取引先の担当者', 'wrong_participant', '会食の相手ではあるが、先方が席を外している間の話で、「部長に一言添えて」と頼む相手でもない。', 'da9b1e734101077f')
 on conflict (item_id, position) do update set
        text = excluded.text,
        role = excluded.role,

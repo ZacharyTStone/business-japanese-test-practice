@@ -248,6 +248,40 @@ SECTIONS: dict[str, str] = {
     "sougou_dokkai": "dokkai",
 }
 
+#: How many questions of this type the real exam asks, out of its 80.
+#:
+#: 第1部 聴解 25 (場面把握 5, 発言聴解 10, 総合聴解 10), 第2部 聴読解 25 (状況把握 5,
+#: 資料聴読解 10, 総合聴読解 10), 第3部 読解 30 (語彙・文法 10, 表現読解 10,
+#: 総合読解 10). Corroborated across the exam's own published structure and the
+#: endorsed publisher's workbooks; the 80 total and the 25/25/30 split are the
+#: firmest part, the per-sub-part counts the least firm, and both agree that
+#: **場面把握 and 状況把握 are half-size types**.
+#:
+#: It is one fact used twice, which is why it is a table rather than two
+#: constants. The planner reads it to decide what to WRITE — a shelf is compared
+#: against its share rather than against every other shelf, so a five-question
+#: type is not filled to the depth of a ten-question one. The database has the
+#: same column (public.item_types.exam_questions) and the queue reads it to
+#: decide what to SERVE, so that a set of ten leans the way the exam does.
+#: tests/test_plan.py asserts the two agree.
+#:
+#: 画像把握 is ours rather than the exam's — the closest thing to it is the
+#: picture half of 第1部 — so it is given the smallest non-zero share there is.
+#: What actually keeps it rare is plan.NIGHT_TYPE_CAPS; this only stops it
+#: looking like a ten-question type to the arithmetic.
+EXAM_QUESTIONS: dict[str, int] = {
+    "bamen_haaku": 5,
+    "gazou_haaku": 2,
+    "hatsugen_choukai": 10,
+    "sougou_choukai": 10,
+    "joukyou_haaku": 5,
+    "shiryou_choudokkai": 10,
+    "sougou_choudokkai": 10,
+    "goi_bunpou": 10,
+    "hyougen": 10,
+    "sougou_dokkai": 10,
+}
+
 #: Types whose stimulus is a picture of their own: an item is not served until
 #: its picture is drawn and approved (public.item_types.needs_picture).
 PICTURE_TYPES: tuple[str, ...] = ("gazou_haaku",)

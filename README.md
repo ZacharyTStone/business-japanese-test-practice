@@ -39,19 +39,44 @@ Three things are true of the whole system and explain most of its shape:
   touched; a trigger decides correctness and records which trap caught them.
 
 All nine BJT problem types are built. Each has a seed table, an item schema, a
-generator, a worked fixture, and a hand-written reference batch:
+generator, a worked fixture, and a hand-written reference batch. The **exam**
+column is how many questions of that type the real paper asks, out of its 80;
+it is what decides which shelf the nightly run fills next and how a practice set
+leans (`item_types.exam_questions`, `bjt.schemas.EXAM_QUESTIONS`):
 
-| Section | Type | What it is | Stimulus |
-|---|---|---|---|
-| 聴解 | `bamen_haaku` | 場面把握 — hear a moment, answer about the situation | narration |
-| 聴解 | `hatsugen_choukai` | 発言聴解 — a narrated situation, four spoken utterances | narration + spoken options |
-| 聴解 | `sougou_choukai` | 総合聴解 — a conversation, then a question about it | narration + dialogue |
-| 聴読解 | `joukyou_haaku` | 状況把握 — read a notice, hear a request, choose an action | narration + document |
-| 聴読解 | `shiryou_choudokkai` | 資料聴読解 — a document on the page, a prompt in the ear | narration + document |
-| 聴読解 | `sougou_choudokkai` | 総合聴読解 — a longer exchange and its documents | narration + dialogue + documents |
-| 読解 | `goi_bunpou` | 語彙・文法 — one blank, four fillers | text |
-| 読解 | `hyougen` | 表現読解 — a situation, four expressions | text |
-| 読解 | `sougou_dokkai` | 総合読解 — read a document, infer intent or action | document |
+| Section | Type | What it is | Exam | Stimulus |
+|---|---|---|---|---|
+| 聴解 | `bamen_haaku` | 場面把握 — hear a moment, answer about the situation | 5 | narration + spoken options |
+| 聴解 | `hatsugen_choukai` | 発言聴解 — a narrated situation, four spoken utterances | 10 | narration + spoken options |
+| 聴解 | `sougou_choukai` | 総合聴解 — a conversation, then a question about it | 10 | narration + dialogue + spoken options |
+| 聴読解 | `joukyou_haaku` | 状況把握 — read a notice, hear a request, choose an action | 5 | narration + document |
+| 聴読解 | `shiryou_choudokkai` | 資料聴読解 — a document on the page, a prompt in the ear | 10 | narration + document |
+| 聴読解 | `sougou_choudokkai` | 総合聴読解 — a longer exchange and its documents | 10 | narration + dialogue + documents |
+| 読解 | `goi_bunpou` | 語彙・文法 — one blank, four short fillers | 10 | text |
+| 読解 | `hyougen` | 表現読解 — a situation, four expressions | 10 | text |
+| 読解 | `sougou_dokkai` | 総合読解 — read a document thread, infer what changed | 10 | document |
+
+Two things about that table are worth saying out loud, because both are ways a
+practice app drifts from this exam without anybody noticing.
+
+**Every type in 第1部 聴解 speaks its options.** The screen shows the picture and
+the bare numerals 1–4, the four candidates are read aloud, and in 総合聴解 there
+is nothing on the screen at all. Printing them turns a listening item into a
+reading item with a soundtrack. `TYPE_AUDIO` in `bjt/tts/plan.py` is where that
+lives; an item whose option clips do not exist yet falls back to printed options
+on its own, so the library converts as it is re-synthesised rather than all at
+once.
+
+**Length is most of what makes an item feel like the exam.** 語彙・文法 options on
+the real paper are two to six characters — one stem with four endings, or four
+particles — so a set of fifteen-character options has drifted into 表現読解
+whatever else is right about it; and a 総合読解 passage is two to three minutes of
+reading, four hundred to nine hundred characters, where ours have been running
+under three hundred. `batch.LENGTH_BANDS` holds the ranges, the generators write
+to them, and `bjt checkbatch` reports a **note** — not a warning — when a bundle
+falls outside. A note says the item is unlike the exam; a warning would say it is
+broken, and a two-hundred-character 総合読解 item is a perfectly good question
+that is not the question the exam asks.
 
 発言聴解 was built first on purpose: it exercises every hard part at once — 敬語
 direction, ウチ/ソト, telephone protocol, a reused scene image, and TTS. Whatever
@@ -293,11 +318,16 @@ anything. `bjt checkbatch` runs these offline, with no key:
 | length does not leak | "pick the longest, most elaborate option" must not work — over-politeness is one of the traps |
 | distractor role coverage | an enum of eight used as three is a prompt that has settled into a rut |
 | per-option `why` | if this is thin, the app has nothing to show after a wrong answer |
-| stem length | a listening stem is heard once: too short sets up nothing, too long tests memory |
+| length matches the exam | the stem, the options and the documents against the ranges the real paper sets (`batch.LENGTH_BANDS`) |
 | scenes come from the bank | images are a shared bank, not one per item |
 
 Failures block a bundle from being written. Warnings are for the five-second
-human look the pipeline ends with anyway.
+human look the pipeline ends with anyway. **Notes** are weaker than either: the
+length check reports one, because an item that is shorter than the exam's is not
+a defective item — it is a good question of the wrong size, and the honest thing
+to do is ship it and say so rather than either pretend it is fine or refuse to
+write anything. The generators read the same table, so new items are written to
+the band and the notes burn down as the library turns over.
 
 ---
 
@@ -645,6 +675,50 @@ above, so it is excluded from the count and can never cost a promotion.
 Weakness-targeted *selection* works today over a fixed library. Weakness-targeted
 *generation* is the nightly job's business, and it aims at the bank's empty
 shelves rather than at any individual.
+
+**A set leans the way the exam does.** The score report adds up three sections in
+a fixed proportion — 25 / 25 / 30 of 80 — and until recently the app had no idea:
+it spread a set across problem *types* and let the section mix fall out of the
+weakness arithmetic, which on an uneven bank produces sets that are five
+listening items and nothing else. `item_types.exam_questions` carries the count
+per type and `next_items()` charges 0.25 for each item of a section beyond that
+section's share of the set. It is the strongest of the three variety terms and
+still weaker than a large difference in weakness: the first three of each section
+are ranked by weakness alone, and nobody chooses a section anywhere.
+
+**The reading questions are timed, at the exam's pace.** 聴解 and 聴読解 advance
+with the audio, so the candidate makes no pacing decision and there is nothing to
+practise; 読解 is 30 questions in a freely-navigable 30-minute block, so pacing is
+a skill, and it is the skill this app was not teaching. Somebody who reads well
+and slowly meets the last six questions with two minutes left and loses marks
+they had the Japanese for.
+
+`item_types.seconds_per_item` divides that block rather than averaging it —
+語彙・文法 30, 表現読解 45, 総合読解 105, which is 1800 seconds for ten of each and
+therefore the block exactly. `typical_chars` alongside it says how much a typical
+item of the type puts on screen, and `client/src/lib/pace.ts` scales the budget
+by how a *particular* item compares, clamped to 0.6–1.6 so a 900-character thread
+gets longer than a 400-character notice without one freak item handing out four
+minutes. A question nobody answers in time is recorded as one nobody answered:
+`chosen_index = -1`, graded wrong by the same trigger as everything else, with
+the role `timed_out`. `profiles.timed_reading` turns it off; it is the only
+setting in the app, and `next_items()` does not read it.
+
+**Reporting a bad question.** Every item was written by a model and passed by
+other models, and what gets through is the item that is defensible but odd.
+`item_feedback` takes one row per person per item — a fixed reason (unnatural,
+wrong answer, ambiguous, unclear, audio, other) and an optional sentence —
+correctable, never deletable, and invisible to the queue. A reported item keeps
+being served until a person reads the report and unpublishes it, because an item
+that vanishes on one press is a bank one press away from empty. The reasons are a
+closed set so that reports are a count the generator loop can act on rather than
+prose nobody reads:
+
+```sql
+select i.item_type, f.reason, count(*), max(f.created_at)
+  from public.item_feedback f join public.items i on i.id = f.item_id
+ group by 1, 2 order by 3 desc;
+```
 
 ### Checking it
 

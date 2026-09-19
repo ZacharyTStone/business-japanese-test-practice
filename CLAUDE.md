@@ -162,6 +162,45 @@ accident is not.
   slips in one item from the level above. The owner asked for this (2026-09-16):
   all the thinking happens behind the scenes, and the app's whole job is to
   raise a score rather than to offer a study menu.
+  The one exception is `profiles.timed_reading`, below: it decides whether the
+  reading questions are counted down, and `next_items()` has never heard of it.
+  A setting about *how you practise* is not a setting about *what you are
+  served*, and that is the line — anything that would change which item comes
+  next belongs on the wrong side of it.
+- **The set is shaped like the exam, and so is the bank.** The exam asks 80
+  questions in a fixed proportion — 聴解 25, 聴読解 25, 読解 30, and inside those
+  場面把握 5 / 発言聴解 10 / 総合聴解 10, 状況把握 5 / 資料聴読解 10 / 総合聴読解
+  10, 語彙・文法 10 / 表現読解 10 / 総合読解 10. That count lives in one place
+  twice: `public.item_types.exam_questions` and `bjt.schemas.EXAM_QUESTIONS`,
+  which a test holds equal. The nightly planner fills the shelf furthest behind
+  its **share** rather than the shelf with fewest items, and `next_items()`
+  carries a section term so a set of ten leans 3 / 3 / 4 rather than however the
+  weakness arithmetic happens to fall. The owner asked for the app to mirror the
+  exam more closely (2026-09-19).
+- **The reading questions are timed, at the exam's own pace.** 聴解 and 聴読解
+  advance with the audio and the candidate makes no pacing decision; 読解 is 30
+  questions in a freely-navigable 30-minute block, so pacing is a skill and the
+  app was not teaching it. `item_types.seconds_per_item` divides that block —
+  30 / 45 / 105 seconds, which is 1800 for ten of each, exactly the block — and
+  `client/src/lib/pace.ts` scales a type's budget by how much a *particular*
+  item has to read (`typical_chars`), clamped so one freak item cannot hand out
+  four minutes. A question nobody answers in time is recorded as one nobody
+  answered: `attempts.chosen_index = -1`, graded wrong, role `timed_out`. The
+  owner asked for this (2026-09-19). A schema test holds the three budgets to
+  summing to the exam's block, which is the part not to break.
+- **第1部 speaks its options.** All three 聴解 types read their four candidates
+  aloud rather than printing them — the exam shows the picture and the bare
+  numerals, and in 総合聴解 shows nothing at all. `TYPE_AUDIO` in
+  `bjt/tts/plan.py` and `SPOKEN_OPTION_TYPES` in the practice screen must agree.
+  An item whose option clips do not exist yet falls back to printed options on
+  its own, so this ships progressively rather than all at once.
+- **A report is a report, not a withdrawal.** `public.item_feedback` takes one
+  row per person per item — a fixed reason and an optional sentence — and
+  nothing in the queue reads it. A reported item keeps being served until a
+  person looks at the report and unpublishes it; an item that vanishes on one
+  press is a bank one press away from empty. The reasons are a closed set on
+  purpose, because a count is something the generator loop can act on and prose
+  is not.
 - **Ten a day, fifteen at most, and the database counts.** The daily set is
   `profiles.daily_goal` (default 10, never above 15, never chosen in the app).
   After it one bonus set is offered; at fifteen answers in a Japanese calendar
