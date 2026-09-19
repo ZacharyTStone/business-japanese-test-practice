@@ -199,7 +199,18 @@ jobs:
           # items nobody has looked at yet — and if the review has stalled,
           # every night after it would be. One unreviewed night at a time;
           # a manual run may say "force" to write anyway.
-          waiting="$(git ls-remote --heads origin 'content/nightly-*' | awk '{print $2}' | sed 's#refs/heads/##')"
+          # A branch already merged into the default branch is a night that
+          # was reviewed; only one whose commits are not on main is waiting.
+          # (Merged, not deleted, is the common case when auto-delete is off.)
+          default="${{ github.event.repository.default_branch }}"
+          git fetch -q origin "$default" '+refs/heads/content/nightly-*:refs/remotes/origin/content/nightly-*' || true
+          waiting=""
+          for ref in $(git for-each-ref --format='%(refname:short)' 'refs/remotes/origin/content/nightly-*'); do
+            if ! git merge-base --is-ancestor "$ref" "origin/$default"; then
+              waiting="$waiting${ref#origin/}"$'\n'
+            fi
+          done
+          waiting="$(printf '%s' "$waiting" | sed '/^$/d')"
           if [ -n "$waiting" ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
             echo "go=false" >> "$GITHUB_OUTPUT"
             {
