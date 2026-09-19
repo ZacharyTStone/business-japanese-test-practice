@@ -91,9 +91,11 @@ def _print_item_answer(item: dict) -> None:
 # ----- generation + gating -----------------------------------------------
 
 def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_check: bool = True,
-                       cell=None):
+                       cell=None, feedback: "str | None" = None):
     """Generate one item, run every per-item check, persist with metrics.
-    Returns (item, item_id, kept: bool, detail: str).
+    Returns (item, item_id, kept: bool, detail: str, reason: str | None) —
+    `reason` is what review said, in a sentence the next draft for the same
+    shelf is told (`feedback`), and None for an item that was kept.
 
     The order is cheapest-first, and that is the point. The offline vocab check
     costs nothing. The proofreader is one small call. The answerability gate is
@@ -106,7 +108,7 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_
     gen = get_generator(item_type, store)
     if cell is None and gen.requires_cell:
         cell = _next_cell(store, item_type, level)
-    item = gen.generate(level, cell=cell)
+    item = gen.generate(level, cell=cell, feedback=feedback)
 
     vres = vocab.check_item(item, level)
     sres = sanity.run_check(item) if sanity_check else sanity.SanityResult(checked=False)
@@ -159,7 +161,25 @@ def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_
         item["model_p_correct"] = full
 
     detail = _gate_detail(cold, full, gate_verdict, vres, sres, dres)
-    return item, item_id, kept, detail
+    return item, item_id, kept, detail, _rejection_reason(item_type, gate_verdict, sres, vres)
+
+
+def _rejection_reason(item_type: str, verdict: str, sres, vres) -> "str | None":
+    """Why review rejected this draft, as one sentence for the next one."""
+    if verdict == "discarded:leaky":
+        return answerability.leak_description(item_type)
+    if verdict == "discarded:ambiguous":
+        return ("a reviewer with the whole stimulus could not pick the marked answer "
+                "consistently — another option was just as defensible, or the stimulus "
+                "did not settle it")
+    if verdict == "discarded:sanity":
+        faults = "+".join(sres.faults) if sres is not None else "a proofreading fault"
+        note = (sres.notes[:200] if sres is not None and sres.notes else "")
+        return f"the proofreader flagged {faults}" + (f": {note}" if note else "")
+    if verdict == "discarded:vocab":
+        return ("it used kanji above the level's band: "
+                + " ".join(vres.violations[:8]))
+    return None
 
 
 def _spent_cells(store, item_type: str) -> set:
@@ -296,7 +316,7 @@ def cmd_selftest(args) -> int:
 def cmd_gen(args) -> int:
     store = Store()
     try:
-        item, iid, kept, detail = _generate_and_gate(
+        item, iid, kept, detail, _ = _generate_and_gate(
             store, args.type, args.level, gate=not args.no_gate,
             sanity_check=not args.no_sanity,
         )
@@ -324,7 +344,7 @@ def cmd_smoke(args) -> int:
         cells = _sample_cells(store, args.type, args.level, args.n)
         for i in range(args.n):
             try:
-                item, iid, kept, detail = _generate_and_gate(
+                item, iid, kept, detail, _ = _generate_and_gate(
                     store, args.type, args.level, gate=not args.no_gate,
                     cell=cells[i] if cells else None,
                 )
@@ -412,7 +432,7 @@ def cmd_practice(args) -> int:
         attempts_budget = target * 4  # cap regen attempts so a bad streak can't loop forever
         while served < target and attempts_budget > 0:
             attempts_budget -= 1
-            item, iid, kept, detail = _generate_and_gate(
+            item, iid, kept, detail, _ = _generate_and_gate(
                 store, args.type, args.level, gate=not args.fast
             )
             if not kept:
@@ -732,6 +752,11 @@ def run_batch(
     # the same money for the same answer. Reset by a keep.
     strikes = 0
     idx = 0
+    # What review said about the last draft for this shelf, told to the next
+    # one. A shelf's second and third drafts used to be written blind, and
+    # they failed the same way as the first (2026-09-19: three leaky
+    # 状況把握 drafts in a row, one shelf, nothing written).
+    feedback: "str | None" = None
     while len(kept_items) < n and attempts < budget:
         if strikes >= config.SLOT_PATIENCE:
             print(f"  [{len(kept_items)}/{n}] giving up on this shelf: "
@@ -741,26 +766,32 @@ def run_batch(
         cell = cells[idx % len(cells)] if cells else None
         idx += 1
         try:
-            item, iid, kept, detail = _generate_and_gate(
-                store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell
+            item, iid, kept, detail, reason = _generate_and_gate(
+                store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell,
+                feedback=feedback,
             )
         except LLMBillingError:
             raise  # nothing after this can succeed; the caller ends the run
         except LLMError as e:
             print(f"  [{len(kept_items)}/{n}] generation failed: {e}")
             strikes += 1
+            feedback = f"it did not validate ({str(e)[:200]})"
             continue
         if not kept:
             print(f"  [{len(kept_items)}/{n}] dropped — {detail}")
             strikes += 1
+            feedback = reason
             continue
         close = dedupe.max_similarity(item, kept_items)
         if close >= dedupe.DEFAULT_THRESHOLD:
             print(f"  [{len(kept_items)}/{n}] dropped — near-duplicate "
                   f"of an item already in this batch ({close:.2f})")
             strikes += 1
+            feedback = ("it was a near-duplicate of another item in this batch "
+                        f"({item.get('topic', '')!r}); write a clearly different situation")
             continue
         strikes = 0
+        feedback = None
         kept_items.append(item)
         print(f"  [{len(kept_items)}/{n}] kept  {item.get('topic','')!r}  {detail}")
 
@@ -812,7 +843,8 @@ def cmd_plan(args) -> int:
     before approving a night's spend, or just to see whether the library is the
     shape the practice queue needs it to be."""
     state = plan.survey()
-    order = plan.work_order(state, budget=args.budget, per_slot=args.per_slot)
+    order = plan.work_order(state, budget=args.budget, per_slot=args.per_slot,
+                            reading_min=args.reading_min)
     if args.json:
         print(json.dumps(plan.to_json(state, order), ensure_ascii=False, indent=2))
     else:
@@ -835,7 +867,8 @@ def cmd_nightly(args) -> int:
     have."""
     budget, per_slot = clamp_night(args.budget, args.per_slot)
     state = plan.survey()
-    order = plan.work_order(state, budget=budget, per_slot=per_slot)
+    order = plan.work_order(state, budget=budget, per_slot=per_slot,
+                            reading_min=args.reading_min)
     print(plan.render(state, order))
     print(f"\nCeilings this run: ${config.RUN_BUDGET_USD:.2f}, "
           f"{config.RUN_MAX_CALLS} calls, {config.RUN_MAX_MINUTES:g} minutes, "
@@ -1229,6 +1262,26 @@ def cmd_scenes(args) -> int:
             wanted = list(survey)
         if not args.force:
             wanted = [s for s in wanted if not s.has_art]
+        if args.only == "bank":
+            wanted = [s for s in wanted if not s.is_picture]
+        elif args.only == "pictures":
+            wanted = [s for s in wanted if s.is_picture]
+        # A night draws at most so many per-item pictures: each is an image
+        # call and several vision calls per draft, and the tree may hold more
+        # new items than one night should pay for.
+        pictures = [s for s in wanted if s.is_picture][:config.NIGHT_MAX_PICTURES]
+        wanted = [s for s in wanted if not s.is_picture] + pictures
+        # What the bucket remembers being refused, so a scene at its lifetime
+        # allowance is not drawn again; and the ledger grows as tonight refuses.
+        prior: dict[str, int] = {}
+        on_reject = None
+        if bucket.configured:
+            try:
+                prior = bucket.refusals()
+            except RuntimeError as exc:
+                print(f"could not read the refusals ledger: {exc}", file=sys.stderr)
+            if args.upload:
+                on_reject = bucket.record_refusal
         if not wanted:
             note = "every scene already has artwork; nothing to draw (--force redraws)"
             print(note)
@@ -1243,6 +1296,7 @@ def cmd_scenes(args) -> int:
             result = scene_art.draw(
                 wanted, provider=provider, review=scene_art.review_with_model,
                 media_dir=args.media_dir, attempts=args.attempts,
+                prior=prior, on_reject=on_reject,
             )
             print(result.summary())
             if args.summary:
@@ -1272,7 +1326,15 @@ def cmd_scenes(args) -> int:
     if args.sql:
         out = pathlib.Path(args.out) if args.out else config.ROOT / "batches" / "scenes.sql"
         out.write_text(scenemod.to_sql(survey), encoding="utf-8")
-        print(f"Wrote {out}  ({len(have)} scene(s) with artwork)")
+        borrowed = [(s, scenemod.stand_in_for(s, survey)) for s in survey]
+        borrowed = [(s, o) for s, o in borrowed if o is not None]
+        print(f"Wrote {out}  ({len(have)} scene(s) with artwork"
+              + (f", {len(borrowed)} on a stand-in" if borrowed else "") + ")")
+        if args.summary and borrowed:
+            with pathlib.Path(args.summary).open("a", encoding="utf-8") as fh:
+                fh.write("\n### Stand-ins\n\n")
+                for s, o in borrowed:
+                    fh.write(f"- `{s.scene_id}` shows `{o.scene_id}`'s picture until its own is drawn.\n")
         return 1 if failed else 0
 
     if args.generate is not None or args.upload:
@@ -1281,11 +1343,15 @@ def cmd_scenes(args) -> int:
     print(f"scene bank: {len(survey)} scene(s), {len(have)} with artwork\n")
     print(f"  {'scene_id':32} {'art':4} {'cells':>6}  used by")
     for scene in survey:
-        mark = "yes" if scene.has_art else "—"
+        other = scenemod.stand_in_for(scene, survey)
+        mark = "yes" if scene.has_art else ("↪" if other else "—")
         print(f"  {scene.scene_id:32} {mark:4} {scene.cell_count:6}  "
-              f"{'、'.join(scene.used_by)}")
+              f"{'、'.join(scene.used_by)}"
+              + (f"  (shows {other.scene_id})" if other else "")
+              + ("  [per-item picture]" if scene.is_picture else ""))
     if not have:
-        print("\n  No artwork yet. Items ship and are practised without pictures.")
+        print("\n  No artwork yet. Items ship and are practised without pictures —")
+        print("  except 画像把握, whose items wait for their own picture.")
         print("  `bjt scenes --generate` draws the missing ones and reviews each draft;")
         print("  `bjt scenes --prompt <scene_id>` prints the brief for one.")
     return 0
@@ -1456,6 +1522,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="most items one run may write")
     pl.add_argument("--per-slot", type=int, default=plan.DEFAULT_PER_SLOT,
                     help="most items one run may write into one (type, level)")
+    pl.add_argument("--reading-min", type=int, default=plan.DEFAULT_READING_MIN,
+                    help="items reserved for the reading shelves before the rest")
     pl.add_argument("--json", action="store_true", help="machine-readable work order")
     pl.set_defaults(func=cmd_plan)
 
@@ -1464,6 +1532,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="most items this run may write")
     ni.add_argument("--per-slot", type=int, default=plan.DEFAULT_PER_SLOT,
                     help="most items this run may write into one (type, level)")
+    ni.add_argument("--reading-min", type=int, default=plan.DEFAULT_READING_MIN,
+                    help="items reserved for the reading shelves before the rest")
     ni.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
     ni.add_argument("--no-sanity", action="store_true", help="skip the cheap proofreading pass before the gate")
     ni.add_argument("--dry-run", action="store_true", help="print the work order and stop")
@@ -1540,6 +1610,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help=f"drafts the review may reject per scene (default: {config.SCENE_ATTEMPTS})")
     sc.add_argument("--force", action="store_true",
                     help="redraw even scenes that already have artwork")
+    sc.add_argument("--only", choices=["bank", "pictures"], default=None,
+                    help="draw only the shared bank, or only the per-item pictures "
+                         "(default: both)")
     sc.add_argument("--upload", action="store_true",
                     help="put approved files in the `scenes` bucket "
                          "(needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)")

@@ -2,7 +2,7 @@
 #
 # It has two halves, and the first one needs nothing at all.
 #
-#   survey    — count the library shelf by shelf (nine problem types × three
+#   survey    — count the library shelf by shelf (ten problem types × three
 #               levels) and print the work order `bjt nightly` would execute.
 #               Offline, no key, runs every night whatever else is configured.
 #               This is the half that tells you the practice queue cannot
@@ -42,11 +42,14 @@
 #                      That is what the practice queue reads to pitch a set at a
 #                      difficulty that teaches. Also applies batches/scenes.sql
 #                      once artwork has been uploaded (below).
-#   OPENAI_API_KEY     the image model that draws the scene bank. With it (and
+#   OPENAI_API_KEY     the image model that draws the pictures. With it (and
 #                      ANTHROPIC_API_KEY, which reviews every draft against the
-#                      brief) the job draws whichever of the sixteen scenes has
-#                      no picture yet. Sixteen pictures, drawn once: after the
-#                      first successful night this step finds nothing to do.
+#                      brief) the job draws whichever of the sixteen bank scenes
+#                      has no picture yet (Sundays), and every night the picture
+#                      of each new 画像把握 item, which is reviewed against the
+#                      item's own four descriptions and is what makes the item
+#                      servable. A picture refused too often is given up on,
+#                      and the bucket remembers (rejected/).
 #   SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
 #                      the project URL and the service-role key, which together
 #                      let the job put approved artwork in the `scenes` bucket
@@ -79,8 +82,12 @@ on:
         description: "Most items into any one (type, level)"
         required: false
         default: "3"
+      reading_min:
+        description: "Items reserved for the reading shelves before the rest (they need no audio or picture)"
+        required: false
+        default: "3"
       scenes:
-        description: "Also draw the scenes the bank is missing (the schedule does this on Sundays)"
+        description: "Also draw the shared bank's missing scenes (the schedule does this on Sundays; item pictures are drawn every night)"
         type: boolean
         required: false
         default: false
@@ -116,6 +123,9 @@ jobs:
       # code clamps whatever is typed here to BJT_NIGHT_MAX_BUDGET / _PER_SLOT.
       BUDGET: ${{ github.event.inputs.budget || '8' }}
       PER_SLOT: ${{ github.event.inputs.per_slot || '3' }}
+      # Reading items first: no audio, no picture, the cheapest item there is,
+      # and the owner asked for them every night (2026-09-19).
+      READING_MIN: ${{ github.event.inputs.reading_min || '3' }}
       # The most this run may spend, checked before every call against the
       # usage the API reports. Reached, the run stops and keeps what it wrote.
       BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '2' }}
@@ -135,10 +145,10 @@ jobs:
             echo '## The bank tonight'
             echo
             echo '```'
-            python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT"
+            python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT" --json > plan.json
+          python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --json > plan.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -161,30 +171,36 @@ jobs:
         run: |
           echo "db=$HAVE_DB" >> "$GITHUB_OUTPUT"
           echo "storage=$HAVE_STORAGE" >> "$GITHUB_OUTPUT"
-          # Pictures are drawn once a week (the Sunday run), or when a manual
-          # run asks. Every night was the first ten dollars: a scene the
-          # reviewer rejects three times is rejected three times again the next
-          # night, and the bank has only two of those left to draw.
+          # Two kinds of picture. The shared bank is drawn once a week (the
+          # Sunday run), or when a manual run asks: every night was the first
+          # ten dollars, and the bank is one scene from complete. A 画像把握
+          # item's own picture is drawn every night, because the item is not
+          # served until it exists and the bucket's ledger caps how many
+          # drafts any picture may ever cost (BJT_SCENE_LIFETIME_ATTEMPTS).
           weekly=false
           if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" = "7" ]; then weekly=true; fi
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.scenes }}" = "true" ]; then weekly=true; fi
-          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ] && [ "$weekly" = "true" ]; then
+          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
             echo "art=true" >> "$GITHUB_OUTPUT"
-          elif [ "$weekly" != "true" ]; then
-            echo "art=false" >> "$GITHUB_OUTPUT"
-            {
-              echo
-              echo '### No scenes drawn tonight'
-              echo
-              echo 'Artwork is drawn on the Sunday run, or on a manual run with "scenes" ticked.'
-            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "$weekly" = "true" ]; then
+              echo "only=" >> "$GITHUB_OUTPUT"
+            else
+              echo "only=--only pictures" >> "$GITHUB_OUTPUT"
+              {
+                echo
+                echo '### Shared bank not drawn tonight'
+                echo
+                echo 'Bank scenes are drawn on the Sunday run, or on a manual run with "scenes" ticked;'
+                echo 'the pictures of new 画像把握 items are drawn every night.'
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
             echo "art=false" >> "$GITHUB_OUTPUT"
             {
               echo
-              echo '### No scenes drawn'
+              echo '### No pictures drawn'
               echo
-              echo "Drawing the scene bank needs both \`ANTHROPIC_API_KEY\` (present: $HAVE_API_KEY)"
+              echo "Drawing pictures needs both \`ANTHROPIC_API_KEY\` (present: $HAVE_API_KEY)"
               echo "and \`OPENAI_API_KEY\` (present: $HAVE_IMAGES). See blockers.md."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -209,9 +225,13 @@ jobs:
       # hours — never on the path of somebody waiting for five questions.
       - name: install psql
         if: steps.keys.outputs.db == 'true'
+        # The runner image ships one; the ten-second apt round trip is only for
+        # the day it stops doing so.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          command -v psql >/dev/null || {
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          }
 
       - name: recount how hard each item is
         if: steps.keys.outputs.db == 'true'
@@ -220,55 +240,6 @@ jobs:
         run: |
           psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
             -c "select public.refresh_item_stats() as items_recounted;"
-
-      # ------------------------------------------------------- the scene bank
-
-      # Draw whichever scenes have no picture, review each draft, upload what
-      # passed. The bucket listing is what makes this idempotent: on a fresh
-      # runner media/ is empty, and the bucket is the only record of what was
-      # drawn on an earlier night. Without the storage secrets the pictures are
-      # drawn and kept only in the run's artifact, for a person to upload.
-      - name: draw the scenes the bank is missing
-        if: steps.keys.outputs.art == 'true' && github.event.inputs.dry_run != 'true'
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          upload=""
-          if [ "${{ steps.keys.outputs.storage }}" = "true" ]; then upload="--upload --sql"; fi
-          # A scene that fails every attempt is reported, not fatal: the app
-          # ships items without pictures, and the next night tries again.
-          python -m bjt scenes --generate --provider openai $upload --summary scenes.md || true
-          cat scenes.md >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/upload-artifact@v4
-        if: steps.keys.outputs.art == 'true' && github.event.inputs.dry_run != 'true'
-        with:
-          name: scene-artwork
-          path: media/scenes
-          if-no-files-found: ignore
-
-      # The scene step above is allowed to fail — a picture is optional — and
-      # when it dies before writing the SQL, this step must not be the one that
-      # ends the night: everything after it is the generation, which is the job.
-      - name: point the database at the artwork
-        if: steps.keys.outputs.art == 'true' && steps.keys.outputs.storage == 'true' && steps.keys.outputs.db == 'true' && github.event.inputs.dry_run != 'true'
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ ! -f batches/scenes.sql ]; then
-            {
-              echo
-              echo '### Artwork not applied'
-              echo
-              echo 'The scene step did not write `batches/scenes.sql` (see its output above);'
-              echo 'the database was not pointed at any new picture tonight.'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f batches/scenes.sql
 
       # --------------------------------------------------------- the generation
 
@@ -304,7 +275,7 @@ jobs:
         if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --summary summary.md
+        run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --summary summary.md
 
       # Whatever happens after this point — a push refused, a pull request
       # not permitted, the job killed by its own clock — the items that were
@@ -334,6 +305,63 @@ jobs:
             python -m bjt checkbatch "$f"
             echo "::endgroup::"
           done
+
+      # ------------------------------------------------------- the scene bank
+
+      # Draw whichever scenes have no picture, review each draft, upload what
+      # passed. The bucket listing is what makes this idempotent: on a fresh
+      # runner media/ is empty, and the bucket is the only record of what was
+      # drawn on an earlier night. Without the storage secrets the pictures are
+      # drawn and kept only in the run's artifact, for a person to upload.
+      #
+      # After the generation, not before: the survey reads batches/ in this
+      # checkout, so a 画像把握 item written tonight gets its picture tonight,
+      # and the pull request carries the item, the picture's SQL, and the
+      # picture already in the bucket. The row scenes.sql inserts for it is a
+      # scene with a picture and no item yet; publishing the item on merge
+      # attaches the two.
+      - name: draw the scenes the bank is missing
+        if: steps.keys.outputs.art == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          upload=""
+          if [ "${{ steps.keys.outputs.storage }}" = "true" ]; then upload="--upload --sql"; fi
+          # A scene that fails every attempt is reported, not fatal: the app
+          # ships items without pictures, and the next night tries again.
+          python -m bjt scenes --generate --provider openai ${{ steps.keys.outputs.only }} $upload --summary scenes.md || true
+          cat scenes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.keys.outputs.art == 'true' && github.event.inputs.dry_run != 'true'
+        with:
+          name: scene-artwork
+          path: media/scenes
+          if-no-files-found: ignore
+
+      # The scene step above is allowed to fail — a bank picture is optional,
+      # and an item picture waits for the next night — and when it dies before
+      # writing the SQL, this step must not be the one that ends the night: the
+      # items are already written and checked, and the pull request is next.
+      - name: point the database at the artwork
+        if: steps.keys.outputs.art == 'true' && steps.keys.outputs.storage == 'true' && steps.keys.outputs.db == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ ! -f batches/scenes.sql ]; then
+            {
+              echo
+              echo '### Artwork not applied'
+              echo
+              echo 'The scene step did not write `batches/scenes.sql` (see its output above);'
+              echo 'the database was not pointed at any new picture tonight.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f batches/scenes.sql
 
       # batches/scenes.sql is included when the scene step wrote it, so the
       # pull request also records which pictures the database was pointed at.

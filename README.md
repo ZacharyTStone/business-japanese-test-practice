@@ -64,6 +64,10 @@ will quietly drop, because writing a document that contains the answer is much
 easier than writing a pair that have to be combined — and the result looks fine
 until you notice the audio is decorative.
 
+`gazou_haaku` is deliberately rare (one a night at most) and expensive in a way
+no other type is: each item gets a picture drawn for it, reviewed against its
+own four descriptions, and the item is not served until that picture exists.
+
 `blockers.md` lists the work that is finished up to the point where it needs an
 API key, a vendor account, or a person to listen to something.
 
@@ -115,7 +119,7 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt selftest` | Offline check of schema/role validation and the DB (no key). |
 | `bjt gen --type T --level J2` | Generate one item, proofread and gate it, store it, print it. |
 | `bjt batch --type T --level J2 -n 10` | **The main path.** Generate a batch offline, proofread and gate each item, run the whole-batch checks, write a bundle. |
-| `bjt plan` | What the bank needs next: nine types × three levels, emptiest shelf first. No key. |
+| `bjt plan` | What the bank needs next: ten types × three levels, reading shelves first, then emptiest shelf first. No key. |
 | `bjt nightly [--budget N]` | Run that work order — generate, gate, check, and write the SQL. What the nightly job calls. |
 | `bjt importbatch <file.source.json>` | Same checks, same bundle, for items written by hand. |
 | `bjt checkbatch <bundle.json> [--show]` | Re-run every offline check over an existing bundle. No key needed. |
@@ -126,7 +130,7 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt publish <bundle.json>` | Turn a checked bundle into idempotent SQL for the database. |
 | `bjt synth <bundle.json>` | Synthesise the bundle's audio offline and write the SQL that points at it. `--provider auto` picks the pinned or configured provider; `--have` skips clips the database already has; `--upload` puts the files in the `audio` bucket. `--provider silent` runs with no vendor account. |
 | `bjt audition` | The cast saying the same eight lines, on a page to listen to; `--voices` adds every voice the model offers, to recast a role by ear. |
-| `bjt scenes` | What the scene bank needs, most-wanted first. `--generate` draws the missing ones and has a judge model review each draft against the brief; `--upload` puts approved art in the bucket; `--sql` points the database at it. |
+| `bjt scenes` | What the scene bank needs, most-wanted first, and every 画像把握 picture the bank owes. `--generate` draws the missing ones and has a judge model review each draft against the brief (and, for a picture, sit the item); `--only bank`/`--only pictures` narrows it; `--upload` puts approved art in the bucket and records refusals there; `--sql` points the database at it, stand-ins included. |
 | `bjt render <bundle.json>` | Render a document stimulus to HTML, to look at while writing one. |
 | `bjt grant <user-id>` | SQL granting or revoking the ad-free unlock, as the service role. |
 | `bjt tester <email>` | SQL letting one email address use the app while it is in testing; `--remove` takes them off. |
@@ -136,7 +140,8 @@ Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
 `BJT_JUDGE_MODEL`, `BJT_DB_PATH`, `BJT_SEEDS_DIR`, `BJT_SEEDTABLE_DIR`,
 `BJT_BATCH_DIR`, `BJT_GEN_EFFORT`, `BJT_SLOT_PATIENCE`, `BJT_GATE_TRIALS`,
 `BJT_IMAGE_MODEL`, `BJT_IMAGE_QUALITY`, `BJT_IMAGE_COMPRESSION`,
-`BJT_SCENE_ATTEMPTS`.
+`BJT_SCENE_ATTEMPTS`, `BJT_SCENE_LIFETIME_ATTEMPTS` (6, over a picture's whole
+life), `BJT_NIGHT_MAX_PICTURES` (4).
 
 Every process that calls the API runs under ceilings it cannot lift from the
 prompt: `BJT_RUN_BUDGET_USD` (default 2, priced from the usage each response

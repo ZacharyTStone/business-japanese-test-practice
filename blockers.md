@@ -272,6 +272,14 @@ A third secret is optional and unlocks the other half of the night:
 first run's pull request item by item before merging it — the whole design
 assumes a person does, and the budget is small so that a person can.
 
+**One setting, still off (2026-09-19).** The job pushes its branch and then
+fails to open the pull request: "GitHub Actions is not permitted to create or
+approve pull requests". Settings → Actions → General → Workflow permissions →
+tick "Allow GitHub Actions to create and approve pull requests". Until then
+each night's branch (`content/nightly-<date>-<run>`) sits unopened, with the
+link in the run summary; `content/nightly-20260919-7` is one such, with five
+items and `scenes.sql` on it.
+
 ---
 
 ## What is not blocked

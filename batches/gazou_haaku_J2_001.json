@@ -1,0 +1,462 @@
+{
+  "bundle_version": 2,
+  "item_type": "gazou_haaku",
+  "level": "J2",
+  "generated_at": "2026-09-19T05:09:05+00:00",
+  "generator_model": "author-composed",
+  "items": [
+    {
+      "id": "917fb25e9a",
+      "item_type": "gazou_haaku",
+      "level": "J2",
+      "seed_cell": {
+        "id": "reception+staff_to_visitor+guiding_visitor@J2",
+        "setting": "reception",
+        "relation": "staff_to_visitor",
+        "function": "guiding_visitor",
+        "level": "J2",
+        "channel": "in_person"
+      },
+      "topic": "受付で来客を奥へ案内する",
+      "stem": "受付の人は何をしていますか。",
+      "options": [
+        {
+          "text": "来客を会議室のほうへ案内しています。",
+          "role": "correct",
+          "why": "受付の人が廊下のほうへ手のひらを向けて方向を示し、来客もそちらを向いている。"
+        },
+        {
+          "text": "来客に入館証を渡しています。",
+          "role": "different_action",
+          "why": "受付でよくある行動だが、絵の中で手渡されている物はなく、手は方向を示している。"
+        },
+        {
+          "text": "来客が受付の人に行き方を教えています。",
+          "role": "wrong_participants",
+          "why": "方向を示しているのは受付の人のほうで、来客はかばんを持って立っているだけ。"
+        },
+        {
+          "text": "打ち合わせを終えた来客を見送っています。",
+          "role": "right_scene_wrong_moment",
+          "why": "同じ受付の場面だが、来客は出口ではなく奥の廊下を向いていて、これから入る場面。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "受付の人が廊下のほうに手のひらを向けて方向を示し、来客がそちらを向いているので、来客を奥へ案内している場面。入館証などの受け渡しは描かれておらず、方向を示しているのは受付の人。来客は出口ではなく奥を向いているので、見送りではなく、これから通す場面である。",
+      "explanation_en": "The receptionist's open-palm gesture down the corridor, with the visitor facing that way, shows the visitor being shown in.",
+      "vocab_notes": [
+        {
+          "term": "案内する",
+          "reading": "あんないする",
+          "meaning": "to show someone the way"
+        },
+        {
+          "term": "入館証",
+          "reading": "にゅうかんしょう",
+          "meaning": "visitor badge"
+        },
+        {
+          "term": "見送る",
+          "reading": "みおくる",
+          "meaning": "to see someone off"
+        }
+      ],
+      "audio": {
+        "narration": "a3990da6dc9586a1",
+        "options": [
+          "12a6417d94fc1758",
+          "dde8847bc9008cc9",
+          "69282f33f91fdb33",
+          "d3cbe53e6dc4565b"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "The reception counter of a Japanese company, seen from the visitor's side of the counter. A receptionist in a dark suit stands behind the counter, body turned toward a corridor on the right, one arm extended with an open palm pointing down that corridor, looking at the visitor. In front of the counter stands one visitor in a coat holding a briefcase, facing the corridor, having just arrived. Nobody is handing anything over; nobody is bowing; the visitor is not walking toward the entrance behind them. The counter is bare. No signs, no readable text anywhere.",
+      "scene_id": "pic_917fb25e9a"
+    },
+    {
+      "id": "66f0315028",
+      "item_type": "gazou_haaku",
+      "level": "J2",
+      "seed_cell": {
+        "id": "meeting_room+subordinate_to_superior+presenting_at_whiteboard@J2",
+        "setting": "meeting_room",
+        "relation": "subordinate_to_superior",
+        "function": "presenting_at_whiteboard",
+        "level": "J2",
+        "channel": "in_person"
+      },
+      "topic": "会議室でホワイトボードを使って説明する",
+      "stem": "ホワイトボードの前に立っている人は何をしていますか。",
+      "options": [
+        {
+          "text": "会議が終わってホワイトボードを消しています。",
+          "role": "different_action",
+          "why": "手にはマーカーを持ち、図を指さしているので、消しているのではなく説明している。"
+        },
+        {
+          "text": "図を示しながら座っている人たちに説明しています。",
+          "role": "correct",
+          "why": "立っている人がボードの図を指さし、座っている三人がそれを見て聞いている。"
+        },
+        {
+          "text": "受付で来客に建物の場所を説明しています。",
+          "role": "adjacent_setting",
+          "why": "説明している点は合っているが、場所は会議室で、相手は席に着いた社内の人たち。"
+        },
+        {
+          "text": "座っている上司が立っている部下に指示を出しています。",
+          "role": "wrong_participants",
+          "why": "話しているのは立っている若手のほうで、座っている人たちは聞く側。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "立っている若手社員がマーカーを持ち、ホワイトボードの図を指さして、テーブルに座った三人に向かって説明している場面。消している様子はなく、場所は受付ではなく社内の会議室で、話しているのは座っている側ではなく立っている側である。",
+      "explanation_en": "Marker in hand and pointing at the chart, the standing employee is explaining to the seated colleagues, not erasing or being instructed.",
+      "vocab_notes": [
+        {
+          "term": "指示を出す",
+          "reading": "しじをだす",
+          "meaning": "to give instructions"
+        },
+        {
+          "term": "図",
+          "reading": "ず",
+          "meaning": "diagram, chart"
+        }
+      ],
+      "audio": {
+        "narration": "abaf9651a101be6d",
+        "options": [
+          "7e8c0a5f1bcb6461",
+          "67d2e6a8af4095dc",
+          "8e64c79fdcd93cc6",
+          "99fb646d0ecebcbc"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "A small meeting room in a Japanese office. A young employee stands at a whiteboard on the left, marker in one hand, the other hand pointing at a simple hand-drawn bar chart on the board made only of blank rectangles of different heights, no letters or numbers. Three older colleagues sit at the table facing the board, one with arms folded, listening. Nobody is erasing the board and nobody at the table is standing or speaking. Papers on the table are blank. No screen, no signs, no readable text.",
+      "scene_id": "pic_66f0315028"
+    },
+    {
+      "id": "09fa4bde9a",
+      "item_type": "gazou_haaku",
+      "level": "J2",
+      "seed_cell": {
+        "id": "client_office+staff_to_client+exchanging_business_cards@J2",
+        "setting": "client_office",
+        "relation": "staff_to_client",
+        "function": "exchanging_business_cards",
+        "level": "J2",
+        "channel": "in_person"
+      },
+      "topic": "取引先の会議室で名刺交換をする",
+      "stem": "二人は何をしていますか。",
+      "options": [
+        {
+          "text": "契約書にサインをしています。",
+          "role": "different_action",
+          "why": "二人は立って小さなカードを差し出し合っており、ペンも書類への記入も描かれていない。"
+        },
+        {
+          "text": "受付で入館の手続きをしています。",
+          "role": "adjacent_setting",
+          "why": "取引先の会議室のテーブルのそばで向かい合っており、受付のカウンターはない。"
+        },
+        {
+          "text": "名刺を交換しています。",
+          "role": "correct",
+          "why": "二人が両手で名刺を差し出し合い、軽くお辞儀をしている。"
+        },
+        {
+          "text": "席に着いて打ち合わせを始めています。",
+          "role": "right_scene_wrong_moment",
+          "why": "打ち合わせの前の場面で、二人はまだ立っていて、椅子は引かれていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "二人が立ったまま、両手で名刺を差し出し合い、軽く頭を下げているので、名刺交換の場面。ペンや記入の様子はなく、場所は受付ではなく取引先の会議室で、まだ席には着いていない。",
+      "explanation_en": "Both standing, both holding out a card with two hands and bowing slightly: the moment of exchanging business cards, before the meeting begins.",
+      "vocab_notes": [
+        {
+          "term": "名刺交換",
+          "reading": "めいしこうかん",
+          "meaning": "exchanging business cards"
+        },
+        {
+          "term": "席に着く",
+          "reading": "せきにつく",
+          "meaning": "to take one's seat"
+        }
+      ],
+      "audio": {
+        "narration": "0d0158d4833770f0",
+        "options": [
+          "ac6371692996e71c",
+          "1f57603708c2ecb2",
+          "56564e56403ead63",
+          "3dad80b2e0eaaa5c"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "A meeting room at a client company. Two people in business suits stand facing each other beside a table, each holding out a small blank white card with both hands at chest height, slightly bowing toward each other, the cards passing between them. Nobody is seated; the chairs are pushed in. On the table lie two closed folders and two glasses of water. There is no pen, nobody is writing, and nothing is being signed. No reception counter is visible. No signs, logos or readable text.",
+      "scene_id": "pic_09fa4bde9a"
+    },
+    {
+      "id": "1a8cd70899",
+      "item_type": "gazou_haaku",
+      "level": "J2",
+      "seed_cell": {
+        "id": "office_floor+peer_to_peer+handing_documents@J2",
+        "setting": "office_floor",
+        "relation": "peer_to_peer",
+        "function": "handing_documents",
+        "level": "J2",
+        "channel": "in_person"
+      },
+      "topic": "席にいる同僚に書類を渡す",
+      "stem": "立っている人は何をしていますか。",
+      "options": [
+        {
+          "text": "座っている同僚の机の上を片付けています。",
+          "role": "different_action",
+          "why": "手に持っているのは書類の束で、机の上の物には触れていない。"
+        },
+        {
+          "text": "座っている同僚に書類を渡しています。",
+          "role": "correct",
+          "why": "立っている人が書類を差し出し、座っている人がそれを受け取ろうと手を伸ばしている。"
+        },
+        {
+          "text": "渡した書類を同僚と一緒に確認しています。",
+          "role": "right_scene_wrong_moment",
+          "why": "書類はまだ立っている人の手にあり、二人で読んでいる場面ではない。"
+        },
+        {
+          "text": "座っている人が立っている人に書類を渡しています。",
+          "role": "wrong_participants",
+          "why": "書類を持って差し出しているのは立っている人で、座っている人は受け取る側。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "立っている人が書類の束を差し出し、座っている同僚が振り向いて受け取ろうとしている場面なので、書類を渡しているところ。片付けている様子はなく、書類はまだ手の中にあって一緒に確認する前で、渡しているのは立っている人のほうである。",
+      "explanation_en": "The standing colleague holds the papers out and the seated one reaches for them: handing over, not tidying or reading together, and in that direction.",
+      "vocab_notes": [
+        {
+          "term": "片付ける",
+          "reading": "かたづける",
+          "meaning": "to tidy up"
+        },
+        {
+          "term": "確認する",
+          "reading": "かくにんする",
+          "meaning": "to check, to confirm"
+        }
+      ],
+      "audio": {
+        "narration": "1e71f4a4c3270528",
+        "options": [
+          "e15467a2cf5f15e0",
+          "b4902132efe6c826",
+          "a810efe4a500aa1f",
+          "049d2b679a2d21ec"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "An open-plan Japanese office floor. One employee stands beside a desk holding out a thin stack of blank papers toward a colleague who is seated at that desk; the seated colleague has turned in the chair and is reaching up to take the papers with one hand, looking at the standing person. The papers are still in the standing person's hand, not yet on the desk. The desk holds only a closed laptop and a cup. Nobody is tidying the desk, and neither person is reading the papers together. Other desks in the background are empty. No signs or readable text.",
+      "scene_id": "pic_1a8cd70899"
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "a3990da6dc9586a1",
+      "item_id": "917fb25e9a",
+      "kind": "narration",
+      "index": null,
+      "text": "受付の人は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "12a6417d94fc1758",
+      "item_id": "917fb25e9a",
+      "kind": "option",
+      "index": 0,
+      "text": "来客を会議室のほうへ案内しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "dde8847bc9008cc9",
+      "item_id": "917fb25e9a",
+      "kind": "option",
+      "index": 1,
+      "text": "来客に入館証を渡しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "69282f33f91fdb33",
+      "item_id": "917fb25e9a",
+      "kind": "option",
+      "index": 2,
+      "text": "来客が受付の人に行き方を教えています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d3cbe53e6dc4565b",
+      "item_id": "917fb25e9a",
+      "kind": "option",
+      "index": 3,
+      "text": "打ち合わせを終えた来客を見送っています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "abaf9651a101be6d",
+      "item_id": "66f0315028",
+      "kind": "narration",
+      "index": null,
+      "text": "ホワイトボードの前に立っている人は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "7e8c0a5f1bcb6461",
+      "item_id": "66f0315028",
+      "kind": "option",
+      "index": 0,
+      "text": "会議が終わってホワイトボードを消しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "67d2e6a8af4095dc",
+      "item_id": "66f0315028",
+      "kind": "option",
+      "index": 1,
+      "text": "図を示しながら座っている人たちに説明しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8e64c79fdcd93cc6",
+      "item_id": "66f0315028",
+      "kind": "option",
+      "index": 2,
+      "text": "受付で来客に建物の場所を説明しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "99fb646d0ecebcbc",
+      "item_id": "66f0315028",
+      "kind": "option",
+      "index": 3,
+      "text": "座っている上司が立っている部下に指示を出しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0d0158d4833770f0",
+      "item_id": "09fa4bde9a",
+      "kind": "narration",
+      "index": null,
+      "text": "二人は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ac6371692996e71c",
+      "item_id": "09fa4bde9a",
+      "kind": "option",
+      "index": 0,
+      "text": "契約書にサインをしています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1f57603708c2ecb2",
+      "item_id": "09fa4bde9a",
+      "kind": "option",
+      "index": 1,
+      "text": "受付で入館の手続きをしています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "56564e56403ead63",
+      "item_id": "09fa4bde9a",
+      "kind": "option",
+      "index": 2,
+      "text": "名刺を交換しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3dad80b2e0eaaa5c",
+      "item_id": "09fa4bde9a",
+      "kind": "option",
+      "index": 3,
+      "text": "席に着いて打ち合わせを始めています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1e71f4a4c3270528",
+      "item_id": "1a8cd70899",
+      "kind": "narration",
+      "index": null,
+      "text": "立っている人は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e15467a2cf5f15e0",
+      "item_id": "1a8cd70899",
+      "kind": "option",
+      "index": 0,
+      "text": "座っている同僚の机の上を片付けています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b4902132efe6c826",
+      "item_id": "1a8cd70899",
+      "kind": "option",
+      "index": 1,
+      "text": "座っている同僚に書類を渡しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a810efe4a500aa1f",
+      "item_id": "1a8cd70899",
+      "kind": "option",
+      "index": 2,
+      "text": "渡した書類を同僚と一緒に確認しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "049d2b679a2d21ec",
+      "item_id": "1a8cd70899",
+      "kind": "option",
+      "index": 3,
+      "text": "座っている人が立っている人に書類を渡しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "pic_09fa4bde9a",
+    "pic_1a8cd70899",
+    "pic_66f0315028",
+    "pic_917fb25e9a"
+  ]
+}

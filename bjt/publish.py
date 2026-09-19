@@ -101,14 +101,19 @@ def bundle_sql(bundle: dict, bundle_id: str) -> str:
     ]
 
     scenes = sorted({it["scene_id"] for it in items if it.get("scene_id")})
+    # A per-item picture is labelled by its item's topic; a bank scene by the
+    # seed table. Either way image_path is left alone here.
+    picture_labels = {it["scene_id"]: it.get("topic", "") for it in items
+                      if it.get("scene_id") and it.get("image_brief")}
     if scenes:
         parts += [
-            "-- Scenes are a shared bank; image_path stays null until the art exists,",
-            "-- and is deliberately not overwritten by a re-publish.",
+            "-- Scenes are a shared bank (or, for 画像把握, one picture per item);",
+            "-- image_path stays null until the art exists, and is deliberately not",
+            "-- overwritten by a re-publish.",
             _upsert(
                 "scenes",
                 ["id", "label_ja"],
-                [[s, labels.get(s, "")] for s in scenes],
+                [[s, picture_labels.get(s) or labels.get(s, "")] for s in scenes],
                 ["id"],
             ),
             "",

@@ -103,6 +103,13 @@ def to_bundle_item(item: dict) -> dict:
         if key in item:
             out[key] = item[key]
 
+    # A type whose picture is its own: the brief travels with the item, and
+    # the scene id is derived from the item id so the picture job, the
+    # database and the app all find it under one name (bjt/scenes.py).
+    if item.get("image_brief"):
+        out["image_brief"] = item["image_brief"]
+        out["scene_id"] = f"pic_{iid}"
+
     # The difficulty prior: how often the difficulty model (a deliberately weak
     # one, bjt/fidelity/difficulty.py) answered this item correctly with the
     # full stimulus — or, when that probe did not run, how often the
@@ -388,6 +395,8 @@ def _as_generator_shape(bundle_item: dict) -> dict:
     it.pop("audio", None)
     it.pop("id", None)
     it.pop("model_p_correct", None)
+    if it.get("image_brief"):
+        it.pop("scene_id", None)  # derived by the bundle, never emitted by the model
 
     field = schemas.DOCUMENT_FIELDS.get(it.get("item_type", ""))
     documents = it.pop("documents", None)

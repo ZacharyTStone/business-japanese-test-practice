@@ -474,3 +474,30 @@ def test_the_cli_names_the_provider_it_used(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "(silent)" in out and "SILENT placeholder" in out
     assert (tmp_path / "a.sql").exists()
+
+
+def test_a_pictures_descriptions_are_read_by_the_narrator():
+    """The four descriptions of a 画像把握 picture are heard in the narrator's
+    voice, as on the exam — nobody drawn is saying them — and in room tone."""
+    from bjt import fixtures
+    from bjt.tts import plan as tts_plan
+    item = dict(fixtures.FIXTURES["gazou_haaku"], seed_cell={"relation": "staff_to_visitor"})
+    clips = tts_plan.plan_item(item, "x")
+    options = [c for c in clips if c.kind == "option"]
+    assert len(options) == 4
+    assert {c.voice for c in options} == {tts_plan.NARRATOR_VOICE}
+    assert {c.channel for c in options} == {"in_person"}
+    assert [c for c in clips if c.kind == "narration"]
+
+
+def test_a_picture_item_carries_its_brief_and_a_scene_of_its_own():
+    from bjt import batch as batchmod
+    from bjt import fixtures, scenes
+    item = dict(fixtures.FIXTURES["gazou_haaku"],
+                seed_cell={"id": "reception+staff_to_visitor+guiding_visitor@J2"})
+    out = batchmod.to_bundle_item(item)
+    assert out["scene_id"] == scenes.picture_scene_id(out["id"])
+    assert out["image_brief"] == item["image_brief"]
+    # ...and re-validates as the model emitted it, without the derived scene id.
+    from bjt import schemas
+    assert schemas.validate_item("gazou_haaku", batchmod._as_generator_shape(out)) == []

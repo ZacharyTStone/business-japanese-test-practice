@@ -376,6 +376,38 @@ def judge_synthetic(rendered_items: list[str], model: Optional[str] = None) -> d
     return _structured(system, user, schema, model or config.JUDGE_MODEL, max_tokens=4000, effort="high")
 
 
+# ----- answering from a picture ------------------------------------------
+
+def answer_from_image(image: bytes, media_type: str, question: str, options: list[str],
+                      model: Optional[str] = None) -> dict:
+    """Look at a picture and pick which of the options describes it.
+
+    The visual half of the answerability gate for 画像把握 (bjt/scene_art.py):
+    the same shape as `answer_choice`, with the picture where the stem would
+    be. Low effort, small ceiling, run a few times per draft like the text
+    gate; the draft ships only if every trial picks the marked option.
+    """
+    import base64
+
+    numbered = "\n".join(f"{i}. {t}" for i, t in enumerate(options))
+    content = [
+        {"type": "image", "source": {"type": "base64", "media_type": media_type,
+                                     "data": base64.b64encode(image).decode("ascii")}},
+        {"type": "text", "text": (
+            f"{question}\n\nOptions:\n{numbered}\n\n"
+            "Look at the picture and choose the single option that describes what it "
+            "shows. Return its 0-based index."
+        )},
+    ]
+    system = (
+        "You are a highly proficient reader of Japanese taking a business-Japanese "
+        "listening test in which a picture is shown and four descriptions are heard. "
+        "Answer from what is actually visible. If none fits well, pick the closest."
+    )
+    return _structured(system, content, _ANSWER_SCHEMA, model or config.JUDGE_MODEL,
+                       max_tokens=1500, effort="low")
+
+
 # ----- scene artwork review ---------------------------------------------
 
 def review_scene_image(image: bytes, media_type: str, brief: str, rules: dict[str, str],
