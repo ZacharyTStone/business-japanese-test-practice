@@ -1,0 +1,122 @@
+{
+  "bundle_version": 2,
+  "item_type": "joukyou_haaku",
+  "level": "J3",
+  "generated_at": "2026-09-19T05:33:30+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "fd6bb953af",
+      "item_type": "joukyou_haaku",
+      "level": "J3",
+      "seed_cell": {
+        "id": "phone_with_notice+superior_to_subordinate+check_condition@J3",
+        "setting": "phone_with_notice",
+        "relation": "superior_to_subordinate",
+        "function": "check_condition",
+        "level": "J3",
+        "channel": "phone"
+      },
+      "topic": "経費精算の証憑ルール",
+      "stem": "部下が経理部からの通知を見ているところへ、上司から電話がかかってきた。上司は「さっきのタクシー代なんだけど、五千円ぐらいだった。会社のSuicaで払ったんだが、領収書は出なかったんだ。今日中に精算したいんだけど、どうすればいい？」と言っている。このあと、どうすればいいですか。",
+      "options": [
+        {
+          "text": "一万円以上の支出の規定に従い、領収書の原本を添付するよう伝える。",
+          "role": "right_action_wrong_condition",
+          "why": "領収書原本の添付は一万円以上の支出に適用される規定で、今回のタクシー代は五千円のためこの条件を満たさない。"
+        },
+        {
+          "text": "交通系ICカードでの支払い分なので、利用明細を印刷して添付するよう伝える。",
+          "role": "correct",
+          "why": "通知は交通系ICカードでの支払い分について、領収書の代わりに利用明細を印刷して添付すると定めており、上司の支払い方法はこれに当てはまる。"
+        },
+        {
+          "text": "部下が経理部に連絡し、利用明細を代わりに印刷して提出してもらう。",
+          "role": "wrong_action_owner",
+          "why": "利用明細の準備と提出は精算する本人である上司が行うべきことで、部下や経理部が代行するものではない。"
+        },
+        {
+          "text": "領収書をなくしているので、支出報告書に理由を記入し、上長の承認を得るよう伝える。",
+          "role": "ignores_the_document",
+          "why": "この対応は現金払いで領収書を紛失した場合の規定であり、今回は会社のSuicaで支払っているため、通知は利用明細の添付という別の対応を求めている。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "通知は経費精算の証憑について、金額と支払い方法によって扱いを分けている。一万円以上は領収書原本、一万円未満で領収書を紛失した場合は支出報告書、交通系ICカードでの支払いは利用明細と、三つの規定がある。上司の電話から、金額は五千円で一万円未満だが、支払い方法が会社のSuicaだと分かるため、現金紛失時の規定ではなく、ICカードの規定が適用される。一万円以上の規定は金額条件を満たさず誤り。支出報告書の案は支払い方法を見落としている。経理部や部下が代わりに動く必要はなく、当人である上司が利用明細を用意すべきである。",
+      "explanation_en": "The notice splits receipt rules by amount and payment method; the phone call reveals the fare was paid via company IC card, which triggers the usage-statement rule rather than the lost-receipt or high-amount rules.",
+      "vocab_notes": [
+        {
+          "term": "精算",
+          "reading": "せいさん",
+          "meaning": "settlement of accounts / reimbursement"
+        },
+        {
+          "term": "領収書",
+          "reading": "りょうしゅうしょ",
+          "meaning": "receipt"
+        },
+        {
+          "term": "利用明細",
+          "reading": "りようめいさい",
+          "meaning": "usage statement / detailed record of use"
+        }
+      ],
+      "audio": {
+        "narration": "87aa241f1529313d",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "memo_notice",
+          "title": "経費精算における証憑の取り扱いについて",
+          "meta": [
+            {
+              "label": "発信者",
+              "value": "経理部"
+            },
+            {
+              "label": "発信日",
+              "value": "四月一日"
+            },
+            {
+              "label": "対象",
+              "value": "全社員"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "経費精算における証憑の取り扱いを、本日より次のとおり変更します。"
+            },
+            {
+              "type": "numbered",
+              "items": [
+                "一万円以上の支出は、領収書の原本を添付してください。",
+                "一万円未満の支出で領収書を紛失した場合は、支出報告書に理由を記入し、上長の承認を得てください。",
+                "交通系ICカードでの支払い分は、領収書の代わりに利用明細を印刷して添付してください。"
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "87aa241f1529313d",
+      "item_id": "fd6bb953af",
+      "kind": "narration",
+      "index": null,
+      "text": "部下が経理部からの通知を見ているところへ、上司から電話がかかってきた。上司は「さっきのタクシー代なんだけど、五千円ぐらいだった。会社のSuicaで払ったんだが、領収書は出なかったんだ。今日中に精算したいんだけど、どうすればいい？」と言っている。このあと、どうすればいいですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_phone_desk"
+  ]
+}

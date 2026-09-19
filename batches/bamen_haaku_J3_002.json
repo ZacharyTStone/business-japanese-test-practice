@@ -1,0 +1,88 @@
+{
+  "bundle_version": 2,
+  "item_type": "bamen_haaku",
+  "level": "J3",
+  "generated_at": "2026-09-19T05:27:33+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "b52928d04e",
+      "item_type": "bamen_haaku",
+      "level": "J3",
+      "seed_cell": {
+        "id": "dining+superior_to_subordinate+identify_speaker_role@J3",
+        "setting": "dining",
+        "relation": "superior_to_subordinate",
+        "function": "identify_speaker_role",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "会食で新人をねぎらう上司",
+      "stem": "会食の席で、上司と部下たちが同じテーブルを囲んでいます。グラスを片手に、ある人がこう話しています。「今年配属されたばかりのみんなが、こうして仕事の話を楽しそうにしているのを見ると安心するよ。困ったことがあったら、いつでも遠慮なく相談してほしい。」この人はどの立場の人ですか。",
+      "options": [
+        {
+          "text": "人事部から出席している担当者",
+          "role": "plausible_but_unmentioned",
+          "why": "配属や相談という話題から人事部を連想しやすいが、人事部から来たことは一言も述べられていない。"
+        },
+        {
+          "text": "会の進行を仕切る幹事役の若手社員",
+          "role": "adjacent_setting",
+          "why": "乾杯や締めの挨拶をする幹事の言葉ではなく、部下の様子を見て安心するという上司特有の視点で話しており、幹事の発言ではない。"
+        },
+        {
+          "text": "部下たちをまとめる立場の上司",
+          "role": "correct",
+          "why": "「配属されたばかりのみんな」と部下を三人称で指し、彼らの様子を見て安心し相談を促す言い方から、まとめる立場の上司だと分かる。"
+        },
+        {
+          "text": "今年配属されたばかりの新入社員本人",
+          "role": "wrong_participant",
+          "why": "「配属されたばかりのみんな」と話している対象として三人称で言及されており、話している本人がその新入社員ではあり得ない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "「配属されたばかりのみんな」という三人称の言い方と、「困ったことがあったら相談してほしい」という声かけから、話しているのは部下たちを束ねる上司だと分かる。新入社員本人ならこのような三人称の言い方はしない。幹事の発言は会の進行に関するものになるはずで、ここでは進行の話は一切出ていない。人事部担当者だという情報もどこにも述べられていない。",
+      "explanation_en": "The third-person reference to newly assigned staff and the offer to listen to their concerns mark the speaker as their supervisor.",
+      "vocab_notes": [
+        {
+          "term": "配属される",
+          "reading": "はいぞくされる",
+          "meaning": "to be assigned (to a department)"
+        },
+        {
+          "term": "ねぎらう",
+          "reading": "ねぎらう",
+          "meaning": "to show appreciation for someone's effort"
+        },
+        {
+          "term": "遠慮なく",
+          "reading": "えんりょなく",
+          "meaning": "without hesitation"
+        }
+      ],
+      "audio": {
+        "narration": "29ae54fd4470a9cd",
+        "options": [],
+        "dialogue": []
+      },
+      "scene_id": "scene_izakaya_table",
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "29ae54fd4470a9cd",
+      "item_id": "b52928d04e",
+      "kind": "narration",
+      "index": null,
+      "text": "会食の席で、上司と部下たちが同じテーブルを囲んでいます。グラスを片手に、ある人がこう話しています。「今年配属されたばかりのみんなが、こうして仕事の話を楽しそうにしているのを見ると安心するよ。困ったことがあったら、いつでも遠慮なく相談してほしい。」この人はどの立場の人ですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_izakaya_table"
+  ]
+}
