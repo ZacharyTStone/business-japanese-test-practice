@@ -644,7 +644,12 @@ export default function Practice() {
                     pressed && !revealed && { opacity: 0.85 },
                     isChosen && !revealed && styles.optionPending,
                     show && (isAnswer ? styles.optionCorrect : styles.optionWrong),
-                    dim && { opacity: 0.5 },
+                    // Set aside, not faded. After the answer these two are
+                    // neither the choice nor the key, and they step back by
+                    // going flat and grey — which leaves them legible, since
+                    // "what were the other two?" is a question worth being
+                    // able to answer.
+                    dim && styles.optionAside,
                   ]}
                 >
                   <View style={styles.optionHeader}>
@@ -682,7 +687,9 @@ export default function Practice() {
                       </Text>
                     ) : null}
                   </View>
-                  {optionTextHidden ? null : <Text style={type.option}>{option.text}</Text>}
+                  {optionTextHidden ? null : (
+                    <Text style={[type.option, dim && { color: colors.muted }]}>{option.text}</Text>
+                  )}
                 </Pressable>
               );
             })}
@@ -892,6 +899,7 @@ const styles = StyleSheet.create({
   // A pointer over an option that can still be chosen: the card lifts and its
   // edge takes the soft accent, which is "this one, if you press" without
   // the full border that means "this one, pressed".
+  optionAside: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
   optionHover: { borderColor: colors.accentSoft, ...shadow.cardRaised },
   optionPending: { borderColor: colors.accent },
   optionCorrect: { borderColor: colors.correct, backgroundColor: colors.correctSoft },

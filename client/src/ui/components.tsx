@@ -92,9 +92,24 @@ export function Button({
   sub?: string;
   icon?: IconName;
 }) {
-  const labelColor =
-    tone === "primary" ? colors.onAccent : tone === "onAccent" ? colors.accentDeep : colors.accent;
-  const subColor = tone === "primary" ? colors.onAccentMuted : colors.muted;
+  // A button that cannot be pressed is drawn as one, rather than as a faded
+  // copy of a button that can: the fill goes flat, the label goes grey, the
+  // shadow goes. Fading it left every colour on the card lying about its own
+  // contrast — and, on a screen where something else is also faded, made the
+  // two indistinguishable. The owner asked for state to be drawn rather than
+  // dimmed (2026-09-20).
+  const labelColor = disabled
+    ? colors.muted
+    : tone === "primary"
+      ? colors.onAccent
+      : tone === "onAccent"
+        ? colors.accentDeep
+        : colors.accent;
+  const subColor = disabled
+    ? colors.muted
+    : tone === "primary"
+      ? colors.onAccentMuted
+      : colors.muted;
   // The face of the button scales under the finger; the Pressable around it
   // is the hit area and does not move, so a press that started on the edge
   // is still on the button when it lifts.
@@ -109,7 +124,6 @@ export function Button({
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
       disabled={disabled}
-      style={disabled ? styles.disabled : undefined}
     >
       {({ pressed }) => (
         <Animated.View
@@ -118,8 +132,11 @@ export function Button({
             tone === "primary" && styles.buttonPrimary,
             tone === "secondary" && styles.buttonSecondary,
             tone === "onAccent" && styles.buttonOnAccent,
+            // Last of the fills, so it replaces the tone's rather than sitting
+            // over it at half strength.
+            disabled && styles.buttonOff,
             hovered && !disabled && (tone === "primary" ? styles.buttonPrimaryHover : styles.buttonHover),
-            pressed && styles.pressed,
+            pressed && !disabled && styles.pressed,
             press.style,
           ]}
         >
@@ -443,11 +460,19 @@ export function Chip({
         styles.chip,
         selected && styles.chipOn,
         hovered && !selected && !disabled && styles.chipHover,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.chipOff,
       ]}
     >
-      <Text style={[styles.chipText, selected && styles.chipTextOn]}>{label}</Text>
+      <Text
+        style={[
+          styles.chipText,
+          selected && styles.chipTextOn,
+          disabled && styles.chipTextOff,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -593,7 +618,16 @@ const styles = StyleSheet.create({
   buttonLabel: { fontSize: 16, fontWeight: "700", letterSpacing: 0.1 },
   buttonSub: { fontSize: 12, ...tabular },
   pressed: { opacity: 0.85 },
-  disabled: { opacity: 0.45 },
+  // Off, not faded: a flat surface inside a hairline, with no shadow to lift
+  // it. `muted` on `surfaceAlt` is 4.84:1, so the label is still a label —
+  // which is the half that dimming to 45% gives up.
+  buttonOff: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: space.xl },
   noticeWarn: { backgroundColor: colors.surfaceAlt },
   noticeHead: { flexDirection: "row", alignItems: "center", gap: space.md },
@@ -639,6 +673,10 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   chipOn: { backgroundColor: colors.accentDeep },
+  // Same rule as the button: a chip that is off is drawn flat and grey rather
+  // than faded, so nothing on the screen is asked to read through a veil.
+  chipOff: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, shadowOpacity: 0, elevation: 0 },
+  chipTextOff: { color: colors.muted },
   chipHover: shadow.cardRaised,
   dateInput: {
     fontSize: 16,

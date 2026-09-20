@@ -105,6 +105,39 @@ def test_the_hero_card_carries_its_own_fill():
     )
 
 
+#: The conditions that describe a lasting state rather than a finger on the
+#: screen. `pressed` and `hovered` are not here on purpose: they last as long
+#: as the touch does, and a momentary dip is what direct manipulation looks
+#: like everywhere.
+STATE_TESTS = ("disabled &&", "disabled ?", "dim &&", "dim ?")
+
+
+def test_a_state_that_lasts_is_drawn_rather_than_dimmed():
+    """A control that cannot be pressed, or an option no longer in play, is
+    drawn as one: a flat fill, a grey label, no shadow.
+
+    Fading it to a fraction was doing three things at once, and getting two of
+    them wrong. It made every colour underneath lie about its own contrast, so
+    the ratios this file checks stopped describing the screen. It made two
+    different states — off, and not-yet-loaded — look identical. And on a card
+    whose fill was itself only half there it left text on nothing at all. The
+    owner asked for state to be a change of UI rather than a change of opacity
+    (2026-09-20).
+    """
+    offences = []
+    for path in sorted((pathlib.Path(__file__).resolve().parents[1] / "client").rglob("*.tsx")):
+        if "node_modules" in path.parts:
+            continue
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if "opacity" not in line:
+                continue
+            if any(flag in line for flag in STATE_TESTS):
+                offences.append(f"{path.relative_to(path.parents[2])}:{n}: {line.strip()}")
+    assert not offences, (
+        "a lasting state is dimmed rather than drawn:\n  " + "\n  ".join(offences)
+    )
+
+
 def test_muted_is_quieter_than_loud_but_still_text():
     """Muted has a job: it is the second line, and it has to look like one.
 

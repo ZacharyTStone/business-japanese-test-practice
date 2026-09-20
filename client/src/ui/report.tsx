@@ -86,6 +86,9 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
   }
 
   const busy = stage === "sending";
+  /** Whether the press does anything: a reason is chosen and nothing is in
+   *  flight. One name, so the style below reads as a state and not as a sum. */
+  const canSend = Boolean(reason) && !busy;
   return (
     <View style={styles.panel}>
       <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
@@ -135,16 +138,21 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: !reason || busy }}
+          accessibilityState={{ disabled: !canSend }}
           onPress={send}
-          disabled={!reason || busy}
+          disabled={!canSend}
           style={({ pressed }) => [
             styles.send,
-            (!reason || busy) && { opacity: 0.5 },
-            pressed && { opacity: 0.85 },
+            // Drawn off rather than faded, as everywhere else: until a reason
+            // is chosen this is not a button, and it should look like one that
+            // is waiting rather than one that is half there.
+            !canSend && styles.sendOff,
+            pressed && canSend && { opacity: 0.85 },
           ]}
         >
-          <Text style={styles.sendText}>{busy ? t("report_sending") : t("report_send")}</Text>
+          <Text style={[styles.sendText, !canSend && styles.sendTextOff]}>
+            {busy ? t("report_sending") : t("report_send")}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -182,5 +190,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xl,
     paddingVertical: space.md,
   },
+  sendOff: { backgroundColor: colors.surfaceAlt, borderWidth: 1.5, borderColor: colors.border },
   sendText: { color: colors.onAccent, fontSize: 14, fontWeight: "700" },
+  sendTextOff: { color: colors.muted },
 });
