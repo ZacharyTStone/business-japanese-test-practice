@@ -50,16 +50,21 @@ export function GradientCard({
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
+  // The gradient needs an id of its own. Two of these can be in the document
+  // at once — the tab stack keeps 今日 mounted behind the result screen — and
+  // two paint servers sharing one id is a reference that resolves to whichever
+  // the browser saw first, and to nothing at all when that one unmounts.
+  const fill = `heroFill${React.useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   return (
     <View style={[styles.gradientCard, style]}>
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
         <Defs>
-          <LinearGradient id="heroFill" x1="0" y1="0" x2="1" y2="1">
+          <LinearGradient id={fill} x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor={colors.accentDeep} />
             <Stop offset="1" stopColor={colors.accentInk} />
           </LinearGradient>
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroFill)" />
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${fill})`} />
         {/* Two soft lights, low on the right, where no text sits. They are
             what stops a flat fill reading as a coloured rectangle; at this
             opacity they take nothing measurable off the contrast of the
@@ -557,6 +562,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: space.xl,
     overflow: "hidden",
+    // The fill is the card's own, and the gradient above it is decoration.
+    // This card carries two weights of text in colours picked for a violet
+    // ground (see theme.ts: "an accent fill that carries text is accentDeep
+    // or darker"), and until this line the only thing keeping that rule was
+    // an SVG paint server. A browser that drops it — the frame before it
+    // rasterises, a composited layer it declines to repaint — left white text
+    // and pale violet text on the page's own near-white, which is a hero
+    // nobody can read; reported from a phone (2026-09-20). `accentDeep` is
+    // the gradient's own light end, so nothing changes when it does paint.
+    backgroundColor: colors.accentDeep,
     ...shadow.hero,
   },
   button: {

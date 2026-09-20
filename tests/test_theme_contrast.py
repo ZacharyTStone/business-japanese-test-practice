@@ -79,6 +79,32 @@ def test_text_on_an_accent_fill_is_readable(text, fill):
     )
 
 
+def test_the_hero_card_carries_its_own_fill():
+    """The contrast above is only true if the violet is actually there.
+
+    The hero draws a gradient over itself with an SVG paint server, and for a
+    while that was the *only* thing painting it: `gradientCard` set no
+    background at all. A browser that declines to paint the paint server — the
+    frame before it rasterises, a composited layer it does not repaint — left
+    `onAccent` white and `onAccentMuted` pale violet on the page's own
+    near-white, which is a hero nobody can read. Reported from a phone and
+    reproduced by deleting the `<svg>` from the built page (2026-09-20).
+
+    So the fill is a property of the card, and the check is that it is one of
+    the fills the test above approves rather than any violet at all.
+    """
+    source = (pathlib.Path(__file__).resolve().parents[1]
+              / "client" / "src" / "ui" / "components.tsx").read_text(encoding="utf-8")
+    card = re.search(r"gradientCard:\s*\{(.*?)\n  \},", source, re.S)
+    assert card, "components.tsx no longer declares a `gradientCard` style"
+    fill = re.search(r"backgroundColor:\s*colors\.(\w+)", card.group(1))
+    assert fill, "the hero card has no background of its own — the gradient is not a fill"
+    assert fill.group(1) in ("accentDeep", "accentInk"), (
+        f"the hero card is filled with `{fill.group(1)}`; a fill that carries text is "
+        f"accentDeep or darker (theme.ts)"
+    )
+
+
 def test_muted_is_quieter_than_loud_but_still_text():
     """Muted has a job: it is the second line, and it has to look like one.
 
