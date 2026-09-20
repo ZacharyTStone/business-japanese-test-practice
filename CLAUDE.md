@@ -202,10 +202,14 @@ accident is not.
   `bjt/tts/plan.py` and `SPOKEN_OPTION_TYPES` in the practice screen must agree.
   An item whose option clips do not exist yet falls back to printed options on
   its own, so this ships progressively rather than all at once.
-- **A spoken option is introduced by its letter.** 「エー」「ビー」「シー」「ディー」
+- **A spoken option is introduced by its letter.** 「エー」「ビー」「シー」「デー」
   play before the four candidates, because the screen shows nothing but the
   badges while they run and four unlabelled sentences is a memory test rather
-  than a listening one. They are four clips for the whole library, not four per
+  than a listening one. D is 「デー」 and not 「ディー」: the four differ only in
+  their onset, and 「ビー」/「ディー」 are a voiced stop apart — the pair that
+  actually gets misheard, as it was (2026-09-20). 「デー」 is the reading
+  Japanese uses when a letter has to survive a telephone, and it moves the
+  vowel too. They are four clips for the whole library, not four per
   item — `OPTION_LABELS` in `bjt/tts/plan.py`, in the narrator's voice and in
   room tone whatever the item's channel is, found by the app on the same four
   strings (`OPTION_LETTERS` in `client/src/lib/db.ts`, which a test holds
