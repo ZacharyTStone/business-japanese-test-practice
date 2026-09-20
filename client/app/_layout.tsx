@@ -7,7 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../src/lib/auth";
 import { LangProvider, useLang } from "../src/lib/i18n";
 import { isConfigured } from "../src/lib/supabase";
-import { Loading } from "../src/ui/components";
+import { Loading, Notice, ScreenMessage } from "../src/ui/components";
 import { ClosedScreen, SignInScreen } from "../src/ui/gate";
 import { Icon } from "../src/ui/icons";
 import { colors, space, type } from "../src/ui/theme";
@@ -73,7 +73,23 @@ function Navigator() {
   if (isConfigured) {
     if (auth.loading) return <Loading />;
     if (!auth.session) return <SignInScreen />;
-    if (auth.isTester === null && !auth.error) return <Loading />;
+    // An RPC that failed to answer is not an RPC that said no: falling
+    // through to ClosedScreen here used to tell a tester who hit a network
+    // blip that their account was not approved. Only a confirmed `false`
+    // means that; a stuck `null` with an error means try again.
+    if (auth.isTester === null && auth.error) {
+      return (
+        <ScreenMessage>
+          <Notice
+            title={t("cant_connect")}
+            body={auth.error}
+            tone="warn"
+            action={{ label: t("retry"), onPress: auth.retry }}
+          />
+        </ScreenMessage>
+      );
+    }
+    if (auth.isTester === null) return <Loading />;
     if (auth.isTester !== true) return <ClosedScreen />;
   }
 

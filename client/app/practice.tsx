@@ -178,6 +178,10 @@ export default function Practice() {
   const router = useRouter();
   const { lang, t } = useLang();
   const { session, loading: authLoading, error: authError } = useAuth();
+  // A direct load of /practice — a deep link, a refresh — has nothing behind
+  // it to go back to; history.tsx hit the same thing first. "Back" from here
+  // always has to land somewhere.
+  const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
   const [items, setItems] = useState<QueuedItem[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -298,7 +302,7 @@ export default function Practice() {
           title={t("cant_connect")}
           body={authError}
           tone="warn"
-          action={{ label: t("back"), onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: leave }}
         />
       </View>
     );
@@ -310,7 +314,7 @@ export default function Practice() {
           title={t("q_load_err")}
           body={error}
           tone="warn"
-          action={{ label: t("back"), onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: leave }}
         />
       </View>
     );
@@ -332,7 +336,7 @@ export default function Practice() {
           title={t("no_q_title")}
           body={t("no_q_body")}
           tone="warn"
-          action={{ label: t("back"), onPress: () => router.back() }}
+          action={{ label: t("back"), onPress: leave }}
         />
       </View>
     );

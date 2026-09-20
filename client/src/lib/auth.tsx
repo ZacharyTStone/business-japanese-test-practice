@@ -41,6 +41,11 @@ type AuthState = {
    *  sent a confirmation email first ("Confirm email" left on in the project). */
   signUp: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
+  /** Re-run the session read and the tester check. `error` is set once and
+   *  never cleared on its own — a cold-start hiccup used to strand the app on
+   *  a message with nothing to press, or, worse, read as "not a tester" (see
+   *  the effect below). This is the way back. */
+  retry: () => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -50,6 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTester, setIsTester] = useState<boolean | null>(null);
+  // Bumped by retry(): both effects below depend on it, so one call re-runs
+  // the session read and the tester check together.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!isConfigured) {
@@ -62,7 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (sessionError) setError(sessionError.message);
+      // Read, not merged with what the tester-check effect might set next:
+      // a clean session read clears a stale error from a previous attempt.
+      setError(sessionError ? sessionError.message : null);
       setSession(data.session);
       setLoading(false);
     })();
@@ -83,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sub.subscription.unsubscribe();
       appState.remove();
     };
-  }, []);
+  }, [attempt]);
 
   // Ask the database whether this account may use the app. It is one RPC and
   // it is asked once per session, because the answer is a property of the
@@ -98,13 +108,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .rpc("is_tester")
       .then(({ data, error: rpcError }) => {
         if (cancelled) return;
-        if (rpcError) setError(rpcError.message);
-        else setIsTester(data === true);
+        if (rpcError) {
+          setError(rpcError.message);
+          return;
+        }
+        setError(null);
+        setIsTester(data === true);
       });
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, attempt]);
 
   const value = useMemo<AuthState>(() => {
     const user = session?.user;
@@ -136,6 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signOut();
         setSession(null);
         setIsTester(null);
+      },
+
+      retry() {
+        setError(null);
+        setLoading(true);
+        setAttempt((n) => n + 1);
       },
     };
   }, [session, loading, error, isTester]);

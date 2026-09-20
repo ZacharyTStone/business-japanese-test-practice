@@ -42,7 +42,13 @@ import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 export default function Account() {
   const router = useRouter();
   const { lang, setLang, t } = useLang();
-  const { email, signOut, loading: authLoading, error: authError } = useAuth();
+  const {
+    email,
+    signOut,
+    loading: authLoading,
+    error: authError,
+    retry: retryAuth,
+  } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -120,7 +126,12 @@ export default function Account() {
   if (authError) {
     return (
       <ScreenMessage>
-        <Notice title={t("cant_connect")} body={authError} tone="warn" />
+        <Notice
+          title={t("cant_connect")}
+          body={authError}
+          tone="warn"
+          action={{ label: t("retry"), onPress: retryAuth }}
+        />
       </ScreenMessage>
     );
   }

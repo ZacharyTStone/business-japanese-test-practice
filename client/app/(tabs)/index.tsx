@@ -49,7 +49,7 @@ function minutesFor(n: number): number {
 export default function Home() {
   const router = useRouter();
   const { lang, t } = useLang();
-  const { loading: authLoading, error: authError } = useAuth();
+  const { loading: authLoading, error: authError, retry: retryAuth } = useAuth();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
@@ -107,7 +107,12 @@ export default function Home() {
   if (authError) {
     return (
       <ScreenMessage>
-        <Notice title={t("cant_connect")} body={authError} tone="warn" />
+        <Notice
+          title={t("cant_connect")}
+          body={authError}
+          tone="warn"
+          action={{ label: t("retry"), onPress: retryAuth }}
+        />
       </ScreenMessage>
     );
   }
