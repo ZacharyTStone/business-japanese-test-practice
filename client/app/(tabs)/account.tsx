@@ -19,7 +19,7 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchProfile, fetchSectionLevels, updateProfile } from "../../src/lib/db";
+import { fetchProfile, fetchSectionLevels, resetProgress, updateProfile } from "../../src/lib/db";
 import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/lib/exam";
 import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
 import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
@@ -48,6 +48,12 @@ export default function Account() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
+  /** Starting again, in three states: closed, asked, and done saying so. One
+   *  press is not enough for something that cannot be undone, and a dialog box
+   *  would be a screen explaining a feature — so the card asks in place. */
+  const [confirming, setConfirming] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const [wiped, setWiped] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isConfigured || authLoading || authError) return;
@@ -77,6 +83,24 @@ export default function Account() {
       await updateProfile({ timed_reading: on });
     } catch (e) {
       setError(errorText(e));
+    }
+  }
+
+  async function wipe() {
+    setWiping(true);
+    setError(null);
+    try {
+      const counts = await resetProgress();
+      setConfirming(false);
+      setWiped(counts.attempts);
+      // The levels on this screen are now the starting default and the profile
+      // carries a new summary, so re-read both rather than leaving the old
+      // numbers on screen under a line saying they are gone.
+      setReloads((n) => n + 1);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setWiping(false);
     }
   }
 
@@ -216,6 +240,50 @@ export default function Account() {
             ))}
           </View>
           <Text style={type.small}>{t("acc_lang_sub")}</Text>
+        </Card>
+      </View>
+
+      {/* Everything the app knows about somebody is derived from their answers,
+          so this one button is the whole of it: the three levels, the spacing
+          ladder, the weakness arithmetic and today's count all follow from the
+          rows it removes. The database does the removing — the client has no
+          delete policy on an answer and is not getting one. */}
+      <View style={{ gap: space.md }}>
+        <SectionLabel>{t("acc_reset")}</SectionLabel>
+        <Card style={{ gap: space.md }}>
+          <View style={styles.head}>
+            <IconBadge name="alert" tone="amber" />
+            <Text style={[type.small, { flex: 1 }]}>{t("acc_reset_body")}</Text>
+          </View>
+          <Text style={type.small}>{t("acc_reset_keeps")}</Text>
+          {confirming ? (
+            <>
+              <Text style={[type.body, { color: colors.wrong }]}>{t("acc_reset_confirm")}</Text>
+              <Button
+                label={wiping ? t("acc_reset_busy") : t("acc_reset_do")}
+                tone="secondary"
+                disabled={wiping}
+                onPress={wipe}
+              />
+              <View style={styles.chips}>
+                <Chip label={t("cancel")} selected={false} onPress={() => setConfirming(false)} />
+              </View>
+            </>
+          ) : (
+            <Button
+              label={t("acc_reset")}
+              tone="secondary"
+              onPress={() => {
+                setWiped(null);
+                setConfirming(true);
+              }}
+            />
+          )}
+          {wiped !== null ? (
+            <Text style={type.small} accessibilityLiveRegion="polite">
+              {t("acc_reset_done", { n: wiped })}
+            </Text>
+          ) : null}
         </Card>
       </View>
 

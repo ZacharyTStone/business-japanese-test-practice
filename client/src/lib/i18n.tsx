@@ -111,6 +111,22 @@ const S = {
   acc_noscore_title: ["点数の予測は出しません", "No score prediction"],
   acc_noscore_body: ["生成した問題には本番と同じ尺度がないので、「たぶん◯点」は出しません。上の「レベル」は、いま出している問題の難しさです。問題はすべて独自に作ったもので、過去問は使っていません。試験の運営とは関係ありません。", "Generated questions share no scale with the real exam, so the app never says “probably N points”. The level above is the difficulty of the questions you are being served. Every question is original; no past papers. The app is not affiliated with the exam."],
   logout: ["ログアウト", "Sign out"],
+  // Starting again. Worded as what it costs rather than as what it offers: the
+  // press is easy and the history is not coming back.
+  acc_reset: ["記録を消してやり直す", "Start again"],
+  acc_reset_body: [
+    "解いた記録・復習の予定・三つのレベルを全部消して、はじめて使うときと同じ状態にします。",
+    "Erases every answer, the review schedule and the three levels, and puts the app back to how it was on the first day.",
+  ],
+  acc_reset_keeps: [
+    "試験日・1日の目標・言語・読解の制限時間はそのままです。",
+    "Your exam date, daily goal, language and reading clock stay as they are.",
+  ],
+  acc_reset_confirm: ["本当に消しますか。元には戻せません。", "Really erase it? This cannot be undone."],
+  acc_reset_do: ["消す", "Erase it"],
+  acc_reset_busy: ["消しています…", "Erasing…"],
+  acc_reset_done: ["{n}問の記録を消しました。", "{n} answer erased.|{n} answers erased."],
+  cancel: ["やめる", "Cancel"],
 
   // countdown
   countdown_past: ["試験はもう終わりました", "The exam has passed"],

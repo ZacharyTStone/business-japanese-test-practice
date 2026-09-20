@@ -1618,3 +1618,205 @@ delete from public.bundles where id = 'bnd_cap';
 delete from auth.users where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 \echo 'ALL QUEUE-PROMISE TESTS PASSED'
+
+-- ---------------------------------------------------------------------------
+-- Starting again.
+--
+-- `reset_my_progress()` is the only statement in the schema that removes an
+-- answer, and the only client-callable function that writes anything. Both of
+-- those are worth pinning down: that it reaches exactly one person's history
+-- and all of it, that it leaves everything which is not history alone, and
+-- that it is shut to anybody the rest of the schema is shut to.
+
+begin;
+set local role service_role;
+
+insert into public.bundles (id, item_type, level, generator_model, generated_at) values
+    ('bnd_reset', 'goi_bunpou', 'J2', 'author-composed', now());
+insert into public.items (id, bundle_id, item_type, level, seed_cell_id, setting, relation,
+                          function, channel, topic, stem, correct_index, is_published)
+values ('itm_r1', 'bnd_reset', 'goi_bunpou', 'J2', 'c+r+f@J2', 'office_desk',
+        'peer_to_peer', 'request', 'written', '語彙', '問題文1', 0, true),
+       ('itm_r2', 'bnd_reset', 'goi_bunpou', 'J2', 'c+r+g@J2', 'office_desk',
+        'peer_to_peer', 'request', 'written', '語彙', '問題文2', 0, true);
+insert into public.item_options (item_id, position, text, role, why) values
+    ('itm_r1', 0, 'あ', 'correct', 'r'), ('itm_r1', 1, 'い', 'content_mismatch', 'r'),
+    ('itm_r1', 2, 'う', 'register_too_casual', 'r'), ('itm_r1', 3, 'え', 'wrong_speech_act', 'r'),
+    ('itm_r2', 0, 'あ', 'correct', 'r'), ('itm_r2', 1, 'い', 'content_mismatch', 'r'),
+    ('itm_r2', 2, 'う', 'register_too_casual', 'r'), ('itm_r2', 3, 'え', 'wrong_speech_act', 'r');
+
+commit;
+
+-- auth.users is written by the test's own role, as the fixtures at the top of
+-- this file are: the service role has no more business creating a user here
+-- than the app does.
+insert into auth.users (id, email, is_anonymous) values
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'wipe@example.com', false),
+    ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'keep@example.com', false),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'outside@example.com', false);
+
+begin;
+set local role service_role;
+insert into public.testers (email, note) values
+    ('wipe@example.com', 'test fixture: the one that resets'),
+    ('keep@example.com', 'test fixture: the one that must not notice');
+
+-- Settings, a purchase and a bug report: none of them is progress.
+update public.profiles
+   set display_name = 'Zach', exam_date = '2026-12-01', daily_goal = 12, timed_reading = false
+ where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+insert into public.entitlements (user_id, product, source) values
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'ads_free', 'grant');
+-- A level that has been moved, so the reset has something to put back.
+insert into public.section_levels (user_id, section, level, moves) values
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'dokkai', 'J1', 3);
+commit;
+
+do $$
+declare
+    wipe uuid := 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+begin
+    perform test.become(wipe);
+end
+$$;
+set role authenticated;
+
+-- A history for the one that resets: two sessions, four answers (so the
+-- schedule and the notes have something in them), and a report.
+insert into public.practice_sessions (user_id) values
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc'),
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc');
+insert into public.attempts (item_id, chosen_index) values
+    ('itm_r1', 0), ('itm_r2', 1), ('itm_r1', 2), ('itm_r2', 0);
+insert into public.review_notes (user_id, item_id, note) values
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'itm_r1', 'あとで');
+insert into public.item_feedback (user_id, item_id, reason, note) values
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'itm_r2', 'unnatural', '不自然');
+
+reset role;
+do $$ begin perform test.become('dddddddd-dddd-dddd-dddd-dddddddddddd'); end $$;
+set role authenticated;
+
+-- ...and a history for the one that does not, on the same two items.
+insert into public.practice_sessions (user_id) values
+    ('dddddddd-dddd-dddd-dddd-dddddddddddd');
+insert into public.attempts (item_id, chosen_index) values ('itm_r1', 0), ('itm_r2', 3);
+
+reset role;
+do $$ begin perform test.become('cccccccc-cccc-cccc-cccc-cccccccccccc'); end $$;
+set role authenticated;
+
+do $$
+declare
+    wipe uuid := 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    out  jsonb;
+    p    record;
+    d    record;
+begin
+    raise notice 'starting again';
+    perform test.check(
+        (select count(*) from public.attempts where user_id = wipe) = 4
+        and (select count(*) from public.review_schedule where user_id = wipe) = 2
+        and (select count(*) from public.section_levels where user_id = wipe) >= 1,
+        'there is a history to erase');
+
+    out := public.reset_my_progress();
+    perform test.check(
+        (out ->> 'attempts')::int = 4 and (out ->> 'sessions')::int = 2
+        and (out ->> 'reviews')::int = 2 and (out ->> 'notes')::int = 1,
+        'it reports what it removed');
+
+    perform test.check(
+        (select count(*) from public.attempts where user_id = wipe) = 0
+        and (select count(*) from public.practice_sessions where user_id = wipe) = 0
+        and (select count(*) from public.review_schedule where user_id = wipe) = 0
+        and (select count(*) from public.review_notes where user_id = wipe) = 0
+        and (select count(*) from public.section_levels where user_id = wipe) = 0,
+        'the history is gone — answers, sessions, schedule, notes and levels');
+
+    -- The point of the whole thing: the app is back to what it shows somebody
+    -- who has never answered anything.
+    perform test.check(
+        (select count(*) from public.v_my_levels where level = 'J2' and not placed) = 3,
+        'all three sections read the starting level again, none of them placed');
+    select * into d from public.v_my_day;
+    perform test.check(d.answered_today = 0 and d.left_today = 15,
+        'today is a fresh day');
+
+    select * into p from public.profiles where id = wipe;
+    perform test.check(p.target_level = 'J2', 'the level summary is back to the default');
+    perform test.check(
+        p.display_name = 'Zach' and p.exam_date = date '2026-12-01'
+        and p.daily_goal = 12 and p.timed_reading = false,
+        'and the settings are untouched — they were never progress');
+    perform test.check(
+        (select count(*) from public.entitlements where user_id = wipe and revoked_at is null) = 1,
+        'a purchase survives a reset');
+    perform test.check(
+        (select count(*) from public.item_feedback where user_id = wipe) = 1,
+        'so does a report about a question: it is an opinion about the bank');
+
+end
+$$;
+
+reset role;
+do $$ begin perform test.become('dddddddd-dddd-dddd-dddd-dddddddddddd'); end $$;
+set role authenticated;
+
+do $$
+begin
+    -- The property that makes a definer function safe here — asked from the
+    -- other person's own session, because row-level security means a tester
+    -- cannot count somebody else's rows to find out either way.
+    raise notice 'starting again: nobody else notices';
+    perform test.check((select count(*) from public.attempts) = 2,
+        'the other tester still has both answers');
+    perform test.check((select count(*) from public.practice_sessions) = 1,
+        'and their session');
+    perform test.check((select count(*) from public.review_schedule) = 2,
+        'and both items still due when they were');
+    perform test.check((select count(*) from public.v_my_day where answered_today = 2) = 1,
+        'and their day still counts them');
+end
+$$;
+
+reset role;
+do $$ begin perform test.become('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'); end $$;
+set role authenticated;
+
+do $$
+declare
+    ok boolean := false;
+begin
+    raise notice 'starting again: the door is the same door';
+    perform test.check(not public.is_tester(), 'not on the tester list');
+    begin
+        perform public.reset_my_progress();
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'a non-tester cannot call it');
+    perform test.check(
+        not has_function_privilege('anon', 'public.reset_my_progress()', 'execute'),
+        'anon cannot call it at all');
+    perform test.check(
+        has_function_privilege('authenticated', 'public.reset_my_progress()', 'execute'),
+        'a signed-in user can — it is the app''s own RPC');
+    perform test.check(
+        (select proconfig is not null
+            and exists (select 1 from unnest(proconfig) c where split_part(c, '=', 1) = 'search_path')
+           from pg_proc where oid = 'public.reset_my_progress()'::regprocedure),
+        'and its search_path is pinned');
+end
+$$;
+
+reset role;
+
+delete from public.items where bundle_id = 'bnd_reset';
+delete from public.bundles where id = 'bnd_reset';
+delete from auth.users where id in ('cccccccc-cccc-cccc-cccc-cccccccccccc',
+                                    'dddddddd-dddd-dddd-dddd-dddddddddddd',
+                                    'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee');
+delete from public.testers where email in ('wipe@example.com', 'keep@example.com');
+
+\echo 'ALL RESET TESTS PASSED'

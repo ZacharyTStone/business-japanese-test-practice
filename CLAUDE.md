@@ -126,7 +126,15 @@ accident is not.
   the answerability gate. It is not an ability estimate, nothing about anybody
   is derived from it, and it is never displayed.
 - **`attempts` has no update or delete policy.** An answer already given is
-  history.
+  history. The one statement in the schema that removes one is
+  `reset_my_progress()`, and it is shaped so that it cannot be anything else:
+  no arguments, the user read from the session, and the whole history or none
+  of it — answers, sessions, the spacing schedule, the review notes and the
+  three section levels. A policy would open the door to "delete the ones I got
+  wrong", which is the thing not to have; a settings button that erases
+  everything is not that. Settings, entitlements and item reports are not
+  progress and are left alone. The owner asked for a way to start again
+  (2026-09-20).
 - **画像把握 is the one type whose picture is the question, and its item is not
   served until the picture exists.** The generator writes an English
   `image_brief` with the four descriptions; the scene job draws it, one picture

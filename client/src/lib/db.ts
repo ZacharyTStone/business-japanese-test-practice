@@ -202,6 +202,34 @@ export async function reportItem(args: {
 /** The radar. All nine types come back, including untouched ones — "not tried
  *  yet" is the most useful thing this can say early on, and a chart that hides
  *  the gaps is worse than no chart. */
+/** What a reset removed, for the line the screen shows afterwards. */
+export type ResetCounts = {
+  attempts: number;
+  sessions: number;
+  reviews: number;
+  notes: number;
+  levels: number;
+};
+
+/**
+ * Erase this learner's own practice history and start again.
+ *
+ * An RPC rather than a delete, because `attempts` has no delete policy and
+ * `review_schedule` has no write policy at all: an answer already given is
+ * history, and a client that could edit either could make the app tell it what
+ * it wanted to hear. `reset_my_progress()` takes no arguments and reads the
+ * user from the session, so there is no way to spell "delete the ones I got
+ * wrong" with it — it is all of one person's history or none of it.
+ *
+ * Settings, the purchase and any reported questions are left alone; they were
+ * never progress. See the migration for the whole list.
+ */
+export async function resetProgress(): Promise<ResetCounts> {
+  const { data, error } = await supabase.rpc("reset_my_progress");
+  if (error) throw error;
+  return data as ResetCounts;
+}
+
 export async function fetchTypeStats(): Promise<TypeStat[]> {
   const { data, error } = await supabase
     .from("v_my_type_stats")
