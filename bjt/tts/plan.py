@@ -27,6 +27,23 @@ from typing import Optional
 #: narration is not part of what is being tested.
 NARRATOR_VOICE = "narrator_f"
 
+#: The four option letters, spoken. The screen shows nothing but A / B / C / D
+#: while a listening item's options play, so without these the learner hears
+#: four candidates with nothing tying any of them to a button — which is a
+#: memory test rather than a listening one. The exam reads its numbers aloud
+#: for the same reason.
+#:
+#: Katakana rather than "A", so the reading is the Japanese one and does not
+#: depend on a provider guessing which language a bare letter is in. The
+#: narrator speaks them whoever is speaking in the item, because a letter
+#: belongs to the exam rather than to anybody in the scene — which, with the
+#: content-hashed clip id, is what makes these four files for the whole
+#: library rather than four per item.
+#:
+#: The app names the same four strings (`OPTION_LETTERS` in client/src/lib/db.ts),
+#: which is how it finds the clips; a test holds the two equal.
+OPTION_LABELS = ("エー", "ビー", "シー", "ディー")
+
 #: Relation → the voice of the person doing the speaking (the left side of the
 #: 関係 arrow). Fixed for the life of the library.
 RELATION_VOICES: dict[str, str] = {
@@ -126,8 +143,8 @@ def audio_policy(item_type: str) -> dict:
 class Clip:
     clip_id: str
     item_id: str
-    kind: str  # "narration" | "option"
-    index: Optional[int]  # option position, None for narration
+    kind: str  # "narration" | "dialogue" | "option_label" | "option"
+    index: Optional[int]  # option or turn position, None for narration
     text: str
     voice: str
     channel: str
@@ -225,6 +242,23 @@ def plan_item(item: dict, item_id: str) -> list[Clip]:
         if policy.get("options_by_narrator"):
             voice, channel = NARRATOR_VOICE, "in_person"
         for i, opt in enumerate(item["options"]):
+            # The letter first, in the narrator's voice and off the phone line
+            # whatever the item's channel is: it is said by the exam, not from
+            # inside the scene. An item with more options than there are
+            # letters gets none for the extras rather than a wrong one — the
+            # app plays a letter only where there is one for every option.
+            if i < len(OPTION_LABELS):
+                clips.append(
+                    Clip(
+                        clip_id=clip_id(NARRATOR_VOICE, "in_person", OPTION_LABELS[i]),
+                        item_id=item_id,
+                        kind="option_label",
+                        index=i,
+                        text=OPTION_LABELS[i],
+                        voice=NARRATOR_VOICE,
+                        channel="in_person",
+                    )
+                )
             clips.append(
                 Clip(
                     clip_id=clip_id(voice, channel, opt["text"]),

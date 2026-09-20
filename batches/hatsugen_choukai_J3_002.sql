@@ -4,8 +4,9 @@
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_client_office_sofa', '取引先の応接ソファ'),
        ('scene_elevator_hall', 'エレベーターホール'),
@@ -20,9 +21,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('c902476155c11126', '受付に立っていると、二時にお約束のあるお客様が到着しました。これから応接室へご案内します。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
+       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
        ('c4ca0150f1ef34cf', 'お待ちしておりました。応接室へご案内いたします。どうぞこちらへ。', 'staff_mid_f', 'in_person'),
+       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
        ('669de1c7396e8dd9', 'お待ちしてました。応接室まで案内しますね。こっちです。', 'staff_mid_f', 'in_person'),
+       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('b96387c2d668a7e7', 'お待ちしておりました。応接室へご案内させていただきますので、どうぞお越しになられてください。', 'staff_mid_f', 'in_person'),
+       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
        ('44ed51be02541011', 'お待ちしておりました。本日はどのようなご用件でしょうか。', 'staff_mid_f', 'in_person'),
        ('4abf43d914d25a1b', '取引先から電話があり、営業部の佐藤に代わってほしいと言われました。佐藤は席にいます。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
        ('642916a0e9326537', 'はい、佐藤さんですね。佐藤さーん、お電話ですよ。', 'staff_mid_m', 'phone'),

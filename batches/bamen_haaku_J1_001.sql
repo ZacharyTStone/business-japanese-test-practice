@@ -16,9 +16,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('7d3635c26223c62e', '展示会のブースで、担当者が取引先の人と話しています。「新型のカタログですが、あいにく手元の分が切れてしまいまして。ご住所を頂戴できれば戻り次第お送りしますし、お急ぎでしたら会場の端末でデータをご覧いただくこともできます。」「では、データで結構です。」担当者はこのあと何をしますか。', 'narrator_f', 'in_person'),
+       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
        ('805a2f7b6a18cada', '会場の端末で、カタログのデータをその場で見せる。', 'narrator_f', 'in_person'),
+       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
        ('94e17fbd744096fe', '住所を控えて、会社に戻ってからカタログを送る。', 'narrator_f', 'in_person'),
+       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('e3f0fd5ece48002c', '隣のブースからカタログを一部借りてくる。', 'narrator_f', 'in_person'),
+       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
        ('b330fd6dd2fc4c64', '取引先に、カタログのデータを送ってもらう。', 'narrator_f', 'in_person'),
        ('9b54696b8cd116ea', '取引先との会食の席で、先方が席を外している間に、ある社員が小声でこう話しています。「さっきはフォローしていただいて助かりました。納期の話はうちの課だけでは答えられませんので。戻ったら、そちらの部からも部長に一言添えていただけますか。」この人は誰に向かって話していますか。', 'narrator_f', 'in_person'),
        ('689037efa7da27ac', '料理を運んできた店の人', 'narrator_f', 'in_person'),

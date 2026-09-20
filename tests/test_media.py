@@ -499,6 +499,68 @@ def test_a_pictures_descriptions_are_read_by_the_narrator():
     assert [c for c in clips if c.kind == "narration"]
 
 
+def test_every_spoken_option_is_introduced_by_its_letter():
+    """A listening item shows nothing but A / B / C / D while its options play.
+
+    The letter is what ties the sentence being heard to the button that answers
+    it; without it the learner is holding four unlabelled sentences in their
+    head, which is a memory test rather than a listening one.
+    """
+    from bjt import fixtures
+    from bjt.tts import plan as tts_plan
+    item = dict(fixtures.FIXTURES["hatsugen_choukai"],
+                seed_cell={"relation": "subordinate_to_superior"})
+    clips = tts_plan.plan_item(item, "x")
+    spoken = [c for c in clips if c.kind in ("option_label", "option")]
+    assert [c.kind for c in spoken] == ["option_label", "option"] * 4
+    labels = [c for c in spoken if c.kind == "option_label"]
+    assert [c.text for c in labels] == list(tts_plan.OPTION_LABELS)
+    # The exam's own voice and room tone, whoever is speaking in the item and
+    # down whatever line: a letter is not said by anybody in the scene.
+    assert {c.voice for c in labels} == {tts_plan.NARRATOR_VOICE}
+    assert {c.channel for c in labels} == {"in_person"}
+
+
+def test_the_letters_are_four_clips_for_the_whole_library():
+    """Hashed from (voice, channel, text) like every other clip, so 「エー」 is
+    synthesised once and shared by every item of every type that speaks its
+    options — four files, not four per item."""
+    from bjt import fixtures
+    from bjt.tts import plan as tts_plan
+    a = dict(fixtures.FIXTURES["hatsugen_choukai"],
+             seed_cell={"relation": "subordinate_to_superior"})
+    b = dict(fixtures.FIXTURES["gazou_haaku"], seed_cell={"relation": "staff_to_visitor"})
+    ids = {c.clip_id for c in tts_plan.plan_item(a, "a") if c.kind == "option_label"}
+    assert len(ids) == 4
+    assert ids == {c.clip_id for c in tts_plan.plan_item(b, "b") if c.kind == "option_label"}
+
+
+def test_a_type_that_prints_its_options_is_given_no_letters():
+    """They follow the options, not the item: 総合読解 shows its four on the
+    page, where a voice reading the letters out would be noise."""
+    from bjt import fixtures
+    from bjt.tts import plan as tts_plan
+    clips = tts_plan.plan_item(fixtures.FIXTURES["sougou_dokkai"], "x")
+    assert not [c for c in clips if c.kind == "option_label"]
+
+
+def test_the_app_looks_for_the_letters_this_module_plans():
+    """The app finds the letter clips by what is said and who says it — they
+    are global rather than attached to an item — so the two files have to say
+    the same thing. Read out of client/src/lib/db.ts, the same source the app
+    imports, so a value that drifts drifts here too."""
+    import pathlib
+    import re
+    from bjt.tts import plan as tts_plan
+    db = (pathlib.Path(__file__).resolve().parents[1]
+          / "client" / "src" / "lib" / "db.ts").read_text(encoding="utf-8")
+    letters = re.search(r"const OPTION_LETTERS = \[(.*?)\];", db, re.S)
+    assert letters, "db.ts no longer declares OPTION_LETTERS as expected"
+    assert re.findall(r'"([^"]+)"', letters.group(1)) == list(tts_plan.OPTION_LABELS)
+    voice = re.search(r'const NARRATOR_VOICE = "([^"]+)";', db)
+    assert voice and voice.group(1) == tts_plan.NARRATOR_VOICE
+
+
 def test_a_picture_item_carries_its_brief_and_a_scene_of_its_own():
     from bjt import batch as batchmod
     from bjt import fixtures, scenes

@@ -4,8 +4,9 @@
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_client_office_sofa', '取引先の応接ソファ'),
        ('scene_corridor', 'オフィスの廊下'),
@@ -20,9 +21,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('239353dd4532e131', '会議室を使いたいのですが、鍵が見当たりません。鍵は課長が持っていると聞きました。近くに課長がいます。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
+       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
        ('d775217875790d2b', '課長、すみません。会議室の鍵をお借りできますか。', 'staff_junior_m', 'in_person'),
+       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
        ('7d5a7b0cae3cc0a1', '課長、会議室の鍵をお借りになってもよろしいでしょうか。', 'staff_junior_m', 'in_person'),
+       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('1539164858fecb53', '課長、会議室の鍵、ちょっと貸してもらえますか。', 'staff_junior_m', 'in_person'),
+       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
        ('2e0502f8ea6b8422', '課長、会議室の鍵をお借りさせていただかせていただいてもよろしいでしょうか。', 'staff_junior_m', 'in_person'),
        ('3cc88f8ba5836f6c', '取引先の方が、今日はじめて会社にいらっしゃいました。受付であなたが応対します。相手はまだ名乗っていません。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
        ('bce2bdb74ca5a6b2', '毎度ありがとうございます。少々お待ちください。', 'reception_f', 'in_person'),

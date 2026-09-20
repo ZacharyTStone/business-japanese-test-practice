@@ -50,6 +50,7 @@ import { useAuth } from "../src/lib/auth";
 import {
   clipUrl,
   fetchDay,
+  fetchOptionLetters,
   fetchPace,
   fetchProfile,
   fetchQueue,
@@ -146,15 +147,21 @@ function spokenOptionUrls(item: QueuedItem): string[] | null {
 }
 
 /** Every clip of an item, in the order it is heard: the conversation, then the
- *  question, then — for 発言聴解 — the four things one might say. Turns without
- *  a clip yet are skipped, not waited for. */
-function playlistFor(item: QueuedItem): string[] {
+ *  question, then — for 発言聴解 — the four things one might say, each behind
+ *  the letter that names it. Turns without a clip yet are skipped, not waited
+ *  for, and so are the letters: they are four clips for the whole library
+ *  (fetchOptionLetters), so before they are synthesised this is exactly the
+ *  run it always was. */
+function playlistFor(item: QueuedItem, letters: string[] | null): string[] {
   const turns = (item.dialogue ?? [])
     .map((t) => clipUrl(t.audio_path))
     .filter((u): u is string => Boolean(u));
   const narration = clipUrl(item.narration_path);
   const spoken = spokenOptionUrls(item) ?? [];
-  return [...turns, ...(narration ? [narration] : []), ...spoken];
+  const options = spoken.flatMap((url, i) =>
+    letters?.[i] ? [letters[i], url] : [url]
+  );
+  return [...turns, ...(narration ? [narration] : []), ...options];
 }
 
 /** A tap you can feel. Pattern durations are ignored on iOS, which is fine —
@@ -195,6 +202,10 @@ export default function Practice() {
    *  practised without a clock rather than not at all. */
   const [pace, setPace] = useState<Record<string, TypePace>>({});
   const [timed, setTimed] = useState(false);
+  /** 「エー」「ビー」「シー」「ディー」, or null until all four are synthesised.
+   *  Furniture too: an item whose options are spoken is still practisable with
+   *  nothing but the options, which is how it worked before they existed. */
+  const [letters, setLetters] = useState<string[] | null>(null);
 
   const startedAt = useRef(Date.now());
   const questionShownAt = useRef(Date.now());
@@ -223,19 +234,22 @@ export default function Practice() {
     let cancelled = false;
     (async () => {
       try {
-        const [day, levels, profile, paces] = await Promise.all([
+        const [day, levels, profile, paces, spokenLetters] = await Promise.all([
           fetchDay(),
           fetchSectionLevels(),
           // The clock is furniture. A set that cannot be timed is still a set,
-          // so neither of these is allowed to fail the screen.
+          // so neither of these is allowed to fail the screen. Nor are the
+          // spoken letters, which are the same four clips for every item.
           fetchProfile().catch(() => null),
           fetchPace().catch(() => ({}) as Record<string, TypePace>),
+          fetchOptionLetters().catch(() => null),
         ]);
         // Read before the first answer, so the result screen can name the
         // section whose level moved rather than just that something did.
         levelsBefore.current = levels;
         setPace(paces);
         setTimed(profile?.timed_reading ?? false);
+        setLetters(spokenLetters);
         // The size is what the day has left of its set, or the bonus set once
         // the set is done: the rest of the allowance, or a full set for an
         // account whose ceiling is lifted. Zero means the day is over, and the
@@ -266,7 +280,7 @@ export default function Practice() {
     () => (item ? [...item.options].sort((a, b) => a.position - b.position) : []),
     [item]
   );
-  const playlist = useMemo(() => (item ? playlistFor(item) : []), [item]);
+  const playlist = useMemo(() => (item ? playlistFor(item, letters) : []), [item, letters]);
   const spokenOptions = useMemo(() => (item ? spokenOptionUrls(item) : null), [item]);
 
   if (!isConfigured) {

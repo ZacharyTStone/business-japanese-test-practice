@@ -293,6 +293,39 @@ export function clipUrl(audioPath: string | null): string | null {
   return supabase.storage.from("audio").getPublicUrl(audioPath).data.publicUrl;
 }
 
+/**
+ * The four option letters, spoken.
+ *
+ * A listening item shows nothing but A / B / C / D while its options play, so
+ * the clip that names the letter is what ties what is being heard to the button
+ * that answers it; without it the learner is holding four unlabelled sentences
+ * in their head. The exam reads its numbers aloud for the same reason.
+ *
+ * These are one clip each for the whole library rather than one per item — a
+ * clip id is a hash of (voice, channel, text), so 「エー」 is synthesised once
+ * and shared — which is why they are looked up by what is said rather than
+ * arriving with the item. The four strings and the narrator's name are
+ * `OPTION_LABELS` and `NARRATOR_VOICE` in bjt/tts/plan.py, which is where the
+ * clips come from; a test holds the two files equal.
+ */
+const OPTION_LETTERS = ["エー", "ビー", "シー", "ディー"];
+const NARRATOR_VOICE = "narrator_f";
+
+/** The four letter clips in A–D order, or null until every one of them has been
+ *  synthesised. All four or none: a run that says the letter before three of
+ *  the options and not the fourth is worse than one that says none. */
+export async function fetchOptionLetters(): Promise<string[] | null> {
+  const { data, error } = await supabase
+    .from("audio_clips")
+    .select("text, audio_path")
+    .eq("voice", NARRATOR_VOICE)
+    .in("text", OPTION_LETTERS);
+  if (error) throw error;
+  const paths = new Map((data ?? []).map((row) => [row.text as string, row.audio_path]));
+  const urls = OPTION_LETTERS.map((letter) => clipUrl(paths.get(letter) ?? null));
+  return urls.every((u): u is string => Boolean(u)) ? (urls as string[]) : null;
+}
+
 /** Public URL for a scene illustration, on exactly the same terms: null is the
  *  ordinary case, because items are published long before their artwork. */
 export function sceneUrl(imagePath: string | null): string | null {

@@ -401,11 +401,29 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "771f316560",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "b3f94ffb21163d9d",
       "item_id": "771f316560",
       "kind": "option",
       "index": 0,
       "text": "数字を直した報告書を、先方に送ってから上司に見せる。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "771f316560",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -419,11 +437,29 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "771f316560",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "041310e45a6f0276",
       "item_id": "771f316560",
       "kind": "option",
       "index": 2,
       "text": "数字を直した報告書を、先に上司に見せる。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "acc2d27ad18591f0",
+      "item_id": "771f316560",
+      "kind": "option_label",
+      "index": 3,
+      "text": "ディー",
       "voice": "narrator_f",
       "channel": "in_person"
     },

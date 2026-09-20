@@ -677,6 +677,15 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "db96cb5c00",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "ed9a3925edc8acbc",
       "item_id": "db96cb5c00",
       "kind": "option",
@@ -684,6 +693,15 @@
       "text": "申し訳ございません。田中はただいま外出しておりまして、三時ごろ戻る予定でございます。",
       "voice": "staff_mid_m",
       "channel": "phone"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "db96cb5c00",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
+      "voice": "narrator_f",
+      "channel": "in_person"
     },
     {
       "clip_id": "f4e932c8dc41845d",
@@ -695,6 +713,15 @@
       "channel": "phone"
     },
     {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "db96cb5c00",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "c0727e3faa3d6ee4",
       "item_id": "db96cb5c00",
       "kind": "option",
@@ -702,6 +729,15 @@
       "text": "すみません、田中は今ちょっと出ちゃってて、三時ぐらいには戻ると思います。",
       "voice": "staff_mid_m",
       "channel": "phone"
+    },
+    {
+      "clip_id": "acc2d27ad18591f0",
+      "item_id": "db96cb5c00",
+      "kind": "option_label",
+      "index": 3,
+      "text": "ディー",
+      "voice": "narrator_f",
+      "channel": "in_person"
     },
     {
       "clip_id": "5c739d8576e237f3",

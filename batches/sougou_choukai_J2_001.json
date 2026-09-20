@@ -644,11 +644,29 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "8f4b311918",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "37d1c1197647f26e",
       "item_id": "8f4b311918",
       "kind": "option",
       "index": 0,
       "text": "一区画に減らして出展する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "8f4b311918",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -662,11 +680,29 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "8f4b311918",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "4acf7f7296f7d3c9",
       "item_id": "8f4b311918",
       "kind": "option",
       "index": 2,
       "text": "二区画のまま出展し、備品は社内から運ぶ。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "acc2d27ad18591f0",
+      "item_id": "8f4b311918",
+      "kind": "option_label",
+      "index": 3,
+      "text": "ディー",
       "voice": "narrator_f",
       "channel": "in_person"
     },

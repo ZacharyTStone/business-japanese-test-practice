@@ -677,12 +677,30 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "95ef217a86",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "e4be594f587fff72",
       "item_id": "95ef217a86",
       "kind": "option",
       "index": 0,
       "text": "お先に失礼します。何かお手伝いできることがあれば、おっしゃってください。",
       "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "95ef217a86",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
+      "voice": "narrator_f",
       "channel": "in_person"
     },
     {
@@ -695,12 +713,30 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "95ef217a86",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "fac27328fb6e374e",
       "item_id": "95ef217a86",
       "kind": "option",
       "index": 2,
       "text": "お先に失礼させていただかせていただきます。何かございましたら、いつでもお申し付けくださいませ。",
       "voice": "staff_junior_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "acc2d27ad18591f0",
+      "item_id": "95ef217a86",
+      "kind": "option_label",
+      "index": 3,
+      "text": "ディー",
+      "voice": "narrator_f",
       "channel": "in_person"
     },
     {

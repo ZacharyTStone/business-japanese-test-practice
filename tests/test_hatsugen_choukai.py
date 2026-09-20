@@ -126,15 +126,23 @@ def test_voice_follows_the_relation_so_it_stays_fixed_across_items(item, cell):
 def test_narration_stays_clean_even_on_a_phone_item(item):
     clips = tts_plan.plan_item(item, "x")
     assert clips[0].kind == "narration"
-    assert clips[0].channel == "in_person"   # the narrator is outside the scene
-    assert all(c.channel == "phone" for c in clips[1:])
+    # Only what is said *inside* the scene goes down the phone line. The
+    # narrator is outside it, and so is the voice that reads the option
+    # letters — a letter is the exam speaking, not anybody in the room.
+    outside = [c for c in clips if c.kind in ("narration", "option_label")]
+    assert len(outside) == 5
+    assert all(c.channel == "in_person" for c in outside)
+    assert all(c.channel == "phone" for c in clips if c.kind == "option")
 
 
 def test_identical_utterances_share_one_clip(item):
     a = tts_plan.plan_item(item, "item-a")
     b = tts_plan.plan_item(item, "item-b")
     assert {c.clip_id for c in a} == {c.clip_id for c in b}
-    assert len(tts_plan.manifest([("item-a", item), ("item-b", item)])) == 5
+    # The question, the four options, and the four letters — and the letters
+    # are the same four files for every item in the library, which is the
+    # point of hashing a clip id from (voice, channel, text).
+    assert len(tts_plan.manifest([("item-a", item), ("item-b", item)])) == 9
 
 
 def test_bundle_item_keeps_the_listening_fields_and_resolves_the_answer(item, cell):

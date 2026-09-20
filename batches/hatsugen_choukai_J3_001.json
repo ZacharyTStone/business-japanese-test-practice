@@ -677,12 +677,30 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "d775217875790d2b",
       "item_id": "3b2ba9c2cc",
       "kind": "option",
       "index": 0,
       "text": "課長、すみません。会議室の鍵をお借りできますか。",
       "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
+      "voice": "narrator_f",
       "channel": "in_person"
     },
     {
@@ -695,12 +713,30 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "1539164858fecb53",
       "item_id": "3b2ba9c2cc",
       "kind": "option",
       "index": 2,
       "text": "課長、会議室の鍵、ちょっと貸してもらえますか。",
       "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "acc2d27ad18591f0",
+      "item_id": "3b2ba9c2cc",
+      "kind": "option_label",
+      "index": 3,
+      "text": "ディー",
+      "voice": "narrator_f",
       "channel": "in_person"
     },
     {

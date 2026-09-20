@@ -145,11 +145,29 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "b9e1673422",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "640d84d8044b8a4d",
       "item_id": "b9e1673422",
       "kind": "option",
       "index": 0,
       "text": "相手のほうが、時間を取ってほしいと頼んでいる段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "b9e1673422",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -163,11 +181,29 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "b9e1673422",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "0d607d81478dfa98",
       "item_id": "b9e1673422",
       "kind": "option",
       "index": 2,
       "text": "話が終わって、礼を言っている段階",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "acc2d27ad18591f0",
+      "item_id": "b9e1673422",
+      "kind": "option_label",
+      "index": 3,
+      "text": "ディー",
       "voice": "narrator_f",
       "channel": "in_person"
     },

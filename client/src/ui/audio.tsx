@@ -10,7 +10,7 @@
  * exam plays once, but practice is not the exam; being able to replay is how you
  * hear the difference between 「いただく」 and 「召し上がる」 on the fourth listen.
  */
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { type AudioStatus, useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -150,6 +150,120 @@ const styles = StyleSheet.create({
 
 
 /**
+ * How often a playing clip reports in.
+ *
+ * Shorter than the 500ms default, because on web the end of a clip is carried
+ * by an ordinary time update — `didJustFinish` there is `media.ended` — and
+ * time updates are throttled to exactly this interval. Chromium also fires
+ * `pause` at the end, which expo-audio emits unthrottled and which says the
+ * same thing, so today the end is reported twice; a browser that does not is
+ * one where a clip shorter than the interval could finish without the queue
+ * ever hearing about it. 250ms is comfortably under the shortest thing the
+ * library says aloud, which is a letter.
+ */
+const STATUS_INTERVAL_MS = 250;
+
+/** What a component gets back from `useClipQueue`. */
+type ClipQueue = {
+  /** Which clip is playing, as an index into `urls`. */
+  at: number;
+  running: boolean;
+  status: AudioStatus;
+  /** Play from the first clip that exists. */
+  start: () => void;
+  /** Stop and rewind to the beginning. Does not report the run as finished. */
+  stop: () => void;
+};
+
+/**
+ * One player, walked along a list of clips.
+ *
+ * The step from one clip to the next is taken on the player's own
+ * `playbackStatusUpdate` event rather than on the status this component
+ * renders, and that is the whole reason this is a hook and not an effect.
+ * `useAudioPlayer` builds a *new* player whenever the source changes, while
+ * `useAudioPlayerStatus` keeps the last status it was handed until that new
+ * player says something — so for one render the status of the clip that has
+ * just ended is attached to the clip that is about to start. An effect that
+ * advanced on `status.didJustFinish` therefore fired twice for one clip: once
+ * on the finish, and again when the index it depends on changed with the same
+ * stale `true` still showing. That is why a listening run played the first,
+ * third and fifth clips and skipped every even one.
+ *
+ * An event is delivered once, to a listener attached to the player that sent
+ * it, so a status belonging to the clip before can no longer be read as this
+ * one's. `handled` is the other half, and web is why: `didJustFinish` there is
+ * `media.ended`, a state that stays true rather than a one-shot, and a clip
+ * that reaches its end reports it on the final time update *and* again on the
+ * pause that follows. One advance per player is what makes that one step.
+ *
+ * A clip with no audio yet is stepped over rather than waited for: a
+ * half-synthesised item should still play the parts that exist.
+ */
+function useClipQueue(
+  urls: (string | null)[],
+  { autoplay = false, onFinished }: { autoplay?: boolean; onFinished?: () => void } = {}
+): ClipQueue {
+  const firstPlayable = () => Math.max(0, urls.findIndex(Boolean));
+  const [at, setAt] = React.useState(firstPlayable);
+  const [running, setRunning] = React.useState(autoplay && urls.some(Boolean));
+  const player = useAudioPlayer(urls[at] ?? null, { updateInterval: STATUS_INTERVAL_MS });
+  const status = useAudioPlayerStatus(player);
+
+  // What the listener reads when an event arrives. Both are re-read rather than
+  // captured: the list is rebuilt by the parent's render and `onFinished` is
+  // usually written inline, and neither should re-subscribe the listener.
+  const live = React.useRef({ urls, onFinished });
+  live.current = { urls, onFinished };
+
+  React.useEffect(() => {
+    if (!running) return undefined;
+    // One advance per clip. Declared here rather than in a ref so that it
+    // resets with the listener — on the next clip, and on a replay of this one.
+    let handled = false;
+    const sub = player.addListener("playbackStatusUpdate", (s) => {
+      if (handled || !s.didJustFinish) return;
+      handled = true;
+      const list = live.current.urls;
+      let next = at + 1;
+      while (next < list.length && !list[next]) next += 1;
+      if (next < list.length) {
+        setAt(next);
+        return;
+      }
+      setRunning(false);
+      setAt(0);
+      live.current.onFinished?.();
+    });
+    return () => sub.remove();
+    // `at` is a dependency so that two identical clips in a row — which share
+    // one player, because the source is what builds it — still get a listener
+    // each.
+  }, [player, running, at]);
+
+  React.useEffect(() => {
+    if (!running || !urls[at]) return;
+    player.seekTo(0);
+    player.play();
+  }, [player, running, at]);
+
+  const start = React.useCallback(() => {
+    const first = live.current.urls.findIndex(Boolean);
+    if (first < 0) return;
+    setAt(first);
+    setRunning(true);
+  }, []);
+
+  const stop = React.useCallback(() => {
+    player.pause();
+    setRunning(false);
+    setAt(Math.max(0, live.current.urls.findIndex(Boolean)));
+  }, [player]);
+
+  return { at, running, status, start, stop };
+}
+
+/**
  * A heard conversation.
  *
  * Turns play one after another rather than as a single file, for a reason that
@@ -217,56 +331,26 @@ function Turn({ turn }: { turn: DialogueTurn }) {
 /** Plays each turn in order, advancing when one finishes. */
 function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string | null)[] }) {
   const { t } = useLang();
-  const [at, setAt] = React.useState(0);
-  const [running, setRunning] = React.useState(false);
-  const player = useAudioPlayer(paths[at] ?? null);
-  const status = useAudioPlayerStatus(player);
-
-  React.useEffect(() => {
-    if (!running) return;
-    if (!status.didJustFinish) return;
-    // Skip any turn that has no clip yet rather than stalling on it: a
-    // half-synthesised conversation should still play the parts that exist.
-    let next = at + 1;
-    while (next < paths.length && !paths[next]) next += 1;
-    if (next >= paths.length) {
-      setRunning(false);
-      setAt(0);
-      return;
-    }
-    setAt(next);
-  }, [status.didJustFinish, running, at, paths]);
-
-  React.useEffect(() => {
-    if (running && paths[at]) {
-      player.seekTo(0);
-      player.play();
-    }
-  }, [at, running]);
+  const queue = useClipQueue(paths);
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={running ? t("stop_dialogue") : t("listen_dialogue")}
-      onPress={() => {
-        if (running) {
-          player.pause();
-          setRunning(false);
-          setAt(0);
-        } else {
-          setRunning(true);
-          player.seekTo(0);
-          player.play();
-        }
-      }}
+      accessibilityLabel={queue.running ? t("stop_dialogue") : t("listen_dialogue")}
+      onPress={() => (queue.running ? queue.stop() : queue.start())}
       style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
     >
       <View style={styles.playIcon}>
-        <Icon name={running ? "stop" : "play"} size={18} color={colors.onAccent} strokeWidth={2} />
+        <Icon
+          name={queue.running ? "stop" : "play"}
+          size={18}
+          color={colors.onAccent}
+          strokeWidth={2}
+        />
       </View>
       <Text style={[type.body, { flex: 1 }]}>{t("listen_dialogue")}</Text>
       <Text style={type.small}>
-        {at + 1} / {turns.length}
+        {queue.at + 1} / {turns.length}
       </Text>
     </Pressable>
   );
@@ -298,38 +382,22 @@ export function AutoPlaylist({
   onFinished?: () => void;
 }) {
   const { t } = useLang();
-  const [at, setAt] = React.useState(0);
-  const [running, setRunning] = React.useState(autoplay && urls.length > 0);
   const [finished, setFinished] = React.useState(!autoplay || urls.length === 0);
-  const player = useAudioPlayer(urls[at] ?? null);
-  const status = useAudioPlayerStatus(player);
   const reported = React.useRef(false);
-
-  React.useEffect(() => {
-    if (running && urls[at]) {
-      player.seekTo(0);
-      player.play();
-    }
-  }, [at, running]);
-
-  React.useEffect(() => {
-    if (!running || !status.didJustFinish) return;
-    if (at + 1 < urls.length) {
-      setAt(at + 1);
-      return;
-    }
-    setRunning(false);
+  const report = () => {
     setFinished(true);
-    setAt(0);
-    if (!reported.current) {
-      reported.current = true;
-      onFinished?.();
-    }
-  }, [status.didJustFinish, running, at, urls.length]);
+    if (reported.current) return;
+    reported.current = true;
+    onFinished?.();
+  };
+  const queue = useClipQueue(urls, {
+    autoplay: autoplay && urls.length > 0,
+    onFinished: report,
+  });
 
   if (urls.length === 0) return null;
 
-  if (!running && finished) {
+  if (!queue.running && finished) {
     // Always replayable. The exam plays a clip once; practice is not the exam,
     // and the fourth listen is where a learner finally hears that it was
     // 伺います and not 参ります.
@@ -337,10 +405,7 @@ export function AutoPlaylist({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t("listen_again")}
-        onPress={() => {
-          setAt(0);
-          setRunning(true);
-        }}
+        onPress={queue.start}
         style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
       >
         <View style={styles.playIcon}>
@@ -351,6 +416,7 @@ export function AutoPlaylist({
     );
   }
 
+  const { status } = queue;
   const fraction =
     status.duration && status.duration > 0 ? Math.min(1, status.currentTime / status.duration) : 0;
   return (
@@ -362,7 +428,7 @@ export function AutoPlaylist({
         <Text style={[type.body, { flex: 1 }]}>{t("listening")}</Text>
         {urls.length > 1 ? (
           <Text style={type.small}>
-            {at + 1} / {urls.length}
+            {queue.at + 1} / {urls.length}
           </Text>
         ) : null}
       </View>
@@ -374,14 +440,8 @@ export function AutoPlaylist({
         onPress={() => {
           // Skipping is allowed — it is practice — but it counts as finished,
           // so the options appear rather than the screen waiting for ever.
-          player.pause();
-          setRunning(false);
-          setFinished(true);
-          setAt(0);
-          if (!reported.current) {
-            reported.current = true;
-            onFinished?.();
-          }
+          queue.stop();
+          report();
         }}
         style={({ pressed }) => [pressed && { opacity: 0.85 }]}
       >

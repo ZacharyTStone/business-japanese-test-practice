@@ -677,12 +677,30 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "995396318a",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "c4ca0150f1ef34cf",
       "item_id": "995396318a",
       "kind": "option",
       "index": 0,
       "text": "お待ちしておりました。応接室へご案内いたします。どうぞこちらへ。",
       "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "995396318a",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
+      "voice": "narrator_f",
       "channel": "in_person"
     },
     {
@@ -695,12 +713,30 @@
       "channel": "in_person"
     },
     {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "995396318a",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
       "clip_id": "b96387c2d668a7e7",
       "item_id": "995396318a",
       "kind": "option",
       "index": 2,
       "text": "お待ちしておりました。応接室へご案内させていただきますので、どうぞお越しになられてください。",
       "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "acc2d27ad18591f0",
+      "item_id": "995396318a",
+      "kind": "option_label",
+      "index": 3,
+      "text": "ディー",
+      "voice": "narrator_f",
       "channel": "in_person"
     },
     {

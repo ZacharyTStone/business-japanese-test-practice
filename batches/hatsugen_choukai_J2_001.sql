@@ -4,8 +4,9 @@
 
 begin;
 
--- Scenes are a shared bank; image_path stays null until the art exists,
--- and is deliberately not overwritten by a re-publish.
+-- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
 insert into public.scenes (id, label_ja)
 values ('scene_client_meeting_room', '取引先の会議室'),
        ('scene_corridor', 'オフィスの廊下'),
@@ -21,9 +22,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('2f8a0ca05b4633b3', '取引先から、上司の田中部長あてに電話がかかってきました。田中部長は外出していて、三時ごろ戻る予定です。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
+       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
        ('ed9a3925edc8acbc', '申し訳ございません。田中はただいま外出しておりまして、三時ごろ戻る予定でございます。', 'staff_mid_m', 'phone'),
+       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
        ('f4e932c8dc41845d', '申し訳ございません。田中部長はただいま外出されていて、三時ごろお戻りになる予定です。', 'staff_mid_m', 'phone'),
+       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('c0727e3faa3d6ee4', 'すみません、田中は今ちょっと出ちゃってて、三時ぐらいには戻ると思います。', 'staff_mid_m', 'phone'),
+       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
        ('5c739d8576e237f3', '申し訳ございません。私では分かりかねますので、少々お待ちいただけますでしょうか。', 'staff_mid_m', 'phone'),
        ('b3a2a8e3467e4fe1', '明日の会議で使う資料を作り終えました。提出する前に、課長に内容を見てもらいたいと思っています。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
        ('86a98288e14149a1', 'お忙しいところ恐れ入りますが、明日の会議資料を拝読していただけますでしょうか。', 'staff_junior_m', 'in_person'),
