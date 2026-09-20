@@ -31,7 +31,7 @@ values ('e8078990730d2494', '展示会の出展について、結論はどうな
        ('38514cc8ea12f032', '予算を一割増やして備品を借りる。', 'narrator_f', 'in_person'),
        ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('4acf7f7296f7d3c9', '二区画のまま出展し、備品は社内から運ぶ。', 'narrator_f', 'in_person'),
-       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
+       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
        ('42e249f0a811d695', '備品の運搬を外部の業者に頼む。', 'narrator_f', 'in_person'),
        ('eb2409b511d86590', '試作品が遅れているのは、今は何が原因ですか。', 'narrator_f', 'in_person'),
        ('1374320693346177', '試作品、今週中に上がる予定でしたよね。どうなっていますか。', 'manager_m', 'video'),

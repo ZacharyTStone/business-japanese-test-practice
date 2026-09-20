@@ -24,7 +24,7 @@ values ('a3990da6dc9586a1', '受付の人は何をしていますか。', 'narra
        ('dde8847bc9008cc9', '来客に入館証を渡しています。', 'narrator_f', 'in_person'),
        ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('69282f33f91fdb33', '来客が受付の人に行き方を教えています。', 'narrator_f', 'in_person'),
-       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
+       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
        ('d3cbe53e6dc4565b', '打ち合わせを終えた来客を見送っています。', 'narrator_f', 'in_person'),
        ('abaf9651a101be6d', 'ホワイトボードの前に立っている人は何をしていますか。', 'narrator_f', 'in_person'),
        ('7e8c0a5f1bcb6461', '会議が終わってホワイトボードを消しています。', 'narrator_f', 'in_person'),

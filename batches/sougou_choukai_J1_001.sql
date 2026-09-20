@@ -28,7 +28,7 @@ values ('65cf4a8882e7739a', '問い合わせの窓口は、誰が担当するこ
        ('bd512d2d5eef6008', '設定を担当している社員', 'narrator_f', 'in_person'),
        ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('da9b1e734101077f', '取引先の担当者', 'narrator_f', 'in_person'),
-       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
+       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
        ('4ada26a99c384818', '二人の社員が交代で担当する', 'narrator_f', 'in_person'),
        ('c8690b84797bbf6f', '二十日に納品する台数は、いくつになりましたか。', 'narrator_f', 'in_person'),
        ('ec250f17b2a14316', '初回は百台を二十日に、とお願いしていましたね。', 'manager_m', 'video'),

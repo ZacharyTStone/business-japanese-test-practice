@@ -26,7 +26,7 @@ values ('b0ee6487f832174e', '会社の廊下で、部下が上司に呼び止め
        ('12e5f968b1ae5963', '報告書の数字をこれから直す。', 'narrator_f', 'in_person'),
        ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('041310e45a6f0276', '数字を直した報告書を、先に上司に見せる。', 'narrator_f', 'in_person'),
-       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
+       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
        ('5252e3fa63ee429e', '先方に報告書の送り先を確認する。', 'narrator_f', 'in_person'),
        ('a79b34a57d0e972e', '会社で、ある人が電話でこう話しています。「いつもお世話になっております。山川商事の佐藤でございます。先日ご注文いただいた品物の納期の件で、ご連絡いたしました。」この人はどの立場の人ですか。', 'narrator_f', 'in_person'),
        ('83c820c902d97002', '品物を納める側の会社の担当者', 'narrator_f', 'in_person'),

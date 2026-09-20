@@ -28,7 +28,7 @@ values ('b4ec14f1473c4de6', '報告書が遅れそうなのは、なぜですか
        ('bef6e01d7e220f55', 'グラフを作るソフトが動かないから', 'narrator_f', 'in_person'),
        ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('c75a2febc5e8cb72', 'データがまだ届いていないから', 'narrator_f', 'in_person'),
-       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
+       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
        ('21851b3be541eb26', 'システム部からの返事を待っているから', 'narrator_f', 'in_person'),
        ('14b6815909b5129d', '前回の見積から変わったのは、何ですか。', 'narrator_f', 'in_person'),
        ('1bc13ccf8628238f', '前回お渡しした見積から、変わった点をご説明します。', 'manager_m', 'in_person'),

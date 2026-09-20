@@ -22,7 +22,7 @@ values ('7d3635c26223c62e', '展示会のブースで、担当者が取引先の
        ('94e17fbd744096fe', '住所を控えて、会社に戻ってからカタログを送る。', 'narrator_f', 'in_person'),
        ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
        ('e3f0fd5ece48002c', '隣のブースからカタログを一部借りてくる。', 'narrator_f', 'in_person'),
-       ('acc2d27ad18591f0', 'ディー', 'narrator_f', 'in_person'),
+       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
        ('b330fd6dd2fc4c64', '取引先に、カタログのデータを送ってもらう。', 'narrator_f', 'in_person'),
        ('9b54696b8cd116ea', '取引先との会食の席で、先方が席を外している間に、ある社員が小声でこう話しています。「さっきはフォローしていただいて助かりました。納期の話はうちの課だけでは答えられませんので。戻ったら、そちらの部からも部長に一言添えていただけますか。」この人は誰に向かって話していますか。', 'narrator_f', 'in_person'),
        ('689037efa7da27ac', '料理を運んできた店の人', 'narrator_f', 'in_person'),

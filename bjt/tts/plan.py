@@ -40,9 +40,17 @@ NARRATOR_VOICE = "narrator_f"
 #: content-hashed clip id, is what makes these four files for the whole
 #: library rather than four per item.
 #:
+#: **D is 「デー」 and not 「ディー」.** The four letters differ only in their
+#: onset — the vowel is the same long イー in all of them — and 「ビー」 and
+#: 「ディー」 differ by a voiced stop apiece, which is the pair a listener
+#: actually mishears. Reported from practice: B sounded like D (2026-09-20).
+#: 「デー」 is the reading Japanese already uses when a letter has to survive a
+#: telephone, for this exact reason, and it moves D's vowel as well as its
+#: onset: エー / ビー / シー / デー is [eː] / [biː] / [ɕiː] / [deː].
+#:
 #: The app names the same four strings (`OPTION_LETTERS` in client/src/lib/db.ts),
 #: which is how it finds the clips; a test holds the two equal.
-OPTION_LABELS = ("エー", "ビー", "シー", "ディー")
+OPTION_LABELS = ("エー", "ビー", "シー", "デー")
 
 #: Relation → the voice of the person doing the speaking (the left side of the
 #: 関係 arrow). Fixed for the life of the library.

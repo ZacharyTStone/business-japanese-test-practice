@@ -336,7 +336,11 @@ export function clipUrl(audioPath: string | null): string | null {
  * `OPTION_LABELS` and `NARRATOR_VOICE` in bjt/tts/plan.py, which is where the
  * clips come from; a test holds the two files equal.
  */
-const OPTION_LETTERS = ["エー", "ビー", "シー", "ディー"];
+// D is 「デー」 rather than 「ディー」: the four differ only in their onset, and
+// 「ビー」/「ディー」 are a voiced stop apart, which is the pair that gets
+// misheard. 「デー」 is what Japanese uses when a letter has to survive a
+// telephone. See OPTION_LABELS in bjt/tts/plan.py.
+const OPTION_LETTERS = ["エー", "ビー", "シー", "デー"];
 const NARRATOR_VOICE = "narrator_f";
 
 /** The four letter clips in A–D order, or null until every one of them has been
