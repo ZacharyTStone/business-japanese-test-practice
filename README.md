@@ -1,4 +1,55 @@
-# ビジネス日本語ドリル
+<h1 align="center">ビジネス日本語ドリル</h1>
+
+<p align="center">
+  <strong>An adaptive practice app for the BJT Business Japanese Proficiency Test — and the LLM pipeline that writes, checks, and grades its questions.</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-private%20beta%20(testers%20only)-orange?style=flat-square" alt="Status: private beta" />
+  <img src="https://img.shields.io/badge/Python-item%20pipeline-3776AB?logo=python&logoColor=white&style=flat-square" alt="Python" />
+  <img src="https://img.shields.io/badge/Claude%20API-structured%20output-D97757?logo=anthropic&logoColor=white&style=flat-square" alt="Claude API" />
+  <img src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3FCF8E?logo=supabase&logoColor=white&style=flat-square" alt="Supabase" />
+  <img src="https://img.shields.io/badge/Expo-iOS%20%C2%B7%20Android%20%C2%B7%20Web-000020?logo=expo&logoColor=white&style=flat-square" alt="Expo" />
+  <img src="https://img.shields.io/badge/TypeScript-React%20Native-3178C6?logo=typescript&logoColor=white&style=flat-square" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white&style=flat-square" alt="Cloudflare Workers" />
+</p>
+
+<p align="center">
+  <a href="#how-it-fits-together">Architecture</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#the-six-fidelity-mechanisms">Fidelity</a> ·
+  <a href="#the-nightly-job">Nightly job</a> ·
+  <a href="#the-database">Database</a> ·
+  <a href="blockers.md">Blockers</a>
+</p>
+
+---
+
+### At a glance
+
+| | |
+|---|---|
+| 🎯 **Coverage** | All **9** BJT problem types across 聴解 · 聴読解 · 読解, at three levels (J3 / J2 / J1) |
+| 🧠 **Adaptive, with zero settings** | One button. Per-section levels, a spaced-repetition ladder, and a difficulty target that follows you — all computed in SQL |
+| 🤖 **LLM-generated, gate-checked** | Every item passes a sanity check, a two-sided answerability gate, a difficulty probe and batch-level checks before it can ship |
+| 🗓️ **Offline by design** | Nothing is generated while anyone practises — a nightly GitHub Action opens a reviewable PR of checked items. Running cost: **$0** |
+| 🔊 **Real listening practice** | Role-cast TTS voices, phone-line audio treatment, and spoken options for every 聴解 item |
+| 🔒 **Database is the gatekeeper** | Row-level security on every table; answers are graded by a Postgres trigger, not the client |
+
+### How it fits together
+
+```mermaid
+flowchart LR
+    ST["seedtable/<br/>場面 × 関係 × 機能 × レベル"] --> GEN["Generator<br/>(Claude, structured output)"]
+    GEN --> GATE["Sanity check → answerability gate<br/>→ difficulty probe"]
+    GATE --> BATCH["Batch checks<br/>(dedupe, answer spread, length…)"]
+    BATCH --> PR["Nightly PR<br/>checked JSON + SQL"]
+    PR -->|merge| DB[("Supabase<br/>Postgres + RLS")]
+    BATCH --> TTS["TTS + scene art"] --> DB
+    DB -->|"next_items() · grading trigger"| APP["Expo app<br/>iOS · Android · Web"]
+```
+
+---
 
 A study app for the format of the **BJT ビジネス日本語能力テスト** (Business
 Japanese Proficiency Test), and the pipeline that writes its questions.
