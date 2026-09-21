@@ -826,6 +826,17 @@ tool targets; it is not part of any product name, slug, or bundle identifier —
 app is 「ビジネス日本語ドリル」. A store description may say it follows the BJT
 format; the name may not.
 
+This project is independent. It is not affiliated with, endorsed by, or
+connected to the organisation that runs the exam, and nothing here is an
+official study material.
+
 No past-paper text is copied anywhere in this repository. Every item is an
 original composition, which is why generation was a requirement from the start
 rather than a convenience.
+
+## License
+
+All rights reserved — see [LICENSE](LICENSE). The source is published to be
+read, not to be reused; the question bank in `batches/` is not offered as
+training data or as content for another study tool. To use something here, open
+an issue and ask.

@@ -26,3 +26,6 @@ media/
 # deliverable and are committed; the run's own notes are not.
 /plan.json
 /summary.md
+
+# macOS
+.DS_Store

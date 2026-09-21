@@ -1,0 +1,24 @@
+Copyright (c) 2026 Zachary Stone. All rights reserved.
+
+This source code is published to be read, not to be reused.
+
+You may read it, and you may quote short extracts with attribution — in a
+review, an article, or a discussion of how it works. Everything else is
+reserved. Without written permission you may not copy, modify, distribute,
+sublicense, or use this repository or any part of it in a product or a service.
+That covers the item pipeline in bjt/, the schema and policies in supabase/,
+the app in client/, the seed table in seedtable/, and the question bank in
+batches/.
+
+The question bank deserves its own line. Every item in batches/ is an original
+composition written for this project: no past-paper text is copied anywhere in
+this repository, and nothing here is offered as training data or as content for
+another study tool.
+
+"BJT" is a registered trademark of its owner. This project is independent: it is
+not affiliated with, endorsed by, or connected to the organisation that runs the
+exam. The mark is used only in prose, to name the exam format this tool targets,
+and never as a product name — the app is 「ビジネス日本語ドリル」. See the
+"Naming" section of README.md.
+
+To use something here, open an issue and ask.

@@ -76,8 +76,32 @@ permissions:
 jobs:
   deploy:
     name: migrate, publish, admit
-    # After `checks`, only a green one; by hand, always.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # By hand, always. After `checks`, three things have to be true, and the
+    # last two are what make this workflow safe in a public repository.
+    #
+    # `branches: [main]` above matches the NAME of the branch the `checks` run
+    # was on, and it cannot tell one repository's `main` from another's. A fork
+    # keeps the default branch name, so a pull request opened from a fork's
+    # `main` produces a `checks` run whose head branch is `main`, and the filter
+    # lets it through. The deploy would then run with every secret because a
+    # stranger asked. It would deploy THIS repository's code — the checkout
+    # below takes the default branch and never the pull request's head, which is
+    # the part that keeps it from being code execution — but it would still
+    # reach the production database and spend the TTS key on demand.
+    #
+    #   green    a push that fails a check never reaches the database.
+    #   ours     the `checks` run was on this repository, not on a fork of it.
+    #   a push   a pull request's own `checks` run is not a merge, and it is the
+    #            merge that is the decision to ship.
+    #
+    # Nothing legitimate is lost: work lands on `main` as a push (CLAUDE.md), a
+    # merged nightly pull request is a push to `main` too, and a pull request's
+    # own run never matched `branches: [main]` in the first place.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
