@@ -1,0 +1,166 @@
+{
+  "bundle_version": 2,
+  "item_type": "gazou_haaku",
+  "level": "J1",
+  "generated_at": "2026-09-21T21:32:30+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "c706451a58",
+      "item_type": "gazou_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "client_office+staff_to_visitor+guiding_visitor@J1",
+        "setting": "client_office",
+        "relation": "staff_to_visitor",
+        "function": "guiding_visitor",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "取引先の応接室で奥へ案内する",
+      "stem": "社員は何をしていますか。",
+      "options": [
+        {
+          "text": "来客が社員に会議室までの道を尋ねています。",
+          "role": "wrong_participants",
+          "why": "手で方向を示しているのは社員のほうで、来客は尋ねる様子もなく黙って従っている。"
+        },
+        {
+          "text": "来客に資料を手渡しています。",
+          "role": "different_action",
+          "why": "手には何も持っておらず、資料のやり取りは描かれていない。手は方向を示す動きをしている。"
+        },
+        {
+          "text": "来客を奥の応接室へ案内しています。",
+          "role": "correct",
+          "why": "社員が手のひらを奥のドアのほうへ向け、来客もその方向を見て歩き出そうとしている。"
+        },
+        {
+          "text": "受付で来客に入館証を渡しています。",
+          "role": "adjacent_setting",
+          "why": "場面は取引先の応接室の奥まった一角で、受付カウンターは描かれていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "社員が奥のドアのほうへ手のひらを向けて方向を示し、来客がその方向を見ているので、来客を奥の応接室へ案内している場面。資料などの手渡しは描かれておらず、方向を示しているのは社員であって来客ではない。また、場所は受付ではなく取引先の応接室の内部であり、受付カウンターは存在しない。",
+      "explanation_en": "The employee's open palm toward the inner door, with the visitor looking that way, shows the visitor being guided further inside; no handover, no reversed roles, and not a reception desk.",
+      "vocab_notes": [
+        {
+          "term": "案内する",
+          "reading": "あんないする",
+          "meaning": "to show someone the way"
+        },
+        {
+          "term": "応接室",
+          "reading": "おうせつしつ",
+          "meaning": "reception/meeting room for guests"
+        },
+        {
+          "term": "入館証",
+          "reading": "にゅうかんしょう",
+          "meaning": "visitor badge"
+        }
+      ],
+      "audio": {
+        "narration": "ec018e53afaa6fee",
+        "options": [
+          "ef97d3a686346ed6",
+          "57b7fa5c5da17f44",
+          "e9c832cf45f1fd0f",
+          "21c4b9db5fd02510"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "Inside a client company's reception/meeting room, near an inner doorway leading to another room. A male employee in a suit stands facing a visitor in a coat, one arm raised with an open palm pointing toward the inner doorway, body turned that way, guiding the visitor further in. The visitor, holding a briefcase, is looking toward the doorway, one foot slightly forward as if about to walk that way. Nothing is being handed over; both hands are empty aside from the briefcase. There is no reception counter or badge anywhere. A low table with two chairs sits to the side, unused. No signs or readable text.",
+      "scene_id": "pic_c706451a58",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "ec018e53afaa6fee",
+      "item_id": "c706451a58",
+      "kind": "narration",
+      "index": null,
+      "text": "社員は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "c706451a58",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ef97d3a686346ed6",
+      "item_id": "c706451a58",
+      "kind": "option",
+      "index": 0,
+      "text": "来客が社員に会議室までの道を尋ねています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "c706451a58",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "57b7fa5c5da17f44",
+      "item_id": "c706451a58",
+      "kind": "option",
+      "index": 1,
+      "text": "来客に資料を手渡しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "c706451a58",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e9c832cf45f1fd0f",
+      "item_id": "c706451a58",
+      "kind": "option",
+      "index": 2,
+      "text": "来客を奥の応接室へ案内しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "134df096a9c7dc0a",
+      "item_id": "c706451a58",
+      "kind": "option_label",
+      "index": 3,
+      "text": "デー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "21c4b9db5fd02510",
+      "item_id": "c706451a58",
+      "kind": "option",
+      "index": 3,
+      "text": "受付で来客に入館証を渡しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "pic_c706451a58"
+  ]
+}

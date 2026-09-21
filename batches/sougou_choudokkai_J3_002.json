@@ -1,0 +1,245 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J3",
+  "generated_at": "2026-09-21T21:43:31+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "b39fb5be07",
+      "item_type": "sougou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "client_review+peer_to_peer+identify_risk@J3",
+        "setting": "client_review",
+        "relation": "peer_to_peer",
+        "function": "identify_risk",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "検討会後の家具見積りの残課題",
+      "stem": "この見積りについて、何が問題として残っていますか。",
+      "options": [
+        {
+          "text": "パーティションの納品日が、まだ決まっていないこと",
+          "role": "combines_wrong_pair",
+          "why": "資料ではパーティションとシェルフの両方が未定と書かれているが、会話でパーティションは来週水曜に入荷が確定したと述べられている。"
+        },
+        {
+          "text": "シェルフの納品日を、同僚Bが先方に確認すること",
+          "role": "wrong_action_owner",
+          "why": "納品日を確認しているのはメーカーであり、同僚Bが先方に確認する話は会話に出ていない。"
+        },
+        {
+          "text": "シェルフの単価が、まだ決まっていないこと",
+          "role": "unsupported_but_plausible",
+          "why": "資料では未定と記載されているが、会話でメーカーから連絡があり九千円に決まったと同僚Bが説明している。"
+        },
+        {
+          "text": "シェルフの納品日が、まだ決まっていないこと",
+          "role": "correct",
+          "why": "会話で単価とパーティションの納品日は解決したが、シェルフの納品日はメーカーが在庫確認中でまだ分からないと同僚Bが述べている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "資料には、パーティションとシェルフの納品日が両方未定、シェルフの単価も未定と記載されている。会話では、シェルフの単価が九千円に決まったこと、パーティションの納品日が来週水曜に確定したことが分かる。結果として未解決のまま残るのはシェルフの納品日だけで、これはメーカーが在庫を確認中のためである。資料だけを読むと未定事項が二つ以上あるように見え、会話だけでは元々どの項目が未定だったのか分からない。",
+      "explanation_en": "The document lists both the shelf price and two delivery dates as pending; the conversation resolves the price and one delivery date, leaving only the shelf's delivery date unresolved.",
+      "vocab_notes": [
+        {
+          "term": "在庫確認",
+          "reading": "ざいこかくにん",
+          "meaning": "stock check / inventory confirmation"
+        },
+        {
+          "term": "入荷",
+          "reading": "にゅうか",
+          "meaning": "arrival of goods (into stock)"
+        }
+      ],
+      "audio": {
+        "narration": "c80c4363e4929897",
+        "options": [],
+        "dialogue": [
+          "b205d09efbc6f4ce",
+          "a548d70e0eff879c",
+          "794167fa62b3ef8a",
+          "808e8ab78e1602d7",
+          "f6e0e09411ed7d68",
+          "97b719f0bb9ae2b2",
+          "5bc6580ceb2446f7"
+        ]
+      },
+      "documents": [
+        {
+          "template": "quote_order",
+          "title": "御見積書（オフィス家具一式）",
+          "meta": [
+            {
+              "label": "宛先",
+              "value": "さくら文具株式会社 御中"
+            },
+            {
+              "label": "発行者",
+              "value": "山川商事株式会社 営業部"
+            },
+            {
+              "label": "発行日",
+              "value": "十月三日"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "品目",
+                "数量",
+                "単価",
+                "金額"
+              ],
+              "rows": [
+                [
+                  "デスク",
+                  "20台",
+                  "15,000円",
+                  "300,000円"
+                ],
+                [
+                  "椅子",
+                  "20台",
+                  "8,000円",
+                  "160,000円"
+                ],
+                [
+                  "パーティション",
+                  "15枚（変更前20枚）",
+                  "12,000円",
+                  "180,000円"
+                ],
+                [
+                  "シェルフ",
+                  "10台",
+                  "未定",
+                  "未定"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "同僚A",
+          "text": "検討会の見積り、パーティションの数量が変わっていますね。",
+          "clip_id": "b205d09efbc6f4ce"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "はい、先方の要望で二十枚から十五枚に減らしました。",
+          "clip_id": "a548d70e0eff879c"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "シェルフの単価がまだ未定になっていますが、あれは決まりましたか。",
+          "clip_id": "794167fa62b3ef8a"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "ちょうどメーカーから連絡があって、九千円に決まりました。",
+          "clip_id": "808e8ab78e1602d7"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "よかったです。納品日はどうですか。資料ではパーティションとシェルフ、両方未定でしたが。",
+          "clip_id": "f6e0e09411ed7d68"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "パーティションは来週水曜に入荷すると確定しました。ただ、シェルフのほうはまだメーカーが在庫を確認中で、納品日は分かりません。",
+          "clip_id": "97b719f0bb9ae2b2"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では、そこが残る問題ですね。",
+          "clip_id": "5bc6580ceb2446f7"
+        }
+      ],
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "c80c4363e4929897",
+      "item_id": "b39fb5be07",
+      "kind": "narration",
+      "index": null,
+      "text": "この見積りについて、何が問題として残っていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b205d09efbc6f4ce",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "検討会の見積り、パーティションの数量が変わっていますね。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a548d70e0eff879c",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "はい、先方の要望で二十枚から十五枚に減らしました。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "794167fa62b3ef8a",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "シェルフの単価がまだ未定になっていますが、あれは決まりましたか。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "808e8ab78e1602d7",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "ちょうどメーカーから連絡があって、九千円に決まりました。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f6e0e09411ed7d68",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "よかったです。納品日はどうですか。資料ではパーティションとシェルフ、両方未定でしたが。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "97b719f0bb9ae2b2",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "パーティションは来週水曜に入荷すると確定しました。ただ、シェルフのほうはまだメーカーが在庫を確認中で、納品日は分かりません。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5bc6580ceb2446f7",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 6,
+      "text": "では、そこが残る問題ですね。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": []
+}

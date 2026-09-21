@@ -1,0 +1,226 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J1",
+  "generated_at": "2026-09-21T21:40:16+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "23fd538a62",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "handover+other_department+reconcile_document@J1",
+        "setting": "handover",
+        "relation": "other_department",
+        "function": "reconcile_document",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "システム移行案件の引き継ぎ",
+      "stem": "データ移行の開始予定は、いつからになりましたか。",
+      "options": [
+        {
+          "text": "九月十五日から",
+          "role": "stated_by_wrong_speaker",
+          "why": "経理部担当者がそう確認しているが、それはテスト環境構築の予定日であり、システム部担当者がその場で訂正している。"
+        },
+        {
+          "text": "十月八日から",
+          "role": "correct",
+          "why": "システム部担当者が、ベンダー側の人員不足でデータ移行の開始自体が一週間遅れ、十月八日からになったと明言している。"
+        },
+        {
+          "text": "十月一日から",
+          "role": "combines_wrong_pair",
+          "why": "報告書に書かれた当初の予定日のままで、会話で述べられたベンダー都合の一週間遅れを反映していない。"
+        },
+        {
+          "text": "十月十五日から",
+          "role": "unsupported_but_plausible",
+          "why": "さらなる遅れとしてありそうな日付だが、会話にも報告書にも述べられていない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "報告書ではデータ移行の開始予定は十月一日となっているが、会話でテスト環境構築の完了後、ベンダー側の人員不足によりデータ移行の開始自体が一週間遅れて十月八日になったと分かる。九月十五日はテスト環境構築の予定日であり、経理部担当者が誤って結び付けたものをシステム部担当者が訂正している。十月十五日はさらに遅れた場合の推測に過ぎず、根拠がない。報告書だけでは遅れが分からず、会話だけでは元の予定日が分からないため、両方を突き合わせないと正しい日付は選べない。",
+      "explanation_en": "The report lists an original start date; the conversation reveals a one-week vendor delay that pushes it back, and a colleague's misattributed date is corrected on the spot.",
+      "vocab_notes": [
+        {
+          "term": "検収",
+          "reading": "けんしゅう",
+          "meaning": "acceptance inspection"
+        },
+        {
+          "term": "人員不足",
+          "reading": "じんいんぶそく",
+          "meaning": "staff shortage"
+        },
+        {
+          "term": "引き継ぎ",
+          "reading": "ひきつぎ",
+          "meaning": "handover"
+        }
+      ],
+      "audio": {
+        "narration": "c16863511b844dc7",
+        "options": [],
+        "dialogue": [
+          "2b02bce288b43518",
+          "7afb4b86ec8df75b",
+          "3e61351755a4c0b7",
+          "894530015214ebfd",
+          "1febbc2c24f4b404",
+          "9cdc1f38f6cd06a5"
+        ]
+      },
+      "documents": [
+        {
+          "template": "progress_report",
+          "title": "顧客管理システム移行 進捗報告書",
+          "meta": [
+            {
+              "label": "報告者",
+              "value": "システム部 保田"
+            },
+            {
+              "label": "報告日",
+              "value": "九月二十日"
+            },
+            {
+              "label": "案件",
+              "value": "顧客管理システム移行（経理部向け）"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "caption": "作業マイルストーン",
+              "columns": [
+                "項目",
+                "状況",
+                "予定日"
+              ],
+              "rows": [
+                [
+                  "要件定義",
+                  "完了",
+                  "八月三十一日"
+                ],
+                [
+                  "テスト環境構築",
+                  "遅延中",
+                  "九月十五日"
+                ],
+                [
+                  "データ移行",
+                  "未着手",
+                  "十月一日開始"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "システム部担当者",
+          "text": "この報告書の通り、データ移行は十月一日開始の予定でした。",
+          "clip_id": "2b02bce288b43518"
+        },
+        {
+          "speaker_role": "経理部担当者",
+          "text": "テスト環境の構築が九月十五日に終わる予定でしたが、それは今どうなっていますか。",
+          "clip_id": "7afb4b86ec8df75b"
+        },
+        {
+          "speaker_role": "システム部担当者",
+          "text": "先週ようやく完了しました。ただ、ベンダー側の人員不足で、データ移行の開始自体が一週間遅れて十月八日からになりました。",
+          "clip_id": "3e61351755a4c0b7"
+        },
+        {
+          "speaker_role": "経理部担当者",
+          "text": "では、データ移行は九月十五日からということですね？",
+          "clip_id": "894530015214ebfd"
+        },
+        {
+          "speaker_role": "システム部担当者",
+          "text": "いえ、九月十五日はテスト環境の予定日です。データ移行の開始は十月八日です。",
+          "clip_id": "1febbc2c24f4b404"
+        },
+        {
+          "speaker_role": "経理部担当者",
+          "text": "承知しました。十月八日から準備します。",
+          "clip_id": "9cdc1f38f6cd06a5"
+        }
+      ],
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "c16863511b844dc7",
+      "item_id": "23fd538a62",
+      "kind": "narration",
+      "index": null,
+      "text": "データ移行の開始予定は、いつからになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "2b02bce288b43518",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "この報告書の通り、データ移行は十月一日開始の予定でした。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "7afb4b86ec8df75b",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "テスト環境の構築が九月十五日に終わる予定でしたが、それは今どうなっていますか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3e61351755a4c0b7",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "先週ようやく完了しました。ただ、ベンダー側の人員不足で、データ移行の開始自体が一週間遅れて十月八日からになりました。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "894530015214ebfd",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "では、データ移行は九月十五日からということですね？",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1febbc2c24f4b404",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "いえ、九月十五日はテスト環境の予定日です。データ移行の開始は十月八日です。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9cdc1f38f6cd06a5",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "承知しました。十月八日から準備します。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": []
+}

@@ -1,0 +1,147 @@
+{
+  "bundle_version": 2,
+  "item_type": "shiryou_choudokkai",
+  "level": "J3",
+  "generated_at": "2026-09-21T21:38:19+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "81a2e12c4c",
+      "item_type": "shiryou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "schedule_sheet+junior_to_senior+find_the_conflict@J3",
+        "setting": "schedule_sheet",
+        "relation": "junior_to_senior",
+        "function": "find_the_conflict",
+        "level": "J3",
+        "channel": "phone"
+      },
+      "topic": "予定表の重複予約を電話で確認する",
+      "stem": "後輩が予定表を見ながら先輩に電話でこう尋ねました。先輩「15日10時、ABC商事さんとみどり産業さんが重なっていますね。みどり産業さんとはもう16日の13時に変更してもらいました。かえで商会さんは17日に延期になったので、16日は空いています。」みどり産業と実際に会うのはいつですか。",
+      "options": [
+        {
+          "text": "10月14日10時",
+          "role": "reads_wrong_row",
+          "why": "同じ第2応接室が使われるABC商事の別日の行で、みどり産業とは無関係の時間帯。"
+        },
+        {
+          "text": "10月15日10時",
+          "role": "ignores_the_spoken_change",
+          "why": "予定表に元々書かれていた重複中の時間で、変更後の時間を反映していない。"
+        },
+        {
+          "text": "10月17日",
+          "role": "wrong_timeframe",
+          "why": "これはかえで商会が延期になった日で、みどり産業の約束が移った日ではない。"
+        },
+        {
+          "text": "10月16日13時",
+          "role": "correct",
+          "why": "先輩の発言で、重複していたみどり産業との約束は16日13時に変更されたと述べられている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "予定表では15日10時にABC商事とみどり産業の予約が重複している。先輩の電話で、みどり産業との約束は16日13時に変更されたと分かる。10月15日10時は変更前の値で誤り、10月14日10時はABC商事の別行を読み違えたもの、10月17日はかえで商会が延期になった日であり、みどり産業とは関係ない。予定表だけでは変更後の時間が分からず、電話だけではどの予約が重複していたか分からない。",
+      "explanation_en": "The sheet shows a double booking; the call reveals which appointment moved and to when, while the other date belongs to a different client's postponement.",
+      "vocab_notes": [
+        {
+          "term": "重複",
+          "reading": "じゅうふく",
+          "meaning": "duplication/overlap"
+        },
+        {
+          "term": "延期",
+          "reading": "えんき",
+          "meaning": "postponement"
+        },
+        {
+          "term": "応接室",
+          "reading": "おうせつしつ",
+          "meaning": "reception room"
+        }
+      ],
+      "audio": {
+        "narration": "e47e027fd06a1501",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "来客対応 予定表",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "10月14日(月)～10月16日(水)"
+            },
+            {
+              "label": "作成者",
+              "value": "後輩 中村"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "日付",
+                "時間",
+                "訪問先",
+                "場所"
+              ],
+              "rows": [
+                [
+                  "10/14(月)",
+                  "10:00",
+                  "ABC商事",
+                  "第2応接室"
+                ],
+                [
+                  "10/14(月)",
+                  "14:00",
+                  "さくら工業",
+                  "本社ロビー（元は第1会議室）"
+                ],
+                [
+                  "10/15(火)",
+                  "10:00",
+                  "ABC商事",
+                  "第2応接室"
+                ],
+                [
+                  "10/15(火)",
+                  "10:00",
+                  "みどり産業",
+                  "第1応接室"
+                ],
+                [
+                  "10/16(水)",
+                  "13:00",
+                  "かえで商会",
+                  "第3応接室"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "e47e027fd06a1501",
+      "item_id": "81a2e12c4c",
+      "kind": "narration",
+      "index": null,
+      "text": "後輩が予定表を見ながら先輩に電話でこう尋ねました。先輩「15日10時、ABC商事さんとみどり産業さんが重なっていますね。みどり産業さんとはもう16日の13時に変更してもらいました。かえで商会さんは17日に延期になったので、16日は空いています。」みどり産業と実際に会うのはいつですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_phone_desk"
+  ]
+}

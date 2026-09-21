@@ -1,0 +1,133 @@
+{
+  "bundle_version": 2,
+  "item_type": "shiryou_choudokkai",
+  "level": "J1",
+  "generated_at": "2026-09-21T21:37:11+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "8091994664",
+      "item_type": "shiryou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "schedule_sheet+junior_to_senior+find_the_conflict@J1",
+        "setting": "schedule_sheet",
+        "relation": "junior_to_senior",
+        "function": "find_the_conflict",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "予定表の重複予約を電話で確認する",
+      "stem": "後輩が予定表を見ながら電話でこう言いました。「先輩、十五日の予定なんですが、第一応接室にB社商談と定例会議が両方入っているように見えます。」先輩は「ああ、B社商談は仮予約のままだったので、空いていた第二応接室に変更しました。定例会議は予定通り第一応接室で行います」と答えました。B社商談は十五日、どこで行われますか。",
+      "options": [
+        {
+          "text": "第二会議室",
+          "role": "surface_keyword_match",
+          "why": "「第二」という語は共通するが、予定表にも会話にも登場しない部屋であり、実際の変更先である第二応接室とは異なる。"
+        },
+        {
+          "text": "第三応接室",
+          "role": "reads_wrong_row",
+          "why": "十六日のC社訪問で使われる部屋であり、十五日のB社商談とは別の行の情報。"
+        },
+        {
+          "text": "第一応接室",
+          "role": "ignores_the_spoken_change",
+          "why": "予定表に元々書かれていた場所で、電話で変更が伝えられたことを反映していない。"
+        },
+        {
+          "text": "第二応接室",
+          "role": "correct",
+          "why": "先輩の説明どおり、仮予約だったB社商談は実際に空いていた第二応接室に変更されたため。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "予定表では十五日の第一応接室にB社商談（仮予約）と定例会議が重なって記載されている。電話で先輩は、仮予約だったB社商談を空いていた第二応接室に変更したと説明し、定例会議は第一応接室のままだと述べた。予定表だけでは重複していることは分かるが変更後の場所は分からず、電話だけでは何が変更されたのか特定できない。第一応接室は変更前の値、第三応接室は別の日の別の行、第二会議室は語の一部が似ているだけの無関係な部屋であり、いずれも誤り。",
+      "explanation_en": "The schedule shows a room conflict on the 15th; the phone call reveals which event was moved and to where, requiring both sources.",
+      "vocab_notes": [
+        {
+          "term": "仮予約",
+          "reading": "かりよやく",
+          "meaning": "provisional reservation"
+        },
+        {
+          "term": "応接室",
+          "reading": "おうせつしつ",
+          "meaning": "reception/meeting room"
+        }
+      ],
+      "audio": {
+        "narration": "868403b9d7b9834c",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "来客対応・会議室予定表",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "十月十四日〜十月十六日"
+            },
+            {
+              "label": "作成者",
+              "value": "営業部 佐藤"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "日付",
+                "内容",
+                "場所",
+                "担当"
+              ],
+              "rows": [
+                [
+                  "十月十四日",
+                  "A社訪問",
+                  "第二応接室",
+                  "木村"
+                ],
+                [
+                  "十月十五日",
+                  "B社商談",
+                  "第一応接室（仮予約）",
+                  "森田"
+                ],
+                [
+                  "十月十五日",
+                  "社内定例会議",
+                  "第一応接室",
+                  "佐藤"
+                ],
+                [
+                  "十月十六日",
+                  "C社訪問",
+                  "第三応接室",
+                  "木村"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "phone",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "868403b9d7b9834c",
+      "item_id": "8091994664",
+      "kind": "narration",
+      "index": null,
+      "text": "後輩が予定表を見ながら電話でこう言いました。「先輩、十五日の予定なんですが、第一応接室にB社商談と定例会議が両方入っているように見えます。」先輩は「ああ、B社商談は仮予約のままだったので、空いていた第二応接室に変更しました。定例会議は予定通り第一応接室で行います」と答えました。B社商談は十五日、どこで行われますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": []
+}
