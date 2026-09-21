@@ -3,6 +3,15 @@
 A study app for the format of the **BJT ビジネス日本語能力テスト** (Business
 Japanese Proficiency Test), and the pipeline that writes its questions.
 
+> **Work in progress, and not open.** This is a personal project, built by one
+> person to prepare for the BJT. It is readable here because there is no reason
+> to hide it, not because it is finished or because anybody can sign up. The
+> database is the door and it is shut: `public.testers` decides who may have an
+> account at all, only the owner can write that table, and every row-level
+> policy requires a row in it. There is no public instance, no sign-up, and no
+> support. See [blockers.md](blockers.md) for what is unfinished, and
+> [LICENSE](LICENSE) for what you may do with what is here.
+
 ```
 bjt/         the item pipeline — generate, check, publish        (Python)
 seedtable/   the axes that produce variety                       (committed data)

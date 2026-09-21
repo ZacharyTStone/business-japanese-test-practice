@@ -77,10 +77,18 @@ begin
     if not exists (select 1 from pg_roles where rolname = 'service_role') then
         create role service_role nologin noinherit bypassrls;
     end if;
+    -- GoTrue's own connection. It is here so that the sign-up trigger, which
+    -- only refuses this role, can be exercised: the fixtures below insert
+    -- auth.users rows as the test superuser and are deliberately unaffected.
+    if not exists (select 1 from pg_roles where rolname = 'supabase_auth_admin') then
+        create role supabase_auth_admin nologin noinherit;
+    end if;
 end
 $$;
 
 grant usage on schema public, auth, storage to anon, authenticated, service_role;
+grant usage on schema auth, public to supabase_auth_admin;
+grant insert, select on auth.users to supabase_auth_admin;
 grant select on storage.buckets, storage.objects to anon, authenticated;
 grant all on storage.buckets, storage.objects to service_role;
 alter default privileges in schema public

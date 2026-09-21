@@ -133,10 +133,14 @@ without a picture, which the app allows.
 The client shows an email-and-password screen (sign in, or create an
 account), then asks one RPC (`is_tester()`) whether the email is allowed; the
 database enforces the same check in every row-level policy, so the client is
-not what keeps anybody out. Google sign-in is not wired up: it needs an OAuth
-client in Google Cloud Console and a consent screen, which is more than a
-one-person test needs. When it comes back it is a second button on the same
-screen, and the tester list matches on the same email.
+not what keeps anybody out. Since 2026-09-21 the list also decides who may
+have an account in the first place: a `before insert` trigger on `auth.users`
+refuses a sign-up from the auth service for an address the list does not
+already name, so an empty list means the project accepts nobody at all.
+Google sign-in is not wired up: it needs an OAuth client in Google Cloud
+Console and a consent screen, which is more than a one-person test needs.
+When it comes back it is a second button on the same screen, and the tester
+list matches on the same email.
 
 **What is blocked.** Only the dashboard settings below, and a deployed URL to
 sign in from.
@@ -152,14 +156,20 @@ sign in from.
    where the app is served.
 4. Set only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in
    the Cloudflare build variables. **Never a service-role key.**
-5. Put the email on the tester list: the **deploy database** workflow's
-   `tester_email` field, or `bjt tester you@example.com` applied with psql.
+5. Put the email on the tester list **first**: the **deploy database**
+   workflow's `tester_email` field, or `bjt tester you@example.com` applied
+   with psql. This is now the step that has to come before the account, not
+   after it -- sign-up itself is refused for an address the list does not name.
 
 Then the acceptance checks, which are the point:
 
 - Fresh browser: the sign-in screen, and nothing behind it without signing in.
-- Create an account with an email that is **not** on the list: the "not open
-  yet" screen names it; the network tab shows every query returning nothing.
+- Try to create an account with an email that is **not** on the list: sign-up
+  itself fails, and no `auth.users` row and no profile are left behind.
+- Add that same address to the list, then create the account: it works. Take
+  it off the list again and the "not open yet" screen names it, because the
+  policies are a separate lock from the trigger -- the network tab shows every
+  query returning nothing.
 - Sign in with the listed email: one profile is created; answering items
   writes attempts and moves the weakness metrics.
 - Refresh, and open on a second device: the same history is there.

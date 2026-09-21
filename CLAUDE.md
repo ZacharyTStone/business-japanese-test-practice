@@ -239,6 +239,18 @@ accident is not.
   that drops the conjunct, and the anonymous-first client path comes back in
   front of the door. Never add a policy, view or RPC that answers a
   non-tester while this holds.
+  There is a second lock in front of the first: an address that is not already
+  on the list cannot get an account at all. `refuse_unlisted_signup()` is a
+  `before insert` trigger on `auth.users` that refuses the auth service's own
+  connection (GoTrue is `supabase_auth_admin`, which is the path open to the
+  internet) unless `public.testers` already names the address; an anonymous
+  sign-in carries no address and is refused by the same sentence. An empty
+  list therefore means nobody can sign up, which is where a fresh project
+  starts. A migration, a fixture or the owner with the service role is
+  unaffected, because a check the owner has to switch off to do ordinary work
+  is a check that ends up switched off. The owner asked for this (2026-09-21):
+  the app takes no new users while it is a work in progress. Reading nothing
+  and not existing are different things, and both are wanted.
 - **The one screen that explains any of this is the start screen**
   (`client/src/ui/welcome.tsx`), shown once on first launch. Everything else
   gets on with serving questions. If a feature needs explaining somewhere else

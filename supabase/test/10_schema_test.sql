@@ -592,6 +592,86 @@ update auth.users set email = 'zach@example.com' where id = '11111111-1111-1111-
 
 reset role;
 
+-- --- and no new accounts ---------------------------------------------------
+--
+-- Everything above is about what an account may READ. This is about whether it
+-- may exist at all. The refusal applies to the auth service's connection --
+-- the sign-up endpoint, the one a stranger can reach -- so every fixture in
+-- this file, inserted as the test superuser, is deliberately unaffected and
+-- the isolation tests above still have their unlisted account to work with.
+
+insert into public.testers (email, note) values
+    ('invited@example.com', 'test fixture: listed, has not signed up yet');
+
+do $$
+declare
+    ok boolean;
+begin
+    raise notice 'the door: no new accounts';
+
+    -- The role is set outside each attempt: an exception rolls its subtrans-
+    -- action back, and a SET made inside would go with it.
+    execute 'set role supabase_auth_admin';
+
+    ok := false;
+    begin
+        insert into auth.users (email, is_anonymous) values ('nobody@example.com', false);
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'an address the owner never listed cannot sign up');
+
+    ok := false;
+    begin
+        insert into auth.users (email, is_anonymous) values (null, true);
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'an anonymous sign-in carries no address, so it is refused too');
+
+    ok := false;
+    begin
+        insert into auth.users (email, is_anonymous) values ('NOBODY@example.com', false);
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'and the case of the address does not get round it');
+
+    ok := true;
+    begin
+        insert into auth.users (email, is_anonymous) values ('invited@example.com', false);
+    exception when others then
+        ok := false;
+    end;
+    perform test.check(ok, 'somebody the owner listed first can sign up');
+
+    execute 'reset role';
+
+    perform test.check(
+        (select count(*) from auth.users where email = 'nobody@example.com') = 0,
+        'the refused address left no row behind');
+    perform test.check(
+        (select count(*) from public.profiles p
+           join auth.users u on u.id = p.id
+          where u.email = 'invited@example.com') = 1,
+        'and the one that was let through still gets its profile');
+end
+$$;
+
+-- The trigger is the second lock, not a replacement for the first: an account
+-- that exists and is then taken off the list goes back to reading nothing.
+delete from public.testers where email = 'invited@example.com';
+do $$
+begin
+    perform test.become((select id from auth.users where email = 'invited@example.com'));
+    set local role authenticated;
+    perform test.check(not public.is_tester(), 'taken off the list, an existing account reads nothing again');
+end
+$$;
+
+reset role;
+delete from auth.users where email = 'invited@example.com';
+
 \echo 'ALL SCHEMA TESTS PASSED'
 
 -- ---------------------------------------------------------------------------

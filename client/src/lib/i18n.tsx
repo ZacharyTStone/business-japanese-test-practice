@@ -84,7 +84,7 @@ const S = {
   gate_body: ["いまはテスト中のため、登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   gate_email: ["メールアドレス", "Email"],
   gate_password: ["パスワード", "Password"],
-  gate_password_hint: ["パスワードは6文字以上。初めての方は「アカウントを作る」を押してください。", "Password of at least 6 characters. First time here? Press “Create account”."],
+  gate_password_hint: ["パスワードは6文字以上。登録済みのメールアドレスであれば、初めての方は「アカウントを作る」を押してください。", "Password of at least 6 characters. If your address is already registered, press “Create account” the first time."],
   gate_sign_in: ["ログイン", "Sign in"],
   gate_create: ["アカウントを作る", "Create account"],
   gate_busy: ["確認しています…", "Checking…"],
