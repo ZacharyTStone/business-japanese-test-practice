@@ -12,7 +12,7 @@ import json
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Optional
 
 from .. import config
 from ..schemas import correct_index

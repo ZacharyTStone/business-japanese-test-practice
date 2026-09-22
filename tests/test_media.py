@@ -561,6 +561,26 @@ def test_the_app_looks_for_the_letters_this_module_plans():
     assert voice and voice.group(1) == tts_plan.NARRATOR_VOICE
 
 
+def test_the_app_shows_letters_for_exactly_the_types_that_speak_their_options():
+    """SPOKEN_OPTION_TYPES in the practice screen decides whether a learner sees
+    four letters or four printed options; TYPE_AUDIO in this module decides
+    whether the clips those letters point at ever get synthesised. A type in
+    one set and not the other is either options nobody hears introduced, or a
+    letter with nothing behind it — so the two lists have to name the same
+    types. Read out of client/app/practice.tsx, the same source the app
+    imports, so a drift here is caught here rather than in the app."""
+    import pathlib
+    import re
+    from bjt.tts import plan as tts_plan
+    practice = (pathlib.Path(__file__).resolve().parents[1]
+                / "client" / "app" / "practice.tsx").read_text(encoding="utf-8")
+    block = re.search(r"const SPOKEN_OPTION_TYPES = new Set\(\[(.*?)\]\);", practice, re.S)
+    assert block, "practice.tsx no longer declares SPOKEN_OPTION_TYPES as expected"
+    app_types = set(re.findall(r'"([^"]+)"', block.group(1)))
+    plan_types = {t for t, policy in tts_plan.TYPE_AUDIO.items() if policy["options"]}
+    assert app_types == plan_types
+
+
 def test_a_picture_item_carries_its_brief_and_a_scene_of_its_own():
     from bjt import batch as batchmod
     from bjt import fixtures, scenes
