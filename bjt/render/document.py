@@ -121,7 +121,8 @@ def document_schema() -> dict:
             "title": {
                 "type": "string",
                 "description": "The document's own title as it appears at the top: an "
-                "email subject line, a memo heading, the name of a report.",
+                "email subject line, a memo heading, the name of a report. Numbers "
+                "in Arabic digits (「10月 新人研修 予定表」, not 「十月 …」).",
             },
             "meta": {
                 "type": "array",
@@ -135,12 +136,17 @@ def document_schema() -> dict:
                     },
                 },
                 "description": "The template's header fields — From/To/Date for an "
-                "email, 日時/場所/出席者 for minutes. Labels in Japanese.",
+                "email, 日時/場所/出席者 for minutes. Labels in Japanese. Dates and "
+                "times in Arabic digits (「9月9日（火）10時〜12時」).",
             },
             "blocks": {
                 "type": "array",
                 "items": _block_schema(),
-                "description": "The body, in reading order.",
+                "description": "The body, in reading order. Write every number "
+                "with Arabic digits, as a real business document does: 9月9日"
+                "（火）, 10時〜12時, 200個, 800万円 — never 九月九日, 十時, 二百個. "
+                "Kanji numerals stay only in the names of things (第一会議室, "
+                "第三回, 一覧).",
             },
         },
     }

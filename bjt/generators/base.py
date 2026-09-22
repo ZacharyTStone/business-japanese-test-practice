@@ -263,6 +263,13 @@ class Generator:
             # item; drop it rather than spend an attempt asking for it back.
             for doc in schemas.documents_of(item):
                 render.prune_empty_blocks(doc)
+            # Numbers spelled out in kanji are the same kind of tic and get the
+            # same answer: rewritten here rather than costing the draft, and
+            # rewritten *before* the gate, the proofreader and the
+            # discriminator see it, so all three judge the item as it will
+            # ship. `to_bundle_item` does this too — this is the copy that
+            # makes the fidelity checks honest.
+            batchmod.normalise_numerals(item)
             repair_surplus_options(item)
             errors = schemas.validate_item(self.item_type, item)
             errors.extend(self.validate_extra(item, cell))

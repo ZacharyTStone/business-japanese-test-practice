@@ -10,6 +10,8 @@ not a preference.
     render.render(doc)                 # -> an HTML fragment for the app
     render.render_page(doc)            # -> a standalone page, for looking at it
     render.document_schema()           # -> the schema the model emits against
+    render.to_arabic(doc)              # spelled-out numbers -> digits, in place
+    render.document_faults(doc)        # the numbers still spelled out, [] == clean
     render.TEMPLATES                   # -> the eight templates
 """
 from .document import (  # noqa: F401
@@ -19,6 +21,13 @@ from .document import (  # noqa: F401
     prune_empty_blocks,
     text_of,
     validate_document,
+)
+from .numerals import (  # noqa: F401
+    COUNTERS,
+    document_faults,
+    kanji_numbers_in,
+    to_arabic,
+    to_arabic_text,
 )
 from .html import render, render_block, render_page  # noqa: F401
 from .templates import TEMPLATES, Template, for_item_type, spec  # noqa: F401

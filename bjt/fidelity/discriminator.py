@@ -11,7 +11,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from .. import llm, textutil
+from .. import llm, schemas, textutil
 
 
 @dataclass
@@ -23,6 +23,40 @@ class DiscriminatorResult:
     reasons: list[str] = field(default_factory=list)
 
 
+def _carries(items: list[dict], part: str) -> int:
+    if part == "資料":
+        return sum(1 for it in items if schemas.documents_of(it))
+    return sum(1 for it in items if it.get("dialogue"))
+
+
+def _refuse_lopsided(generated: list[dict], official: list[dict]) -> None:
+    """Refuse a comparison that would measure the seed files instead of the items.
+
+    The judge is shown the whole stimulus, 資料 and 会話 included. If every
+    generated item has a 資料 and no official sample does — which is how
+    `seeds/official/*.json` arrives, since transcribing a printed table is work
+    somebody has to do by hand — then "has a 資料" separates the two sides
+    perfectly and the rate is 100% no matter how good the items are. That would
+    be bad enough as a wrong number on a dashboard. It is worse than that here,
+    because `bjt discriminate` folds the judge's stated tells back into the
+    generator prompt: the next night's items would be written to avoid having a
+    document at all.
+
+    So this is a fault in the comparison, not a result to report. It says which
+    seed file to fix.
+    """
+    for part in ("資料", "会話"):
+        ours, theirs = _carries(generated, part), _carries(official, part)
+        if ours and not theirs:
+            raise ValueError(
+                f"every one of the {ours} generated item(s) with a {part} is being "
+                f"compared against official samples that have none, so the judge "
+                f"can separate the two sides on that alone. Add the {part} to the "
+                f"official samples in seeds/official/, or discriminate a type that "
+                f"does not have one."
+            )
+
+
 def run_discriminator(
     item_type: str,
     generated_items: list[dict],
@@ -32,6 +66,8 @@ def run_discriminator(
 ) -> DiscriminatorResult:
     if not generated_items or not official_items:
         raise ValueError("need at least one generated and one official item")
+
+    _refuse_lopsided(generated_items, official_items)
 
     rng = random.Random(seed)
     labelled = [(textutil.render_for_discriminator(it), "synthetic") for it in generated_items]

@@ -135,6 +135,31 @@ accident is not.
   everything is not that. Settings, entitlements and item reports are not
   progress and are left alone. The owner asked for a way to start again
   (2026-09-20).
+- **A printed number is written with digits, and the whole screen agrees.** A
+  booking grid headed 「十時〜十二時」 or a quotation for 「数量二百個」 is
+  grammatical and is not what comes off an office printer; kanji numerals
+  belong to vertical prose and to the names of things (第一会議室, 第三回, 一覧).
+  `bjt/render/numerals.py` holds the rule, `batch.normalise_numerals` applies
+  it wherever an item enters a bundle, the document schema quotes it to the
+  generator, and an offline check re-runs the converter and fails a bundle it
+  can still move. It covers the 資料 *and* the printed options, stem and 解説 of
+  a document type, because 資料聴読解 offers 「七十点」 as an answer to a figure
+  read off a table and two notations for one number is arithmetic instead of
+  reading. Anything `bjt/tts/plan.py` synthesises is untouched — a clip id
+  hashes its text, and a live clip is never re-made — which is why a narrated
+  stem still reads 「三時から」. All 41 documents in the bank were kanji until
+  2026-09-22, because nothing said so and nothing checked. The owner asked for
+  this (2026-09-22).
+- **The discriminator sees what the learner sees.** `render_for_discriminator`
+  carries the 資料 and the 会話, not just the stem and the options; without them
+  the headline fidelity metric was rating 状況把握, 資料聴読解, 総合聴読解 and
+  総合読解 — 55 of the exam's 80 questions — on a fragment of their stimulus,
+  which is how a library of textbook-looking documents went unnoticed. The
+  matching half is that `run_discriminator` refuses a comparison where our
+  items carry a stimulus the official samples lack: `bjt discriminate` folds
+  the judge's stated tells back into the generator prompt, so a tell about
+  `seeds/official/` not having the 資料 transcribed would teach the generator to
+  stop writing documents.
 - **画像把握 is the one type whose picture is the question, and its item is not
   served until the picture exists.** The generator writes an English
   `image_brief` with the four descriptions; the scene job draws it, one picture

@@ -593,7 +593,14 @@ def cmd_discriminate(args) -> int:
             return 2
         official = _normalize_official(official, args.type)[: args.n]
         print(f"Discriminating {len(generated)} generated vs {len(official)} official {args.type} items...")
-        result = discriminator.run_discriminator(args.type, generated, official)
+        try:
+            result = discriminator.run_discriminator(args.type, generated, official)
+        except ValueError as e:
+            # A comparison the judge could win on the shape of the seed file
+            # rather than on the writing. Reported as a fault to fix, never as
+            # a rate — see discriminator._refuse_lopsided.
+            print(f"\nCannot score this comparison: {e}", file=sys.stderr)
+            return 2
         store.insert_discriminator_run(
             args.type, result.n_generated, result.n_official,
             result.discrimination_rate, result.reasons,

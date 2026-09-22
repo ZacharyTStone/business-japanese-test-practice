@@ -18,6 +18,7 @@ how a test-taker learns to score without understanding anything.
 """
 from __future__ import annotations
 
+import copy
 import datetime as _dt
 import hashlib
 import json
@@ -27,7 +28,7 @@ from typing import Optional
 
 from . import config, schemas, seedtable
 from .fidelity import dedupe, roles
-from .render import document
+from .render import document, numerals
 from .tts import plan as tts_plan
 
 #: 2 — audio clip ids are filed by role (`narration` / `options` / `dialogue`)
@@ -89,9 +90,71 @@ def item_id(item: dict) -> str:
     return hashlib.sha1(f"{item.get('item_type','')}|{key}".encode("utf-8")).hexdigest()[:10]
 
 
+def normalise_numerals(item: dict) -> int:
+    """Make every printed part of a document item agree with its document about
+    how a number is written. Returns how many strings moved.
+
+    `bjt/render/numerals.py` says why a 資料 sets its numbers in Arabic digits.
+    The document alone is not enough, because the learner is not reading the
+    document alone: 資料聴読解 asks for a figure off a table and offers 「七十点」
+    as an answer, and a table reading 70点 beside an option reading 七十点 makes
+    the learner convert between two notations to do a task that is supposed to
+    be about reading Japanese. So the rule is the screen, not the file — the
+    document, the printed options, the printed stem and the 解説 all follow the
+    document's style.
+
+    **What is left alone, and why.** Anything `bjt.tts.plan` synthesises: the
+    narrated stem of the three 聴読解 types, the spoken options of 第1部, a
+    dialogue's turns. A clip id hashes its text, so rewriting a number the
+    narrator reads would orphan a clip that is already live, and a live clip is
+    never re-made. Nothing is lost by it either — spoken text is never on the
+    screen to disagree with anything.
+
+    Types with no document (語彙・文法, 表現読解, and the 聴解 types) are out of
+    scope altogether. Their options are utterances and word choices rather than
+    figures read off a page, 「十二台」 against 「十二枚」 is the question being
+    asked in one of them, and no table is beside them to contradict.
+    """
+    if not schemas.DOCUMENT_FIELDS.get(item.get("item_type", "")):
+        return 0
+    spoken = tts_plan.audio_policy(item["item_type"])
+    moved = 0
+
+    for doc in schemas.documents_of(item):
+        moved += numerals.to_arabic(doc)
+
+    if not spoken.get("stem") and item.get("stem"):
+        before = item["stem"]
+        item["stem"] = numerals.to_arabic_text(before)
+        moved += item["stem"] != before
+
+    if not spoken.get("options"):
+        for option in item.get("options") or []:
+            for key in ("text", "why"):
+                if isinstance(option.get(key), str):
+                    before = option[key]
+                    option[key] = numerals.to_arabic_text(before)
+                    moved += option[key] != before
+
+    for key in ("explanation_ja", "explanation_en"):
+        if isinstance(item.get(key), str):
+            before = item[key]
+            item[key] = numerals.to_arabic_text(before)
+            moved += item[key] != before
+
+    return moved
+
+
 def to_bundle_item(item: dict) -> dict:
     """One item in app-facing shape: answer resolved to an index, audio clip ids
     attached, documents normalised to a list, our internal metrics left out."""
+    # The one funnel every item passes through on its way into a bundle, whether
+    # a generator wrote it or a person hand-wrote a `.source.json`. Copied first
+    # because the numeral pass rewrites strings and the caller's item is not
+    # ours to edit; the clip ids below are unaffected, since what it rewrites is
+    # by definition the text nothing synthesises.
+    item = copy.deepcopy(item)
+    normalise_numerals(item)
     iid = item_id(item)
     clips = tts_plan.plan_item(item, iid)
     by_kind: dict[str, list] = {}
@@ -421,7 +484,38 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
             "; ".join(out_of_band) + f" — {', '.join(summary)}" if out_of_band
             else ", ".join(summary))
 
-    # 9. Listening-specific: the scene must exist in the bank.
+    # 9. A document is printed to look like something, so everything printed
+    #    beside it writes its numbers the way print does — see
+    #    `normalise_numerals`, which is what this check is checking.
+    #    `to_bundle_item` runs that on the way in, so a failure here means a
+    #    bundle assembled some other way: a hand-edited `.json`, or a batch
+    #    older than the rule. A failure rather than a note because it is
+    #    mechanical and unambiguous, and re-importing the batch fixes it.
+    #
+    #    Re-normalising a copy and diffing is the whole test: it cannot
+    #    disagree with the converter about what a number is, and it stays true
+    #    if the converter's mind is changed later.
+    spelled_out: dict[str, str] = {}
+    n_docs = 0
+    for it in items:
+        shaped = _as_generator_shape(it)
+        docs = schemas.documents_of(shaped)
+        n_docs += len(docs)
+        moved = normalise_numerals(copy.deepcopy(shaped))
+        if moved:
+            # Name what is wrong where we can. The runs come from the documents
+            # because that is what `document_faults` reads; an item whose only
+            # spelled-out number is in an option still reports its count.
+            runs = sorted({r for doc in docs for r in numerals.document_faults(doc)})
+            spelled_out[it["id"]] = ", ".join(runs) if runs else f"{moved} string(s)"
+    if n_docs:
+        add("numbers are written as digits", "fail" if spelled_out else "pass",
+            "still spelled out — "
+            + "; ".join(f"{iid}: {what}" for iid, what in spelled_out.items())
+            if spelled_out else
+            f"{n_docs} document(s) and their options read like print")
+
+    # 10. Listening-specific: the scene must exist in the bank.
     if item_type == "hatsugen_choukai":
         try:
             bank = set(seedtable.load(item_type).scene_bank)
@@ -435,7 +529,7 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
                 f"not in the bank: {unknown}" if unknown
                 else f"{n_scenes} scene(s) reused across {n} items")
 
-    # 10. Shared utterances are supposed to collapse into one file, so the
+    # 11. Shared utterances are supposed to collapse into one file, so the
     #    manifest should be smaller than the clips the items ask for between
     #    them. The old form of this check assumed five clips per item —
     #    narration plus four spoken options — which is true of exactly one of
