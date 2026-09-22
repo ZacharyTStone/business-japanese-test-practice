@@ -1,0 +1,69 @@
+{
+  "bundle_version": 2,
+  "item_type": "hyougen",
+  "level": "J3",
+  "generated_at": "2026-09-22T20:45:40+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "97f123223d",
+      "item_type": "hyougen",
+      "level": "J3",
+      "seed_cell": {
+        "id": "chat_internal+peer_to_peer+request@J3",
+        "setting": "chat_internal",
+        "relation": "peer_to_peer",
+        "function": "request",
+        "level": "J3",
+        "channel": "written"
+      },
+      "topic": "社内チャットで同僚に資料チェックを依頼する",
+      "stem": "社内チャットで、同じ課の同僚に、明日提出する資料の数字チェックを今日中にしてほしいと頼みます。最も適切な表現はどれですか。",
+      "options": [
+        {
+          "text": "資料チェック、よろしく。",
+          "role": "register_too_casual",
+          "why": "何を今日中にしてほしいのかという依頼の形になっておらず、命令に近い言い切りで、チャットの文としても素っ気なさすぎる。"
+        },
+        {
+          "text": "資料のチェックをしていただき、ありがとうございます。",
+          "role": "correct_keigo_wrong_speech_act",
+          "why": "敬語は整っているが、相手がすでにチェックを終えたことへの感謝の言葉になっており、これから頼む場面の依頼にはなっていない。"
+        },
+        {
+          "text": "資料のチェックをさせていただけますか。",
+          "role": "wrong_honorific_direction",
+          "why": "「させていただく」は自分がチェックする許可を求める形で、相手にチェックしてほしいという依頼とは行為の向きが逆になっている。"
+        },
+        {
+          "text": "資料のチェック、今日中にお願いできる？",
+          "role": "correct",
+          "why": "依頼の内容と期限を示しつつ疑問形で相手に判断を委ねており、同僚同士のチャットとして丁寧さと親しさのバランスが取れている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "同僚への依頼は、内容と期限を示したうえで疑問形にし、相手が引き受けやすい形にする。「よろしく」だけでは何をいつまでにという依頼の中身が伝わらず素っ気ない。「していただき、ありがとうございます」はすでに終わったことへの感謝であり、これから頼む場面には合わない。「させていただけますか」は自分がチェックする許可を求める形で、相手に行為を求める依頼とは向きが逆になっている。",
+      "explanation_en": "A peer request states the task and deadline in a question form; thanking for a finished action or asking permission to act oneself both fail as a forward-looking request.",
+      "vocab_notes": [
+        {
+          "term": "お願いできる？",
+          "reading": "おねがいできる？",
+          "meaning": "could you do this for me? (casual-polite request among peers)"
+        },
+        {
+          "term": "させていただけますか",
+          "reading": "させていただけますか",
+          "meaning": "may I be allowed to do ~ (asks permission for one's own action)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}

@@ -1,0 +1,166 @@
+{
+  "bundle_version": 2,
+  "item_type": "gazou_haaku",
+  "level": "J1",
+  "generated_at": "2026-09-22T20:44:38+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "2cf468fc3d",
+      "item_type": "gazou_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "event_venue+peer_to_peer+taking_notes_in_meeting@J1",
+        "setting": "event_venue",
+        "relation": "peer_to_peer",
+        "function": "taking_notes_in_meeting",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "セミナー会場でメモを取る",
+      "stem": "左の人は何をしていますか。",
+      "options": [
+        {
+          "text": "右の人がメモを取りながら話を聞いています。",
+          "role": "wrong_participants",
+          "why": "手帳とペンを持っているのは左の人で、右の人は腕を組んで座っているだけ。"
+        },
+        {
+          "text": "展示ブースで来場者に商品を説明しています。",
+          "role": "adjacent_setting",
+          "why": "場所は展示ブースではなくセミナー会場の座席で、二人とも聴衆として座っている。"
+        },
+        {
+          "text": "配布資料を隣の人に手渡しています。",
+          "role": "different_action",
+          "why": "手にあるのはペンと手帳で、資料らしき物を持ったり渡したりはしていない。"
+        },
+        {
+          "text": "手帳にメモを取りながら話を聞いています。",
+          "role": "correct",
+          "why": "左の人がペンを持ち手帳に何か書きながら、前のスクリーンのほうを見ている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "左の人がペンを持ち手帳に書き込みながら前のスクリーンを見ているので、話を聞きながらメモを取っている場面。資料を配ったり渡したりする様子はなく、メモを取っているのは右の人ではなく左の人であり、場所は展示ブースではなくセミナー会場の座席である。",
+      "explanation_en": "The person on the left holds a pen and writes in a notebook while facing the front, showing note-taking during a talk, not handing out papers or the person on the right taking notes.",
+      "vocab_notes": [
+        {
+          "term": "メモを取る",
+          "reading": "めもをとる",
+          "meaning": "to take notes"
+        },
+        {
+          "term": "配布資料",
+          "reading": "はいふしりょう",
+          "meaning": "handout materials"
+        },
+        {
+          "term": "展示ブース",
+          "reading": "てんじぶーす",
+          "meaning": "exhibition booth"
+        }
+      ],
+      "audio": {
+        "narration": "03c83634f156e162",
+        "options": [
+          "49cd8a8aef42c8d3",
+          "62743f260f205fbc",
+          "c2ac6401a66a5061",
+          "863a94197e34572e"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "Inside a large exhibition hall set up as a seminar area with rows of folding chairs facing a blank presentation screen at the front, out of focus. Two colleagues in business attire sit next to each other in the middle row, both facing forward. The person on the left holds an open notebook on their lap and a pen, writing something, eyes toward the front screen. The person on the right sits with arms crossed, not holding anything, simply watching. Neither is standing, no papers are being handed between them, and there is no booth counter or product display nearby. No readable text, signs, or screens with content.",
+      "scene_id": "pic_2cf468fc3d",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "03c83634f156e162",
+      "item_id": "2cf468fc3d",
+      "kind": "narration",
+      "index": null,
+      "text": "左の人は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d08f3de5649eec59",
+      "item_id": "2cf468fc3d",
+      "kind": "option_label",
+      "index": 0,
+      "text": "エー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "49cd8a8aef42c8d3",
+      "item_id": "2cf468fc3d",
+      "kind": "option",
+      "index": 0,
+      "text": "右の人がメモを取りながら話を聞いています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da4df49bf7f00ab2",
+      "item_id": "2cf468fc3d",
+      "kind": "option_label",
+      "index": 1,
+      "text": "ビー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "62743f260f205fbc",
+      "item_id": "2cf468fc3d",
+      "kind": "option",
+      "index": 1,
+      "text": "展示ブースで来場者に商品を説明しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d690aea8d6cb91f1",
+      "item_id": "2cf468fc3d",
+      "kind": "option_label",
+      "index": 2,
+      "text": "シー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c2ac6401a66a5061",
+      "item_id": "2cf468fc3d",
+      "kind": "option",
+      "index": 2,
+      "text": "配布資料を隣の人に手渡しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "134df096a9c7dc0a",
+      "item_id": "2cf468fc3d",
+      "kind": "option_label",
+      "index": 3,
+      "text": "デー",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "863a94197e34572e",
+      "item_id": "2cf468fc3d",
+      "kind": "option",
+      "index": 3,
+      "text": "手帳にメモを取りながら話を聞いています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "pic_2cf468fc3d"
+  ]
+}

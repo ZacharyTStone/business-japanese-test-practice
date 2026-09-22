@@ -1,0 +1,203 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J1",
+  "generated_at": "2026-09-22T20:57:43+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "2bb7e73bae",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "project_meeting+peer_to_peer+summarise_outcome@J1",
+        "setting": "project_meeting",
+        "relation": "peer_to_peer",
+        "function": "summarise_outcome",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "新製品発表会の会場と業者決定",
+      "stem": "会場と仕出し業者は、結局どうなりましたか。",
+      "options": [
+        {
+          "text": "会場は同僚Bの提案でBホールに変更され、仕出し業者はX社に決定した。",
+          "role": "stated_by_wrong_speaker",
+          "why": "Bホールを押さえて報告したのは同僚Aであり、同僚Bが提案したという事実はない。"
+        },
+        {
+          "text": "会場はBホールに変更され、仕出し業者は同僚Bが決定した。",
+          "role": "wrong_action_owner",
+          "why": "仕出し業者をX社に決めたのは山田であり、同僚Bではない。"
+        },
+        {
+          "text": "会場はBホールに変更され、仕出し業者はX社に決定した。",
+          "role": "correct",
+          "why": "Aホールが使えなくなったためBホールに変更され、未定だった仕出し業者は山田がX社に決めたと会話で述べられている。"
+        },
+        {
+          "text": "会場はAホールのままで、仕出し業者はX社に決定した。",
+          "role": "combines_wrong_pair",
+          "why": "仕出し業者の決定は会話の内容だが、会場は議事録どおりAホールのままとしており、変更の事実が反映されていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "議事録では会場はAホールに決定済み、仕出し業者は未定のまま次回検討とされていた。会話で、Aホールが改装工事のため使えなくなり同僚AがBホールを押さえたこと、仕出し業者は山田がX社に決めたことが分かる。議事録だけでは変更を知りえず、会話だけでは元の会場が分からないため、両方を突き合わせて初めて結論が定まる。combines_wrong_pairは会場だけ古い情報のまま、wrong_action_ownerは決定者を取り違え、stated_by_wrong_speakerは提案者を取り違えている。",
+      "explanation_en": "The minutes fix the venue and leave the caterer open; the conversation reverses this: the venue changes due to renovation while the caterer is settled, and only combining both sources gives the true outcome.",
+      "vocab_notes": [
+        {
+          "term": "仕出し業者",
+          "reading": "しだしぎょうしゃ",
+          "meaning": "catering vendor"
+        },
+        {
+          "term": "押さえる",
+          "reading": "おさえる",
+          "meaning": "to reserve/secure (a venue)"
+        }
+      ],
+      "audio": {
+        "narration": "89720e51a9160978",
+        "options": [],
+        "dialogue": [
+          "ca8e43d4b5d3cad6",
+          "260597879e7e88df",
+          "0bf957ed219656f3",
+          "28346885e5f18f68",
+          "fd85153bd6e5a2f1",
+          "11e96cb2010d343e"
+        ]
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "新製品発表会 会場・準備 打ち合わせ 議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "9月5日（木）10時〜11時"
+            },
+            {
+              "label": "場所",
+              "value": "第二会議室"
+            },
+            {
+              "label": "出席者",
+              "value": "同僚A、同僚B、山田"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "numbered",
+              "items": [
+                "会場はAホールに決定。",
+                "予算は50万円以内とする。",
+                "仕出し業者は未定。次回までに検討する。"
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "同僚A",
+          "text": "議事録では会場はAホールに決まっていましたが、先週連絡があって、Aホールは改装工事で使えなくなったそうです。",
+          "clip_id": "ca8e43d4b5d3cad6"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "それは困りますね。代わりの案はあるんですか。",
+          "clip_id": "260597879e7e88df"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "Bホールを押さえました。広さも予算内に収まります。",
+          "clip_id": "0bf957ed219656f3"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "分かりました。仕出し業者はどうなりましたか。議事録では未定のままでしたが。",
+          "clip_id": "28346885e5f18f68"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "それは山田さんがX社に決めたと聞いています。",
+          "clip_id": "fd85153bd6e5a2f1"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "では、会場と仕出し、両方とも決まったということですね。",
+          "clip_id": "11e96cb2010d343e"
+        }
+      ],
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "89720e51a9160978",
+      "item_id": "2bb7e73bae",
+      "kind": "narration",
+      "index": null,
+      "text": "会場と仕出し業者は、結局どうなりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ca8e43d4b5d3cad6",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "議事録では会場はAホールに決まっていましたが、先週連絡があって、Aホールは改装工事で使えなくなったそうです。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "260597879e7e88df",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "それは困りますね。代わりの案はあるんですか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0bf957ed219656f3",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "Bホールを押さえました。広さも予算内に収まります。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "28346885e5f18f68",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "分かりました。仕出し業者はどうなりましたか。議事録では未定のままでしたが。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fd85153bd6e5a2f1",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "それは山田さんがX社に決めたと聞いています。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "11e96cb2010d343e",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "では、会場と仕出し、両方とも決まったということですね。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": []
+}
