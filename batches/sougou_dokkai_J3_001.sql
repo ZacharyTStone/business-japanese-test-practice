@@ -1,11 +1,11 @@
 -- sougou_dokkai_J3_001: 2 × sougou_dokkai (J3)
--- generated 2026-09-18T08:50:51+00:00 by manual-load
+-- generated 2026-09-22T08:18:13+00:00 by manual-load
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('sougou_dokkai_J3_001', 'sougou_dokkai', 'J3', 'manual-load', '2026-09-18T08:50:51+00:00')
+values ('sougou_dokkai_J3_001', 'sougou_dokkai', 'J3', 'manual-load', '2026-09-22T08:18:13+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -43,14 +43,14 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('f0575e4dfd', 'e6cfbc7831');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('f0575e4dfd', 0, '木曜日までに、コメントをメールで佐藤に送る。', 'surface_keyword_match', 'コメントと期限は合っているが、注記は「メールでは送らない」と書いている。', null),
+values ('f0575e4dfd', 0, '木曜日までに、チラシの案へのコメントをまとめてメールで佐藤に送る。', 'surface_keyword_match', 'コメントと期限は合っているが、注記は「メールでは送らない」と書いている。', null),
        ('f0575e4dfd', 1, '金曜日に、印刷を発注する。', 'wrong_timeframe', '発注は金曜日で、佐藤の担当。コメントのあとの話で、まずすることではない。', null),
        ('f0575e4dfd', 2, 'チラシの案を新しく作り直す。', 'unsupported_but_plausible', '作り直すという話は議事録のどこにも書かれていない。', null),
        ('f0575e4dfd', 3, '木曜日までに、共有フォルダのファイルにコメントを書き込む。', 'correct', '決まったことの一つ目が全員のコメントで、注記が書き込む場所を共有フォルダのファイルと定めている。', null),
        ('e6cfbc7831', 0, '部品Aの値段が上がること', 'unsupported_but_plausible', '値段の話はどちらのメールにも出ていない。', null),
        ('e6cfbc7831', 1, '20日までには30個しか納品できず、残りは25日以降になること', 'correct', '在庫は30個で追加の入荷は25日なのに、先方は50個を20日までと頼んでいる。二つのメールを合わせると、注文どおりには納品できない。', null),
        ('e6cfbc7831', 2, '注文の数量が50個であること', 'stated_but_answers_different_question', 'メールに書かれている事実だが、それ自体は問題ではない。', null),
-       ('e6cfbc7831', 3, '追加の入荷が25日より遅れること', 'wrong_timeframe', '入荷は25日の予定と書かれているだけで、遅れるとは書かれていない。', null)
+       ('e6cfbc7831', 3, '追加の入荷が9月25日より遅れ、20日までの納品に間に合わないこと', 'wrong_timeframe', '入荷は25日の予定と書かれているだけで、遅れるとは書かれていない。', null)
 on conflict (item_id, position) do update set
        text = excluded.text,
        role = excluded.role,

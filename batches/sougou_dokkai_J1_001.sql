@@ -1,11 +1,11 @@
 -- sougou_dokkai_J1_001: 2 × sougou_dokkai (J1)
--- generated 2026-09-18T08:50:50+00:00 by manual-load
+-- generated 2026-09-22T08:18:13+00:00 by manual-load
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('sougou_dokkai_J1_001', 'sougou_dokkai', 'J1', 'manual-load', '2026-09-18T08:50:50+00:00')
+values ('sougou_dokkai_J1_001', 'sougou_dokkai', 'J1', 'manual-load', '2026-09-22T08:18:13+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -43,12 +43,12 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('807d62e9b4', 'a151810e90');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('807d62e9b4', 0, '課長が、16日の午後に先方を訪ねる旨を返事をする。', 'wrong_timeframe', '課長は16日は午前しか空いておらず、先方の希望は午後なので、その日程は成り立たない。', null),
+values ('807d62e9b4', 0, '課長が、16日の午後なら空いているとして、自分で先方へ返事をする。', 'wrong_timeframe', '課長は16日は午前しか空いておらず、先方の希望は午後なので、その日程は成り立たない。', null),
        ('807d62e9b4', 1, '先方の担当者が、技術担当に直接連絡して日程を決める。', 'unsupported_but_plausible', '先方は同席を頼んでいるだけで、自分から技術担当に連絡するとは書いていない。', null),
        ('807d62e9b4', 2, '佐藤が、技術担当の予定を確かめたうえで、今日中に先方へ返事をする。', 'correct', '課長は「調整をお願いします」「返事は今日中に」と佐藤に振っており、先方の希望する技術担当の同席も踏まえるよう求めている。', null),
        ('807d62e9b4', 3, '技術の担当者が、自分の空いている日を先方へ直接返事をする。', 'surface_keyword_match', '「技術のご担当」は先方が同席を望んだ相手で、返事をする役割は課長から佐藤に振られている。', null),
        ('a151810e90', 0, '測定器の戻りが検査の開始予定より遅く、検査の着手が遅れること', 'correct', '検査は10月1日開始の予定だが、測定器は10月6日まで戻らないと書かれており、予定どおりには始められない。報告書はそれを問題として書いていない。', null),
-       ('a151810e90', 1, '製造がまだ8割までしか進んでいないこと', 'stated_but_answers_different_question', '報告書に書かれた事実だが、完了予定は9月30日でまだ先であり、遅れとは言えない。', null),
+       ('a151810e90', 1, '製造が8割までしか進んでおらず、9月30日の完了予定に遅れていること', 'stated_but_answers_different_question', '報告書に書かれた事実だが、完了予定は9月30日でまだ先であり、遅れとは言えない。', null),
        ('a151810e90', 2, '設計の完了が予定より遅れたこと', 'wrong_timeframe', '設計は9月5日に完了済みで、遅れたとはどこにも書かれていない。', null),
        ('a151810e90', 3, '製造の人手が足りず、製造が遅れること', 'unsupported_but_plausible', '遅れの原因としてはありがちだが、人手については報告書に何も書かれていない。', null)
 on conflict (item_id, position) do update set

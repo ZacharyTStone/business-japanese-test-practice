@@ -287,3 +287,49 @@ def test_a_rare_type_gets_at_most_its_cap_a_night():
     for w in order:
         by_type[w.item_type] = by_type.get(w.item_type, 0) + w.n
     assert by_type == {"gazou_haaku": 1, "bamen_haaku": 3}
+
+
+# ----- the difficulty signal the queue needs and mostly does not have ----
+
+def test_difficulty_coverage_counts_what_carries_a_prior(tmp_path, monkeypatch):
+    """`model_p_correct` is the only term in next_items() that separates two
+    items of the same type and level. A bundle imported offline has none, and
+    left uncounted that is invisible — the term quietly becomes a constant."""
+    import json
+
+    from bjt import plan as planmod
+
+    b = {"bundle_version": 2, "item_type": "goi_bunpou", "level": "J2",
+         "generated_at": "2026-09-22T00:00:00+00:00", "generator_model": "t",
+         "audio_manifest": [], "scenes": [],
+         "items": [{"id": "a", "model_p_correct": 0.6},
+                   {"id": "b", "model_p_correct": None},
+                   {"id": "c"}]}
+    path = tmp_path / "x.json"
+    path.write_text(json.dumps(b, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(planmod.batchmod, "bundles", lambda item_type=None: [path])
+
+    assert planmod.difficulty_coverage() == (1, 3)
+
+
+def test_plan_says_so_when_the_difficulty_term_sorts_nothing(monkeypatch, capsys):
+    from bjt import cli
+    from bjt import plan as planmod
+
+    monkeypatch.setattr(planmod, "difficulty_coverage", lambda: (4, 146))
+    assert cli.main(["plan"]) == 0
+    out = capsys.readouterr().out
+    assert "4/146 carry a difficulty signal" in out
+    assert "sorts nothing" in out
+    assert "bjt probe" in out
+
+
+def test_plan_stays_quiet_when_every_item_has_one(monkeypatch, capsys):
+    from bjt import cli
+    from bjt import plan as planmod
+
+    monkeypatch.setattr(planmod, "difficulty_coverage", lambda: (146, 146))
+    assert cli.main(["plan"]) == 0
+    out = capsys.readouterr().out
+    assert "146/146 carry a difficulty signal." in out
+    assert "sorts nothing" not in out

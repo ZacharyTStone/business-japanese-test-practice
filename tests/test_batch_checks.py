@@ -507,3 +507,38 @@ def test_a_document_item_re_validates_after_bundling():
         report = batch.check_bundle(bundle)
         validity = next(c for c in report.checks if c.name == "item validity")
         assert validity.status == "pass", f"{item_type}: {validity.detail}"
+
+
+# ----- tells only the whole library can show ----------------------------
+
+def _correct_is_uniquely(item, *, longest):
+    lens = [len(o["text"]) for o in item["options"]]
+    want = max(lens) if longest else min(lens)
+    return lens[item["correct_index"]] == want and lens.count(want) == 1
+
+
+@pytest.mark.parametrize("extreme", ["longest", "shortest"])
+def test_no_type_lets_you_pass_it_by_option_length(extreme):
+    """"Pick the longest option" must not beat guessing, per TYPE.
+
+    check_bundle has this test too, but per bundle — and a bundle is two to six
+    items, so a habit that runs through a whole type is invisible to it. 総合読解
+    reached 7 of 10 that way: the correct answer was the fully-specified one and
+    the distractors were terse, so the type could be passed at 70% without
+    reading a word of Japanese. The sweep here is over the library because the
+    library is the thing a learner meets.
+    """
+    by_type = {}
+    for path in COMMITTED:
+        bundle = json.loads(path.read_text(encoding="utf-8"))
+        for item in bundle["items"]:
+            hit, n = by_type.setdefault(bundle["item_type"], [0, 0])
+            by_type[bundle["item_type"]] = [
+                hit + _correct_is_uniquely(item, longest=(extreme == "longest")),
+                n + 1,
+            ]
+    # Under 8 items a run of three proves nothing; the bank's smallest shelves
+    # are there, and failing them would be failing arithmetic.
+    skewed = {t: f"{hit}/{n}" for t, (hit, n) in by_type.items()
+              if n >= 8 and hit / n > 0.5}
+    assert not skewed, f"correct option is the {extreme} in: {skewed}"

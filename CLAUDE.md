@@ -97,6 +97,15 @@ accident is not.
   level the queue aims at `target = 0.85 − (accuracy at this problem type) ×
   0.33`, held in [0.50, 0.80], against the bank's measured success rate. This is
   the fine grain the three-way level cannot give; it moves on every answer.
+  It runs on `items.model_p_correct`, which is written at generation time or
+  never — so an item that reached the bank through `bjt importbatch` has none,
+  and with none the term falls back to a constant and sorts nothing. On
+  2026-09-22 that was 142 of 146 items, i.e. the pitch was off across almost
+  the whole library while looking like it was on. `bjt probe <bundle>` is the
+  catch-up pass (same weaker model, same trials, only the items with no rate,
+  and it writes nothing when it cannot measure — a fabricated prior is worse
+  than none, because the queue would trust it), and `bjt plan` now prints the
+  coverage so the gap cannot go quiet again.
 - **The ranking terms have an order of authority, and it matters.** The 機能 tag
   dominates; traps and the difficulty pitch are comparable second; the
   type/場面 variety nudges are third; the tie-break random is a fiftieth of a
@@ -300,6 +309,15 @@ accident is not.
   in the UI, that is evidence the feature does not belong.
 - **"BJT" is a registered trademark.** It may describe the exam format in prose.
   It may not appear in the product name, slug, or bundle identifier.
+- **No tell a learner can pass the type on.** `check_bundle` asserts the
+  correct option is not systematically the longest or the shortest, but per
+  bundle — and a bundle is two to six items, so a habit running through a whole
+  type is invisible to it. 総合読解 reached 7 of 10 that way (the correct answer
+  was the fully-specified one and the distractors were terse), which is a 70%
+  pass mark for reading nothing. The sweep that catches it is over the library,
+  per type, in `tests/test_batch_checks.py`, because the library is what a
+  learner meets. The fix is to specify the distractors, never to trim the
+  answer.
 - **No past-paper text, ever.** Every item is an original composition.
 - **`seeds/` is gitignored** (licensed material). `seedtable/` and `batches/` are
   committed (our own design and output).

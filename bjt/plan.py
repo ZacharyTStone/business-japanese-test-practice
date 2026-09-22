@@ -321,6 +321,29 @@ def to_json(survey_result: Survey, order: list[WorkItem]) -> dict:
     }
 
 
+def difficulty_coverage() -> tuple[int, int]:
+    """(items carrying a difficulty signal, items published).
+
+    `model_p_correct` is the only term in `next_items()` that separates two
+    items of the same type and level, and it is written at generation time or
+    not at all — so a bundle that arrived through `bjt importbatch` has none.
+    Left uncounted that is invisible: the ranking term falls back to a constant,
+    which is not wrong for any one item and does nothing across all of them.
+    Counting it here puts it on the same screen as the shelves, because "the
+    queue cannot tell these apart" is a fact about the bank's shape.
+    """
+    have = total = 0
+    for path in batchmod.bundles():
+        try:
+            bundle = batchmod.load(path)
+        except Exception:
+            continue
+        for item in bundle.get("items", []):
+            total += 1
+            have += item.get("model_p_correct") is not None
+    return have, total
+
+
 def render(survey_result: Survey, order: list[WorkItem]) -> str:
     """The work order as something a person reads before approving it."""
     lines: list[str] = []
@@ -343,6 +366,14 @@ def render(survey_result: Survey, order: list[WorkItem]) -> str:
         f"{len(survey_result.thin)} below the type's share of {DEFAULT_FLOOR}; "
         f"{survey_result.cells_left} seed cell(s) left."
     )
+    have, total = difficulty_coverage()
+    if total:
+        lines.append(
+            f"  {have}/{total} carry a difficulty signal"
+            + ("." if have == total else
+               " — for the rest the queue's difficulty term is a constant, so it "
+               "sorts nothing. `bjt probe <bundle>` measures them.")
+        )
     lines.append("")
 
     if not order:

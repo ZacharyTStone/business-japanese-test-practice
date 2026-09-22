@@ -2,7 +2,7 @@
   "bundle_version": 2,
   "item_type": "shiryou_choudokkai",
   "level": "J2",
-  "generated_at": "2026-09-22T06:41:10+00:00",
+  "generated_at": "2026-09-22T08:18:12+00:00",
   "generator_model": "author-composed",
   "items": [
     {
@@ -26,7 +26,7 @@
           "why": "見積書に書かれている数量のままで、口頭で告げられた「倍に」を反映していない。"
         },
         {
-          "text": "80箱",
+          "text": "80本",
           "role": "reads_wrong_row",
           "why": "倍にする計算は合っているが、対象が用紙の行で、しかも用紙は「40箱で結構」と据え置かれている。"
         },
@@ -36,7 +36,7 @@
           "why": "見積書のインクは24本で、それを倍にするので48本。"
         },
         {
-          "text": "240冊",
+          "text": "240本",
           "role": "surface_keyword_match",
           "why": "ファイルの行を倍にした数で、ファイルは「そのままで」と明言されている。"
         }

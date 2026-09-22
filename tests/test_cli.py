@@ -109,3 +109,37 @@ def test_tester_remove_and_bad_input(capsys):
     assert cli.main(["tester", "b@example.com", "--remove"]) == 0
     assert "delete from public.testers where email = 'b@example.com'" in capsys.readouterr().out
     assert cli.main(["tester", "not-an-email"]) == 2
+
+
+def test_probe_dry_run_names_the_items_with_no_prior_and_spends_nothing(capsys, monkeypatch):
+    """A catch-up pass over the committed bank. The dry run is what makes it
+    safe to look before spending, since the real one calls a model per item."""
+    from bjt.fidelity import difficulty
+
+    def explode(*a, **k):
+        raise AssertionError("--dry-run must not reach the model")
+    monkeypatch.setattr(difficulty, "measure", explode)
+
+    assert cli.main(["probe", "batches/sougou_dokkai_J1_001.json", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "without a difficulty signal" in out
+    assert "would measure" in out
+
+
+def test_probe_leaves_the_bundle_alone_when_nothing_could_be_measured(capsys, monkeypatch, tmp_path):
+    """A fabricated prior is worse than none — the queue would trust it — so a
+    probe that cannot run writes nothing and says so."""
+    import json
+    import shutil
+
+    from bjt.fidelity import difficulty
+
+    src = "batches/sougou_dokkai_J1_001.json"
+    dst = tmp_path / "b.json"
+    shutil.copy(src, dst)
+    before = dst.read_text(encoding="utf-8")
+
+    monkeypatch.setattr(difficulty, "measure",
+                        lambda item, **k: difficulty.DifficultyResult(measured=False))
+    assert cli.main(["probe", str(dst)]) == 1
+    assert dst.read_text(encoding="utf-8") == before

@@ -1,11 +1,11 @@
 -- sougou_dokkai_J2_001: 6 × sougou_dokkai (J2)
--- generated 2026-09-15T17:59:51+00:00 by author-composed
+-- generated 2026-09-22T08:18:13+00:00 by author-composed
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('sougou_dokkai_J2_001', 'sougou_dokkai', 'J2', 'author-composed', '2026-09-15T17:59:51+00:00')
+values ('sougou_dokkai_J2_001', 'sougou_dokkai', 'J2', 'author-composed', '2026-09-22T08:18:13+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -47,7 +47,7 @@ on conflict (id) do update set
 -- be a fifth answer nobody meant to publish.
 delete from public.item_options where item_id in ('5d536c8392', '5165a67c41', 'd0f01bbe08', '239d687cb0', 'bcf3ee0bf3', '7438c97fc1');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
-values ('5d536c8392', 0, '納品された品物に不具合があったこと', 'unsupported_but_plausible', '苦情の原因として最も想像しやすいが、「品物そのものに問題はございませんでした」と明確に否定されている。', null),
+values ('5d536c8392', 0, '納品された品物に不具合があり、そのために検品をやり直したこと', 'unsupported_but_plausible', '苦情の原因として最も想像しやすいが、「品物そのものに問題はございませんでした」と明確に否定されている。', null),
        ('5d536c8392', 1, 'ラインの立ち上げが1日ずれていること', 'stated_but_answers_different_question', 'メールに書かれているとおりだが、これは遅れの結果であって、問われている原因ではない。', null),
        ('5d536c8392', 2, '納品が午後遅くになり、その日のうちに検品できなかったこと', 'correct', '品物と数量に問題はないと明記したうえで、4時過ぎの到着で当日の検品ができなかったと述べている。', null),
        ('5d536c8392', 3, '納品の連絡が届いていなかったこと', 'surface_keyword_match', '引用部分に納品の連絡はあり、それ自体は届いている。問題にされているのは到着の時刻。', null),
@@ -57,9 +57,9 @@ values ('5d536c8392', 0, '納品された品物に不具合があったこと', 
        ('5165a67c41', 3, '領収書の原本を経理部に提出する。', 'surface_keyword_match', '「原本の提出は不要です」と書かれているのは新しい手続きの話で、原本という語だけを拾っている。', null),
        ('d0f01bbe08', 0, '見積金額を下げること。', 'unsupported_but_plausible', '見積りへの返信として最も想像しやすいが、「金額については社内で了承が得られました」と明記されている。', null),
        ('d0f01bbe08', 1, '納入の回数を3回から増やすこと。', 'surface_keyword_match', '回数の話は出てくるが、求められているのはまとめること、つまり減らすほう。', null),
-       ('d0f01bbe08', 2, '倉庫の受け入れ体制について相談に乗ること。', 'stated_but_answers_different_question', '倉庫の事情は理由として述べられているだけで、それについての相談は求められていない。', null),
+       ('d0f01bbe08', 2, '倉庫の受け入れ体制について、こちらから改善策を提案して相談に乗ること。', 'stated_but_answers_different_question', '倉庫の事情は理由として述べられているだけで、それについての相談は求められていない。', null),
        ('d0f01bbe08', 3, '納入を1回にまとめること。難しければ、各回の日程を早めに知らせること。', 'correct', '第一希望と、それが通らない場合の代案が順に書かれており、どちらも依頼として述べられている。', null),
-       ('239d687cb0', 0, '組み立てが50パーセントしか進んでいないこと', 'stated_but_answers_different_question', '数字としては途中だが、予定も50パーセントで、予定どおり進んでいる。', null),
+       ('239d687cb0', 0, '組み立てが50パーセントしか進んでおらず、今週中に終わらないこと', 'stated_but_answers_different_question', '数字としては途中だが、予定も50パーセントで、予定どおり進んでいる。', null),
        ('239d687cb0', 1, '試験準備に着手できておらず、試験の日程は動かせないこと', 'correct', '予定と実績が食い違っている唯一の工程で、しかも日程を動かして吸収することができないと書かれている。', null),
        ('239d687cb0', 2, '部材の手配が終わっていないこと', 'wrong_timeframe', '部材手配は予定・実績とも「完了」で、すでに済んでいる。', null),
        ('239d687cb0', 3, '担当者が別件の対応に入っていること', 'surface_keyword_match', '未着手の理由として書かれているが、報告すべき問題はそれによって生じた遅れのほう。', null),

@@ -870,6 +870,65 @@ def cmd_plan(args) -> int:
     return 0
 
 
+def cmd_probe(args) -> int:
+    """Measure the difficulty of items that shipped without a measurement.
+
+    `items.model_p_correct` is the queue's prior on how hard a question is, and
+    it is the only term in `next_items()` that tells two items of the same type
+    and level apart. It is written at generation time — by the difficulty probe,
+    or failing that by the answerability gate — so an item that reached the
+    bank any other way has none. `bjt importbatch` is that other way: it stores
+    with `gate_verdict="skipped"` and measures nothing, which is right for an
+    offline import and leaves a hole. On 2026-09-22 that hole was 142 of 146
+    items, and the ranking term they share falls back to a constant, so the
+    pitch was doing nothing at all across almost the whole library.
+
+    This is the catch-up pass: the same probe, the same weaker model and the
+    same trial count, run over a committed bundle rather than over a draft. It
+    touches only items whose rate is missing, so re-running it is cheap and
+    safe, and it obeys the run ceilings in `bjt/llm.py` like everything else —
+    a bank-wide catch-up is exactly the shape of run those ceilings exist for,
+    so expect to run it more than once rather than to raise them.
+
+    Needs an API key. Without one every item reports unmeasured and the bundle
+    is left exactly as it was, because a fabricated prior is worse than none:
+    the queue would trust it.
+    """
+    import pathlib
+
+    from .fidelity import difficulty
+
+    path = pathlib.Path(args.path)
+    bundle = batchmod.load(path)
+    items = bundle.get("items", [])
+    todo = [it for it in items if it.get("model_p_correct") is None]
+    print(f"{path.name}: {len(items)} item(s), {len(todo)} without a difficulty signal")
+    if not todo:
+        print("Nothing to measure.")
+        return 0
+    if args.dry_run:
+        for it in todo:
+            print(f"  would measure {it['id']} ({it['item_type']} {it['level']})")
+        return 0
+
+    measured = 0
+    for it in todo:
+        result = difficulty.measure(batchmod._as_generator_shape(it))
+        print(f"  {it['id']}  {result.detail()}")
+        if result.measured and result.rate is not None:
+            it["model_p_correct"] = result.rate
+            measured += 1
+    if not measured:
+        print("\nNothing measured — the bundle is unchanged.", file=sys.stderr)
+        return 1
+
+    batchmod.save(bundle, path)
+    out, _ = publish.publish_bundle(path)
+    print(f"\nMeasured {measured} item(s); wrote {path} and {out}.")
+    print("Both are content — commit them and let the deploy workflow apply the SQL.")
+    return 0
+
+
 def cmd_nightly(args) -> int:
     """The nightly run: fill the emptiest shelves, check everything, stop.
 
@@ -1689,6 +1748,12 @@ def build_parser() -> argparse.ArgumentParser:
                          "(one press, for everybody — the owner's row, not a tester's)")
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
+
+    pr = sub.add_parser("probe", help="measure difficulty for items that shipped without it")
+    pr.add_argument("path", help="a committed bundle (batches/*.json)")
+    pr.add_argument("--dry-run", action="store_true",
+                    help="list what would be measured and spend nothing")
+    pr.set_defaults(func=cmd_probe)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")

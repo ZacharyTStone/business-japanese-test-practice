@@ -1,5 +1,5 @@
 -- shiryou_choudokkai_J2_001: 6 × shiryou_choudokkai (J2)
--- generated 2026-09-22T06:41:10+00:00 by author-composed
+-- generated 2026-09-22T08:18:12+00:00 by author-composed
 -- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
 
 begin;
@@ -29,7 +29,7 @@ on conflict (id) do update set
        channel = excluded.channel;
 
 insert into public.bundles (id, item_type, level, generator_model, generated_at)
-values ('shiryou_choudokkai_J2_001', 'shiryou_choudokkai', 'J2', 'author-composed', '2026-09-22T06:41:10+00:00')
+values ('shiryou_choudokkai_J2_001', 'shiryou_choudokkai', 'J2', 'author-composed', '2026-09-22T08:18:12+00:00')
 on conflict (id) do update set
        item_type = excluded.item_type,
        level = excluded.level,
@@ -72,9 +72,9 @@ on conflict (id) do update set
 delete from public.item_options where item_id in ('013fa68b2a', 'f760e4e239', '353e5d008b', 'a58a148f1d', '0c022ece93', 'd0694b8a01');
 insert into public.item_options (item_id, position, text, role, why, clip_id)
 values ('013fa68b2a', 0, '24本', 'ignores_the_spoken_change', '見積書に書かれている数量のままで、口頭で告げられた「倍に」を反映していない。', null),
-       ('013fa68b2a', 1, '80箱', 'reads_wrong_row', '倍にする計算は合っているが、対象が用紙の行で、しかも用紙は「40箱で結構」と据え置かれている。', null),
+       ('013fa68b2a', 1, '80本', 'reads_wrong_row', '倍にする計算は合っているが、対象が用紙の行で、しかも用紙は「40箱で結構」と据え置かれている。', null),
        ('013fa68b2a', 2, '48本', 'correct', '見積書のインクは24本で、それを倍にするので48本。', null),
-       ('013fa68b2a', 3, '240冊', 'surface_keyword_match', 'ファイルの行を倍にした数で、ファイルは「そのままで」と明言されている。', null),
+       ('013fa68b2a', 3, '240本', 'surface_keyword_match', 'ファイルの行を倍にした数で、ファイルは「そのままで」と明言されている。', null),
        ('f760e4e239', 0, '9月24日', 'correct', '18日（金）の翌々営業日。19日（土）と20日（日）の週末、21日と22日の休業日を飛ばすと、営業日は23日と24日になる。', null),
        ('f760e4e239', 1, '9月20日', 'ignores_the_spoken_change', '出荷の2日後をそのまま数えた日で、上司が述べた曜日も、メールの休業日も飛ばしていない。', null),
        ('f760e4e239', 2, '9月18日', 'wrong_timeframe', 'これは出荷日で、届く日ではない。', null),
