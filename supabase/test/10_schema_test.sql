@@ -1782,6 +1782,38 @@ begin
 end
 $$;
 
+-- However many. There is no product ceiling on the number — what limits a set
+-- is how many items the bank has in this learner's window, and the queue
+-- serves what it has however large a number it is handed.
+reset role;
+begin;
+set local role service_role;
+update public.testers set max_daily_goal = 500 where email = 'h@example.com';
+commit;
+
+do $$ begin perform test.become('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); end $$;
+set role authenticated;
+
+do $$
+declare
+    d record;
+begin
+    raise notice 'however many';
+    select * into d from public.v_my_day;
+    perform test.check(d.goal_max = 500 and d.max_today = 500 and d.left_today = 485,
+        'five hundred is a number the row may carry');
+
+    update public.profiles set daily_goal = 200
+     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    perform test.check((select goal from public.v_my_day) = 200,
+        'and a day of two hundred questions is theirs to set');
+
+    perform test.check((select count(*) from public.next_items(200)) = 14,
+        'the queue serves what the bank has, which is the limit that was always real');
+end
+$$;
+
+reset role;
 -- Put the account back as the rest of the file expects to find it.
 reset role;
 begin;

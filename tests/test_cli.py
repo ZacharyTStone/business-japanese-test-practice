@@ -120,9 +120,15 @@ def test_tester_max_goal_sizes_one_accounts_day(capsys):
     assert "a day of up to 40 questions" in out
     assert "max_daily_goal = excluded.max_daily_goal" in out
 
-    # A hundred is the check constraint on the column, so the CLI refuses to
-    # print SQL the database would only reject.
-    assert cli.main(["tester", "z@example.com", "--max-goal", "500"]) == 2
+    # However many: there is no product ceiling here, because what limits a set
+    # is how many items the bank has in the learner's window rather than this.
+    assert cli.main(["tester", "z@example.com", "--max-goal", "500"]) == 0
+    assert "'z@example.com', '', false, false, 500)" in capsys.readouterr().out
+
+    # The only bound left is the smallint the column is declared as, so the CLI
+    # refuses only SQL the database itself would reject.
+    assert cli.main(["tester", "z@example.com", "--max-goal", "32767"]) == 0
+    assert cli.main(["tester", "z@example.com", "--max-goal", "32768"]) == 2
     assert cli.main(["tester", "z@example.com", "--max-goal", "0"]) == 2
 
 

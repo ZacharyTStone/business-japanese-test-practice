@@ -1520,8 +1520,12 @@ def cmd_tester(args) -> int:
         print()
         print(f"delete from public.testers where email = {publish.lit(email)};")
     else:
-        if args.max_goal is not None and not 1 <= args.max_goal <= 100:
-            print(f"a day is between 1 and 100 questions, not {args.max_goal}", file=sys.stderr)
+        # No product ceiling: what limits a set is how many items the bank has
+        # in the learner's level window, not this number. 32767 is where the
+        # smallint the column is declared as ends.
+        if args.max_goal is not None and not 1 <= args.max_goal <= 32767:
+            print(f"a day is at least 1 question and at most 32767, not {args.max_goal}",
+                  file=sys.stderr)
             return 2
         unlimited = "true" if args.unlimited else "false"
         may_veto = "true" if args.veto else "false"
@@ -1539,6 +1543,7 @@ def cmd_tester(args) -> int:
             print("-- max_daily_goal is the ONE account's own fifteen: the largest set it")
             print("-- may choose in the app, and the point its day stops. Everybody else's")
             print("-- row stays null, which is the ten-a-day, fifteen-at-most everyone has.")
+            print("-- Ask for more than the bank can serve and the queue serves what it has.")
         print("-- Runs as the service role; a client cannot touch this table.")
         print("-- Idempotent: re-running updates the note, the flags and the number,")
         print("-- and nothing else.")
@@ -1760,9 +1765,10 @@ def build_parser() -> argparse.ArgumentParser:
                          "(one press, for everybody — the owner's row, not a tester's)")
     te.add_argument("--max-goal", type=int, metavar="N",
                     help="let this account choose its own daily set size, up to N "
-                         "questions (1-100); its day then ends at N instead of at "
-                         "fifteen. Omit to leave the standard ten-a-day, "
-                         "fifteen-at-most in place")
+                         "questions; its day then ends at N instead of at fifteen. "
+                         "As large as you like — the queue serves what the bank has "
+                         "in the level window. Omit to leave the standard "
+                         "ten-a-day, fifteen-at-most in place")
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 

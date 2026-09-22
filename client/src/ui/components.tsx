@@ -643,7 +643,7 @@ export function NumberField({
       accessibilityLabel={accessibilityLabel}
       inputMode="numeric"
       keyboardType="number-pad"
-      maxLength={3}
+      maxLength={5}
       style={styles.dateInput}
     />
   );

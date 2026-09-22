@@ -294,12 +294,18 @@ accident is not.
   the number `v_my_day` and `next_items()` read, so the door is per account
   rather than a constant, and `v_my_day.goal_max` — null for everybody else —
   is what draws the field on the account screen, so no screen carries a copy of
-  the fifteen. The check constraint on `daily_goal` is only a hard hundred: the
-  per-account bound is a trigger on `profiles`, because a constraint cannot ask
-  who is writing and without the trigger any tester could PATCH their own row
-  past the ceiling and it would be advisory. The trigger judges a goal being
-  *written*, never a row that already exists, so lowering the number later does
-  not freeze the rest of the profile. The owner asked for this (2026-09-22).
+  the fifteen. The check constraint on `daily_goal` says only that a day is at
+  least one question: the per-account bound is a trigger on `profiles`, because
+  a constraint cannot ask who is writing and without the trigger any tester
+  could PATCH their own row past the ceiling and it would be advisory. The
+  trigger judges a goal being *written*, never a row that already exists, so
+  lowering the number later does not freeze the rest of the profile.
+  **There is no invented ceiling on that number** — the only bound is the
+  `smallint` both columns are declared as. A hundred was there for one commit
+  and was protecting nothing: `next_items()` serves what the published bank has
+  in the learner's level window, so a goal of five hundred fetches everything
+  there is rather than five hundred rows, and the bank is the limit that was
+  always real. The owner asked for this (2026-09-22).
 - **Testers only, for now, and the database is the door.** `public.testers`
   lists who may use the app by the email they sign in with (email and password
   today; Google later, matched on the same email); `is_tester()` reads the JWT; every row-level policy in `public` requires it and the anon role holds
