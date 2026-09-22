@@ -560,6 +560,96 @@ export function DateField({
 }
 
 /**
+ * A whole number somebody types, between two bounds.
+ *
+ * The same shape as DateField and for the same reason: on the web this is the
+ * browser's own number control, because it is the best one already on the
+ * device, and everywhere else a plain numeric field. The value is handed up
+ * only once it is a whole number inside the bounds, so a half-typed "4" on the
+ * way to "40" never reaches the profile — and a field left empty or out of
+ * range falls back to the last good value when it loses focus rather than
+ * saving something nobody meant.
+ *
+ * There is exactly one of these in the app, on the account screen, and only
+ * for an account the database says may size its own day. It is not a difficulty
+ * or a level or a type: it is how long a sitting is.
+ */
+export function NumberField({
+  value,
+  onChange,
+  min,
+  max,
+  accessibilityLabel,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  min: number;
+  max: number;
+  accessibilityLabel: string;
+}) {
+  const [text, setText] = useState(String(value));
+  // Follows the profile when it is loaded or changed from elsewhere, without
+  // fighting what is being typed here.
+  useEffect(() => setText(String(value)), [value]);
+
+  function parse(next: string): number | null {
+    if (!/^\d+$/.test(next)) return null;
+    const n = Number(next);
+    return n >= min && n <= max ? n : null;
+  }
+
+  function commit(next: string) {
+    setText(next);
+    const n = parse(next);
+    if (n !== null && n !== value) onChange(n);
+  }
+
+  /** Nothing usable in the box when the cursor leaves: put back what is saved. */
+  function settle() {
+    if (parse(text) === null) setText(String(value));
+  }
+
+  if (Platform.OS === "web") {
+    return (
+      <input
+        type="number"
+        value={text}
+        min={min}
+        max={max}
+        step={1}
+        aria-label={accessibilityLabel}
+        onChange={(e) => commit(e.target.value)}
+        onBlur={settle}
+        style={{
+          fontFamily: "inherit",
+          fontSize: 16,
+          color: colors.text,
+          backgroundColor: colors.surfaceAlt,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radius.md,
+          padding: `${space.md}px ${space.lg}px`,
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      />
+    );
+  }
+
+  return (
+    <TextInput
+      value={text}
+      onChangeText={commit}
+      onBlur={settle}
+      accessibilityLabel={accessibilityLabel}
+      inputMode="numeric"
+      keyboardType="number-pad"
+      maxLength={3}
+      style={styles.dateInput}
+    />
+  );
+}
+
+/**
  * Where an ad may go — and, more importantly, where one may not.
  *
  * The placement type has exactly two members, so putting an ad on the practice

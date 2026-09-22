@@ -77,7 +77,7 @@ def test_tester_sql_is_lowercased_and_idempotent(capsys):
 def test_tester_unlimited_lifts_the_ceiling_and_is_off_by_default(capsys):
     assert cli.main(["tester", "z@example.com"]) == 0
     out = capsys.readouterr().out
-    assert "insert into public.testers (email, note, unlimited, may_veto)" in out
+    assert "insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)" in out
     assert "'z@example.com', '', false" in out
     assert "unlimited = excluded.unlimited" in out
 
@@ -103,6 +103,27 @@ def test_tester_veto_is_off_by_default_and_says_what_it_does(capsys):
     out = capsys.readouterr().out
     assert "'z@example.com', '', true, true" in out
     assert "no daily ceiling and the veto button" in out
+
+
+def test_tester_max_goal_sizes_one_accounts_day(capsys):
+    """One row may carry a number: the largest set that account may choose in
+    the app, and where its day stops. Null everywhere else, which is the
+    ten-a-day, fifteen-at-most everybody gets."""
+    assert cli.main(["tester", "z@example.com"]) == 0
+    out = capsys.readouterr().out
+    assert "insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)" in out
+    assert "'z@example.com', '', false, false, null)" in out
+
+    assert cli.main(["tester", "z@example.com", "--max-goal", "40"]) == 0
+    out = capsys.readouterr().out
+    assert "'z@example.com', '', false, false, 40)" in out
+    assert "a day of up to 40 questions" in out
+    assert "max_daily_goal = excluded.max_daily_goal" in out
+
+    # A hundred is the check constraint on the column, so the CLI refuses to
+    # print SQL the database would only reject.
+    assert cli.main(["tester", "z@example.com", "--max-goal", "500"]) == 2
+    assert cli.main(["tester", "z@example.com", "--max-goal", "0"]) == 2
 
 
 def test_tester_remove_and_bad_input(capsys):

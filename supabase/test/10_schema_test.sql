@@ -434,7 +434,8 @@ declare
 begin
     raise notice 'definer functions are not reachable over the API';
     foreach f in array array['handle_new_user()', 'sync_profile_identity()', 'grade_attempt()',
-                             'schedule_review()', 'refresh_item_stats()']
+                             'schedule_review()', 'refresh_item_stats()',
+                             'keep_the_daily_goal_under_its_ceiling()']
     loop
         perform test.check(
             not has_function_privilege('anon', 'public.' || f, 'execute'),
@@ -498,7 +499,9 @@ begin
     perform test.check(
         not has_function_privilege('anon', 'public.next_items(integer)', 'execute')
         and not has_function_privilege('anon', 'public.my_streak()', 'execute')
-        and not has_function_privilege('anon', 'public.is_tester()', 'execute'),
+        and not has_function_privilege('anon', 'public.is_tester()', 'execute')
+        and not has_function_privilege('anon', 'public.my_goal_max()', 'execute')
+        and not has_function_privilege('anon', 'public.my_daily_max()', 'execute'),
         'anon cannot call any RPC');
     perform test.check(
         has_function_privilege('authenticated', 'public.is_tester()', 'execute')
@@ -1636,6 +1639,43 @@ begin
 end
 $$;
 
+-- The fifteen is a ceiling on the account, not a number the client agrees to.
+-- The check constraint on profiles.daily_goal is a hard bound (a hundred);
+-- what stops a tester PATCHing their way to a hundred-question day is the
+-- trigger, which asks whose row this is.
+do $$
+declare
+    ok boolean;
+    d  record;
+begin
+    raise notice 'the fifteen is not the client''s to move';
+    select * into d from public.v_my_day;
+    perform test.check(d.goal_max is null,
+        'an ordinary tester is told there is no set size of theirs to choose');
+
+    begin
+        update public.profiles set daily_goal = 40
+         where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+        ok := false;
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'and writing a goal above the ceiling is refused');
+    perform test.check(
+        (select daily_goal from public.profiles
+          where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') = 10,
+        'so the goal is still ten');
+
+    -- A ceiling, not a freeze: everything up to it is still theirs to set.
+    update public.profiles set daily_goal = 15
+     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    perform test.check((select goal from public.v_my_day) = 15,
+        'and fifteen is still theirs to set');
+    update public.profiles set daily_goal = 10
+     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+end
+$$;
+
 -- The owner lifts this tester's ceiling, as the service role.
 begin;
 set local role service_role;
@@ -1659,6 +1699,101 @@ begin
         'and the queue serves the whole window again');
 end
 $$;
+
+-- ----- the owner sizes their own day ---------------------------------------
+
+-- One number on the tester row, and it is both the largest set this account
+-- may ask for and the door its day shuts at — the same two things the fifteen
+-- has always been. `unlimited` goes back off, so what is being watched here is
+-- the number alone.
+begin;
+set local role service_role;
+update public.testers set unlimited = false, max_daily_goal = 40
+ where email = 'h@example.com';
+commit;
+
+do $$ begin perform test.become('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); end $$;
+set role authenticated;
+
+do $$
+declare
+    ok boolean;
+    d  record;
+begin
+    raise notice 'an account that sizes its own day';
+    select * into d from public.v_my_day;
+    perform test.check(not d.unlimited and d.goal_max = 40 and d.max_today = 40
+                       and d.answered_today = 15 and d.left_today = 25,
+        'the door is where the owner put it, and the view says how large a set may be');
+
+    -- Above fifteen, which is the whole point. The same statement that was
+    -- refused above goes through, because the trigger asked who was writing.
+    update public.profiles set daily_goal = 30
+     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    perform test.check((select goal from public.v_my_day) = 30,
+        'a set of thirty is theirs to choose');
+
+    begin
+        update public.profiles set daily_goal = 41
+         where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+        ok := false;
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'and one above the number the owner set is still refused');
+
+    perform test.check((select count(*) from public.next_items(50)) = 14,
+        'and the queue serves the whole window rather than stopping at fifteen');
+end
+$$;
+
+-- Lower the number and the door comes with it — the queue reads the same
+-- function the view does, so the two cannot disagree.
+reset role;
+begin;
+set local role service_role;
+update public.testers set max_daily_goal = 18 where email = 'h@example.com';
+commit;
+
+do $$ begin perform test.become('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); end $$;
+set role authenticated;
+
+do $$
+declare
+    d record;
+begin
+    raise notice 'and the number is the door';
+    select * into d from public.v_my_day;
+    perform test.check(d.goal_max = 18 and d.max_today = 18 and d.left_today = 3,
+        'eighteen allowed, fifteen answered, three left');
+    perform test.check((select count(*) from public.next_items(50)) = 3,
+        'and a set of fifty is served as a set of three');
+
+    -- The goal is thirty and the ceiling is now eighteen, which is a row that
+    -- could not be written today. It is not re-judged: the trigger polices the
+    -- writing of a goal, not the row's continued existence, or lowering the
+    -- number would stop an exam date saving.
+    update public.profiles set exam_date = date '2026-12-06'
+     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    perform test.check(
+        (select exam_date from public.profiles
+          where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') = date '2026-12-06',
+        'a goal set under a higher ceiling does not freeze the rest of the row');
+end
+$$;
+
+-- Put the account back as the rest of the file expects to find it.
+reset role;
+begin;
+set local role service_role;
+update public.testers set unlimited = true, max_daily_goal = null
+ where email = 'h@example.com';
+update public.profiles set daily_goal = 10
+ where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+commit;
+
+do $$ begin perform test.become('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); end $$;
+set role authenticated;
 
 do $$
 declare

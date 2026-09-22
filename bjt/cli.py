@@ -1520,24 +1520,36 @@ def cmd_tester(args) -> int:
         print()
         print(f"delete from public.testers where email = {publish.lit(email)};")
     else:
+        if args.max_goal is not None and not 1 <= args.max_goal <= 100:
+            print(f"a day is between 1 and 100 questions, not {args.max_goal}", file=sys.stderr)
+            return 2
         unlimited = "true" if args.unlimited else "false"
         may_veto = "true" if args.veto else "false"
+        max_goal = "null" if args.max_goal is None else str(args.max_goal)
         extras = [t for t, on in (("no daily ceiling", args.unlimited),
-                                  ("the veto button", args.veto)) if on]
+                                  ("the veto button", args.veto),
+                                  (f"a day of up to {args.max_goal} questions",
+                                   args.max_goal is not None)) if on]
         print(f"-- Let {email} use the app while it is in testing"
               + (f", with {' and '.join(extras)}." if extras else "."))
         if args.veto:
             print("-- The veto button unpublishes a question for EVERYBODY on one press.")
             print("-- Give it to the owner and to nobody else.")
+        if args.max_goal is not None:
+            print("-- max_daily_goal is the ONE account's own fifteen: the largest set it")
+            print("-- may choose in the app, and the point its day stops. Everybody else's")
+            print("-- row stays null, which is the ten-a-day, fifteen-at-most everyone has.")
         print("-- Runs as the service role; a client cannot touch this table.")
-        print("-- Idempotent: re-running updates the note and the two flags, nothing else.")
+        print("-- Idempotent: re-running updates the note, the flags and the number,")
+        print("-- and nothing else.")
         print()
-        print("insert into public.testers (email, note, unlimited, may_veto)")
+        print("insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)")
         print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, "
-              f"{unlimited}, {may_veto})")
+              f"{unlimited}, {may_veto}, {max_goal})")
         print("on conflict (email) do update set note = excluded.note,")
         print("                                  unlimited = excluded.unlimited,")
-        print("                                  may_veto = excluded.may_veto;")
+        print("                                  may_veto = excluded.may_veto,")
+        print("                                  max_daily_goal = excluded.max_daily_goal;")
     return 0
 
 
@@ -1746,6 +1758,11 @@ def build_parser() -> argparse.ArgumentParser:
     te.add_argument("--veto", action="store_true",
                     help="let this account unpublish a question from inside the app "
                          "(one press, for everybody — the owner's row, not a tester's)")
+    te.add_argument("--max-goal", type=int, metavar="N",
+                    help="let this account choose its own daily set size, up to N "
+                         "questions (1-100); its day then ends at N instead of at "
+                         "fifteen. Omit to leave the standard ten-a-day, "
+                         "fifteen-at-most in place")
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 

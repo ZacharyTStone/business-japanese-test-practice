@@ -149,6 +149,13 @@ export type DayStatus = {
   unlimited: boolean;
   max_today: number | null;
   left_today: number | null;
+  /** The largest daily set this account may ask for, when the size is this
+   *  account's to choose — which for everybody but the owner it is not, and
+   *  then this is null. The account screen draws its set-size field on exactly
+   *  that null, so no screen carries a copy of the fifteen; the database keeps
+   *  the number honest whatever the client sends (see my_daily_max and the
+   *  trigger on profiles). */
+  goal_max: number | null;
 };
 
 export type Profile = {

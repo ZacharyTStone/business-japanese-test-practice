@@ -19,12 +19,18 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchProfile, fetchSectionLevels, resetProgress, updateProfile } from "../../src/lib/db";
+import {
+  fetchDay,
+  fetchProfile,
+  fetchSectionLevels,
+  resetProgress,
+  updateProfile,
+} from "../../src/lib/db";
 import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/lib/exam";
 import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
 import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
-import type { Profile, SectionLevel } from "../../src/lib/types";
+import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   Card,
@@ -33,6 +39,7 @@ import {
   IconBadge,
   Loading,
   Notice,
+  NumberField,
   ScreenHeader,
   ScreenMessage,
   SectionLabel,
@@ -51,6 +58,9 @@ export default function Account() {
   } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
+  /** Only read for one thing here: whether this account may size its own day,
+   *  which is `goal_max` being a number rather than null. */
+  const [day, setDay] = useState<DayStatus | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -72,6 +82,11 @@ export default function Account() {
     fetchSectionLevels()
       .then(setLevels)
       .catch(() => setLevels([]));
+    // Not fatal either: with no row the set-size card is simply absent, which
+    // is what almost every account sees anyway.
+    fetchDay()
+      .then(setDay)
+      .catch(() => setDay(null));
   }, [authLoading, authError, reloads]);
 
   async function setExamDate(date: string | null) {
@@ -79,6 +94,25 @@ export default function Account() {
     try {
       await updateProfile({ exam_date: date });
     } catch (e) {
+      setError(errorText(e));
+    }
+  }
+
+  /** The day's size, for the one account that may choose it. The bound comes
+   *  from the database (`v_my_day.goal_max`) and the database checks it again
+   *  on the way in — the field is drawn from the answer, not trusted with it —
+   *  so a failure here is a real refusal and is shown rather than swallowed. */
+  async function setDailyGoal(n: number) {
+    const was = profile?.daily_goal;
+    setProfile((p) => (p ? { ...p, daily_goal: n } : p));
+    setError(null);
+    try {
+      await updateProfile({ daily_goal: n });
+      // Home reads the goal from v_my_day, so keep the copy this screen is
+      // holding in step rather than showing yesterday's number until a reload.
+      setDay((d) => (d ? { ...d, goal: n } : d));
+    } catch (e) {
+      setProfile((p) => (p && was !== undefined ? { ...p, daily_goal: was } : p));
       setError(errorText(e));
     }
   }
@@ -210,10 +244,37 @@ export default function Account() {
         </Card>
       </View>
 
-      {/* The only thing in the app anybody chooses, and it is about how they
-          practise rather than about which questions they get: the queue has
-          never heard of it. On by default, because the reading block is timed
-          whether or not it was practised that way. */}
+      {/* How long a sitting is, for the one account the database says may say
+          so: `goal_max` is null for everybody else and this card is not drawn
+          at all. It is on the same side of the line as the reading clock —
+          how you practise, not what you are served — and `next_items()` takes
+          a size and decides the rest from the record exactly as before. What
+          keeps it honest is that the bound is the database's: the field offers
+          what v_my_day reported, and the write is checked again on arrival. */}
+      {day?.goal_max != null ? (
+        <View style={{ gap: space.md }}>
+          <SectionLabel>{t("acc_setsize")}</SectionLabel>
+          <Card style={{ gap: space.md }}>
+            <View style={styles.head}>
+              <IconBadge name="layers" tone="teal" />
+              <Text style={[type.small, { flex: 1 }]}>{t("acc_setsize_body")}</Text>
+            </View>
+            <NumberField
+              value={profile.daily_goal}
+              onChange={setDailyGoal}
+              min={1}
+              max={day.goal_max}
+              accessibilityLabel={t("acc_setsize_label", { max: day.goal_max })}
+            />
+            <Text style={type.small}>{t("acc_setsize_sub", { max: day.goal_max })}</Text>
+          </Card>
+        </View>
+      ) : null}
+
+      {/* The other thing about how somebody practises, rather than about which
+          questions they get: the queue has never heard of it. On by default,
+          because the reading block is timed whether or not it was practised
+          that way. */}
       <View style={{ gap: space.md }}>
         <SectionLabel>{t("acc_timer")}</SectionLabel>
         <Card style={{ gap: space.md }}>

@@ -108,6 +108,20 @@ const S = {
   acc_timer_off: ["時間をはからない", "No clock"],
   acc_timer_sub: ["読解の問題だけです。聴解・聴読解は音声が進み方を決めるので、時計は出ません。", "Reading questions only. In listening the audio sets the pace, so there is no clock."],
   acc_timer_body: ["本番の読解は自分で時間を配ります。1問ずつ、本番と同じだけの時間をはかり、切れたら不正解として次へ進みます。", "The real reading section is self-paced. This gives each question the time the exam allows; when it runs out the question is marked wrong and you move on."],
+  // How long a sitting is. Only an account whose row carries a number of its
+  // own ever sees this card — v_my_day.goal_max is null for everybody else —
+  // and it is still a setting about how you practise rather than about which
+  // questions you get.
+  acc_setsize: ["1日の問題数", "Questions a day"],
+  acc_setsize_body: [
+    "このアカウントは1日に解く問題数を自分で決められます。ふつうは10問、上限15問です。",
+    "This account may say how long a sitting is. For everyone else it is ten a day, fifteen at most.",
+  ],
+  acc_setsize_sub: [
+    "1〜{max}問。{max}問でその日は終わりです。どの問題が出るかは変わりません。",
+    "1 to {max}. The day ends at {max}. Which questions you are served does not change.",
+  ],
+  acc_setsize_label: ["1日の問題数（1〜{max}）", "Questions a day (1 to {max})"],
   acc_noscore_title: ["点数の予測は出しません", "No score prediction"],
   acc_noscore_body: ["生成した問題には本番と同じ尺度がないので、「たぶん◯点」は出しません。上の「レベル」は、いま出している問題の難しさです。問題はすべて独自に作ったもので、過去問は使っていません。試験の運営とは関係ありません。", "Generated questions share no scale with the real exam, so the app never says “probably N points”. The level above is the difficulty of the questions you are being served. Every question is original; no past papers. The app is not affiliated with the exam."],
   logout: ["ログアウト", "Sign out"],

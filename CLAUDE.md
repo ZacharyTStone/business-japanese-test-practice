@@ -209,11 +209,15 @@ accident is not.
   slips in one item from the level above. The owner asked for this (2026-09-16):
   all the thinking happens behind the scenes, and the app's whole job is to
   raise a score rather than to offer a study menu.
-  The one exception is `profiles.timed_reading`, below: it decides whether the
-  reading questions are counted down, and `next_items()` has never heard of it.
-  A setting about *how you practise* is not a setting about *what you are
-  served*, and that is the line — anything that would change which item comes
-  next belongs on the wrong side of it.
+  There are two exceptions and they are both on the same side of one line.
+  `profiles.timed_reading`, below, decides whether the reading questions are
+  counted down; `profiles.daily_goal`, on the one account whose
+  `testers.max_daily_goal` says the size is theirs, decides how long a sitting
+  is. `next_items()` has never heard of the first and takes the second only as
+  a size, deciding *which* items entirely from the record either way. A setting
+  about *how you practise* is not a setting about *what you are served*, and
+  that is the line — anything that would change which item comes next belongs
+  on the wrong side of it.
 - **The set is shaped like the exam, and so is the bank.** The exam asks 80
   questions in a fixed proportion — 聴解 25, 聴読解 25, 読解 30, and inside those
   場面把握 5 / 発言聴解 10 / 総合聴解 10, 状況把握 5 / 資料聴読解 10 / 総合聴読解
@@ -282,6 +286,20 @@ accident is not.
   row with `unlimited = true` lifts the ceiling for that account alone
   (`bjt tester <email> --unlimited`); it is for exercising the app, not for
   studying. The owner asked for this (2026-09-18).
+  **One account may size its own day**, and it is one number rather than a
+  second ceiling: `testers.max_daily_goal` (null on every row but the owner's,
+  `bjt tester <email> --max-goal 60`) is that account's own fifteen — the
+  largest set it may choose *and* the point its day stops, which is what the
+  fifteen has always been, written once instead of twice. `my_daily_max()` is
+  the number `v_my_day` and `next_items()` read, so the door is per account
+  rather than a constant, and `v_my_day.goal_max` — null for everybody else —
+  is what draws the field on the account screen, so no screen carries a copy of
+  the fifteen. The check constraint on `daily_goal` is only a hard hundred: the
+  per-account bound is a trigger on `profiles`, because a constraint cannot ask
+  who is writing and without the trigger any tester could PATCH their own row
+  past the ceiling and it would be advisory. The trigger judges a goal being
+  *written*, never a row that already exists, so lowering the number later does
+  not freeze the rest of the profile. The owner asked for this (2026-09-22).
 - **Testers only, for now, and the database is the door.** `public.testers`
   lists who may use the app by the email they sign in with (email and password
   today; Google later, matched on the same email); `is_tester()` reads the JWT; every row-level policy in `public` requires it and the anon role holds

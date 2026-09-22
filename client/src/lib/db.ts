@@ -321,7 +321,7 @@ export async function fetchStreak(): Promise<number> {
 export async function fetchDay(): Promise<DayStatus> {
   const { data, error } = await supabase
     .from("v_my_day")
-    .select("goal, answered_today, unlimited, max_today, left_today")
+    .select("goal, answered_today, unlimited, max_today, left_today, goal_max")
     .single();
   if (error) throw error;
   return data as DayStatus;
