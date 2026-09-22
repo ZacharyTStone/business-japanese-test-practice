@@ -248,3 +248,55 @@ def document_faults(doc: Any) -> list[str]:
     """The spelled-out numbers left in a document — empty when it is clean."""
     return sorted({run for text in printed_strings(doc)
                    for run in kanji_numbers_in(text)})
+
+
+#: Words in which a numeral kanji is a letter rather than a number. Wider than
+#: `_NOT_NUMBERS`, because `mixed_notation` asks a looser question than the
+#: converter does — it flags a kanji numeral with no counter after it, which is
+#: the shape the converter is blind to by construction.
+#: `一覧` is the one that shows why this list is wider: the converter never
+#: needed it, because 覧 is not a counter and so nothing ever matched. This
+#: asks the looser question, so it does.
+_KANJI_AS_A_LETTER = _NOT_NUMBERS + (
+    "一覧表", "一覧", "一括", "一項", "一緒", "唯一", "一人", "二人", "三人",
+    "四人", "一本化",
+    "三人称", "二人称", "一つ", "二つ", "三つ", "四つ", "五つ", "六つ", "七つ",
+    "八つ", "九つ", "一日", "二日", "三日", "案一", "案二", "案三",
+    "第一", "第二", "第三", "第四", "第五",
+)
+
+_ANY_RUN = re.compile(rf"[{_NUMERAL_CHARS}]{{1,6}}")
+
+
+def mixed_notation(text: str) -> list[str]:
+    """Spelled-out numbers in a string that also uses digits — empty if none.
+
+    `to_arabic_text` only moves a number a counter follows, which is what keeps
+    it off 一覧 and 第一会議室. The price is that it cannot see a number nothing
+    follows: 「1万8000円×十二の21万6000円」 and 「三百から二百を引いて100部」 both
+    survived it, and both are worse than either notation alone — the learner is
+    converting between two systems inside one sentence, beside a table that
+    uses only one of them.
+
+    Catching those by widening the converter would mean rewriting every numeral
+    kanji whatever follows it, and 「二、三日」 and 「一覧」 are why that is not
+    done. So the converter stays narrow and this reports what it leaves, for a
+    person to read. A count, not a rewrite: only a reader can tell 「二案」 (a
+    count, digits) from 「案二」 (a label, kanji).
+    """
+    if not re.search(r"[0-9]", text):
+        return []
+    spans = [(m.start(), m.end())
+             for word in _KANJI_AS_A_LETTER
+             for m in re.finditer(re.escape(word), text)]
+    out = []
+    for m in _ANY_RUN.finditer(text):
+        a, b = m.span()
+        if any(a < e and s < b for s, e in spans):
+            continue
+        if text[:a].endswith("第"):
+            continue
+        if m.group(0) in ("万", "千", "億") and a and text[a - 1].isdigit():
+            continue
+        out.append(m.group(0))
+    return out

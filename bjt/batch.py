@@ -515,7 +515,34 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
             if spelled_out else
             f"{n_docs} document(s) and their options read like print")
 
-    # 10. Listening-specific: the scene must exist in the bank.
+    # 10. The other half of check 9. The converter only moves a number with a
+    #     counter after it; this reports the ones it cannot see, where a single
+    #     sentence ends up carrying both notations. A warning rather than a
+    #     failure because only a reader can tell 「二案」 (a count) from 「案二」
+    #     (a label), and a check that cannot tell them apart must not be the
+    #     thing that blocks a batch.
+    mixed: dict[str, list[str]] = {}
+    for it in items:
+        shaped = _as_generator_shape(it)
+        if not schemas.DOCUMENT_FIELDS.get(shaped.get("item_type", "")):
+            continue
+        spoken = tts_plan.audio_policy(shaped["item_type"])
+        texts = [shaped.get("explanation_ja", "")]
+        if not spoken.get("options"):
+            for o in shaped.get("options") or []:
+                texts += [o.get("text", ""), o.get("why", "")]
+        if not spoken.get("stem"):
+            texts.append(shaped.get("stem", ""))
+        runs = sorted({r for t in texts for r in numerals.mixed_notation(t)})
+        if runs:
+            mixed[it["id"]] = runs
+    if any(schemas.DOCUMENT_FIELDS.get(it.get("item_type", "")) for it in items):
+        add("one sentence, one notation", "warn" if mixed else "pass",
+            "both notations in: "
+            + "; ".join(f"{iid} ({', '.join(r)})" for iid, r in mixed.items())
+            if mixed else "no sentence mixes digits with spelled-out numbers")
+
+    # 11. Listening-specific: the scene must exist in the bank.
     if item_type == "hatsugen_choukai":
         try:
             bank = set(seedtable.load(item_type).scene_bank)
@@ -529,7 +556,7 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
                 f"not in the bank: {unknown}" if unknown
                 else f"{n_scenes} scene(s) reused across {n} items")
 
-    # 11. Shared utterances are supposed to collapse into one file, so the
+    # 12. Shared utterances are supposed to collapse into one file, so the
     #    manifest should be smaller than the clips the items ask for between
     #    them. The old form of this check assumed five clips per item —
     #    narration plus four spoken options — which is true of exactly one of

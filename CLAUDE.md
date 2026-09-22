@@ -149,7 +149,12 @@ accident is not.
   hashes its text, and a live clip is never re-made — which is why a narrated
   stem still reads 「三時から」. All 41 documents in the bank were kanji until
   2026-09-22, because nothing said so and nothing checked. The owner asked for
-  this (2026-09-22).
+  this (2026-09-22). The converter only moves a number with a counter after it,
+  which is what keeps it off 一覧 and 第一会議室 — so it cannot see 「×十二の」 or
+  「三百から二百を引いて」, where nothing follows the number. Widening it would
+  cost 「二、三日」 and 「一覧」, so instead `numerals.mixed_notation` reports a
+  sentence carrying both notations and the batch check warns. A warning, not a
+  failure: only a reader can tell 「二案」 (a count) from 「案二」 (a label).
 - **The discriminator sees what the learner sees.** `render_for_discriminator`
   carries the 資料 and the 会話, not just the stem and the options; without them
   the headline fidelity metric was rating 状況把握, 資料聴読解, 総合聴読解 and
@@ -240,13 +245,26 @@ accident is not.
   strings (`OPTION_LETTERS` in `client/src/lib/db.ts`, which a test holds
   equal). All four or none: before they are synthesised the run is what it
   always was. The owner asked for this (2026-09-20).
-- **A report is a report, not a withdrawal.** `public.item_feedback` takes one
-  row per person per item — a fixed reason and an optional sentence — and
-  nothing in the queue reads it. A reported item keeps being served until a
-  person looks at the report and unpublishes it; an item that vanishes on one
-  press is a bank one press away from empty. The reasons are a closed set on
-  purpose, because a count is something the generator loop can act on and prose
-  is not.
+- **A report is a report; a veto is the decision.** `public.item_feedback` takes
+  one row per person per item — a fixed reason and an optional sentence — and
+  nothing in the queue reads it. A reported item keeps being served until
+  somebody looks: "a tester pressed a button" is not a review, and an item that
+  vanishes on one press is a bank one press away from empty. The reasons are a
+  closed set on purpose, because a count is something the generator loop can
+  act on and prose is not.
+  The owner is not a tester in this respect. Reviewing the bank means meeting a
+  bad question in the app, and the useful moment to remove it is that moment, so
+  `veto_item()` unpublishes it there and then — for everybody, at once, from
+  inside the practice screen. The owner asked for this (2026-09-22). What keeps
+  the paragraph above true is who may press it: `testers.may_veto` is false on
+  every row by default (`bjt tester <email> --veto` sets it), `may_i_veto()`
+  decides whether the button is drawn, and `veto_item()` re-checks it rather
+  than trusting the client that drew it. It is an unpublish and never a delete,
+  so every attempt, review rung and report already pointing at the item keeps
+  resolving — a learner's history does not develop holes because the owner
+  disliked a question afterwards. Nothing is recorded against the learner
+  either: vetoing happens instead of answering, so no `attempts` row is written
+  and the day's ten is not spent. `public.item_vetoes` keeps who and when.
 - **Ten a day, fifteen at most, and the database counts.** The daily set is
   `profiles.daily_goal` (default 10, never above 15, never chosen in the app).
   After it one bonus set is offered; at fifteen answers in a Japanese calendar

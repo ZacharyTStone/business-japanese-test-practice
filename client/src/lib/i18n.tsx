@@ -210,6 +210,14 @@ const S = {
   report_thanks: ["ありがとうございます。確認します。", "Thank you — we'll look at it."],
   report_failed: ["送れませんでした。あとでもう一度お試しください。", "Couldn't send that. Please try again later."],
 
+  // veto — owner only, and it removes the question for everybody
+  veto_open: ["この問題を取り下げる", "Veto this question"],
+  veto_confirm: ["取り下げますか。全員に出なくなります。", "Veto it? It stops being served to everyone."],
+  veto_yes: ["取り下げる", "Veto"],
+  veto_cancel: ["やめる", "Cancel"],
+  veto_done: ["取り下げました。", "Vetoed."],
+  veto_failed: ["取り下げられませんでした。", "Couldn't veto that."],
+
   // result
   no_result_title: ["結果がありません", "No result"],
   no_result_body: ["練習を始めると、ここに結果が出ます。", "Start practising and results show here."],

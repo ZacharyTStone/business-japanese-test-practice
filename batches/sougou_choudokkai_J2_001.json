@@ -695,7 +695,7 @@
         }
       ],
       "correct_index": 0,
-      "explanation_ja": "メールは二案を並べるだけで優劣を決めていない。納期が来週だという会話の情報が決め手になり、3日で終わるほうが選ばれる。来年また直すことは承知のうえで、そこまで決めたわけではない。",
+      "explanation_ja": "メールは2案を並べるだけで優劣を決めていない。納期が来週だという会話の情報が決め手になり、3日で終わるほうが選ばれる。来年また直すことは承知のうえで、そこまで決めたわけではない。",
       "explanation_en": "The email offers two options; only the conversation supplies the constraint that picks one.",
       "vocab_notes": [
         {

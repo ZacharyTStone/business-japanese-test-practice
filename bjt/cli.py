@@ -1462,15 +1462,23 @@ def cmd_tester(args) -> int:
         print(f"delete from public.testers where email = {publish.lit(email)};")
     else:
         unlimited = "true" if args.unlimited else "false"
+        may_veto = "true" if args.veto else "false"
+        extras = [t for t, on in (("no daily ceiling", args.unlimited),
+                                  ("the veto button", args.veto)) if on]
         print(f"-- Let {email} use the app while it is in testing"
-              + (", with no daily ceiling." if args.unlimited else "."))
+              + (f", with {' and '.join(extras)}." if extras else "."))
+        if args.veto:
+            print("-- The veto button unpublishes a question for EVERYBODY on one press.")
+            print("-- Give it to the owner and to nobody else.")
         print("-- Runs as the service role; a client cannot touch this table.")
-        print("-- Idempotent: re-running updates the note and the ceiling flag, nothing else.")
+        print("-- Idempotent: re-running updates the note and the two flags, nothing else.")
         print()
-        print("insert into public.testers (email, note, unlimited)")
-        print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, {unlimited})")
+        print("insert into public.testers (email, note, unlimited, may_veto)")
+        print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, "
+              f"{unlimited}, {may_veto})")
         print("on conflict (email) do update set note = excluded.note,")
-        print("                                  unlimited = excluded.unlimited;")
+        print("                                  unlimited = excluded.unlimited,")
+        print("                                  may_veto = excluded.may_veto;")
     return 0
 
 
@@ -1676,6 +1684,9 @@ def build_parser() -> argparse.ArgumentParser:
     te.add_argument("--note", help="who this is — shows up in the row")
     te.add_argument("--unlimited", action="store_true",
                     help="lift the daily ceiling for this account (a tester exercising the app)")
+    te.add_argument("--veto", action="store_true",
+                    help="let this account unpublish a question from inside the app "
+                         "(one press, for everybody — the owner's row, not a tester's)")
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 

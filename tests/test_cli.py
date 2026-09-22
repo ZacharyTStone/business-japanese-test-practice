@@ -77,14 +77,32 @@ def test_tester_sql_is_lowercased_and_idempotent(capsys):
 def test_tester_unlimited_lifts_the_ceiling_and_is_off_by_default(capsys):
     assert cli.main(["tester", "z@example.com"]) == 0
     out = capsys.readouterr().out
-    assert "insert into public.testers (email, note, unlimited)" in out
+    assert "insert into public.testers (email, note, unlimited, may_veto)" in out
     assert "'z@example.com', '', false" in out
     assert "unlimited = excluded.unlimited" in out
 
     assert cli.main(["tester", "z@example.com", "--unlimited"]) == 0
     out = capsys.readouterr().out
-    assert "'z@example.com', '', true" in out
+    assert "'z@example.com', '', true, false" in out
     assert "no daily ceiling" in out
+
+
+def test_tester_veto_is_off_by_default_and_says_what_it_does(capsys):
+    """The veto flag unpublishes for everybody on one press, so the SQL that
+    grants it says so out loud — it is the owner's row, not a tester's."""
+    assert cli.main(["tester", "z@example.com"]) == 0
+    assert "'z@example.com', '', false, false" in capsys.readouterr().out
+
+    assert cli.main(["tester", "z@example.com", "--veto"]) == 0
+    out = capsys.readouterr().out
+    assert "'z@example.com', '', false, true" in out
+    assert "for EVERYBODY on one press" in out
+    assert "may_veto = excluded.may_veto" in out
+
+    assert cli.main(["tester", "z@example.com", "--unlimited", "--veto"]) == 0
+    out = capsys.readouterr().out
+    assert "'z@example.com', '', true, true" in out
+    assert "no daily ceiling and the veto button" in out
 
 
 def test_tester_remove_and_bad_input(capsys):

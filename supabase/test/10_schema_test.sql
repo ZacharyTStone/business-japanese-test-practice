@@ -1900,3 +1900,185 @@ delete from auth.users where id in ('cccccccc-cccc-cccc-cccc-cccccccccccc',
 delete from public.testers where email in ('wipe@example.com', 'keep@example.com');
 
 \echo 'ALL RESET TESTS PASSED'
+
+-- ---------------------------------------------------------------------------
+-- Vetoing a question.
+--
+-- A veto is an unpublish, which is the one thing `item_feedback` deliberately
+-- is not. What keeps that safe is who may press it, so the tests worth having
+-- are about the door rather than about the update: that a tester without
+-- `may_veto` is refused, that the refusal survives the client calling the RPC
+-- directly, that the item leaves every learner's queue and not just the
+-- vetoer's, and that nothing already pointing at the item breaks.
+
+begin;
+set local role service_role;
+
+insert into public.bundles (id, item_type, level, generator_model, generated_at) values
+    ('bnd_veto', 'goi_bunpou', 'J2', 'author-composed', now());
+insert into public.items (id, bundle_id, item_type, level, seed_cell_id, setting, relation,
+                          function, channel, topic, stem, correct_index, is_published)
+values ('itm_v1', 'bnd_veto', 'goi_bunpou', 'J2', 'v+r+f@J2', 'office_desk',
+        'peer_to_peer', 'request', 'written', '語彙', 'ベトーされる問題', 0, true),
+       ('itm_v2', 'bnd_veto', 'goi_bunpou', 'J2', 'v+r+g@J2', 'office_desk',
+        'peer_to_peer', 'request', 'written', '語彙', '残る問題', 0, true);
+insert into public.item_options (item_id, position, text, role, why) values
+    ('itm_v1', 0, 'あ', 'correct', 'r'), ('itm_v1', 1, 'い', 'content_mismatch', 'r'),
+    ('itm_v1', 2, 'う', 'register_too_casual', 'r'), ('itm_v1', 3, 'え', 'wrong_speech_act', 'r'),
+    ('itm_v2', 0, 'あ', 'correct', 'r'), ('itm_v2', 1, 'い', 'content_mismatch', 'r'),
+    ('itm_v2', 2, 'う', 'register_too_casual', 'r'), ('itm_v2', 3, 'え', 'wrong_speech_act', 'r');
+
+commit;
+
+insert into auth.users (id, email, is_anonymous) values
+    ('f1111111-1111-1111-1111-111111111111', 'owner@example.com', false),
+    ('f2222222-2222-2222-2222-222222222222', 'plain@example.com', false);
+
+begin;
+set local role service_role;
+insert into public.testers (email, note, may_veto) values
+    ('owner@example.com', 'the owner', true),
+    ('plain@example.com', 'an ordinary tester', false);
+commit;
+
+-- ----- an ordinary tester may not ------------------------------------------
+
+do $$ begin perform test.become('f2222222-2222-2222-2222-222222222222'); end $$;
+set role authenticated;
+
+do $$
+declare ok boolean;
+begin
+    perform test.check(not (select public.may_i_veto()),
+                       'a tester whose row has no may_veto is told no');
+
+    -- and the answer is not merely advisory: the RPC re-checks it, because the
+    -- client that drew the button is not the thing that decides.
+    begin
+        perform public.veto_item('itm_v1');
+        ok := false;
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'and calling the RPC anyway is refused');
+    perform test.check(
+        (select is_published from public.items where id = 'itm_v1'),
+        'so the item is still in the bank');
+
+    -- The bank is read-only to a client, veto or no veto. This is what makes
+    -- the RPC the only door rather than one of two.
+    begin
+        update public.items set is_published = false where id = 'itm_v1';
+        ok := (select is_published from public.items where id = 'itm_v1');
+    exception when insufficient_privilege then
+        ok := true;
+    end;
+    perform test.check(ok, 'and no client can unpublish by updating items directly');
+
+    perform test.check(
+        (select count(*) from public.item_vetoes) = 0,
+        'the ledger is not readable by someone who may not veto');
+end
+$$;
+
+-- ----- the owner may -------------------------------------------------------
+
+reset role;
+do $$ begin perform test.become('f1111111-1111-1111-1111-111111111111'); end $$;
+set role authenticated;
+
+do $$
+declare v record; ok boolean;
+begin
+    perform test.check((select public.may_i_veto()), 'the owner''s row says yes');
+
+    perform public.veto_item('itm_v1', 'この問題は日本語が変');
+
+    -- The select policy is `is_tester() and is_published`, so the vetoed item
+    -- stops being visible to its own vetoer too. That IS the unpublish, seen
+    -- from a client: there is no "hidden but still readable" state to be in.
+    perform test.check(
+        not exists (select 1 from public.items where id = 'itm_v1'),
+        'the veto takes the item out of the bank');
+    perform test.check(
+        exists (select 1 from public.items where id = 'itm_v2'),
+        'and only that one');
+
+    select * into v from public.item_vetoes where item_id = 'itm_v1';
+    perform test.check(v.user_id = (select auth.uid()),
+                       'the ledger records who pressed it, from the session');
+    perform test.check(v.note = 'この問題は日本語が変', 'and what they said');
+
+    -- Pressing twice is not two events. (veto_item() re-reads the item through
+    -- its own definer rights, so an already-vetoed item is still vetoable.)
+    perform public.veto_item('itm_v1', '二回目');
+    perform test.check(
+        (select count(*) from public.item_vetoes where item_id = 'itm_v1') = 1,
+        'vetoing an already-vetoed item does not write a second row');
+    perform test.check(
+        (select note from public.item_vetoes where item_id = 'itm_v1') = 'この問題は日本語が変',
+        'and keeps the first press, which is the one that mattered');
+
+    -- The ledger is not writable from the client, only by the RPC as definer.
+    begin
+        insert into public.item_vetoes (item_id, user_id) values ('itm_v2', (select auth.uid()));
+        ok := false;
+    exception when others then
+        ok := true;
+    end;
+    perform test.check(ok, 'the ledger takes no direct insert — veto_item() is the only writer');
+end
+$$;
+
+-- The row itself is still there, which is the part a client cannot see. A veto
+-- is an unpublish, so every attempt, schedule rung and report pointing at the
+-- item keeps resolving; a learner's history does not develop holes because the
+-- owner disliked a question afterwards.
+reset role;
+do $$
+declare ok boolean;
+begin
+    set local role service_role;
+    ok := exists (select 1 from public.items
+                   where id = 'itm_v1' and is_published = false);
+    perform test.check(ok, 'the item row survives the veto, unpublished');
+end
+$$;
+
+do $$ begin perform test.become('f1111111-1111-1111-1111-111111111111'); end $$;
+set role authenticated;
+
+-- ----- it is gone for everybody, not just the vetoer ------------------------
+
+reset role;
+do $$ begin perform test.become('f2222222-2222-2222-2222-222222222222'); end $$;
+set role authenticated;
+
+do $$
+begin
+    perform test.check(
+        not exists (select 1 from public.items where id = 'itm_v1'),
+        'another tester cannot even read the vetoed item — the select policy '
+        'is on is_published, so a veto empties it out of the bank for everyone');
+    perform test.check(
+        exists (select 1 from public.items where id = 'itm_v2'),
+        'while the rest of the bank is untouched');
+end
+$$;
+
+reset role;
+
+begin;
+set local role service_role;
+delete from public.item_vetoes where item_id in ('itm_v1', 'itm_v2');
+delete from public.items where bundle_id = 'bnd_veto';
+delete from public.bundles where id = 'bnd_veto';
+commit;
+delete from auth.users where id in ('f1111111-1111-1111-1111-111111111111',
+                                    'f2222222-2222-2222-2222-222222222222');
+begin;
+set local role service_role;
+delete from public.testers where email in ('owner@example.com', 'plain@example.com');
+commit;
+
+\echo 'ALL VETO TESTS PASSED'

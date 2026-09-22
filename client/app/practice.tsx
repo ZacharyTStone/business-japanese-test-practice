@@ -56,6 +56,7 @@ import {
   fetchQueue,
   fetchSectionLevels,
   finishSession,
+  mayVeto,
   recordAttempt,
   sceneUrl,
   startSession,
@@ -76,6 +77,7 @@ import { HAS_KEYBOARD, optionForKey, useKeys } from "../src/ui/keys";
 import { RudenessMeter } from "../src/ui/meters";
 import { FadeIn } from "../src/ui/motion";
 import { ReportQuestion } from "../src/ui/report";
+import { VetoQuestion } from "../src/ui/veto";
 import { colors, radius, shadow, space, tabular, type } from "../src/ui/theme";
 
 const LETTERS = ["A", "B", "C", "D"];
@@ -184,6 +186,9 @@ export default function Practice() {
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
   const [items, setItems] = useState<QueuedItem[] | null>(null);
+  // Asked once per screen. False for every tester but the owner, and the
+  // server re-checks it, so this only decides whether a button is drawn.
+  const [canVeto, setCanVeto] = useState(false);
   const [index, setIndex] = useState(0);
   const [stageAt, setStageAt] = useState<{ index: number; stage: Stage } | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
@@ -268,6 +273,7 @@ export default function Practice() {
         const queue = remaining > 0 ? await fetchQueue(remaining) : [];
         if (cancelled) return;
         setItems(queue);
+        mayVeto().then(setCanVeto).catch(() => setCanVeto(false));
         setSessionId(await startSession(session.user.id));
         questionShownAt.current = Date.now();
       } catch (e) {
@@ -414,6 +420,49 @@ export default function Practice() {
       setBusy(false);
       go("reveal");
     }
+  }
+
+  /**
+   * The question is out of the bank; take it out of this set too.
+   *
+   * No attempt is written, so nothing is graded, nothing is scheduled for
+   * review and the day's count does not move — vetoing is instead of
+   * answering. The set simply gets one shorter: the item is spliced out and
+   * `index` stays put, which lands on what was the next question. If it was
+   * the last one, the set is over and the result screen is where we were
+   * going anyway.
+   */
+  function vetoed() {
+    const rest = items!.filter((_, i) => i !== index);
+    // The bookkeeping is keyed by index, and every index at or after this one
+    // now names a different question. Clearing it is what stops the next
+    // question inheriting this one's "already answered".
+    answeredFor.current = null;
+    advancedFrom.current = null;
+    scrolledFor.current = null;
+    if (index >= rest.length) {
+      if (rest.length === 0) {
+        router.replace("/");
+        return;
+      }
+      setItems(rest);
+      if (sessionId) void finishSession(sessionId);
+      setSummary({
+        answers,
+        startedAt: startedAt.current,
+        finishedAt: Date.now(),
+        levelsBefore: levelsBefore.current,
+      });
+      router.replace("/result");
+      return;
+    }
+    setItems(rest);
+    setChosen(null);
+    setGraded(null);
+    setShowDetails(false);
+    setOptionsAsText(false);
+    setHovered(null);
+    questionShownAt.current = Date.now();
   }
 
   async function next() {
@@ -698,6 +747,13 @@ export default function Practice() {
               );
             })}
           </FadeIn>
+
+          {/* Before the answer, not after — the opposite of the report button
+              and for the same reason. A report is about a question you engaged
+              with; a veto is about one you have decided not to. */}
+          {canVeto && !revealed ? (
+            <VetoQuestion key={`${item.id}-veto`} itemId={item.id} onVetoed={vetoed} />
+          ) : null}
         </>
       ) : null}
 

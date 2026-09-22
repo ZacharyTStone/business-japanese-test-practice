@@ -199,6 +199,39 @@ export async function reportItem(args: {
   if (updateError) throw updateError;
 }
 
+/**
+ * Whether this account may veto — asked once, so the button is drawn or it is
+ * not. A `false` here is cosmetic: `veto_item()` re-checks the same thing
+ * server-side, because the client that draws a button is not the thing that
+ * decides who may press it.
+ */
+export async function mayVeto(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("may_i_veto");
+  if (error) return false;
+  return data === true;
+}
+
+/**
+ * Take one question out of the bank, for everybody, now.
+ *
+ * Unlike `reportItem`, which is an opinion somebody reads later, this is the
+ * decision itself: the item is unpublished and the next set nobody draws will
+ * contain it. Only an account whose tester row carries `may_veto` can do it —
+ * one press emptying the bank is exactly the risk `item_feedback` exists to
+ * avoid, and what makes it safe here is who is pressing rather than what the
+ * press does.
+ *
+ * Nothing is recorded against the learner: vetoing happens instead of
+ * answering, so no attempt is written and the day's count does not move.
+ */
+export async function vetoItem(itemId: string, note = ""): Promise<void> {
+  const { error } = await supabase.rpc("veto_item", {
+    p_item_id: itemId,
+    p_note: note.trim(),
+  });
+  if (error) throw error;
+}
+
 /** The radar. All nine types come back, including untouched ones — "not tried
  *  yet" is the most useful thing this can say early on, and a chart that hides
  *  the gaps is worse than no chart. */
