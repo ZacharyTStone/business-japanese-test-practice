@@ -8,14 +8,13 @@ needs no price table, a cap on output and effort per call, a cap on the
 night's size, and a bill in every summary — a bug in any one of them is
 caught by the rest.
 """
-import copy
 import pathlib
 import re
 from types import SimpleNamespace
 
 import pytest
 
-from bjt import cli, config, fixtures, llm
+from bjt import cli, config, llm
 
 
 def _usage(**kw):

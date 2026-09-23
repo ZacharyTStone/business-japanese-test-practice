@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from bjt import batch, llm, schemas, seedtable
+from bjt import batch, schemas, seedtable
 from bjt.generators import get_generator
 from bjt.tts import plan as tts_plan
 

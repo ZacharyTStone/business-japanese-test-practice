@@ -245,36 +245,6 @@ export function IconBadge({ name, tone, size = 34 }: { name: IconName; tone: Bad
 }
 
 /**
- * A counted thing, with the tint that identifies it.
- *
- * `value` is a string and not a number on purpose: the honest reading of "no
- * answers yet" is 「—」, not 0%, and the caller is the only one who knows which
- * of those it has.
- */
-export function StatCard({
-  name,
-  tone,
-  label,
-  value,
-  caption,
-}: {
-  name: IconName;
-  tone: BadgeTone;
-  label: string;
-  value: string;
-  caption?: string;
-}) {
-  return (
-    <View style={styles.statCard}>
-      <IconBadge name={name} tone={tone} size={30} />
-      <Text style={[type.small, { marginTop: space.sm }]}>{label}</Text>
-      <Text style={type.stat}>{value}</Text>
-      {caption ? <Text style={type.small}>{caption}</Text> : null}
-    </View>
-  );
-}
-
-/**
  * A ring, for a fraction of something finite — today's goal, a run of answers.
  *
  * Never an accuracy or a level. A ring reads as "how far along", and accuracy is
@@ -734,17 +704,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs,
   },
   iconBadge: { alignItems: "center", justifyContent: "center" },
-  statCard: {
-    flexGrow: 1,
-    flexBasis: "46%",
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: space.lg,
-    gap: 2,
-    ...shadow.card,
-  },
   ringCenter: { alignItems: "center", justifyContent: "center" },
   ringLabel: { fontSize: 20, fontWeight: "700", ...tabular },
   ringCaption: { fontSize: 11, fontWeight: "600" },

@@ -6,7 +6,7 @@ import copy
 
 import pytest
 
-from bjt import cli, fixtures, llm, schemas
+from bjt import cli, fixtures, llm
 from bjt.fidelity import answerability, difficulty
 
 

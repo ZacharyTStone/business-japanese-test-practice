@@ -4,7 +4,6 @@ import copy
 import json
 from types import SimpleNamespace
 
-import pytest
 
 from bjt import cli, fixtures, llm, schemas
 from bjt.generators import get_generator

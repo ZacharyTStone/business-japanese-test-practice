@@ -156,7 +156,6 @@ def test_probe_dry_run_names_the_items_with_no_prior_and_spends_nothing(capsys, 
 def test_probe_leaves_the_bundle_alone_when_nothing_could_be_measured(capsys, monkeypatch, tmp_path):
     """A fabricated prior is worse than none — the queue would trust it — so a
     probe that cannot run writes nothing and says so."""
-    import json
     import shutil
 
     from bjt.fidelity import difficulty

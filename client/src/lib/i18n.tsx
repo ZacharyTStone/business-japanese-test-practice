@@ -265,8 +265,6 @@ const S = {
   tap_explain: ["タップすると解説を見られます", "Tap for the explanation"],
 
   // audio
-  audio_pending: ["{label}（音声は準備中）", "{label} (audio coming soon)"],
-  play_label: ["{label}を再生", "Play {label}"],
   dialogue_pending: ["会話（音声は準備中）", "Conversation (audio coming soon)"],
   show_text: ["本文を見る", "Show text"],
   hide_text: ["本文を隠す", "Hide text"],

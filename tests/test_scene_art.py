@@ -5,8 +5,6 @@ without a vendor account. The reviewer is faked, because that is the model
 call; what is tested is that the job obeys the reviewer, keeps what it
 rejects, and never lets a stand-in be mistaken for artwork.
 """
-import json
-import zlib
 
 import pytest
 

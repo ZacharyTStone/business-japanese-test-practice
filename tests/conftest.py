@@ -1,5 +1,4 @@
 import copy
-import pathlib
 
 import pytest
 

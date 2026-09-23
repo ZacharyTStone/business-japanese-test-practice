@@ -15,7 +15,7 @@ import pathlib
 import pytest
 
 from bjt import batch as batchmod
-from bjt import config, fixtures, plan, publish, schemas
+from bjt import fixtures, plan, publish, schemas
 
 ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
 

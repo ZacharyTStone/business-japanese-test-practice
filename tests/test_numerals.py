@@ -6,7 +6,6 @@ that keep their kanji, and idempotence — the offline check works by re-running
 the converter, so a converter that moved on its own output would fail every
 clean batch and corrupt every money value it touched.
 """
-import copy
 import json
 import pathlib
 

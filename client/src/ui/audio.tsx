@@ -20,54 +20,6 @@ import type { DialogueTurn } from "../lib/types";
 import { Icon } from "./icons";
 import { colors, radius, space, type } from "./theme";
 
-export function ClipButton({
-  path,
-  text,
-  label,
-}: {
-  path: string | null;
-  text: string;
-  label: string;
-}) {
-  const { t } = useLang();
-  const url = clipUrl(path);
-  const player = useAudioPlayer(url ?? null);
-  const status = useAudioPlayerStatus(player);
-
-  if (!url) {
-    // No audio yet. Say so plainly rather than leaving a button that does
-    // nothing — a control that silently fails is worse than no control.
-    return (
-      <View style={styles.fallback}>
-        <Text style={type.small}>{t("audio_pending", { label })}</Text>
-        <Text style={type.body}>{text}</Text>
-      </View>
-    );
-  }
-
-  const playing = status.playing;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t("play_label", { label })}
-      onPress={() => {
-        if (playing) {
-          player.pause();
-        } else {
-          player.seekTo(0);
-          player.play();
-        }
-      }}
-      style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
-    >
-      <View style={styles.playIcon}>
-        <Icon name={playing ? "stop" : "play"} size={18} color={colors.onAccent} strokeWidth={2} />
-      </View>
-      <Text style={type.body}>{label}</Text>
-    </Pressable>
-  );
-}
-
 /**
  * A play button with nothing but an icon — for an option that is heard rather
  * than read. Sits inside the option's own Pressable; a press here plays, a press
@@ -106,12 +58,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.accent,
-  },
-  fallback: {
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius.md,
-    padding: space.lg,
-    gap: space.xs,
   },
   play: {
     flexDirection: "row",
