@@ -1,0 +1,203 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J3",
+  "generated_at": "2026-09-23T21:07:08+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "a786957ed9",
+      "item_type": "sougou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "video_review+peer_to_peer+choose_revision@J3",
+        "setting": "video_review",
+        "relation": "peer_to_peer",
+        "function": "choose_revision",
+        "level": "J3",
+        "channel": "video"
+      },
+      "topic": "パンフレットデザイン修正案の採用",
+      "stem": "今回、どの修正案を、誰が担当して進めることになりましたか。",
+      "options": [
+        {
+          "text": "表紙の色を変えるC案を、田中が担当して進める。",
+          "role": "correct",
+          "why": "先方からC案を進めてほしいと連絡があり、担当も保留から田中に決まったため。"
+        },
+        {
+          "text": "写真を大きくするB案を、佐藤が担当して進める。",
+          "role": "combines_wrong_pair",
+          "why": "議事録どおりの組み合わせだが、先方がB案を予算オーバーで断ったという会話の内容を反映していない。"
+        },
+        {
+          "text": "表紙の色を変えるC案を、佐藤が担当して進める。",
+          "role": "wrong_action_owner",
+          "why": "採用する案自体はC案で合っているが、担当は佐藤ではなく田中に変わっている。"
+        },
+        {
+          "text": "文字サイズを変えるA案を採用して進める。",
+          "role": "stated_by_wrong_speaker",
+          "why": "同僚Aが思いつきで挙げただけで、同僚Bが前回すでに見送りが決まっていると答えており、採用された案ではない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "議事録では、A案は見送り、B案は採用（担当・佐藤）、C案は先方の意向確認後に判断（担当未定）となっていた。会話で、B案は先方が予算オーバーで断ったこと、代わりに保留だったC案を進めてほしいと言われたこと、C案の担当は佐藤ではなく田中になったことが分かる。議事録だけでは先方の判断が変わったことが分からず、会話だけでは元々の担当割り当てが分からないため、両方を突き合わせて初めて正しい組み合わせが決まる。",
+      "explanation_en": "The minutes adopt plan B and leave plan C pending; the conversation reveals the client rejected B and requested C instead, with a new owner.",
+      "vocab_notes": [
+        {
+          "term": "見送り",
+          "reading": "みおくり",
+          "meaning": "postponement / passing on (a proposal)"
+        },
+        {
+          "term": "保留",
+          "reading": "ほりゅう",
+          "meaning": "pending, held over"
+        }
+      ],
+      "audio": {
+        "narration": "aa757f8c419a0639",
+        "options": [],
+        "dialogue": [
+          "6ba24d68230e190a",
+          "8deda4d63b7dfe22",
+          "1acb9a0c55ed9ef1",
+          "721b26e0ee23be0d",
+          "6669e7ea7d280aca",
+          "53623583553557ff"
+        ]
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "パンフレットデザイン 修正案 打ち合わせ議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "9月5日（木）15時〜16時"
+            },
+            {
+              "label": "場所",
+              "value": "オンライン会議室"
+            },
+            {
+              "label": "出席者",
+              "value": "佐藤、田中、同僚A、同僚B"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "numbered",
+              "items": [
+                "A案（文字サイズを11ptから12ptに変更）：見送り",
+                "B案（写真を大きくするレイアウト変更）：採用、担当は佐藤",
+                "C案（表紙の色を変更）：先方の意向確認後に判断、担当は未定"
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "同僚A",
+          "text": "議事録では、写真を大きくするB案を採用することになっていましたね。",
+          "clip_id": "6ba24d68230e190a"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "そうなんですが、先ほど先方から連絡があって、B案は予算オーバーで難しいと言われました。",
+          "clip_id": "8deda4d63b7dfe22"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では、文字サイズを変えるA案はどうですか。",
+          "clip_id": "1acb9a0c55ed9ef1"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "いえ、それは前回ですでに見送りが決まっています。先方は、保留にしていた表紙の色を変えるC案の方を進めてほしいそうです。",
+          "clip_id": "721b26e0ee23be0d"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では担当は佐藤さんのままで進めましょうか。",
+          "clip_id": "6669e7ea7d280aca"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "いえ、C案は佐藤さんではなく、田中さんが担当することになっています。",
+          "clip_id": "53623583553557ff"
+        }
+      ],
+      "channel": "video",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "aa757f8c419a0639",
+      "item_id": "a786957ed9",
+      "kind": "narration",
+      "index": null,
+      "text": "今回、どの修正案を、誰が担当して進めることになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6ba24d68230e190a",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "議事録では、写真を大きくするB案を採用することになっていましたね。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "8deda4d63b7dfe22",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "そうなんですが、先ほど先方から連絡があって、B案は予算オーバーで難しいと言われました。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "1acb9a0c55ed9ef1",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "では、文字サイズを変えるA案はどうですか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "721b26e0ee23be0d",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "いえ、それは前回ですでに見送りが決まっています。先方は、保留にしていた表紙の色を変えるC案の方を進めてほしいそうです。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "6669e7ea7d280aca",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "では担当は佐藤さんのままで進めましょうか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "53623583553557ff",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "いえ、C案は佐藤さんではなく、田中さんが担当することになっています。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    }
+  ],
+  "scenes": []
+}

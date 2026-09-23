@@ -1,0 +1,226 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J1",
+  "generated_at": "2026-09-23T21:04:19+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "dc756cc425",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "video_review+superior_to_subordinate+reconcile_document@J1",
+        "setting": "video_review",
+        "relation": "superior_to_subordinate",
+        "function": "reconcile_document",
+        "level": "J1",
+        "channel": "video"
+      },
+      "topic": "新人研修の会場担当の引き継ぎ",
+      "stem": "研修当日の会場対応は、誰が行うことになりましたか。",
+      "options": [
+        {
+          "text": "中村が行う。",
+          "role": "combines_wrong_pair",
+          "why": "議事録の担当者欄のままで、中村が出張で不在になるという会話の内容を反映していない。"
+        },
+        {
+          "text": "中村が出張を短縮して対応する。",
+          "role": "unsupported_but_plausible",
+          "why": "出張を切り上げて戻る可能性はあり得るが、会話ではそのような話は一切出ていない。"
+        },
+        {
+          "text": "佐藤が行う。",
+          "role": "correct",
+          "why": "中村が出張で当日不在になるため、部長が佐藤に当日対応を依頼し、佐藤も了承している。"
+        },
+        {
+          "text": "佐藤が昼食の手配も合わせて行う。",
+          "role": "wrong_action_owner",
+          "why": "昼食の手配は中村が出張前に済ませると述べており、佐藤が引き継いだのは会場対応だけである。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "議事録では会場の予約・当日対応・昼食の手配がすべて中村の担当とされているが、会話で中村が研修当日は出張で不在になることが分かり、部長が当日対応だけを佐藤に依頼している。昼食の手配は出張前に中村が済ませる予定なので変更されていない。議事録だけでは出張の事実が分からず、会話だけでは元の担当割り振りが分からないため、両方を照合しないと正解できない。",
+      "explanation_en": "The minutes assign everything to Nakamura, but the call reveals Nakamura will be away, so the manager moves only the on-site duty to Sato, leaving the lunch arrangement unchanged.",
+      "vocab_notes": [
+        {
+          "term": "引き継ぐ",
+          "reading": "ひきつぐ",
+          "meaning": "to take over / hand over (a task)"
+        },
+        {
+          "term": "手配",
+          "reading": "てはい",
+          "meaning": "arrangement, making arrangements"
+        }
+      ],
+      "audio": {
+        "narration": "a4e7430667229af8",
+        "options": [],
+        "dialogue": [
+          "6c56f26bb38d3038",
+          "d64533cf7fe8ccc5",
+          "e357a5e2ef1b42db",
+          "ef6bf54f12483df1",
+          "6b2ab03f77832a05",
+          "e33a1f16704f607c"
+        ]
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "新人研修 運営打ち合わせ 議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "9月5日 15時"
+            },
+            {
+              "label": "場所",
+              "value": "オンライン"
+            },
+            {
+              "label": "出席者",
+              "value": "部長、中村、佐藤"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "項目",
+                "担当"
+              ],
+              "rows": [
+                [
+                  "会場の予約",
+                  "中村"
+                ],
+                [
+                  "当日対応",
+                  "中村"
+                ],
+                [
+                  "昼食の手配",
+                  "中村"
+                ]
+              ]
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "研修は9月20日実施。",
+                "詳細は担当者が各自進めること。"
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "部長",
+          "text": "議事録では、会場の予約と当日対応、それに昼食の手配まで、すべて中村さんになっていますね。",
+          "clip_id": "6c56f26bb38d3038"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。ただ、中村さんは来週から出張で、研修当日は不在の予定です。",
+          "clip_id": "d64533cf7fe8ccc5"
+        },
+        {
+          "speaker_role": "部長",
+          "text": "それは困りますね。予約はもう済んでいるようですが、当日対応は佐藤さんにお願いできますか。",
+          "clip_id": "e357a5e2ef1b42db"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "承知しました。私が当日対応いたします。",
+          "clip_id": "ef6bf54f12483df1"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "昼食の手配については、中村さんが出張前に済ませると言っていました。",
+          "clip_id": "6b2ab03f77832a05"
+        },
+        {
+          "speaker_role": "部長",
+          "text": "それはそのままで結構です。",
+          "clip_id": "e33a1f16704f607c"
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "a4e7430667229af8",
+      "item_id": "dc756cc425",
+      "kind": "narration",
+      "index": null,
+      "text": "研修当日の会場対応は、誰が行うことになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6c56f26bb38d3038",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "議事録では、会場の予約と当日対応、それに昼食の手配まで、すべて中村さんになっていますね。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "d64533cf7fe8ccc5",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "はい。ただ、中村さんは来週から出張で、研修当日は不在の予定です。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "e357a5e2ef1b42db",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "それは困りますね。予約はもう済んでいるようですが、当日対応は佐藤さんにお願いできますか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "ef6bf54f12483df1",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "承知しました。私が当日対応いたします。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "6b2ab03f77832a05",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "昼食の手配については、中村さんが出張前に済ませると言っていました。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "e33a1f16704f607c",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "それはそのままで結構です。",
+      "voice": "manager_m",
+      "channel": "video"
+    }
+  ],
+  "scenes": [
+    "scene_video_call_laptop"
+  ]
+}

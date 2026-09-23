@@ -1,0 +1,139 @@
+{
+  "bundle_version": 2,
+  "item_type": "shiryou_choudokkai",
+  "level": "J3",
+  "generated_at": "2026-09-23T21:02:59+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "4f749dbe58",
+      "item_type": "shiryou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "video_shared_doc+peer_to_peer+find_the_date@J3",
+        "setting": "video_shared_doc",
+        "relation": "peer_to_peer",
+        "function": "find_the_date",
+        "level": "J3",
+        "channel": "video"
+      },
+      "topic": "倉庫予約の重なりと延期連絡",
+      "stem": "同僚がオンライン会議で予定表を画面に映しながらこう言いました。「4日の第一倉庫、C社さんとB社さんが重なっている件ですが、C社さんの納品はけっきょく延期になって、D社さんと同じ日に入ることになりました。場所は第一倉庫のまま変わりません。」C社の納品はいつになりますか。",
+      "options": [
+        {
+          "text": "10月4日",
+          "role": "ignores_the_spoken_change",
+          "why": "予定表に元々書かれている仮予約の日付で、口頭で延期になったことを反映していない。"
+        },
+        {
+          "text": "10月2日",
+          "role": "reads_wrong_row",
+          "why": "隣のA社の納品立会いの日付で、C社の行ではない。"
+        },
+        {
+          "text": "10月9日",
+          "role": "correct",
+          "why": "C社の納品はD社と同じ日に延期されたと話されており、予定表でD社の行は10月9日にあたる。"
+        },
+        {
+          "text": "9月30日",
+          "role": "wrong_timeframe",
+          "why": "これは同じC社の検品がすでに完了した日付で、これから行う納品立会いの日ではない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "予定表では10月4日に第一倉庫でB社とC社の予定が重なっており、C社は「仮」とされている。話し手はこの重なりを解消するため、C社の納品をD社と同じ日、つまり10月9日に延期すると伝えている。10月4日は延期前の資料の値のままで誤り。9月30日はC社の別の作業（検品）の完了日であり、これから行う納品とは別物。10月2日はA社の行を誤って読んだもの。資料だけでは重なりの解消先が分からず、音声だけではD社の日付が10月9日だと分からない。",
+      "explanation_en": "The chart shows a double booking on the 4th; the colleague resolves it by moving C's delivery to the same date as D's slot, October 9.",
+      "vocab_notes": [
+        {
+          "term": "納品立会い",
+          "reading": "のうひんたちあい",
+          "meaning": "attending a delivery to confirm receipt"
+        },
+        {
+          "term": "仮予約",
+          "reading": "かりよやく",
+          "meaning": "provisional reservation"
+        }
+      ],
+      "audio": {
+        "narration": "fbafa2ed5f38fdc8",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "10月 納品立会い予定表",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "9月30日（土）〜10月9日（月）"
+            },
+            {
+              "label": "作成者",
+              "value": "総務部 中村"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "日付",
+                "内容",
+                "場所",
+                "担当"
+              ],
+              "rows": [
+                [
+                  "9月30日（土）",
+                  "C社 検品（完了）",
+                  "第一倉庫",
+                  "高橋"
+                ],
+                [
+                  "10月2日（月）",
+                  "A社 納品立会い",
+                  "本社倉庫",
+                  "佐藤"
+                ],
+                [
+                  "10月4日（水）",
+                  "B社 納品立会い",
+                  "第一倉庫",
+                  "鈴木"
+                ],
+                [
+                  "10月4日（水）",
+                  "C社 納品立会い（仮）",
+                  "第一倉庫",
+                  "高橋"
+                ],
+                [
+                  "10月9日（月）",
+                  "D社 納品立会い",
+                  "第二倉庫",
+                  "佐藤"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "video",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "fbafa2ed5f38fdc8",
+      "item_id": "4f749dbe58",
+      "kind": "narration",
+      "index": null,
+      "text": "同僚がオンライン会議で予定表を画面に映しながらこう言いました。「4日の第一倉庫、C社さんとB社さんが重なっている件ですが、C社さんの納品はけっきょく延期になって、D社さんと同じ日に入ることになりました。場所は第一倉庫のまま変わりません。」C社の納品はいつになりますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": []
+}

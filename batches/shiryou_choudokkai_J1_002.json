@@ -1,0 +1,152 @@
+{
+  "bundle_version": 2,
+  "item_type": "shiryou_choudokkai",
+  "level": "J1",
+  "generated_at": "2026-09-23T21:01:28+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "753c57209e",
+      "item_type": "shiryou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "delivery_email+subordinate_to_superior+find_the_conflict@J1",
+        "setting": "delivery_email",
+        "relation": "subordinate_to_superior",
+        "function": "find_the_conflict",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "納品確認メールの単価訂正",
+      "stem": "取引先からの確認メールを見ながら、部下が電話でこう報告しました。「さきほど先方に確認しましたところ、継手金具Bの単価は480円ではなく520円に訂正するとのことでした。金具Aの単価は変更ありません。」上司は、今回の注文の合計金額をいくらだと理解すればよいですか。",
+      "options": [
+        {
+          "text": "148,000円",
+          "role": "correct",
+          "why": "Aは70,000円のまま、Bを150個×520円の78,000円に直して合計すると148,000円になる。"
+        },
+        {
+          "text": "142,000円",
+          "role": "ignores_the_spoken_change",
+          "why": "メールに書かれた元の単価480円のままの合計で、電話で伝えられた520円への訂正が反映されていない。"
+        },
+        {
+          "text": "83,000円",
+          "role": "wrong_timeframe",
+          "why": "これは来月の追加発注分の見込み合計であり、今回すでに確定している今月分の注文額ではない。"
+        },
+        {
+          "text": "176,000円",
+          "role": "reads_wrong_row",
+          "why": "単価の訂正をAの行に当てはめて計算した数字で、実際に訂正されたのはBの単価であってAではない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "メールの合計142,000円は単価480円を前提にした数字だが、電話でBの単価が520円に訂正されたと伝えられたため、Bの金額を78,000円に直して計算し直す必要がある。Aは70,000円のままなので、正しい合計は148,000円。142,000円はメールの数字をそのまま使った誤り、176,000円は訂正をAの行に誤って当てはめた誤り、83,000円は来月分の見込み額であり今回の注文額ではない。メールだけでは訂正の事実が分からず、電話だけではAとBの元の金額が分からないため、両方の情報が必要になる。",
+      "explanation_en": "The email's total assumes the old unit price; the call revises only item B's price, so the total must be recalculated using the email's figures for A and the corrected figure for B.",
+      "vocab_notes": [
+        {
+          "term": "単価",
+          "reading": "たんか",
+          "meaning": "unit price"
+        },
+        {
+          "term": "据え置き",
+          "reading": "すえおき",
+          "meaning": "kept unchanged"
+        },
+        {
+          "term": "月末締め翌月末払い",
+          "reading": "げつまつじめよくげつまつばらい",
+          "meaning": "payment terms: closed at month-end, paid at the end of the following month"
+        }
+      ],
+      "audio": {
+        "narration": "e25a16407ece390d",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "email_external",
+          "title": "発注No.245 ご注文の確認",
+          "meta": [
+            {
+              "label": "差出人",
+              "value": "さくら精密株式会社 営業部 中村"
+            },
+            {
+              "label": "宛先",
+              "value": "山川商事株式会社 資材部 佐藤様"
+            },
+            {
+              "label": "件名",
+              "value": "発注No.245 ご注文の確認"
+            },
+            {
+              "label": "日時",
+              "value": "9月10日 11時"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "いつもお世話になっております。ご注文いただきました商品について、下記のとおりご確認申し上げます。"
+            },
+            {
+              "type": "table",
+              "caption": "ご注文内容",
+              "columns": [
+                "品目",
+                "数量",
+                "単価",
+                "金額"
+              ],
+              "rows": [
+                [
+                  "継手金具A",
+                  "200個",
+                  "350円",
+                  "70,000円"
+                ],
+                [
+                  "継手金具B",
+                  "150個",
+                  "480円",
+                  "72,000円"
+                ]
+              ]
+            },
+            {
+              "type": "key_values",
+              "pairs": [
+                {
+                  "label": "合計金額",
+                  "value": "142,000円"
+                },
+                {
+                  "label": "支払条件",
+                  "value": "月末締め翌月末払い"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "phone",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "e25a16407ece390d",
+      "item_id": "753c57209e",
+      "kind": "narration",
+      "index": null,
+      "text": "取引先からの確認メールを見ながら、部下が電話でこう報告しました。「さきほど先方に確認しましたところ、継手金具Bの単価は480円ではなく520円に訂正するとのことでした。金具Aの単価は変更ありません。」上司は、今回の注文の合計金額をいくらだと理解すればよいですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": []
+}
