@@ -333,3 +333,39 @@ def test_plan_stays_quiet_when_every_item_has_one(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "146/146 carry a difficulty signal." in out
     assert "sorts nothing" not in out
+
+
+def test_difficulty_coverage_skips_an_unreadable_bundle_but_not_a_real_bug(
+    tmp_path, monkeypatch
+):
+    """`difficulty_coverage` exists so a silent gap in the difficulty signal
+    cannot go unnoticed again (see the module docstring). It would be its own
+    kind of silent gap if it swallowed every exception a bundle could raise —
+    `_published_counts`, three lines up, only ever skips a bundle that fails to
+    read or parse; this function used to catch bare `Exception` instead, wide
+    enough to hide a real bug in the counting loop itself. A bundle that is
+    merely corrupt or unreadable is still skipped, same as always; anything
+    else must propagate."""
+    from bjt import plan as planmod
+
+    good = tmp_path / "good.json"
+    good.write_text(
+        json.dumps({"item_type": "goi_bunpou", "level": "J2",
+                    "items": [{"id": "a", "model_p_correct": 0.5}]}),
+        encoding="utf-8",
+    )
+    corrupt = tmp_path / "corrupt.json"
+    corrupt.write_text("{not json", encoding="utf-8")
+
+    monkeypatch.setattr(planmod.batchmod, "bundles", lambda item_type=None: [good, corrupt])
+    assert planmod.difficulty_coverage() == (1, 1), "the corrupt bundle is skipped, not counted"
+
+    def _boom(item_type=None):
+        return [good]
+
+    monkeypatch.setattr(planmod.batchmod, "bundles", _boom)
+    monkeypatch.setattr(
+        planmod.batchmod, "load", lambda path: (_ for _ in ()).throw(TypeError("not a bundle bug"))
+    )
+    with pytest.raises(TypeError):
+        planmod.difficulty_coverage()

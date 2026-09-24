@@ -336,7 +336,7 @@ def difficulty_coverage() -> tuple[int, int]:
     for path in batchmod.bundles():
         try:
             bundle = batchmod.load(path)
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             continue
         for item in bundle.get("items", []):
             total += 1
