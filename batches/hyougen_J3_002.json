@@ -1,0 +1,69 @@
+{
+  "bundle_version": 2,
+  "item_type": "hyougen",
+  "level": "J3",
+  "generated_at": "2026-09-24T21:02:48+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "5a335f190a",
+      "item_type": "hyougen",
+      "level": "J3",
+      "seed_cell": {
+        "id": "meeting_room+superior_to_subordinate+confirm@J3",
+        "setting": "meeting_room",
+        "relation": "superior_to_subordinate",
+        "function": "confirm",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "会議前に部下へ資料準備を確認する",
+      "stem": "会議開始直前、会議室で課長が部下に、配布する資料の準備が終わっているかを確認します。最も適切な表現はどれですか。",
+      "options": [
+        {
+          "text": "資料の準備はできていますか。",
+          "role": "correct",
+          "why": "部下への確認として簡潔で丁寧さも過不足なく、状況の確認という目的に合っている。"
+        },
+        {
+          "text": "資料、ご用意いただけますでしょうか。",
+          "role": "correct_keigo_wrong_speech_act",
+          "why": "敬語は整っているが、これから用意してほしいという依頼の形になっており、準備済みかどうかを尋ねる確認にはなっていない。"
+        },
+        {
+          "text": "資料、できた?もうすぐ始まるけど。",
+          "role": "register_too_casual",
+          "why": "内容は確認だが、会議室での上司から部下への発話としては友人同士のようなくだけた言い方になっている。"
+        },
+        {
+          "text": "資料はもう拝見しましたか。",
+          "role": "wrong_honorific_direction",
+          "why": "「拝見」は自分の行為をへりくだる謙譲語で、部下が資料を見たかどうかを尋ねる場面で使うと敬意の向きが逆になる。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "上司から部下への確認は、平易な丁寧体で状況をそのまま尋ねればよい。「ご用意いただけますでしょうか」は敬語として正しいが依頼の形であり、まだ準備できていないという前提を作ってしまうため確認にならない。「できた?もうすぐ始まるけど」は内容は合っているが会議室での発話としてくだけすぎている。「拝見しましたか」は謙譲語を相手の行為に向けており、敬意の方向が逆になっている。",
+      "explanation_en": "A supervisor confirming with a subordinate uses a plain polite question about the current state, not a request, casual speech, or a humble verb misapplied to the listener's action.",
+      "vocab_notes": [
+        {
+          "term": "配布資料",
+          "reading": "はいふしりょう",
+          "meaning": "handout materials"
+        },
+        {
+          "term": "拝見する",
+          "reading": "はいけんする",
+          "meaning": "to see/look at (humble form for one's own action)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}
