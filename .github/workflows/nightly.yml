@@ -77,15 +77,15 @@ on:
       budget:
         description: "Most items this run may write"
         required: false
-        default: "8"
+        default: "3"
       per_slot:
         description: "Most items into any one (type, level)"
         required: false
-        default: "3"
+        default: "2"
       reading_min:
         description: "Items reserved for the reading shelves before the rest (they need no audio or picture)"
         required: false
-        default: "3"
+        default: "1"
       scenes:
         description: "Also draw the shared bank's missing scenes (the schedule does this on Sundays; item pictures are drawn every night)"
         type: boolean
@@ -94,7 +94,7 @@ on:
       max_usd:
         description: "Most dollars this run may spend on the Anthropic API (measured from usage; the run stops with what it has)"
         required: false
-        default: "2"
+        default: "1"
       dry_run:
         description: "Print the work order and stop"
         type: boolean
@@ -119,16 +119,19 @@ jobs:
     # above it, is the guard that does not depend on any code being right.
     timeout-minutes: 45
     env:
-      # Eight a night, three to a shelf: about two dollars on Sonnet. The
-      # code clamps whatever is typed here to BJT_NIGHT_MAX_BUDGET / _PER_SLOT.
-      BUDGET: ${{ github.event.inputs.budget || '8' }}
-      PER_SLOT: ${{ github.event.inputs.per_slot || '3' }}
+      # Three a night, two to a shelf: well under a dollar on Sonnet. It was
+      # eight until the owner said the app is used far less than that fills
+      # (2026-09-24). The code clamps whatever is typed here to
+      # BJT_NIGHT_MAX_BUDGET / _PER_SLOT.
+      BUDGET: ${{ github.event.inputs.budget || '3' }}
+      PER_SLOT: ${{ github.event.inputs.per_slot || '2' }}
       # Reading items first: no audio, no picture, the cheapest item there is,
-      # and the owner asked for them every night (2026-09-19).
-      READING_MIN: ${{ github.event.inputs.reading_min || '3' }}
+      # and the owner asked for them every night (2026-09-19). At least one.
+      READING_MIN: ${{ github.event.inputs.reading_min || '1' }}
       # The most this run may spend, checked before every call against the
       # usage the API reports. Reached, the run stops and keeps what it wrote.
-      BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '2' }}
+      # A dollar for three items leaves room for a shelf's retries.
+      BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '1' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

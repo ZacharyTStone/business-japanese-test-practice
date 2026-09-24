@@ -132,7 +132,7 @@ def test_the_defaults_are_the_cheaper_ones():
     assert config.GEN_EFFORT == "medium"
     assert config.IMAGE_QUALITY == "medium"
     assert config.SLOT_PATIENCE == 3
-    assert (plan.DEFAULT_BUDGET, plan.DEFAULT_PER_SLOT) == (8, 3)
+    assert (plan.DEFAULT_BUDGET, plan.DEFAULT_PER_SLOT, plan.DEFAULT_READING_MIN) == (3, 2, 1)
 
 
 def test_a_discard_is_explained_to_the_next_draft(store, monkeypatch, quiet, tmp_path):
