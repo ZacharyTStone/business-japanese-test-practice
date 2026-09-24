@@ -23,13 +23,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('98ab48d3e0426f9e', '夜九時を過ぎ、自分の担当分は終わりました。先輩はまだ資料の見直しをしています。エレベーターホールで、先に帰る前にひとこと声をかけます。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
-       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
+       ('25c7c1a4fbc76235', 'いち', 'narrator_f', 'in_person'),
        ('e4be594f587fff72', 'お先に失礼します。何かお手伝いできることがあれば、おっしゃってください。', 'staff_junior_f', 'in_person'),
-       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
+       ('6e34bf5479a4824e', 'に', 'narrator_f', 'in_person'),
        ('61c24dc88ae517f2', 'お先っす。お疲れした。', 'staff_junior_f', 'in_person'),
-       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
+       ('a94822f17a881031', 'さん', 'narrator_f', 'in_person'),
        ('fac27328fb6e374e', 'お先に失礼させていただかせていただきます。何かございましたら、いつでもお申し付けくださいませ。', 'staff_junior_f', 'in_person'),
-       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
+       ('5577d7cacee29a6c', 'よん', 'narrator_f', 'in_person'),
        ('48a898c71cf41e7f', 'お先に失礼します。その資料、今日中に終わりそうですか。', 'staff_junior_f', 'in_person'),
        ('a89c0a9cc89690e7', '隣の席の同僚から、来週の発表を代わってもらえないかと頼まれました。その日はすでに外せない打ち合わせが入っています。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
        ('73df19a847bed706', 'せっかくのお申し出ではございますが、私では役不足でございますので、どうかご容赦くださいませ。', 'staff_mid_f', 'in_person'),

@@ -16,13 +16,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('004fa50818a8258a', '執務フロアで、他の部署の人が席に来て、こう話しています。「お忙しいところすみません。先ほどメールでお送りした件ですが、今、少しお時間よろしいでしょうか。」これはやりとりのどの段階ですか。', 'narrator_f', 'in_person'),
-       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
+       ('25c7c1a4fbc76235', 'いち', 'narrator_f', 'in_person'),
        ('640d84d8044b8a4d', '相手のほうが、時間を取ってほしいと頼んでいる段階', 'narrator_f', 'in_person'),
-       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
+       ('6e34bf5479a4824e', 'に', 'narrator_f', 'in_person'),
        ('7bb63e3c4b9827f2', 'これから話を始めようとしている段階', 'narrator_f', 'in_person'),
-       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
+       ('a94822f17a881031', 'さん', 'narrator_f', 'in_person'),
        ('0d607d81478dfa98', '話が終わって、礼を言っている段階', 'narrator_f', 'in_person'),
-       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
+       ('5577d7cacee29a6c', 'よん', 'narrator_f', 'in_person'),
        ('69f556d7510421e5', 'メールの内容について意見が分かれている段階', 'narrator_f', 'in_person'),
        ('6fd5ad68198fc535', '外出中の部下が、会社の上司に電話をかけています。「課長、お疲れさまです。今、駅に着きました。先方との打ち合わせは三時からですが、資料を会社に忘れてしまいました。」「分かった。資料は今から私が先方にメールで送っておく。君はそのまま向かいなさい。」部下はこのあと何をしますか。', 'narrator_f', 'in_person'),
        ('03037804a4f80b7c', '会社に戻って、資料を取ってくる。', 'narrator_f', 'in_person'),
