@@ -18,13 +18,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('a3990da6dc9586a1', '受付の人は何をしていますか。', 'narrator_f', 'in_person'),
-       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
+       ('25c7c1a4fbc76235', 'いち', 'narrator_f', 'in_person'),
        ('12a6417d94fc1758', '来客を会議室のほうへ案内しています。', 'narrator_f', 'in_person'),
-       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
+       ('6e34bf5479a4824e', 'に', 'narrator_f', 'in_person'),
        ('dde8847bc9008cc9', '来客に入館証を渡しています。', 'narrator_f', 'in_person'),
-       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
+       ('a94822f17a881031', 'さん', 'narrator_f', 'in_person'),
        ('69282f33f91fdb33', '来客が受付の人に行き方を教えています。', 'narrator_f', 'in_person'),
-       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
+       ('5577d7cacee29a6c', 'よん', 'narrator_f', 'in_person'),
        ('d3cbe53e6dc4565b', '打ち合わせを終えた来客を見送っています。', 'narrator_f', 'in_person'),
        ('abaf9651a101be6d', 'ホワイトボードの前に立っている人は何をしていますか。', 'narrator_f', 'in_person'),
        ('7e8c0a5f1bcb6461', '会議が終わってホワイトボードを消しています。', 'narrator_f', 'in_person'),

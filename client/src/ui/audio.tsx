@@ -21,15 +21,48 @@ import { Icon } from "./icons";
 import { colors, radius, space, type } from "./theme";
 
 /**
+ * One voice at a time.
+ *
+ * Every control on the practice screen owns its own player — the listening
+ * run, and each spoken option's play button — and the option buttons are live
+ * while the run is still reading, on purpose: a learner who knows the answer at
+ * the second option should not have to wait for the fourth. Nothing stopped two
+ * of them sounding at once, so an option's button pressed over the run reading
+ * it, or two buttons pressed in a row, played two clips on top of each other.
+ * A tester heard that as distorted audio (2026-09-24). Starting any player now
+ * silences whichever one was sounding.
+ */
+let voice: { owner: object; silence: () => void } | null = null;
+
+function takeVoice(owner: object, silence: () => void) {
+  if (voice && voice.owner !== owner) {
+    const previous = voice.silence;
+    voice = null;
+    try {
+      previous();
+    } catch {
+      // A player already released by its component has nothing left to stop.
+    }
+  }
+  voice = { owner, silence };
+}
+
+function releaseVoice(owner: object) {
+  if (voice?.owner === owner) voice = null;
+}
+
+/**
  * A play button with nothing but an icon — for an option that is heard rather
  * than read. Sits inside the option's own Pressable; a press here plays, a press
- * anywhere else on the option answers, which is the same split as a letter and
+ * anywhere else on the option answers, which is the same split as a number and
  * a speaker button on the exam room's answer sheet.
  */
 export function MiniPlay({ url, label }: { url: string; label: string }) {
   const player = useAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
   const playing = status.playing;
+  const owner = React.useRef({}).current;
+  React.useEffect(() => () => releaseVoice(owner), [owner]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -38,7 +71,9 @@ export function MiniPlay({ url, label }: { url: string; label: string }) {
       onPress={() => {
         if (playing) {
           player.pause();
+          releaseVoice(owner);
         } else {
+          takeVoice(owner, () => player.pause());
           player.seekTo(0);
           player.play();
         }
@@ -105,7 +140,7 @@ const styles = StyleSheet.create({
  * same thing, so today the end is reported twice; a browser that does not is
  * one where a clip shorter than the interval could finish without the queue
  * ever hearing about it. 250ms is comfortably under the shortest thing the
- * library says aloud, which is a letter.
+ * library says aloud, which is an option number.
  */
 const STATUS_INTERVAL_MS = 250;
 
@@ -145,22 +180,31 @@ type ClipQueue = {
  *
  * A clip with no audio yet is stepped over rather than waited for: a
  * half-synthesised item should still play the parts that exist.
+ *
+ * The run holds the one voice (`takeVoice`) while it plays. Another player
+ * starting stops it, exactly as the learner pressing stop would, and then
+ * `onInterrupted` says so — the listening stage counts that as a skip.
  */
 function useClipQueue(
   urls: (string | null)[],
-  { autoplay = false, onFinished }: { autoplay?: boolean; onFinished?: () => void } = {}
+  {
+    autoplay = false,
+    onFinished,
+    onInterrupted,
+  }: { autoplay?: boolean; onFinished?: () => void; onInterrupted?: () => void } = {}
 ): ClipQueue {
   const firstPlayable = () => Math.max(0, urls.findIndex(Boolean));
   const [at, setAt] = React.useState(firstPlayable);
   const [running, setRunning] = React.useState(autoplay && urls.some(Boolean));
   const player = useAudioPlayer(urls[at] ?? null, { updateInterval: STATUS_INTERVAL_MS });
   const status = useAudioPlayerStatus(player);
+  const owner = React.useRef({}).current;
 
   // What the listener reads when an event arrives. Both are re-read rather than
   // captured: the list is rebuilt by the parent's render and `onFinished` is
   // usually written inline, and neither should re-subscribe the listener.
-  const live = React.useRef({ urls, onFinished });
-  live.current = { urls, onFinished };
+  const live = React.useRef({ urls, onFinished, onInterrupted });
+  live.current = { urls, onFinished, onInterrupted };
 
   React.useEffect(() => {
     if (!running) return undefined;
@@ -179,6 +223,7 @@ function useClipQueue(
       }
       setRunning(false);
       setAt(0);
+      releaseVoice(owner);
       live.current.onFinished?.();
     });
     return () => sub.remove();
@@ -187,11 +232,28 @@ function useClipQueue(
     // each.
   }, [player, running, at]);
 
+  const stop = React.useCallback(() => {
+    player.pause();
+    setRunning(false);
+    setAt(Math.max(0, live.current.urls.findIndex(Boolean)));
+    releaseVoice(owner);
+  }, [player, owner]);
+  // Read by another player taking the voice, which may happen several clips
+  // after this one started, so it must reach the player playing now.
+  const stopLatest = React.useRef(stop);
+  stopLatest.current = stop;
+
   React.useEffect(() => {
     if (!running || !urls[at]) return;
+    takeVoice(owner, () => {
+      stopLatest.current();
+      live.current.onInterrupted?.();
+    });
     player.seekTo(0);
     player.play();
   }, [player, running, at]);
+
+  React.useEffect(() => () => releaseVoice(owner), [owner]);
 
   const start = React.useCallback(() => {
     const first = live.current.urls.findIndex(Boolean);
@@ -199,12 +261,6 @@ function useClipQueue(
     setAt(first);
     setRunning(true);
   }, []);
-
-  const stop = React.useCallback(() => {
-    player.pause();
-    setRunning(false);
-    setAt(Math.max(0, live.current.urls.findIndex(Boolean)));
-  }, [player]);
 
   return { at, running, status, start, stop };
 }
@@ -312,7 +368,7 @@ function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string
  * and practice should. Nothing readable about the answers is on screen while
  * it runs, so the first listen is a real listen and not a skim of the answers
  * with sound in the background; spoken options, which show no text, sit under
- * it as letters and may be answered before it finishes.
+ * it as numbers and may be answered before it finishes.
  *
  * `autoplay` is read once, on mount. The screen mounts this at the listening
  * stage and keeps it mounted through answering, so the replay button is the
@@ -339,6 +395,9 @@ export function AutoPlaylist({
   const queue = useClipQueue(urls, {
     autoplay: autoplay && urls.length > 0,
     onFinished: report,
+    // An option's own play button cut the run short: a skip, like the link
+    // below, so the options stay answerable and the replay button appears.
+    onInterrupted: report,
   });
 
   if (urls.length === 0) return null;

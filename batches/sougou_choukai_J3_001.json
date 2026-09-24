@@ -271,11 +271,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "d08f3de5649eec59",
+      "clip_id": "25c7c1a4fbc76235",
       "item_id": "eabb6f222a",
       "kind": "option_label",
       "index": 0,
-      "text": "エー",
+      "text": "いち",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -289,11 +289,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "da4df49bf7f00ab2",
+      "clip_id": "6e34bf5479a4824e",
       "item_id": "eabb6f222a",
       "kind": "option_label",
       "index": 1,
-      "text": "ビー",
+      "text": "に",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -307,11 +307,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "d690aea8d6cb91f1",
+      "clip_id": "a94822f17a881031",
       "item_id": "eabb6f222a",
       "kind": "option_label",
       "index": 2,
-      "text": "シー",
+      "text": "さん",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -325,11 +325,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "134df096a9c7dc0a",
+      "clip_id": "5577d7cacee29a6c",
       "item_id": "eabb6f222a",
       "kind": "option_label",
       "index": 3,
-      "text": "デー",
+      "text": "よん",
       "voice": "narrator_f",
       "channel": "in_person"
     },

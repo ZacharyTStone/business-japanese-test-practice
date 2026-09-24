@@ -271,7 +271,8 @@ def test_a_thin_shelf_is_thin_against_its_share():
 
 
 def test_render_says_how_many_are_reading():
-    text = plan.render(_mixed_survey(), plan.work_order(_mixed_survey(), budget=8))
+    order = plan.work_order(_mixed_survey(), budget=8, per_slot=3, reading_min=3)
+    text = plan.render(_mixed_survey(), order)
     assert "3 of them 読解" in text
 
 

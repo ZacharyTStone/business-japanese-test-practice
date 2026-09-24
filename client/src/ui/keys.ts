@@ -51,8 +51,8 @@ export function useKeys(handler: (key: string) => boolean | void, enabled = true
 /**
  * Which option a key press means, or -1.
  *
- * Both rows, because people reach for whichever is nearer: the digits above the
- * letters, and the letters printed on the options themselves.
+ * Both rows, because people reach for whichever is nearer: the digits printed
+ * on the options themselves, and the letters the options used to carry.
  */
 export function optionForKey(key: string, count: number): number {
   const k = key.toLowerCase();

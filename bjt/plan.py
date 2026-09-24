@@ -62,23 +62,27 @@ from . import schemas, seedtable
 #: greedy fill needs no threshold.
 DEFAULT_FLOOR = 12
 
-#: Most items one run may write into one (type, level) shelf.
-DEFAULT_PER_SLOT = 3
+#: Most items one run may write into one (type, level) shelf. Two of three,
+#: so a night always reaches at least two shelves.
+DEFAULT_PER_SLOT = 2
 
-#: Most items one run may write at all. Eight a night is about two dollars on
-#: Sonnet; the bank fills its thin shelves in weeks rather than days, and the
-#: owner asked for cheap (2026-09-18). The night's real throttle is the
-#: review gate: nothing is written while an earlier night waits unmerged.
-DEFAULT_BUDGET = 8
+#: Most items one run may write at all. Three a night is well under a dollar on
+#: Sonnet. It was eight (2026-09-18) until the owner said the app is used far
+#: less than that fills (2026-09-24): a question nobody reaches is money spent
+#: on nothing, and the bank still grows by twenty a week. The night's real
+#: throttle is the review gate: nothing is written while an earlier night waits
+#: unmerged.
+DEFAULT_BUDGET = 3
 
 #: How many of the night's items go to the reading shelves (語彙・文法, 表現読解,
 #: 総合読解) before the emptiest-first rule sees the rest. The owner asked for
 #: reading items every night (2026-09-19): they need no audio and no picture,
 #: so they are the cheapest item to ship and the one kind a night should never
-#: come back without. Three of eight is one per reading type on an ordinary
-#: night; the floor takes the emptiest reading shelves first, exactly as the
+#: come back without. One of three is the floor, not the ceiling: the main rule
+#: can still hand the other two to reading shelves when they are the furthest
+#: behind. The floor takes the emptiest reading shelves first, exactly as the
 #: main rule does, and yields whatever it cannot place back to the main rule.
-DEFAULT_READING_MIN = 3
+DEFAULT_READING_MIN = 1
 
 #: Most items a night may write of a type that should stay uncommon. 画像把握
 #: is one: each item needs a picture of its own, drawn and reviewed at a cost

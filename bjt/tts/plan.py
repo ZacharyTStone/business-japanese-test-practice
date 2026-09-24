@@ -27,30 +27,29 @@ from typing import Optional
 #: narration is not part of what is being tested.
 NARRATOR_VOICE = "narrator_f"
 
-#: The four option letters, spoken. The screen shows nothing but A / B / C / D
+#: The four option numbers, spoken. The screen shows nothing but 1 / 2 / 3 / 4
 #: while a listening item's options play, so without these the learner hears
 #: four candidates with nothing tying any of them to a button — which is a
 #: memory test rather than a listening one. The exam reads its numbers aloud
 #: for the same reason.
 #:
-#: Katakana rather than "A", so the reading is the Japanese one and does not
-#: depend on a provider guessing which language a bare letter is in. The
-#: narrator speaks them whoever is speaking in the item, because a letter
-#: belongs to the exam rather than to anybody in the scene — which, with the
-#: content-hashed clip id, is what makes these four files for the whole
-#: library rather than four per item.
+#: Kana rather than "1", so the reading is 「いち」 and does not depend on a
+#: provider guessing which language a bare digit is in, and 「よん」 rather than
+#: 「し」, which is the reading a list of choices uses. The narrator speaks them
+#: whoever is speaking in the item, because a number belongs to the exam rather
+#: than to anybody in the scene — which, with the content-hashed clip id, is
+#: what makes these four files for the whole library rather than four per item.
 #:
-#: **D is 「デー」 and not 「ディー」.** The four letters differ only in their
-#: onset — the vowel is the same long イー in all of them — and 「ビー」 and
-#: 「ディー」 differ by a voiced stop apiece, which is the pair a listener
-#: actually mishears. Reported from practice: B sounded like D (2026-09-20).
-#: 「デー」 is the reading Japanese already uses when a letter has to survive a
-#: telephone, for this exact reason, and it moves D's vowel as well as its
-#: onset: エー / ビー / シー / デー is [eː] / [biː] / [ɕiː] / [deː].
+#: **Numbers, not letters.** Letters were tried twice and failed twice. The four
+#: English letters differ only in their onset, so 「ビー」 and 「ディー」 were
+#: misheard for each other (2026-09-20); 「デー」 fixed that and sounded like
+#: "day" rather than the letter (2026-09-24). いち / に / さん / よん share no
+#: sound with each other, and they are what the exam's answer sheet prints. The
+#: owner chose them (2026-09-24).
 #:
-#: The app names the same four strings (`OPTION_LETTERS` in client/src/lib/db.ts),
+#: The app names the same four strings (`OPTION_LABELS` in client/src/lib/db.ts),
 #: which is how it finds the clips; a test holds the two equal.
-OPTION_LABELS = ("エー", "ビー", "シー", "デー")
+OPTION_LABELS = ("いち", "に", "さん", "よん")
 
 #: Relation → the voice of the person doing the speaking (the left side of the
 #: 関係 arrow). Fixed for the life of the library.
@@ -250,11 +249,11 @@ def plan_item(item: dict, item_id: str) -> list[Clip]:
         if policy.get("options_by_narrator"):
             voice, channel = NARRATOR_VOICE, "in_person"
         for i, opt in enumerate(item["options"]):
-            # The letter first, in the narrator's voice and off the phone line
+            # The number first, in the narrator's voice and off the phone line
             # whatever the item's channel is: it is said by the exam, not from
             # inside the scene. An item with more options than there are
-            # letters gets none for the extras rather than a wrong one — the
-            # app plays a letter only where there is one for every option.
+            # numbers gets none for the extras rather than a wrong one — the
+            # app plays a number only where there is one for every option.
             if i < len(OPTION_LABELS):
                 clips.append(
                     Clip(

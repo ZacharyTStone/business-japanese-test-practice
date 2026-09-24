@@ -128,7 +128,7 @@ def test_narration_stays_clean_even_on_a_phone_item(item):
     assert clips[0].kind == "narration"
     # Only what is said *inside* the scene goes down the phone line. The
     # narrator is outside it, and so is the voice that reads the option
-    # letters — a letter is the exam speaking, not anybody in the room.
+    # numbers — a number is the exam speaking, not anybody in the room.
     outside = [c for c in clips if c.kind in ("narration", "option_label")]
     assert len(outside) == 5
     assert all(c.channel == "in_person" for c in outside)
@@ -139,7 +139,7 @@ def test_identical_utterances_share_one_clip(item):
     a = tts_plan.plan_item(item, "item-a")
     b = tts_plan.plan_item(item, "item-b")
     assert {c.clip_id for c in a} == {c.clip_id for c in b}
-    # The question, the four options, and the four letters — and the letters
+    # The question, the four options, and the four numbers — and the numbers
     # are the same four files for every item in the library, which is the
     # point of hashing a clip id from (voice, channel, text).
     assert len(tts_plan.manifest([("item-a", item), ("item-b", item)])) == 9

@@ -339,39 +339,37 @@ export function clipUrl(audioPath: string | null): string | null {
 }
 
 /**
- * The four option letters, spoken.
+ * The four option numbers, spoken.
  *
- * A listening item shows nothing but A / B / C / D while its options play, so
- * the clip that names the letter is what ties what is being heard to the button
+ * A listening item shows nothing but 1 / 2 / 3 / 4 while its options play, so
+ * the clip that says the number is what ties what is being heard to the button
  * that answers it; without it the learner is holding four unlabelled sentences
  * in their head. The exam reads its numbers aloud for the same reason.
  *
  * These are one clip each for the whole library rather than one per item — a
- * clip id is a hash of (voice, channel, text), so 「エー」 is synthesised once
+ * clip id is a hash of (voice, channel, text), so 「いち」 is synthesised once
  * and shared — which is why they are looked up by what is said rather than
  * arriving with the item. The four strings and the narrator's name are
  * `OPTION_LABELS` and `NARRATOR_VOICE` in bjt/tts/plan.py, which is where the
  * clips come from; a test holds the two files equal.
  */
-// D is 「デー」 rather than 「ディー」: the four differ only in their onset, and
-// 「ビー」/「ディー」 are a voiced stop apart, which is the pair that gets
-// misheard. 「デー」 is what Japanese uses when a letter has to survive a
-// telephone. See OPTION_LABELS in bjt/tts/plan.py.
-const OPTION_LETTERS = ["エー", "ビー", "シー", "デー"];
+// Numbers rather than letters: 「ビー」/「ディー」 were misheard for each other,
+// and 「デー」 sounded like "day". See OPTION_LABELS in bjt/tts/plan.py.
+const OPTION_LABELS = ["いち", "に", "さん", "よん"];
 const NARRATOR_VOICE = "narrator_f";
 
-/** The four letter clips in A–D order, or null until every one of them has been
- *  synthesised. All four or none: a run that says the letter before three of
+/** The four number clips in 1–4 order, or null until every one of them has been
+ *  synthesised. All four or none: a run that says the number before three of
  *  the options and not the fourth is worse than one that says none. */
-export async function fetchOptionLetters(): Promise<string[] | null> {
+export async function fetchOptionLabels(): Promise<string[] | null> {
   const { data, error } = await supabase
     .from("audio_clips")
     .select("text, audio_path")
     .eq("voice", NARRATOR_VOICE)
-    .in("text", OPTION_LETTERS);
+    .in("text", OPTION_LABELS);
   if (error) throw error;
   const paths = new Map((data ?? []).map((row) => [row.text as string, row.audio_path]));
-  const urls = OPTION_LETTERS.map((letter) => clipUrl(paths.get(letter) ?? null));
+  const urls = OPTION_LABELS.map((label) => clipUrl(paths.get(label) ?? null));
   return urls.every((u): u is string => Boolean(u)) ? (urls as string[]) : null;
 }
 

@@ -23,7 +23,7 @@ import type { HistoryEntry } from "../src/lib/types";
 import { Button, Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
-const LETTERS = ["A", "B", "C", "D"];
+const NUMBERS = ["1", "2", "3", "4"];
 
 export default function History() {
   const router = useRouter();
@@ -152,7 +152,7 @@ export default function History() {
                       ]}
                     >
                       <Text style={type.small}>
-                        {LETTERS[i]}
+                        {NUMBERS[i]}
                         {isAnswer ? ` · ${t("mark_correct")}` : ""}
                         {isChosen && !isAnswer ? ` · ${t("mark_chosen")}` : ""}
                       </Text>

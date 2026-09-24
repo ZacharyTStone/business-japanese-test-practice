@@ -125,10 +125,11 @@ is nothing on the screen at all. Printing them turns a listening item into a
 reading item with a soundtrack. `TYPE_AUDIO` in `bjt/tts/plan.py` is where that
 lives; an item whose option clips do not exist yet falls back to printed options
 on its own, so the library converts as it is re-synthesised rather than all at
-once. Each candidate is introduced by the letter on its badge —
-「エー」「ビー」「シー」「ディー」, four clips for the whole library — because while
+once. Each candidate is introduced by the number on its badge —
+「いち」「に」「さん」「よん」, four clips for the whole library — because while
 they play there is nothing on the screen to tie a sentence to the button that
-answers it.
+answers it. Numbers rather than letters, as on the exam's own answer sheet:
+「ビー」 and 「ディー」 were misheard for each other, and 「デー」 sounded like "day".
 
 **Length is most of what makes an item feel like the exam.** 語彙・文法 options on
 the real paper are two to six characters — one stem with four endings, or four

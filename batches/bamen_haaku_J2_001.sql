@@ -20,13 +20,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('b0ee6487f832174e', '会社の廊下で、部下が上司に呼び止められました。「例の報告書ですが、数字を直したものを先方に送る前に一度見せてください。」部下はこのあと何をしますか。', 'narrator_f', 'in_person'),
-       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
+       ('25c7c1a4fbc76235', 'いち', 'narrator_f', 'in_person'),
        ('b3f94ffb21163d9d', '数字を直した報告書を、先方に送ってから上司に見せる。', 'narrator_f', 'in_person'),
-       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
+       ('6e34bf5479a4824e', 'に', 'narrator_f', 'in_person'),
        ('12e5f968b1ae5963', '報告書の数字をこれから直す。', 'narrator_f', 'in_person'),
-       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
+       ('a94822f17a881031', 'さん', 'narrator_f', 'in_person'),
        ('041310e45a6f0276', '数字を直した報告書を、先に上司に見せる。', 'narrator_f', 'in_person'),
-       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
+       ('5577d7cacee29a6c', 'よん', 'narrator_f', 'in_person'),
        ('5252e3fa63ee429e', '先方に報告書の送り先を確認する。', 'narrator_f', 'in_person'),
        ('a79b34a57d0e972e', '会社で、ある人が電話でこう話しています。「いつもお世話になっております。山川商事の佐藤でございます。先日ご注文いただいた品物の納期の件で、ご連絡いたしました。」この人はどの立場の人ですか。', 'narrator_f', 'in_person'),
        ('83c820c902d97002', '品物を納める側の会社の担当者', 'narrator_f', 'in_person'),

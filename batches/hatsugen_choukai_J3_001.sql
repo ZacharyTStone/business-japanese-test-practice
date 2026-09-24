@@ -21,13 +21,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('239353dd4532e131', '会議室を使いたいのですが、鍵が見当たりません。鍵は課長が持っていると聞きました。近くに課長がいます。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
-       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
+       ('25c7c1a4fbc76235', 'いち', 'narrator_f', 'in_person'),
        ('d775217875790d2b', '課長、すみません。会議室の鍵をお借りできますか。', 'staff_junior_m', 'in_person'),
-       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
+       ('6e34bf5479a4824e', 'に', 'narrator_f', 'in_person'),
        ('7d5a7b0cae3cc0a1', '課長、会議室の鍵をお借りになってもよろしいでしょうか。', 'staff_junior_m', 'in_person'),
-       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
+       ('a94822f17a881031', 'さん', 'narrator_f', 'in_person'),
        ('1539164858fecb53', '課長、会議室の鍵、ちょっと貸してもらえますか。', 'staff_junior_m', 'in_person'),
-       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
+       ('5577d7cacee29a6c', 'よん', 'narrator_f', 'in_person'),
        ('2e0502f8ea6b8422', '課長、会議室の鍵をお借りさせていただかせていただいてもよろしいでしょうか。', 'staff_junior_m', 'in_person'),
        ('3cc88f8ba5836f6c', '取引先の方が、今日はじめて会社にいらっしゃいました。受付であなたが応対します。相手はまだ名乗っていません。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
        ('bce2bdb74ca5a6b2', '毎度ありがとうございます。少々お待ちください。', 'reception_f', 'in_person'),

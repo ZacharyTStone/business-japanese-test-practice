@@ -14,7 +14,7 @@
  *   listen  — the audio plays, once, by itself. Nothing readable about the
  *             answers is on screen: the first listen is a listen, not a skim.
  *             When the options are spoken (発言聴解) they are on screen from
- *             here as letters with a play button, and can be pressed — a
+ *             here as numbers with a play button, and can be pressed — a
  *             learner who knows the answer at the second turn should not have
  *             to wait for the fourth. Options that are text wait for the
  *             answer stage. The owner asked for this (2026-09-18).
@@ -50,7 +50,7 @@ import { useAuth } from "../src/lib/auth";
 import {
   clipUrl,
   fetchDay,
-  fetchOptionLetters,
+  fetchOptionLabels,
   fetchPace,
   fetchProfile,
   fetchQueue,
@@ -80,7 +80,7 @@ import { ReportQuestion } from "../src/ui/report";
 import { VetoQuestion } from "../src/ui/veto";
 import { colors, radius, shadow, space, tabular, type } from "../src/ui/theme";
 
-const LETTERS = ["A", "B", "C", "D"];
+const NUMBERS = ["1", "2", "3", "4"];
 
 const CHANNEL_KEY: Record<string, Key> = {
   in_person: "ch_in_person",
@@ -135,7 +135,7 @@ const SPOKEN_OPTION_TYPES = new Set([
  *
  * In the exam these are heard, never read: the answer sheet has four numbers
  * and nothing else. So when the audio exists the options are played after the
- * narration and shown as letters with a replay button, and the text stays
+ * narration and shown as numbers with a replay button, and the text stays
  * hidden until the answer is in. All four or none — a set where three are
  * spoken and one is printed would mark the odd one out, and the type table in
  * bjt/tts/plan.py is the only reason any other type would have option clips.
@@ -150,18 +150,18 @@ function spokenOptionUrls(item: QueuedItem): string[] | null {
 
 /** Every clip of an item, in the order it is heard: the conversation, then the
  *  question, then — for 発言聴解 — the four things one might say, each behind
- *  the letter that names it. Turns without a clip yet are skipped, not waited
- *  for, and so are the letters: they are four clips for the whole library
- *  (fetchOptionLetters), so before they are synthesised this is exactly the
+ *  the number that names it. Turns without a clip yet are skipped, not waited
+ *  for, and so are the numbers: they are four clips for the whole library
+ *  (fetchOptionLabels), so before they are synthesised this is exactly the
  *  run it always was. */
-function playlistFor(item: QueuedItem, letters: string[] | null): string[] {
+function playlistFor(item: QueuedItem, labels: string[] | null): string[] {
   const turns = (item.dialogue ?? [])
     .map((t) => clipUrl(t.audio_path))
     .filter((u): u is string => Boolean(u));
   const narration = clipUrl(item.narration_path);
   const spoken = spokenOptionUrls(item) ?? [];
   const options = spoken.flatMap((url, i) =>
-    letters?.[i] ? [letters[i], url] : [url]
+    labels?.[i] ? [labels[i], url] : [url]
   );
   return [...turns, ...(narration ? [narration] : []), ...options];
 }
@@ -211,10 +211,10 @@ export default function Practice() {
    *  practised without a clock rather than not at all. */
   const [pace, setPace] = useState<Record<string, TypePace>>({});
   const [timed, setTimed] = useState(false);
-  /** 「エー」「ビー」「シー」「ディー」, or null until all four are synthesised.
+  /** 「いち」「に」「さん」「よん」, or null until all four are synthesised.
    *  Furniture too: an item whose options are spoken is still practisable with
    *  nothing but the options, which is how it worked before they existed. */
-  const [letters, setLetters] = useState<string[] | null>(null);
+  const [labels, setLabels] = useState<string[] | null>(null);
 
   const startedAt = useRef(Date.now());
   const questionShownAt = useRef(Date.now());
@@ -243,22 +243,22 @@ export default function Practice() {
     let cancelled = false;
     (async () => {
       try {
-        const [day, levels, profile, paces, spokenLetters] = await Promise.all([
+        const [day, levels, profile, paces, spokenLabels] = await Promise.all([
           fetchDay(),
           fetchSectionLevels(),
           // The clock is furniture. A set that cannot be timed is still a set,
           // so neither of these is allowed to fail the screen. Nor are the
-          // spoken letters, which are the same four clips for every item.
+          // spoken numbers, which are the same four clips for every item.
           fetchProfile().catch(() => null),
           fetchPace().catch(() => ({}) as Record<string, TypePace>),
-          fetchOptionLetters().catch(() => null),
+          fetchOptionLabels().catch(() => null),
         ]);
         // Read before the first answer, so the result screen can name the
         // section whose level moved rather than just that something did.
         levelsBefore.current = levels;
         setPace(paces);
         setTimed(profile?.timed_reading ?? false);
-        setLetters(spokenLetters);
+        setLabels(spokenLabels);
         // The size is what the day has left of its set, or the bonus set once
         // the set is done: the rest of the allowance, or a full set for an
         // account whose ceiling is lifted. Zero means the day is over, and the
@@ -290,7 +290,7 @@ export default function Practice() {
     () => (item ? [...item.options].sort((a, b) => a.position - b.position) : []),
     [item]
   );
-  const playlist = useMemo(() => (item ? playlistFor(item, letters) : []), [item, letters]);
+  const playlist = useMemo(() => (item ? playlistFor(item, labels) : []), [item, labels]);
   const spokenOptions = useMemo(() => (item ? spokenOptionUrls(item) : null), [item]);
 
   if (!isConfigured) {
@@ -491,10 +491,10 @@ export default function Practice() {
   }
 
   const revealed = stage === "reveal" && graded !== null;
-  // Spoken options are letters until the answer is in, unless asked for.
+  // Spoken options are numbers until the answer is in, unless asked for.
   const optionTextHidden = spokenOptions !== null && !revealed && !optionsAsText;
   // Options can be answered while the clips still play, but only when they
-  // show no text: letters and play buttons give nothing away, a printed
+  // show no text: numbers and play buttons give nothing away, a printed
   // sentence does.
   const optionsShown = stage === "answer" || stage === "reveal" || (stage === "listen" && optionTextHidden);
   const chosenOption = chosen !== null ? options[chosen] : null;
@@ -677,13 +677,13 @@ export default function Practice() {
                   key={option.position}
                   accessibilityRole="button"
                   // One label for the whole option, so a screen reader says
-                  // "A. 承知いたしました" rather than reading a lone letter and
+                  // "1. 承知いたしました" rather than reading a lone number and
                   // then a sentence with nothing tying them together — and, once
                   // answered, says which one this was.
                   accessibilityLabel={
                     (optionTextHidden
-                      ? t("option_spoken", { letter: LETTERS[i] })
-                      : `${LETTERS[i]}. ${option.text}`) +
+                      ? t("option_spoken", { label: NUMBERS[i] })
+                      : `${NUMBERS[i]}. ${option.text}`) +
                     (show ? ` — ${isAnswer ? t("mark_correct") : t("mark_chosen")}` : "")
                   }
                   accessibilityState={{ disabled: revealed || busy || chosen !== null }}
@@ -708,23 +708,23 @@ export default function Practice() {
                   <View style={styles.optionHeader}>
                     <View
                       style={[
-                        styles.letterBadge,
-                        show && (isAnswer ? styles.letterBadgeCorrect : styles.letterBadgeWrong),
+                        styles.numberBadge,
+                        show && (isAnswer ? styles.numberBadgeCorrect : styles.numberBadgeWrong),
                       ]}
                     >
                       <Text
                         style={[
-                          styles.letter,
+                          styles.number,
                           show && { color: isAnswer ? colors.correct : colors.wrong },
                         ]}
                       >
-                        {LETTERS[i]}
+                        {NUMBERS[i]}
                       </Text>
                     </View>
                     {spokenOptions !== null && !revealed ? (
                       <MiniPlay
                         url={spokenOptions[i]}
-                        label={t("play_option", { letter: LETTERS[i] })}
+                        label={t("play_option", { label: NUMBERS[i] })}
                       />
                     ) : null}
                     {show ? (
@@ -816,7 +816,7 @@ export default function Practice() {
                 {options.map((option, i) => (
                   <View key={option.position} style={styles.why}>
                     <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
-                      {LETTERS[i]}　{option.text}
+                      {NUMBERS[i]}　{option.text}
                     </Text>
                     <Text style={type.small}>{option.why}</Text>
                   </View>
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
   optionPending: { borderColor: colors.accent },
   optionCorrect: { borderColor: colors.correct, backgroundColor: colors.correctSoft },
   optionWrong: { borderColor: colors.wrong, backgroundColor: colors.wrongSoft },
-  letterBadge: {
+  numberBadge: {
     width: 26,
     height: 26,
     borderRadius: 9,
@@ -972,9 +972,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.accentSoft,
   },
-  letterBadgeCorrect: { backgroundColor: "rgba(14,159,110,0.16)" },
-  letterBadgeWrong: { backgroundColor: "rgba(217,58,75,0.16)" },
-  letter: { fontSize: 13, fontWeight: "700", color: colors.accent },
+  numberBadgeCorrect: { backgroundColor: "rgba(14,159,110,0.16)" },
+  numberBadgeWrong: { backgroundColor: "rgba(217,58,75,0.16)" },
+  number: { fontSize: 13, fontWeight: "700", color: colors.accent },
   verdictRow: { flexDirection: "row", alignItems: "center", gap: space.lg },
   why: { gap: 2 },
   hint: { textAlign: "center" },

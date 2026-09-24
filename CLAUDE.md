@@ -80,9 +80,12 @@ accident is not.
   and `run_batch` passes it on; a shelf's second and third drafts are not
   written blind. A draft with a fifth option is trimmed, not regenerated.
 - **Reading items are written every night.** The work order hands the first
-  `--reading-min` (3) items to the emptiest reading shelves before the
+  `--reading-min` (1) items to the emptiest reading shelves before the
   emptiest-first rule sees the rest; they need no audio and no picture. The
-  owner asked for this (2026-09-19). A type in `plan.NIGHT_TYPE_CAPS` (画像把握:
+  owner asked for this (2026-09-19). A night is three items, two to a shelf at
+  most (`plan.DEFAULT_BUDGET` / `_PER_SLOT`, and the nightly workflow's own
+  defaults, which must agree); it was eight until the owner said the app is
+  used far less than that fills (2026-09-24). A type in `plan.NIGHT_TYPE_CAPS` (画像把握:
   one) never takes more than its allowance a night, however empty its shelves.
 - **The database grades answers, not the app.** The client posts `item_id` and
   `chosen_index`; a trigger fills in who, whether it was right, and which
@@ -245,19 +248,20 @@ accident is not.
   `bjt/tts/plan.py` and `SPOKEN_OPTION_TYPES` in the practice screen must agree.
   An item whose option clips do not exist yet falls back to printed options on
   its own, so this ships progressively rather than all at once.
-- **A spoken option is introduced by its letter.** 「エー」「ビー」「シー」「デー」
+- **A spoken option is introduced by its number.** 「いち」「に」「さん」「よん」
   play before the four candidates, because the screen shows nothing but the
   badges while they run and four unlabelled sentences is a memory test rather
-  than a listening one. D is 「デー」 and not 「ディー」: the four differ only in
-  their onset, and 「ビー」/「ディー」 are a voiced stop apart — the pair that
-  actually gets misheard, as it was (2026-09-20). 「デー」 is the reading
-  Japanese uses when a letter has to survive a telephone, and it moves the
-  vowel too. They are four clips for the whole library, not four per
-  item — `OPTION_LABELS` in `bjt/tts/plan.py`, in the narrator's voice and in
-  room tone whatever the item's channel is, found by the app on the same four
-  strings (`OPTION_LETTERS` in `client/src/lib/db.ts`, which a test holds
-  equal). All four or none: before they are synthesised the run is what it
-  always was. The owner asked for this (2026-09-20).
+  than a listening one. Numbers, not letters, and the badges say 1–4
+  everywhere in the app, as the exam's answer sheet does. Letters were tried
+  twice: 「ビー」/「ディー」 were misheard for each other (2026-09-20), and
+  「デー」, the fix, sounded like "day" rather than the letter (2026-09-24).
+  いち / に / さん / よん share no sound. They are four clips for the whole
+  library, not four per item — `OPTION_LABELS` in `bjt/tts/plan.py`, in the
+  narrator's voice and in room tone whatever the item's channel is, found by
+  the app on the same four strings (`OPTION_LABELS` in
+  `client/src/lib/db.ts`, which a test holds equal). All four or none: before
+  they are synthesised the run is what it always was. The owner asked for
+  spoken labels (2026-09-20) and for numbers (2026-09-24).
 - **A report is a report; a veto is the decision.** `public.item_feedback` takes
   one row per person per item — a fixed reason and an optional sentence — and
   nothing in the queue reads it. A reported item keeps being served until

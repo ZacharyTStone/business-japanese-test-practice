@@ -21,13 +21,13 @@ on conflict (id) do update set
 -- One row per distinct utterance. audio_path is filled in by the TTS step.
 insert into public.audio_clips (id, text, voice, channel)
 values ('c902476155c11126', '受付に立っていると、二時にお約束のあるお客様が到着しました。これから応接室へご案内します。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
-       ('d08f3de5649eec59', 'エー', 'narrator_f', 'in_person'),
+       ('25c7c1a4fbc76235', 'いち', 'narrator_f', 'in_person'),
        ('c4ca0150f1ef34cf', 'お待ちしておりました。応接室へご案内いたします。どうぞこちらへ。', 'staff_mid_f', 'in_person'),
-       ('da4df49bf7f00ab2', 'ビー', 'narrator_f', 'in_person'),
+       ('6e34bf5479a4824e', 'に', 'narrator_f', 'in_person'),
        ('669de1c7396e8dd9', 'お待ちしてました。応接室まで案内しますね。こっちです。', 'staff_mid_f', 'in_person'),
-       ('d690aea8d6cb91f1', 'シー', 'narrator_f', 'in_person'),
+       ('a94822f17a881031', 'さん', 'narrator_f', 'in_person'),
        ('b96387c2d668a7e7', 'お待ちしておりました。応接室へご案内させていただきますので、どうぞお越しになられてください。', 'staff_mid_f', 'in_person'),
-       ('134df096a9c7dc0a', 'デー', 'narrator_f', 'in_person'),
+       ('5577d7cacee29a6c', 'よん', 'narrator_f', 'in_person'),
        ('44ed51be02541011', 'お待ちしておりました。本日はどのようなご用件でしょうか。', 'staff_mid_f', 'in_person'),
        ('4abf43d914d25a1b', '取引先から電話があり、営業部の佐藤に代わってほしいと言われました。佐藤は席にいます。こんなとき、何と言いますか。', 'narrator_f', 'in_person'),
        ('642916a0e9326537', 'はい、佐藤さんですね。佐藤さーん、お電話ですよ。', 'staff_mid_m', 'phone'),

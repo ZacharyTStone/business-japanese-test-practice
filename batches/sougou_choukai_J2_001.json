@@ -115,7 +115,7 @@
         "channel": "video"
       },
       "topic": "試作品の遅れの原因",
-      "stem": "試作品が遅れているのは、今は何が原因ですか。",
+      "stem": "現在、試作品が遅れている原因は何ですか。",
       "options": [
         {
           "text": "仕様が変わり、図面を引き直しているから",
@@ -154,7 +154,7 @@
         }
       ],
       "audio": {
-        "narration": "eb2409b511d86590",
+        "narration": "e7f22d5c13a68235",
         "options": [
           "ef9e70c8a41cffcd",
           "ba9897bfc946b048",
@@ -406,12 +406,12 @@
         "channel": "in_person"
       },
       "topic": "前回から変わった点",
-      "stem": "前回の資料から変わったのはどこですか。",
+      "stem": "前回の資料と比べて、変わったのはどの点ですか。",
       "options": [
         {
           "text": "支払いの合計金額が上がった点",
           "role": "surface_keyword_match",
-          "why": "「一回あたりが増える」とは言われているが、合計は「同じ」と二度述べられている。"
+          "why": "「一回あたりの支払額が増える」とは言われているが、合計は「同じ」と二度述べられている。"
         },
         {
           "text": "支払いの期限が早まった点",
@@ -426,11 +426,11 @@
         {
           "text": "支払いの回数が三回から二回に減った点",
           "role": "correct",
-          "why": "後輩が「支払いの回数が三回から二回になっています」と、変わった点として明確に述べている。"
+          "why": "後輩が「支払いの回数が三回から二回に変わっています」と、変わった点として明確に述べている。"
         }
       ],
       "correct_index": 3,
-      "explanation_ja": "合計金額は「同じ」と二度確認され、変わったのは支払いの回数。「一回あたりが増える」は回数が減った結果であって、合計が上がったわけではない。同じ数字が別の意味で出てくる点が、この型の落とし穴。",
+      "explanation_ja": "合計金額は「同じ」と二度確認され、変わったのは支払いの回数。「一回あたりの支払額が増える」は回数が減った結果であって、合計が上がったわけではない。同じ数字が別の意味で出てくる点が、この型の落とし穴。",
       "explanation_en": "The total is unchanged; only its division is. The per-instalment rise is a consequence, not a change in total.",
       "vocab_notes": [
         {
@@ -445,7 +445,7 @@
         }
       ],
       "audio": {
-        "narration": "2f32a020fae39a6f",
+        "narration": "bca2f430caf21e61",
         "options": [
           "a3de8593f6d16fe2",
           "70b49cd2bbc4c842",
@@ -455,8 +455,8 @@
         "dialogue": [
           "ae1e971c423a541d",
           "786d2b079f4d85fe",
-          "4fa483dc90eb7966",
-          "4adc82156c2d485a",
+          "78e89e9369ac7a9d",
+          "9767534e99ab2466",
           "70a013f6e97c4297"
         ]
       },
@@ -473,13 +473,13 @@
         },
         {
           "speaker_role": "後輩社員",
-          "text": "いえ、支払いの回数が三回から二回になっています。金額の合計は同じですが。",
-          "clip_id": "4fa483dc90eb7966"
+          "text": "いえ、合計は同じなんですが、支払いの回数が三回から二回に変わっています。",
+          "clip_id": "78e89e9369ac7a9d"
         },
         {
           "speaker_role": "先輩社員",
-          "text": "一回あたりが増えるわけですね。経理に伝えておいてください。",
-          "clip_id": "4adc82156c2d485a"
+          "text": "ということは、一回あたりの支払額が増えるわけですね。経理に伝えておいてください。",
+          "clip_id": "9767534e99ab2466"
         },
         {
           "speaker_role": "後輩社員",
@@ -644,11 +644,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "d08f3de5649eec59",
+      "clip_id": "25c7c1a4fbc76235",
       "item_id": "8f4b311918",
       "kind": "option_label",
       "index": 0,
-      "text": "エー",
+      "text": "いち",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -662,11 +662,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "da4df49bf7f00ab2",
+      "clip_id": "6e34bf5479a4824e",
       "item_id": "8f4b311918",
       "kind": "option_label",
       "index": 1,
-      "text": "ビー",
+      "text": "に",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -680,11 +680,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "d690aea8d6cb91f1",
+      "clip_id": "a94822f17a881031",
       "item_id": "8f4b311918",
       "kind": "option_label",
       "index": 2,
-      "text": "シー",
+      "text": "さん",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -698,11 +698,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "134df096a9c7dc0a",
+      "clip_id": "5577d7cacee29a6c",
       "item_id": "8f4b311918",
       "kind": "option_label",
       "index": 3,
-      "text": "デー",
+      "text": "よん",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -716,11 +716,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "eb2409b511d86590",
+      "clip_id": "e7f22d5c13a68235",
       "item_id": "0534e27128",
       "kind": "narration",
       "index": null,
-      "text": "試作品が遅れているのは、今は何が原因ですか。",
+      "text": "現在、試作品が遅れている原因は何ですか。",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -986,11 +986,11 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "2f32a020fae39a6f",
+      "clip_id": "bca2f430caf21e61",
       "item_id": "ba7233ff60",
       "kind": "narration",
       "index": null,
-      "text": "前回の資料から変わったのはどこですか。",
+      "text": "前回の資料と比べて、変わったのはどの点ですか。",
       "voice": "narrator_f",
       "channel": "in_person"
     },
@@ -1013,20 +1013,20 @@
       "channel": "in_person"
     },
     {
-      "clip_id": "4fa483dc90eb7966",
+      "clip_id": "78e89e9369ac7a9d",
       "item_id": "ba7233ff60",
       "kind": "dialogue",
       "index": 2,
-      "text": "いえ、支払いの回数が三回から二回になっています。金額の合計は同じですが。",
+      "text": "いえ、合計は同じなんですが、支払いの回数が三回から二回に変わっています。",
       "voice": "manager_m",
       "channel": "in_person"
     },
     {
-      "clip_id": "4adc82156c2d485a",
+      "clip_id": "9767534e99ab2466",
       "item_id": "ba7233ff60",
       "kind": "dialogue",
       "index": 3,
-      "text": "一回あたりが増えるわけですね。経理に伝えておいてください。",
+      "text": "ということは、一回あたりの支払額が増えるわけですね。経理に伝えておいてください。",
       "voice": "staff_junior_m",
       "channel": "in_person"
     },
