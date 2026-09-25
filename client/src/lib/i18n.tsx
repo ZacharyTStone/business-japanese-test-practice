@@ -33,6 +33,7 @@ const S = {
   title_practice: ["練習", "Practice"],
   title_result: ["結果", "Result"],
   title_history: ["解いた問題", "Answered"],
+  title_vocab: ["ことばメモ", "Vocabulary"],
   sec_choukai: ["聴解", "Listening"],
   sec_choudokkai: ["聴読解", "Listening & reading"],
   sec_dokkai: ["読解", "Reading"],
@@ -263,6 +264,16 @@ const S = {
   hist_keep: ["この調子で続けましょう。", "Keep it up."],
   mistake_label: ["ミス：{label}", "Mistake: {label}"],
   tap_explain: ["タップすると解説を見られます", "Tap for the explanation"],
+  hist_detail_err: ["問題文を読み込めませんでした", "Couldn't load the rest of this question"],
+
+  // vocabulary — the notes of every question that caught you, in one list
+  vocab_btn: ["まちがえた問題のことば", "Words from missed questions"],
+  vocab_sub: ["読み方と意味を、まとめて見返す", "Readings and meanings, in one list"],
+  vocab_loading: ["ことばを集めています…", "Gathering words…"],
+  vocab_empty_title: ["まだありません", "Nothing yet"],
+  vocab_empty_body: ["まちがえた問題に出てきたことばが、ここにたまります。", "Words from the questions you miss collect here."],
+  vocab_count: ["{n}語", "{n} word|{n} words"],
+  vocab_head: ["まちがえた問題に出てきたことば", "From the questions you missed"],
 
   // audio
   dialogue_pending: ["会話（音声は準備中）", "Conversation (audio coming soon)"],
@@ -277,6 +288,11 @@ const S = {
   option_spoken: ["{label}（音声）", "{label} (spoken)"],
   show_options_text: ["選択肢を文字で見る", "Show the options as text"],
   hide_options_text: ["選択肢の文字を隠す", "Hide the text"],
+  // the script, line by line, once the answer is in
+  transcript: ["スクリプト", "Transcript"],
+  narration: ["ナレーション", "Narration"],
+  play_line: ["「{who}」を聞く", "Play: {who}"],
+  vocab_label: ["ことば", "Vocabulary"],
 
   // meter
   rudeness: ["失礼度", "Rudeness"],

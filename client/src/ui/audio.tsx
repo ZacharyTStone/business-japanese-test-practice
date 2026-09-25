@@ -85,7 +85,55 @@ export function MiniPlay({ url, label }: { url: string; label: string }) {
   );
 }
 
+/**
+ * The script of a heard question, one line at a time, each line playable on
+ * its own.
+ *
+ * Only ever drawn once the answer is in — after the reveal, and on the review
+ * screen — because before that a script on the page turns a listening item
+ * into a reading one. Afterwards the job is different: not to hear it once
+ * but to find the sentence that got away. The replay button above the options
+ * answers "let me hear it again"; this answers "which line was it, and how did
+ * it sound", which is where 伺います and 参ります finally come apart.
+ *
+ * In the order it was heard: the conversation, then the narration. A line
+ * whose clip has not been synthesised yet is text alone.
+ */
+export function Transcript({
+  turns,
+  narration,
+}: {
+  turns: DialogueTurn[];
+  narration?: { text: string; url: string | null } | null;
+}) {
+  const { t } = useLang();
+  const lines = [
+    ...turns.map((turn) => ({
+      who: turn.speaker_role,
+      text: turn.text,
+      url: clipUrl(turn.audio_path),
+    })),
+    ...(narration ? [{ who: t("narration"), text: narration.text, url: narration.url }] : []),
+  ];
+  if (lines.length === 0) return null;
+  return (
+    <View style={{ gap: space.sm }}>
+      <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>{t("transcript")}</Text>
+      {lines.map((line, i) => (
+        <View key={i} style={styles.line}>
+          {line.url ? <MiniPlay url={line.url} label={t("play_line", { who: line.who })} /> : null}
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={type.small}>{line.who}</Text>
+            <Text style={type.body}>{line.text}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  line: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   mini: {
     width: 34,
     height: 34,

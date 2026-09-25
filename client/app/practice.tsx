@@ -67,7 +67,7 @@ import { verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import { NO_ANSWER, type AnsweredItem, type QueuedItem, type SectionLevel } from "../src/lib/types";
-import { AutoPlaylist, DialoguePlayer, MiniPlay } from "../src/ui/audio";
+import { AutoPlaylist, DialoguePlayer, MiniPlay, Transcript } from "../src/ui/audio";
 import { QuestionClock } from "../src/ui/clock";
 import { Button, Card, Loading, Notice, ProgressBar, Tag } from "../src/ui/components";
 import { DayDone } from "../src/ui/done";
@@ -814,11 +814,21 @@ export default function Practice() {
               {explanation === verdictSub ? null : <Text style={type.body}>{explanation}</Text>}
               <View style={{ gap: space.sm }}>
                 {options.map((option, i) => (
-                  <View key={option.position} style={styles.why}>
-                    <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
-                      {NUMBERS[i]}　{option.text}
-                    </Text>
-                    <Text style={type.small}>{option.why}</Text>
+                  <View key={option.position} style={styles.whyRow}>
+                    {/* A spoken option can be heard again beside its text: the
+                        right one is the sentence worth saying out loud. */}
+                    {spokenOptions ? (
+                      <MiniPlay
+                        url={spokenOptions[i]}
+                        label={t("play_option", { label: NUMBERS[i] })}
+                      />
+                    ) : null}
+                    <View style={[styles.why, { flex: 1 }]}>
+                      <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
+                        {NUMBERS[i]}　{option.text}
+                      </Text>
+                      <Text style={type.small}>{option.why}</Text>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -831,16 +841,13 @@ export default function Practice() {
                   ))}
                 </View>
               ) : null}
-              {!stemAsText ? <Text style={type.small}>{item.stem}</Text> : null}
-              {listenable && item.dialogue?.length ? (
-                <View style={{ gap: space.xs }}>
-                  {item.dialogue.map((turn, i) => (
-                    <Text key={i} style={type.small}>
-                      {turn.speaker_role}：{turn.text}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
+              {/* What was heard, a line at a time. Text-only narration is already
+                  on the card above, and a dialogue with no clips is already
+                  there as a script, so neither is repeated here. */}
+              <Transcript
+                turns={listenable ? (item.dialogue ?? []) : []}
+                narration={stemAsText ? null : { text: item.stem, url: narrationUrl }}
+              />
             </Card>
           ) : null}
 
@@ -977,6 +984,7 @@ const styles = StyleSheet.create({
   number: { fontSize: 13, fontWeight: "700", color: colors.accent },
   verdictRow: { flexDirection: "row", alignItems: "center", gap: space.lg },
   why: { gap: 2 },
+  whyRow: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   hint: { textAlign: "center" },
   toggle: { textAlign: "center", textDecorationLine: "underline" },
 });

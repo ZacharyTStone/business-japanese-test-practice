@@ -20,10 +20,14 @@ import type {
   HistoryEntry,
   Profile,
   QueuedItem,
+  ReviewDetail,
   RoleTrap,
   SectionLevel,
+  StimulusDocument,
   TagStat,
   TypeStat,
+  VocabEntry,
+  VocabNote,
 } from "./types";
 
 /** The practice queue — the only way this app asks for questions.
@@ -443,4 +447,102 @@ export async function fetchHistory(limit = 50): Promise<HistoryEntry[]> {
     });
   }
   return out;
+}
+
+/**
+ * The rest of one past question — its documents, its conversation and
+ * narration with their clips, its spoken options' clips and its notes — for
+ * the moment an entry on the review screen is opened.
+ *
+ * Fetched per entry rather than with the list: fifty conversations and their
+ * documents is a lot to carry for a list most people scroll past, and the
+ * clips cannot be asked for in one go without a request line naming several
+ * hundred ids. Opening one entry is two small queries.
+ *
+ * The clips are furniture, as they are on the practice screen: if they fail to
+ * load the question is still shown, as text.
+ */
+export async function fetchReviewDetail(itemId: string): Promise<ReviewDetail> {
+  const [item, options] = await Promise.all([
+    supabase
+      .from("items")
+      .select("documents, dialogue, vocab_notes, narration_clip_id")
+      .eq("id", itemId)
+      .single(),
+    supabase.from("item_options").select("position, clip_id").eq("item_id", itemId),
+  ]);
+  if (item.error) throw item.error;
+  if (options.error) throw options.error;
+
+  const turns = (item.data.dialogue ?? []) as { speaker_role: string; text: string; clip_id: string | null }[];
+  const narrationId = item.data.narration_clip_id as string | null;
+  const ids = [
+    ...new Set(
+      [...turns.map((turn) => turn.clip_id), narrationId, ...(options.data ?? []).map((o) => o.clip_id)].filter(
+        (id): id is string => Boolean(id)
+      )
+    ),
+  ];
+  const paths = new Map<string, string | null>();
+  if (ids.length > 0) {
+    const { data: clips, error } = await supabase
+      .from("audio_clips")
+      .select("id, audio_path")
+      .in("id", ids);
+    if (!error) for (const clip of clips ?? []) paths.set(clip.id, clip.audio_path);
+  }
+  const pathOf = (id: string | null) => (id ? (paths.get(id) ?? null) : null);
+
+  const optionAudio: Record<number, string | null> = {};
+  for (const o of options.data ?? []) optionAudio[o.position] = pathOf(o.clip_id);
+
+  return {
+    documents: (item.data.documents ?? []) as StimulusDocument[],
+    dialogue: turns.map((turn) => ({ ...turn, clip_id: turn.clip_id ?? null, audio_path: pathOf(turn.clip_id) })),
+    narration_path: pathOf(narrationId),
+    option_audio: optionAudio,
+    vocab_notes: (item.data.vocab_notes ?? []) as VocabNote[],
+  };
+}
+
+/**
+ * The vocabulary notes of the questions that caught this learner, one entry per
+ * word, the most recently missed first.
+ *
+ * Every item ships with notes — a reading and a meaning for the words it turns
+ * on — and the practice screen shows them once, folded under the explanation.
+ * This is where they are kept. Drawn from wrong answers only: a word in a
+ * question that was answered right is not, on the evidence, the problem.
+ *
+ * A read of the record and nothing more; which questions come next is still
+ * decided by next_items() alone.
+ */
+export async function fetchVocab(limit = 200): Promise<VocabEntry[]> {
+  const { data: attempts, error } = await supabase
+    .from("attempts")
+    .select("item_id, answered_at")
+    .eq("is_correct", false)
+    .order("answered_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  if (!attempts?.length) return [];
+
+  const ids = [...new Set(attempts.map((a) => a.item_id as string))];
+  const { data: items, error: itemsError } = await supabase
+    .from("items")
+    .select("id, vocab_notes")
+    .in("id", ids);
+  if (itemsError) throw itemsError;
+  const notesOf = new Map((items ?? []).map((i) => [i.id as string, (i.vocab_notes ?? []) as VocabNote[]]));
+
+  // Newest first, so the first time a word is met here is its latest miss.
+  const byTerm = new Map<string, VocabEntry>();
+  for (const attempt of attempts) {
+    for (const note of notesOf.get(attempt.item_id) ?? []) {
+      const seen = byTerm.get(note.term);
+      if (seen) seen.misses += 1;
+      else byTerm.set(note.term, { ...note, misses: 1, last_missed_at: attempt.answered_at });
+    }
+  }
+  return [...byTerm.values()];
 }
