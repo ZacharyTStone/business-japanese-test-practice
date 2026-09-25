@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from bjt import cli, config, llm
+from bjt import cli, config, llm, plan
 
 
 def _usage(**kw):
@@ -271,3 +271,35 @@ def test_the_workflow_keeps_its_guards():
     unlocked = text.index("name: which of tonight's work is unlocked")
     unlocked_block = text[unlocked:text.index("- name:", unlocked + 1)]
     assert "content/nightly-*" not in unlocked_block
+
+
+def test_the_workflow_agrees_with_plan_on_a_nights_size():
+    """CLAUDE.md states the size of a night as "`plan.DEFAULT_BUDGET` /
+    `_PER_SLOT`, and the nightly workflow's own defaults, which must agree" —
+    but nothing before this test compared the two. `plan.py` and
+    `nightly.yml` each hold their own copy of the same three numbers (as a
+    Python default and as a YAML `workflow_dispatch` default plus its `||`
+    env fallback), and bumping one side alone changed no test and no runtime
+    error: it would just make a scheduled or default-input run write a
+    different night than `bjt plan` reports."""
+    text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
+
+    def dispatch_default(key: str) -> str:
+        block = re.search(rf"^      {key}:\n(?:        .*\n)+", text, re.M)
+        assert block, f"workflow_dispatch has an input named {key}"
+        default = re.search(r'default:\s*"(\d+)"', block.group(0))
+        assert default, f"{key} has a numeric default"
+        return default.group(1)
+
+    def env_fallback(name: str) -> str:
+        line = re.search(rf"^\s+{name}:.*\|\|\s*'(\d+)'", text, re.M)
+        assert line, f"{name} falls back to a literal when no input is given"
+        return line.group(1)
+
+    assert dispatch_default("budget") == str(plan.DEFAULT_BUDGET)
+    assert dispatch_default("per_slot") == str(plan.DEFAULT_PER_SLOT)
+    assert dispatch_default("reading_min") == str(plan.DEFAULT_READING_MIN)
+
+    assert env_fallback("BUDGET") == str(plan.DEFAULT_BUDGET)
+    assert env_fallback("PER_SLOT") == str(plan.DEFAULT_PER_SLOT)
+    assert env_fallback("READING_MIN") == str(plan.DEFAULT_READING_MIN)
