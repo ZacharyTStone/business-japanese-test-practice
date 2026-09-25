@@ -252,9 +252,14 @@ ad network account when it is taken.
 — and prints the work order that would fill the emptiest ones first; `bjt nightly`
 executes it, running every item through the same per-item gate and the same
 whole-batch checks as a hand-run batch, writing bundles and their SQL, and
-leaving a pull request for somebody to read. The survey half runs every night
-already: it needs no key, no network and no project, and it is the thing that
-says out loud that sixteen of the twenty-seven shelves are empty.
+leaving a pull request for somebody to read. The survey half runs on every run:
+it needs no key, no network and no project, and it is the thing that says out
+loud that sixteen of the twenty-seven shelves are empty.
+
+**Paused (2026-09-25).** The workflow's schedule is off at the owner's request:
+the app is used too little to pay for a night of questions. It runs only when
+started from the Actions tab; restoring the `cron` in `nightly.yml` turns the
+nights back on.
 
 **What is blocked.** The writing half needs one secret:
 

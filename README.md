@@ -32,7 +32,7 @@
 | 🎯 **Coverage** | All **9** BJT problem types across 聴解 · 聴読解 · 読解, at three levels (J3 / J2 / J1) |
 | 🧠 **Adaptive, with zero settings** | One button. Per-section levels, a spaced-repetition ladder, and a difficulty target that follows you — all computed in SQL |
 | 🤖 **LLM-generated, gate-checked** | Every item passes a sanity check, a two-sided answerability gate, a difficulty probe and batch-level checks before it can ship |
-| 🗓️ **Offline by design** | Nothing is generated while anyone practises — a nightly GitHub Action opens a reviewable PR of checked items. Running cost: **$0** |
+| 🗓️ **Offline by design** | Nothing is generated while anyone practises — a GitHub Action, started by hand, opens a reviewable PR of checked items. Running cost: **$0** |
 | 🔊 **Real listening practice** | Role-cast TTS voices, phone-line audio treatment, and spoken options for every 聴解 item |
 | 🔒 **Database is the gatekeeper** | Row-level security on every table; answers are graded by a Postgres trigger, not the client |
 
@@ -75,7 +75,7 @@ blockers.md  what is finished up to the point it needs a key
 Three things are true of the whole system and explain most of its shape:
 
 * **Nothing is generated while somebody is practising.** Generation is a batch
-  job — on a laptop, or nightly on a schedule that opens a pull request — and
+  job — on a laptop, or from a GitHub Action that opens a pull request — and
   what ships is checked JSON, published as reviewable SQL. That is why the
   running cost is zero and why the quality gates can afford to be slow.
 * **One bank, shared by everybody, sorted per person.** Every learner draws from
@@ -567,9 +567,11 @@ from.
 
 ### What runs, and when
 
-`.github/workflows/nightly.yml` has two halves, and the first needs nothing:
+`.github/workflows/nightly.yml` has two halves, and the first needs nothing.
+It has no schedule since 2026-09-25: it runs when somebody starts it from the
+Actions tab, and restoring its `cron` trigger turns the nights back on.
 
-* **the survey** — `bjt plan` into the run summary, every night, offline. This is
+* **the survey** — `bjt plan` into the run summary, on every run, offline. This is
   the half that tells you sixteen shelves are empty.
 * **the writing** — `bjt nightly`, then the whole-bundle sweep, then a pull
   request. It runs only when `ANTHROPIC_API_KEY` and `SEEDS_TAR_B64` are both
