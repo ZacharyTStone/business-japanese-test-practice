@@ -42,8 +42,12 @@ These are decisions, not accidents. Changing one is fine; changing one by
 accident is not.
 
 - **Nothing is generated while somebody is practising.** Generation is a batch
-  job (`bjt batch`, or `bjt nightly` on a schedule); content ships as reviewable
-  SQL (`bjt publish`). This is why the running cost is zero. The nightly job
+  job (`bjt batch`, or `bjt nightly` from the **nightly** workflow); content
+  ships as reviewable SQL (`bjt publish`). This is why the running cost is
+  zero. The workflow has no schedule: it runs only when started by hand from
+  the Actions tab (the owner, 2026-09-25 — the app is used too little to pay
+  for a night of questions, and four nights had sat unread on branches). Put
+  the `cron` back in `nightly.yml` to turn the nights on again. The nightly job
   opens a pull request and never publishes — that branch is the review gate the
   roadmap asks for, and it is the one exception to the rule above. Merging it
   is the decision to ship: the **deploy database** workflow runs by itself
@@ -79,7 +83,7 @@ accident is not.
   gate, the proofreader and the dedupe check each say why in one sentence
   and `run_batch` passes it on; a shelf's second and third drafts are not
   written blind. A draft with a fifth option is trimmed, not regenerated.
-- **Reading items are written every night.** The work order hands the first
+- **Reading items are written on every run.** The work order hands the first
   `--reading-min` (1) items to the emptiest reading shelves before the
   emptiest-first rule sees the rest; they need no audio and no picture. The
   owner asked for this (2026-09-19). A night is three items, two to a shelf at

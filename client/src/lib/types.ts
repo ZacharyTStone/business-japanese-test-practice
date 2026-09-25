@@ -251,3 +251,25 @@ export type HistoryEntry = {
   explanation_en: string;
   options: ItemOption[];
 };
+
+/** The rest of a past question, fetched when its entry on the review screen is
+ *  opened: what was read, what was heard, and the notes. Without it a missed
+ *  資料聴読解 or 総合読解 item can only be reviewed as its question line, which
+ *  is the half that was never the problem. */
+export type ReviewDetail = {
+  documents: StimulusDocument[];
+  /** With each turn's clip resolved, so a line can be played again. */
+  dialogue: DialogueTurn[];
+  narration_path: string | null;
+  /** Each option's clip, by position — only the spoken types have any. */
+  option_audio: Record<number, string | null>;
+  vocab_notes: VocabNote[];
+};
+
+/** A word from the notes of a question that caught this learner. */
+export type VocabEntry = VocabNote & {
+  /** How many wrong answers, among the ones read, were on a question carrying
+   *  this word. */
+  misses: number;
+  last_missed_at: string;
+};

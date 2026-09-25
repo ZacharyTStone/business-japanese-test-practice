@@ -266,6 +266,12 @@ export default function Progress() {
           sub={t("review_sub")}
           onPress={() => router.push("/history")}
         />
+        <Button
+          label={t("vocab_btn")}
+          tone="secondary"
+          sub={t("vocab_sub")}
+          onPress={() => router.push("/vocab")}
+        />
       </View>
 
       <AdSlot placement="list_screen" enabled={!adFree} />

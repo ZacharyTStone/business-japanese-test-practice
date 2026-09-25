@@ -4,7 +4,8 @@
 #
 #   survey    — count the library shelf by shelf (ten problem types × three
 #               levels) and print the work order `bjt nightly` would execute.
-#               Offline, no key, runs every night whatever else is configured.
+#               Offline, no key, runs on every run whatever else is configured.
+#               (Runs are manual only since 2026-09-25 — see `on:` below.)
 #               This is the half that tells you the practice queue cannot
 #               interleave across types because sixteen of the shelves are empty.
 #   write     — actually generate, gate, check and commit those items, and open a
@@ -67,11 +68,17 @@
 name: nightly
 
 on:
-  schedule:
-    # 18:00 UTC = 03:00 JST. Cron here is UTC and the learners are in Japan, so
-    # this is stated in both: it should land while nobody is practising, and it
-    # must not drift into the evening when the clocks change.
-    - cron: "0 18 * * *"
+  # No schedule (the owner, 2026-09-25). Every night cost API money for
+  # questions the app is used too little to need, and they sat on branches
+  # nobody opened. The job now runs only when started by hand from the Actions
+  # tab. To turn the nights back on, restore:
+  #
+  #   schedule:
+  #     # 18:00 UTC = 03:00 JST, while nobody is practising.
+  #     - cron: "0 18 * * *"
+  #
+  # The Sunday bank-scene run below keys on a scheduled event, so it is off
+  # with the schedule; a manual run with "scenes" ticked still draws them.
   workflow_dispatch:
     inputs:
       budget:
@@ -87,7 +94,7 @@ on:
         required: false
         default: "1"
       scenes:
-        description: "Also draw the shared bank's missing scenes (the schedule does this on Sundays; item pictures are drawn every night)"
+        description: "Also draw the shared bank's missing scenes (item pictures are drawn on every run)"
         type: boolean
         required: false
         default: false
