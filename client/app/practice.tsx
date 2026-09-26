@@ -359,8 +359,12 @@ export default function Practice() {
   // A scene is worth a pause of its own when there is something to hear or
   // something to look at. A bare reading item goes straight to the question.
   const hasScene = listenable || Boolean(sceneImage);
-  const stage: Stage =
+  const recorded: Stage =
     stageAt?.index === index ? stageAt.stage : hasScene ? "scene" : "answer";
+  // The only way out of "listen" is the playlist finishing, and with nothing
+  // to play there is no playlist: the screen would wait for ever on a hint
+  // about audio that does not exist, with no options and no button.
+  const stage: Stage = recorded === "listen" && !listenable ? "answer" : recorded;
   // Never back out of a reveal: an answer given while the clips were still
   // playing must not be undone by the playlist finishing and asking for the
   // answer stage. Read from the setter so the check sees the latest state,
@@ -436,10 +440,13 @@ export default function Practice() {
     const rest = items!.filter((_, i) => i !== index);
     // The bookkeeping is keyed by index, and every index at or after this one
     // now names a different question. Clearing it is what stops the next
-    // question inheriting this one's "already answered".
+    // question inheriting this one's "already answered" — and its stage: a
+    // veto pressed while a 発言聴解 was still playing left the next question
+    // in "listen", and a reading question has nothing to listen to.
     answeredFor.current = null;
     advancedFrom.current = null;
     scrolledFor.current = null;
+    setStageAt(null);
     if (index >= rest.length) {
       if (rest.length === 0) {
         router.replace("/");
