@@ -20,7 +20,7 @@ from typing import Optional
 
 from .. import batch as batchmod
 from .. import config, levels, llm, phrasebook, render, schemas, seedtable
-from ..fidelity import roles
+from ..fidelity import naturalness, roles
 
 
 def load_seed_json(subdir: str, item_type: str) -> list[dict]:
@@ -159,6 +159,12 @@ class Generator:
             f"{self.label} item.",
             self.task_spec,
             self._role_spec(),
+            # Right after the roles, because most of it is about how a
+            # distractor may be wrong. The principle in the role spec did not
+            # hold on its own: the over-polite distractors in the bank were
+            # invented keigo stacks almost without exception, and 39 questions
+            # were withdrawn on 2026-09-26 (batches/withdrawn.txt).
+            naturalness.PROMPT,
             f"Target level: {level}. Calibrate difficulty to this descriptor:\n"
             f"{levels.descriptor(level)}",
             "Write the 解説 (explanation) in Japanese: state why the answer is correct "
@@ -273,6 +279,11 @@ class Generator:
             repair_surplus_options(item)
             errors = schemas.validate_item(self.item_type, item)
             errors.extend(self.validate_extra(item, cell))
+            # The tells a pattern can see — invented keigo, a placeholder, a
+            # bracket in something heard, a narration that says the answer —
+            # cost a retry here rather than a proofreader's call, and the
+            # retry is told which line and why.
+            errors.extend(naturalness.faults(item))
             if not errors:
                 return self._finalize(item, level, seed, cell)
             last_errors = errors

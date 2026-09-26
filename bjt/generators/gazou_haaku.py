@@ -46,7 +46,11 @@ class GazouHaakuGenerator(Generator):
         "name tags, or documents with readable words. Do not rely on text to make a "
         "description true.\n"
         "- The question names who it is about when more than one person is drawn "
-        "（「立っている人は」「受付の人は」）, so that the descriptions do not have to.\n"
+        "（「立っている人は」「受付の人は」）, so that the descriptions do not have to. "
+        "Every option is then a sentence about THAT person, the wrong_participants "
+        "distractor included: it reverses who does what to whom and keeps the subject "
+        "（「立っている人は書類を受け取っています」）. An option about somebody else "
+        "（「座っている人が…」） is not an answer to the question heard.\n"
         "- Use roles, not personal names, for everyone. Nobody real, no brands."
     )
 

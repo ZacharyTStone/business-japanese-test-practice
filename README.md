@@ -342,8 +342,11 @@ can see in `bjt quality`.
    `BJT_SANITY_MODEL`) the moment an item exists, before anything expensive
    touches it. It proofreads: is the marked answer impossible, is a second option
    just as right, does the 解説 justify a different option, is the Japanese broken,
-   do the options answer the question the stem asks. Any flag discards the item as
-   `discarded:sanity`.
+   is any line — a distractor included — something no native would actually say,
+   does the situation hang together, do the options answer the question the stem
+   asks. Any flag discards the item as `discarded:sanity`. The part of "no native
+   would say it" a pattern can see (`bjt/fidelity/naturalness.py`) does not wait
+   for this call: it sends the draft back inside the generator, for free.
 
    **It runs first because it is cheap.** The answerability gate is six calls to a
    strong model; a generation that came out with its explanation pointing at the
@@ -383,6 +386,7 @@ anything. `bjt checkbatch` runs these offline, with no key:
 | distractor role coverage | an enum of eight used as three is a prompt that has settled into a rut |
 | per-option `why` | if this is thin, the app has nothing to show after a wrong answer |
 | length matches the exam | the stem, the options and the documents against the ranges the real paper sets (`batch.LENGTH_BANDS`) |
+| reads like Japanese | invented keigo stacks (させていただかせていただく), a 〇〇 placeholder, brackets in something heard, a 場面把握 narration that says the answer — the tells a pattern can see, from the questions withdrawn on 2026-09-26 (`bjt/fidelity/naturalness.py`). A withdrawn item is exempt; every served one must pass |
 | scenes come from the bank | images are a shared bank, not one per item |
 
 Failures block a bundle from being written. Warnings are for the five-second
@@ -414,6 +418,25 @@ the clip ids its audio files will be named after.
   "scenes": ["scene_phone_desk", ...]
 }
 ```
+
+### Withdrawing a question
+
+`batches/withdrawn.txt` takes a question out of the bank: one line per item, its
+id, a reason from the same closed set a tester's report uses (`unnatural`,
+`wrong_answer`, `ambiguous`, …) and a sentence saying what is wrong. The item
+stays in its bundle and `bjt publish` writes `is_published = false` for it into
+that bundle's SQL, so merging the line is the decision and the deploy that
+follows carries it out — the same as `veto_item()` from inside the app, and like
+it an unpublish rather than a delete, so answers already given keep resolving.
+`bjt plan`, the phrasebook, the scene job and `bjt synth` stop counting it, so the
+nightly planner refills its shelf. Deleting the line does not put the item back:
+nothing in a bundle's SQL ever sets `is_published = true`, which is what keeps an
+owner's veto from being undone by the next deploy.
+
+A review on 2026-09-26 withdrew 39 of the 146 questions, almost all for Japanese
+nobody would say rather than for a wrong key. Most were over-polite distractors
+invented as keigo stacks, and 142 of the 146 had arrived through `bjt importbatch`,
+which never proofread them.
 
 ### Audio (`bjt/tts/`)
 
@@ -843,7 +866,8 @@ licensed text, and is the thing you edit to grow the library.
 bjt/
   generators/    one module, prompt, and schema per item type
   publish.py     bundle → idempotent SQL
-  fidelity/      roles, sanity check, answerability gate, difficulty probe, discriminator loop, vocab gate, dedupe
+  withdrawn.py   the questions taken out of the bank (batches/withdrawn.txt), and what still counts
+  fidelity/      roles, sanity check, naturalness lint, answerability gate, difficulty probe, discriminator loop, vocab gate, dedupe
   tts/           what to synthesise, in which voice, over which channel — and the
                  offline job that does it (plan.py, synth.py, channel.py, providers.py)
   scenes.py      what the scene bank needs, and what exists

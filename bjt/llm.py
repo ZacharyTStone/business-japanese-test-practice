@@ -295,14 +295,17 @@ def sanity_check(rendered_item: str, rules: dict[str, str], model: Optional[str]
         "Proofread the finished test item below. It is meant to be difficult, and a "
         "hard item is not a broken one — flag a rule only when the fault is actually "
         "there, not when you would have written the item differently. The distractors "
-        "are wrong on purpose. Set every flag you are unsure about to false.\n\n"
+        "are wrong on purpose — but wrong the way real people are wrong, so a "
+        "distractor nobody would ever say is a fault. Set every flag you are unsure "
+        "about to false.\n\n"
         + rendered_item
     )
     system = (
         "You are the proofreader for a business-Japanese test bank. You are a native "
         "reader of Japanese and you check finished items for defects: a marked answer "
         "that cannot be right, a second answer that is just as right, an explanation "
-        "that does not match the marked answer, broken Japanese, options that do not "
+        "that does not match the marked answer, broken Japanese, Japanese no native "
+        "would say, a situation that does not hang together, options that do not "
         "answer the question. You report faults, not preferences."
     )
     return _structured(system, user, schema, model or config.SANITY_MODEL,

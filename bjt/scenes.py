@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Iterable
 
 from . import batch as batchmod
-from . import config, publish, seedtable
+from . import config, publish, seedtable, withdrawn
 
 #: Extensions accepted as artwork, in the order preferred when more than one
 #: exists for a scene. WebP first: these are flat illustrations, they are
@@ -191,15 +191,17 @@ def picture_items() -> list[tuple[str, dict]]:
 
     Read from the bundles rather than the seed tables, because a per-item
     picture is decided by the item (the generator writes the brief with the
-    options) and not by the setting.
+    options) and not by the setting. A withdrawn item is left out: nobody will
+    see its picture, so nobody should pay for one.
     """
     out: list[tuple[str, dict]] = []
+    gone = withdrawn.ids()
     for path in batchmod.bundles():
         try:
             bundle = batchmod.load(path)
         except (OSError, ValueError):
             continue
-        for item in bundle.get("items", []):
+        for item in withdrawn.live_items(bundle, gone):
             if item.get("image_brief") and str(item.get("scene_id", "")).startswith(PICTURE_PREFIX):
                 out.append((bundle.get("item_type", ""), item))
     return out

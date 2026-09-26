@@ -6,7 +6,7 @@ import pathlib
 
 import pytest
 
-from bjt import batch, config, seedtable
+from bjt import batch, config, seedtable, withdrawn
 from bjt.fidelity import dedupe
 
 BATCHES = pathlib.Path(__file__).resolve().parent.parent / "batches"
@@ -143,7 +143,7 @@ def test_the_library_reuses_its_scenes():
     """
     # A 画像把握 picture is one per item by design, and is not what the bank
     # is for; it is left out of the count rather than diluting it.
-    scenes = [it["scene_id"] for _, it in _library()
+    scenes = [it["scene_id"] for _, it in _served()
               if it.get("scene_id") and not it.get("image_brief")]
     assert scenes
     assert len(set(scenes)) < len(scenes) / 2, (
@@ -159,8 +159,19 @@ def test_the_library_reuses_its_scenes():
 # moment a second batch was committed.
 
 def _library():
-    """(bundle filename, item) for every item that ships."""
+    """(bundle filename, item) for every committed item, withdrawn or not.
+
+    For the invariants about keys — ids and seed cells — which a withdrawn item
+    still holds: its row stays in the database, and its cell stays spent."""
     return [(p.name, it) for p in COMMITTED for it in batch.load(p)["items"]]
+
+
+def _served():
+    """(bundle filename, item) for every item a learner can still be served:
+    the library less batches/withdrawn.txt. The sweeps about what a learner
+    meets are over this."""
+    gone = withdrawn.ids()
+    return [(name, it) for name, it in _library() if it["id"] not in gone]
 
 
 def test_no_seed_cell_is_spent_twice_across_the_library():
@@ -195,7 +206,7 @@ def test_no_near_duplicates_across_the_library():
     """Two batches can each be internally varied and still ask the same question.
     A learner meets the whole library, not one bundle, so the dedupe threshold
     has to hold across bundle boundaries too."""
-    lib = _library()
+    lib = _served()
     sigs = [(name, it, dedupe.item_signature(it)) for name, it in lib]
     collisions = []
     for i in range(len(sigs)):
@@ -529,9 +540,10 @@ def test_no_type_lets_you_pass_it_by_option_length(extreme):
     library is the thing a learner meets.
     """
     by_type = {}
+    gone = withdrawn.ids()
     for path in COMMITTED:
         bundle = json.loads(path.read_text(encoding="utf-8"))
-        for item in bundle["items"]:
+        for item in withdrawn.live_items(bundle, gone):
             hit, n = by_type.setdefault(bundle["item_type"], [0, 0])
             by_type[bundle["item_type"]] = [
                 hit + _correct_is_uniquely(item, longest=(extreme == "longest")),

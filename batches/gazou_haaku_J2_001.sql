@@ -109,4 +109,11 @@ on conflict (item_id, position) do update set
        why = excluded.why,
        clip_id = excluded.clip_id;
 
+-- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,
+-- never a delete, so every answer already given keeps resolving. Nothing
+-- here ever sets is_published back to true: a question the owner vetoed
+-- in the app stays vetoed however often this file is applied.
+update public.items set is_published = false
+ where id in ('917fb25e9a', '66f0315028', '1a8cd70899');
+
 commit;

@@ -12,6 +12,22 @@ insert into auth.users (id, email, is_anonymous) values
     ('33333333-3333-3333-3333-333333333333', 'c@example.com', false);
 insert into public.testers (email) values ('c@example.com');
 
+-- Seen from the table itself, before anybody signs in: a withdrawal is an
+-- unpublish, never a delete. Two of the reference ten are in
+-- batches/withdrawn.txt, and `bjt publish` wrote the statement that pulls them.
+do $$
+declare
+    n int;
+begin
+    raise notice 'withdrawn after review';
+    select count(*) into n from public.items where bundle_id = 'hatsugen_choukai_J2_001';
+    perform test.check(n = 10, 'all ten reference rows are in the table, withdrawn or not');
+    select count(*) into n from public.items
+     where bundle_id = 'hatsugen_choukai_J2_001' and not is_published;
+    perform test.check(n = 2, 'the two withdrawn reference items are unpublished, not deleted');
+end
+$$;
+
 do $$ begin perform test.become('33333333-3333-3333-3333-333333333333'); end $$;
 set role authenticated;
 
@@ -21,12 +37,13 @@ declare
     n int;
 begin
     raise notice 'published content';
+    -- A tester sees what is served: the ten less the two withdrawn above.
     select count(*) into n from public.items where bundle_id = 'hatsugen_choukai_J2_001';
-    perform test.check(n = 10, 'all ten reference items published');
+    perform test.check(n = 8, 'the eight served reference items, and not the two withdrawn');
 
     select count(*) into n from public.item_options
      where item_id in (select id from public.items where bundle_id = 'hatsugen_choukai_J2_001');
-    perform test.check(n = 40, 'four options each, and no leftovers from a re-publish');
+    perform test.check(n = 32, 'four options each, and no leftovers from a re-publish');
 
     -- Scoped to this bundle: the schema test put its own fixtures in the same
     -- database, and a count over the whole table would be counting those too.
@@ -40,7 +57,7 @@ begin
              where i.bundle_id = 'hatsugen_choukai_J2_001');
 
     select count(*) into n from bundle_clips;
-    perform test.check(n = 50, 'the audio manifest landed as clip rows');
+    perform test.check(n = 40, 'the audio manifest landed as clip rows');
 
     perform test.check(
         (select count(*) from bundle_clips where audio_path is not null) = 0,
@@ -48,7 +65,7 @@ begin
 
     select count(distinct scene_id) into n from public.items
      where bundle_id = 'hatsugen_choukai_J2_001' and scene_id is not null;
-    perform test.check(n = 8, 'eight scenes carry ten items');
+    perform test.check(n = 7, 'seven scenes carry the eight served items');
 
     perform test.check(
         (select count(*) from public.items i

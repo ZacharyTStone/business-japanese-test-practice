@@ -120,17 +120,36 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
     "set_phrase_misfit": "a real greeting or idiom dropped into a grammatical slot",
     "wrong_honorific_direction": "尊敬語 and 謙譲語 swapped relative to the speaker",
     "wrong_uchi_soto": "ウチ/ソト handled backwards — e.g. honorifics on one's own boss to a client",
-    "over_polite_misfit": "二重敬語 or otherwise over-polite to the point of being wrong",
+    # Was "二重敬語 or otherwise over-polite to the point of being wrong", and a
+    # model read that as licence to invent: させていただかせていただく and its
+    # relatives were the single commonest reason questions were withdrawn on
+    # 2026-09-26 (batches/withdrawn.txt).
+    "over_polite_misfit": (
+        "too formal for this relationship or moment, in wording people really use "
+        "elsewhere (a written formula said aloud, client-grade keigo to a peer), or ONE "
+        "二重敬語 people really say (おっしゃられる, お召し上がりになられる) — never an "
+        "invented stack such as させていただかせていただく, never a parody chain of set phrases"
+    ),
     "wrong_speech_act": "the keigo is right but the act is wrong (an offer where a request was needed)",
     "set_phrase_wrong_situation": "a genuine set phrase used in the wrong 場面 or at the wrong moment",
     "phone_protocol_violation": "breaks the fixed shape of a business phone call (naming oneself, relaying absence, transferring)",
     "content_mismatch": "natural and polite, but does not do what the situation requires",
-    "register_too_casual": "plain or casual form addressed to a superior or client",
-    "register_insulting": "grammatical but demeaning to the listener",
+    "register_too_casual": (
+        "plain or casual speech addressed to a superior or client — the way a person "
+        "really talks to a close colleague, not a caricature of slang"
+    ),
+    "register_insulting": "grammatical, natural Japanese, but demeaning to the listener",
     "correct_keigo_wrong_speech_act": "correct honorific verb, but the wrong illocutionary act",
     "wrong_participant": "a person who is present in the situation, but not the one asked about",
     "different_action": "the same people and objects, but visibly doing something else",
-    "wrong_participants": "the right action, but done by or to the wrong person — or by the wrong number of people",
+    # Still a sentence about the person the question names. Three 画像把握
+    # items answered 「立っている人は何をしていますか」 with an option about the
+    # seated person, which is not an answer at all (withdrawn 2026-09-26).
+    "wrong_participants": (
+        "the right action, but done by or to the wrong person — or by the wrong number "
+        "of people — said about the person the question names (「立っている人は書類を"
+        "受け取っています」), never a sentence about somebody else"
+    ),
     "adjacent_setting": "a setting next door to the real one (受付 for 応接室)",
     "right_scene_wrong_moment": "the right situation, but at the wrong stage of it",
     "plausible_but_unmentioned": "something that would make sense here, but was never said",

@@ -180,7 +180,12 @@ FIXTURES["gazou_haaku"] = {
          "why": "受付の人は廊下のほうへ手を伸ばして方向を示しており、来客はその方向を向いている。"},
         {"text": "来客に入館証を渡しています。", "role": "different_action",
          "why": "受付でよくある行動だが、絵の中で手渡されている物はなく、手は方向を示している。"},
-        {"text": "来客が受付の人に行き方を教えています。", "role": "wrong_participants",
+        # Still about 受付の人, as the question is: the roles are reversed, the
+        # subject is not. This line used to read 「来客が受付の人に行き方を
+        # 教えています」, an option about the visitor offered as an answer to a
+        # question about the receptionist, and a committed item copied it
+        # word for word (917fb25e9a, withdrawn 2026-09-26).
+        {"text": "来客から行き方を教わっています。", "role": "wrong_participants",
          "why": "方向を示しているのは受付の人のほうで、来客はかばんを持って立っているだけ。"},
         {"text": "打ち合わせを終えた来客を見送っています。", "role": "right_scene_wrong_moment",
          "why": "同じ受付の場面だが、来客は出口ではなく奥の廊下を向いていて、これから入る場面。"},
