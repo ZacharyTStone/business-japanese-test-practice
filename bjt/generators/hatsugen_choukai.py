@@ -37,8 +37,14 @@ class HatsugenChoukaiGenerator(Generator):
         "- Do not let the correct option be the longest or the most polite one as a "
         "rule; over-politeness is itself one of the traps.\n"
         "- Use roles, not personal names, for the speaker and the listener. Where a "
-        "company or person must be named inside an utterance, use plain placeholder-"
-        "style names (山田, A社) so voices and scenes stay reusable."
+        "company or person must be named inside an utterance, use a plain fictional "
+        "name (山田, 山川商事, みどり物産). Never 〇〇: it is read aloud as 「まるまる」. "
+        "And never A社 where anything turns on how the name is written — "
+        "「A社の『A』の字」 points at a kanji that does not exist.\n"
+        "- The over-polite distractor is the one models get wrong. It is something a "
+        "nervous new employee really says — client-grade keigo to a peer, a written "
+        "formula spoken aloud, one common 二重敬語 — not a stack nobody says. Most of "
+        "the 発言聴解 questions withdrawn on 2026-09-26 were withdrawn for exactly this."
     )
 
     def cell_spec(self, cell) -> str:

@@ -286,6 +286,34 @@ accident is not.
   disliked a question afterwards. Nothing is recorded against the learner
   either: vetoing happens instead of answering, so no `attempts` row is written
   and the day's ten is not spent. `public.item_vetoes` keeps who and when.
+- **A question leaves the bank through `batches/withdrawn.txt`, never by
+  deletion.** It is the veto made from the repository: one line per item (id, a
+  reason from the closed set `item_feedback` uses, a sentence), and `bjt publish`
+  writes `is_published = false` for it into its bundle's SQL, so the merge is the
+  decision. The item stays in its bundle: its row keeps answers resolving, and
+  its seed cell stays spent, because a new item for that cell would hash to the
+  same id and inherit the unpublish. Nothing ever sets `is_published` back to
+  true — that is what keeps an in-app veto alive across deploys — so putting one
+  back is a hand-written update. Everything that counts the library as a learner
+  meets it (`bjt plan`, the phrasebook, the scene job, `bjt synth`, the library
+  sweeps in the tests) reads it through `withdrawn.live_items` / `live_bundle`. A
+  test holds the committed SQL to what `bjt publish` writes from the ledger, so a
+  line added and not published fails. A review on 2026-09-26 withdrew 39 of 146,
+  almost all for Japanese nobody would say: 142 of the 146 had come in through
+  `bjt importbatch`, which skips the proofreader and the gate.
+- **A distractor is wrong the way people are wrong.** An over-polite option is
+  wording people really use somewhere more formal, or one 二重敬語 people really
+  say — never an invented stack (させていただかせていただく was the commonest
+  reason for the withdrawals above). `bjt/fidelity/naturalness.py` holds the
+  rules: every generator is told them (`PROMPT`); a draft that trips the
+  mechanical half (invented keigo, a 〇〇 placeholder, brackets in something
+  heard, a 場面把握 narration that says the answer) is sent back with the reason;
+  the proofreader has `unnatural_japanese` and `situation_incoherent`; and
+  `check_bundle` fails any served item with a tell, so a committed item that
+  trips it is withdrawn or failing CI. 語彙・文法's `nonexistent_form` is the one
+  deliberate non-word and is exempt. Widen a pattern only against a line from a
+  real item, and add the line that must still pass beside it
+  (`tests/test_naturalness.py`).
 - **Ten a day, fifteen at most, and the database counts.** The daily set is
   `profiles.daily_goal` (default 10, never above 15, never chosen in the app).
   After it one bonus set is offered; at fifteen answers in a Japanese calendar

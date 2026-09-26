@@ -27,6 +27,7 @@ import json
 from collections import Counter
 
 from . import batch as batchmod
+from . import withdrawn
 
 #: Spelled once, here, and nowhere else. Keep the punctuation: it is part of
 #: the hash.
@@ -60,14 +61,16 @@ SPOKEN_TYPES: frozenset[str] = frozenset({
 def library_lines(min_count: int = 2, limit: int = 20) -> list[str]:
     """Spoken lines the committed bank already uses more than once, most
     common first. Read from the bundles' audio manifests, so what counts is
-    exactly what has a clip."""
+    exactly what has a clip. A withdrawn item's lines are not the library's:
+    its wording is the reason it was withdrawn often enough."""
     counts: Counter[str] = Counter()
+    gone = withdrawn.ids()
     for path in batchmod.bundles():
         try:
             bundle = batchmod.load(path)
         except (OSError, json.JSONDecodeError):
             continue
-        for clip in bundle.get("audio_manifest", []):
+        for clip in withdrawn.live_bundle(bundle, gone).get("audio_manifest", []):
             if clip.get("kind") in ("option", "dialogue"):
                 counts[clip["text"]] += 1
     return [text for text, n in counts.most_common(limit)

@@ -36,7 +36,17 @@ class GoiBunpouGenerator(Generator):
         "At least one distractor should be morphologically plausible and not an actual "
         "word — that is the `nonexistent_form` role, and it is a real feature of this "
         "type rather than a trick. The business setting lives in the carrier sentence; "
-        "the options themselves are usually ordinary Japanese."
+        "the options themselves are usually ordinary Japanese.\n"
+        "Every other distractor must be WRONG in this sentence, not merely less usual. A "
+        "register distractor is wrong only when the situation really rules it out "
+        "(外しています to a client on the phone), not when it is one notch plainer than "
+        "the key. Five questions were withdrawn for marking natural Japanese wrong: "
+        "ご確認くださいますよう beside ご確認いただきますよう (both standard before "
+        "お願い申し上げます), 得られたら beside 得られれば in minutes, 三人 beside 三名 to "
+        "one's boss, すり合わせてあります beside すり合わせてまいりました, 検討を始めて "
+        "beside 対応を始めて. If you would hesitate to call a distractor an error in front of "
+        "a native editor, the item has two answers — change the sentence until it does "
+        "not. The 解説 never calls a real expression nonexistent."
     )
 
     def cell_spec(self, cell) -> str:

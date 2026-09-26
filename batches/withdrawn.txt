@@ -1,0 +1,82 @@
+# Questions withdrawn from the bank, and why.
+#
+# One line per item:  <item id>  <reason>  <what is wrong, in one sentence>
+# The reason is one of the closed set a tester's report uses
+# (public.item_feedback.reason): unnatural, wrong_answer, ambiguous, unclear,
+# audio, other. bjt/withdrawn.py reads this file; see it for why an item is
+# withdrawn here rather than deleted from its bundle.
+#
+# What a line does:
+#   - `bjt publish` writes `is_published = false` for the item into its bundle's
+#     SQL, so the deploy that follows the merge takes it out of next_items() for
+#     everybody. The row stays: answers already given keep resolving.
+#   - `bjt plan`, the phrasebook, the scene job and `bjt synth` stop counting it,
+#     so the nightly planner sees the shelf as emptier and refills it.
+#   - `bjt checkbatch` stops holding it to the naturalness lint
+#     (bjt/fidelity/naturalness.py). Every item NOT listed here must pass that
+#     lint, so a committed item with a mechanical tell has to be named here.
+#
+# Deleting a line does not put an item back: the bundle SQL never sets
+# is_published = true, so that an owner's veto from the app survives a deploy.
+# Re-publish by hand: update public.items set is_published = true where id = '…';
+#
+# 2026-09-26: a review of all 146 questions for Japanese nobody would say.
+# 39 withdrawn. 142 of the 146 had come in through `bjt importbatch` and had never
+# been proofread or gated; the prompts, the role descriptions, the proofreader and
+# the offline lint were changed in the same commit so the generator stops writing
+# these.
+
+# 場面把握
+c21b2af994  unnatural     The narration opens 「社内の会議室で」 and the answer is 「社内の会議室」; the question 「ここはどこで話していますか」 is a blend of two questions.
+96e5f5b389  unnatural     Spoken option 「あとで資料を送る先の配送業者」 makes the courier the place the materials are sent to; nobody puts it that way.
+
+# 画像把握 — each asks about one person and offers an option about somebody else, which is not an answer to the question heard
+917fb25e9a  unnatural     Asked 「受付の人は何をしていますか」, option 「来客が受付の人に行き方を教えています」 is about the visitor.
+66f0315028  unnatural     Asked about the person standing at the whiteboard, option 「座っている上司が立っている部下に指示を出しています」 is about the seated boss.
+1a8cd70899  unnatural     Asked 「立っている人は何をしていますか」, option 「座っている人が立っている人に書類を渡しています」 is about the seated person.
+
+# 語彙・文法 — a natural option marked wrong, so the item has two answers and teaches that good Japanese is bad
+bb80c565a1  ambiguous     「事前に御社の担当の方とすり合わせてありますので」 is natural too, and the 解説 claims 〜てある only describes objects, which is false.
+016554fd7e  ambiguous     「ご確認くださいますようお願い申し上げます」 is as standard as the key 「ご確認いただきますよう」; it is marked wrong on feel.
+c1e08d21fa  ambiguous     「先方の承認が得られたら、…切り替える」 is fine in minutes; 〜たら is not wrong beside 〜れば.
+a4d0177c61  ambiguous     「お客様が三人いらっしゃる予定です」 is natural to one's boss; 三名 is more formal, not the only right answer.
+f4dca56dff  ambiguous     「すでに検討を始めております」 fits the sentence as well as the key 「対応を始めております」.
+
+# 発言聴解
+95ef217a86  unnatural     「お先に失礼させていただかせていただきます」 is invented keigo, and 「お先っす。お疲れした。」 is a caricature rather than real casual speech.
+f82e71e147  unnatural     「私では役不足でございますので」 misuses 役不足 for 力不足 and the item calls it merely over-polite, so it teaches the misuse.
+6211b4d620  unnatural     The over-polite option stacks 不徳の致すところ, 慙愧に堪えない and 失態を演じて into a parody nobody says on the phone to their 課長.
+23cc36ccc2  unnatural     「些少の齟齬が生じておられるやに拝察いたしますゆえ」 is parody keigo, with 尊敬語 on a discrepancy.
+83b4f2db61  unnatural     「誠に恐縮至極ではございますが…伏してお願い申し上げる次第でございます」 is a parody chain, not something anyone says at a dinner.
+4aa2abf69f  unnatural     The key 「今年は秋が短いと聞きますが、御社の方はいかがですか」 asks how the client's company is doing about a short autumn, which does not mean anything.
+bc9ff36bff  unnatural     The key says 「A社の「A」の字、一文字違ってたかも」, a placeholder spoken as though it were a kanji; the over-polite option uses 貴殿 in speech.
+5ff8b33d92  unnatural     「鈴木と申させていただきます」 and 「お時間をいただかせていただいても」 are invented keigo.
+3149b15e3d  unnatural     「ご希望に沿わせていただくことができかねさせていただきます」 is invented keigo.
+3b2ba9c2cc  unnatural     「お借りさせていただかせていただいても」 is invented keigo.
+6ad0f15b5f  unnatural     「お伺いさせていただかせていただいても」 is invented keigo.
+43f67d1f13  unnatural     「ご確認させていただかせていただいても」 is invented keigo, and the key 「何時からか、確認してもよろしいでしょうか」 asks permission to ask instead of asking.
+91a3dbc338  unnatural     Two spoken options say 「〇〇商事の田中です」, which the narrator reads as まるまる商事.
+2099bba427  unnatural     「早退させていただかせていただいても」 is invented keigo.
+325876c7a8  unnatural     「お時間をいただかれまして」 is not a form anyone produces.
+f1c44b24eb  unnatural     All four spoken options say 「〇〇商事」 (read as まるまる), and 「田中と仰います」 is not a mistake speakers make.
+995396318a  unnatural     「どうぞお越しになられてください」 said to a guest who is already standing there does not mean anything.
+5ce5d0c9b9  unclear       The stem is at the 課長's desk, but the 解説 and three of the whys talk about holding up a meeting.
+3ecbdc1b0b  unnatural     「宅配便がお見えになりました」 and 「頂戴させていただきたく存じます」 are not errors anyone makes, and the "wrong" 「五分ほど席を外してまいります」 is what people actually say online.
+
+# 表現読解
+3907ae553c  ambiguous     The key 「遅らせていただきたく存じます」 asks leave just as much as 「遅らせてもよろしいでしょうか」, which is marked wrong for asking leave.
+b85cc7b1d0  unnatural     A 後輩 asks a 先輩, not their superior, for permission to leave early, and 「特に何もおっしゃらないでください」 is not something anyone writes.
+6a3ca7f70f  unnatural     The stem says 「前任の後任であることを伝えて」, the predecessor's successor.
+00a6086083  unnatural     「こちら手が空いているので、そんなに時間がかかるものですか」 does not hang together as a sentence.
+590df1a9f0  unnatural     The key opens a proposal with 「一つ伺いたいのですが」 and says 「進めるという進め方」; the よろしいでしょうか option is just as much a proposal.
+fb167cd9a3  unnatural     Nobody asks another department for permission by putting up a 社内掲示.
+
+# 状況把握
+5f2adf082b  unnatural     The narration reads 「先輩（営業部）」 aloud, and the question asks what to 確認 while every option says what to 伝える.
+
+# 資料聴読解
+f760e4e239  unnatural     The boss smuggles the calendar in as hearsay: 「十八日が金曜だとかで、そのあと二十日の日曜も挟みますよね」.
+
+# 総合聴読解
+91d768f9f8  unclear       Inspection starting a week late cannot be fixed by finishing a week early, so the conversation's conclusion, and the key, do not follow.
+2bc464a7cb  unnatural     「作りを組み直す」 and 「表示の部分だけを当て直す」 are not how an engineer describes a rebuild and a patch.

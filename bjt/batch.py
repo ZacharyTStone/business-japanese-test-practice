@@ -26,8 +26,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from . import config, schemas, seedtable
-from .fidelity import dedupe, roles
+from . import config, schemas, seedtable, withdrawn
+from .fidelity import dedupe, naturalness, roles
 from .render import document, numerals
 from .tts import plan as tts_plan
 
@@ -352,8 +352,17 @@ class BundleReport:
         return not self.failed
 
 
-def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -> BundleReport:
-    """Every check that needs no API key. Run on every batch before it ships."""
+def check_bundle(
+    bundle: dict,
+    *,
+    threshold: float = dedupe.DEFAULT_THRESHOLD,
+    withdrawn_ids: Optional[set[str]] = None,
+) -> BundleReport:
+    """Every check that needs no API key. Run on every batch before it ships.
+
+    `withdrawn_ids` defaults to the committed ledger (`batches/withdrawn.txt`);
+    only the naturalness lint looks at it.
+    """
     items = bundle.get("items", [])
     item_type = bundle.get("item_type", "")
     report = BundleReport()
@@ -542,7 +551,31 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
             + "; ".join(f"{iid} ({', '.join(r)})" for iid, r in mixed.items())
             if mixed else "no sentence mixes digits with spelled-out numbers")
 
-    # 11. Listening-specific: the scene must exist in the bank.
+    # 11. Japanese somebody would say. The mechanical half of the naturalness
+    #     rules (bjt/fidelity/naturalness.py): invented keigo stacks, a
+    #     placeholder where a name belongs, brackets in something heard, a
+    #     narration that says the answer. A failure, like the numerals, because
+    #     each pattern is unambiguous and each was found in a question a
+    #     learner had been served. A withdrawn item is not held to it — it is
+    #     no longer served, and is kept only as the record of why — which also
+    #     makes the ledger compulsory: a committed item with one of these tells
+    #     either leaves the bank or fails CI.
+    gone = withdrawn.ids() if withdrawn_ids is None else set(withdrawn_ids)
+    unnatural: dict[str, list[str]] = {}
+    for it in items:
+        if it.get("id") in gone:
+            continue
+        found = naturalness.faults(_as_generator_shape(it))
+        if found:
+            unnatural[it.get("id", "?")] = found
+    served = sum(1 for it in items if it.get("id") not in gone)
+    add("reads like Japanese", "fail" if unnatural else "pass",
+        "; ".join(f"{iid}: {' / '.join(f)}" for iid, f in unnatural.items())
+        if unnatural else
+        f"no mechanical tell in {served} served item(s)"
+        + (f" ({n - served} withdrawn)" if served < n else ""))
+
+    # 12. Listening-specific: the scene must exist in the bank.
     if item_type == "hatsugen_choukai":
         try:
             bank = set(seedtable.load(item_type).scene_bank)
@@ -556,7 +589,7 @@ def check_bundle(bundle: dict, *, threshold: float = dedupe.DEFAULT_THRESHOLD) -
                 f"not in the bank: {unknown}" if unknown
                 else f"{n_scenes} scene(s) reused across {n} items")
 
-    # 12. Shared utterances are supposed to collapse into one file, so the
+    # 13. Shared utterances are supposed to collapse into one file, so the
     #    manifest should be smaller than the clips the items ask for between
     #    them. The old form of this check assumed five clips per item —
     #    narration plus four spoken options — which is true of exactly one of

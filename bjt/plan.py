@@ -53,7 +53,7 @@ from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
 from . import batch as batchmod
-from . import schemas, seedtable
+from . import schemas, seedtable, withdrawn
 
 #: Below this many items, a shelf of a ten-question type is thin enough that the
 #: queue notices: a set of five cannot avoid repeating a type that only has a
@@ -163,8 +163,14 @@ def _published_counts() -> dict[tuple[str, str], int]:
     same reason `batch.spent_cell_ids` uses them: the database is gitignored, so
     on a fresh clone — which is what CI is, every time — it reports an empty
     library while 88 items sit in the tree.
+
+    A withdrawn item (`batches/withdrawn.txt`) is not on the shelf: it is no
+    longer served, so the shelf it came from is that much emptier and the
+    planner refills it. Its seed cell stays spent (`spent_cell_ids` counts it),
+    because a new item written for that cell would inherit the withdrawn id.
     """
     counts: dict[tuple[str, str], int] = {}
+    gone = withdrawn.ids()
     for path in batchmod.bundles():
         try:
             bundle = batchmod.load(path)
@@ -173,7 +179,7 @@ def _published_counts() -> dict[tuple[str, str], int]:
         item_type = bundle.get("item_type")
         if not item_type:
             continue
-        for item in bundle.get("items", []):
+        for item in withdrawn.live_items(bundle, gone):
             level = item.get("level") or bundle.get("level")
             if level:
                 counts[(item_type, level)] = counts.get((item_type, level), 0) + 1
@@ -337,12 +343,13 @@ def difficulty_coverage() -> tuple[int, int]:
     queue cannot tell these apart" is a fact about the bank's shape.
     """
     have = total = 0
+    gone = withdrawn.ids()
     for path in batchmod.bundles():
         try:
             bundle = batchmod.load(path)
         except (OSError, json.JSONDecodeError):
             continue
-        for item in bundle.get("items", []):
+        for item in withdrawn.live_items(bundle, gone):
             total += 1
             have += item.get("model_p_correct") is not None
     return have, total
@@ -370,6 +377,10 @@ def render(survey_result: Survey, order: list[WorkItem]) -> str:
         f"{len(survey_result.thin)} below the type's share of {DEFAULT_FLOOR}; "
         f"{survey_result.cells_left} seed cell(s) left."
     )
+    pulled = len(withdrawn.ids())
+    if pulled:
+        lines.append(f"  {pulled} withdrawn after review and not counted "
+                     f"(batches/{withdrawn.LEDGER_NAME}).")
     have, total = difficulty_coverage()
     if total:
         lines.append(

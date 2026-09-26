@@ -34,6 +34,7 @@ from . import (
     schemas,
     scenes as scenemod,
     seedtable,
+    withdrawn,
 )
 from . import llm as llmmod
 from .llm import LLMBillingError, LLMError
@@ -901,8 +902,11 @@ def cmd_probe(args) -> int:
     path = pathlib.Path(args.path)
     bundle = batchmod.load(path)
     items = bundle.get("items", [])
-    todo = [it for it in items if it.get("model_p_correct") is None]
-    print(f"{path.name}: {len(items)} item(s), {len(todo)} without a difficulty signal")
+    # A withdrawn item is never served, so its difficulty is nobody's business.
+    gone = withdrawn.ids()
+    todo = [it for it in items if it.get("model_p_correct") is None and it["id"] not in gone]
+    print(f"{path.name}: {len(items)} item(s), {len(todo)} without a difficulty signal"
+          + (" (withdrawn ones skipped)" if any(it["id"] in gone for it in items) else ""))
     if not todo:
         print("Nothing to measure.")
         return 0
@@ -1151,6 +1155,10 @@ def cmd_publish(args) -> int:
     print(f"Wrote {out}")
     print(f"  {len(bundle['items'])} item(s), {n_clips} audio clip(s), "
           f"{len(bundle.get('scenes', []))} scene(s)")
+    pulled = len(bundle["items"]) - len(withdrawn.live_items(bundle))
+    if pulled:
+        print(f"  {pulled} of the items are withdrawn (batches/{withdrawn.LEDGER_NAME}) "
+              "and are unpublished by this file")
     print()
     print("Apply it with either:")
     print(f"  psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f {out}")
@@ -1208,8 +1216,16 @@ def cmd_synth(args) -> int:
         print(f"Re-making {len(remake)} named clip(s) if this bundle asks for them — "
               "the recording a learner already heard is being replaced.")
 
+    # Only what is still served: a withdrawn question's lines would be paid for
+    # and never heard. A clip it shares with a live item is still made.
+    live = withdrawn.live_bundle(bundle)
+    skipped = len(bundle.get("audio_manifest", [])) - len(live["audio_manifest"])
+    if skipped:
+        print(f"Skipping {skipped} clip(s) only withdrawn items use "
+              f"(batches/{withdrawn.LEDGER_NAME}).")
+
     result = synth.synthesise_bundle(
-        bundle,
+        live,
         provider=provider,
         out_dir=args.media_dir,
         force=args.force_clips,

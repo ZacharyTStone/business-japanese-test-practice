@@ -476,7 +476,19 @@ def test_the_picture_rules_are_checked_before_the_reader_sits_it(monkeypatch, tm
 def test_a_night_draws_only_so_many_pictures(tmp_path, monkeypatch, capsys):
     from bjt import cli, config
     monkeypatch.setattr(config, "NIGHT_MAX_PICTURES", 2)
+    # About the cap, not the ledger: with nothing withdrawn the library holds
+    # more pictures than the cap allows, which is what there has to be to test it.
+    monkeypatch.setattr("bjt.withdrawn.ids", lambda path=None: frozenset())
     assert cli.main(["scenes", "--generate", "--provider", "placeholder", "--only", "pictures",
                      "--media-dir", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert out.count("| pic_") == 2
+
+
+def test_a_withdrawn_question_gets_no_picture(monkeypatch):
+    """Nobody will see it, so nobody pays for it."""
+    from bjt import scenes, withdrawn
+    every = {it["id"] for _, it in scenes.picture_items()}
+    victim = sorted(every)[0]
+    monkeypatch.setattr(withdrawn, "ids", lambda path=None: frozenset({victim}))
+    assert victim not in {it["id"] for _, it in scenes.picture_items()}

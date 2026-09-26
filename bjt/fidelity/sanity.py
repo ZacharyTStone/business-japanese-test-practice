@@ -23,6 +23,15 @@ sees — the marked answer being impossible rather than merely debatable, a seco
 option being just as right, the explanation naming a different option, Japanese
 no writer would produce, options that do not answer the question asked. Anything
 that needs expertise to adjudicate is the gate's job, and stays there.
+
+**Unnatural is a fault even in a distractor.** A distractor is wrong on
+purpose, and for a long time that exempted it from being read at all. But it
+has to be wrong the way people are wrong: a stack of keigo nobody says tells
+the learner which option is the silly one and teaches nothing else. The rules
+`unnatural_japanese` and `situation_incoherent` are that lesson, from a review
+that withdrew 39 of 146 questions on 2026-09-26 (batches/withdrawn.txt). Their
+mechanical half — the patterns no reader is needed for — runs offline and for
+free in `naturalness.faults`.
 """
 from __future__ import annotations
 
@@ -41,7 +50,11 @@ RULES: dict[str, str] = {
     ),
     "second_answer_defensible": (
         "another option is just as correct as the one marked correct, so the item "
-        "has two answers"
+        "has two answers — including a distractor that is standard, natural Japanese "
+        "in this exact sentence and situation, which a native editor would not "
+        "correct, marked wrong only on preference (ご確認くださいますよう beside "
+        "ご確認いただきますよう). A register the situation really rules out, such as "
+        "外しています to a client on the phone, is a wrong answer, not a second one"
     ),
     "explanation_mismatch": (
         "the 解説 justifies a different option than the one marked correct, or "
@@ -52,6 +65,29 @@ RULES: dict[str, str] = {
         "mangled 敬語 form, a truncated sentence. NOT unusual-but-correct wording, "
         "and NOT a distractor that is deliberately impolite or wrongly pitched — "
         "those are the point of the item"
+    ),
+    # The two below are what a review of the whole bank found on 2026-09-26 and
+    # the four above did not ask about: 39 of 146 questions were withdrawn
+    # (batches/withdrawn.txt), almost all answerable and correctly keyed, and
+    # almost all unnatural. The exemption in `broken_japanese` for deliberately
+    # wrong distractors is where most of them had been hiding.
+    "unnatural_japanese": (
+        "a line — in the stimulus, the correct option OR a distractor — that no native "
+        "speaker would actually say or write, even though each word is real: an "
+        "invented keigo stack (させていただかせていただく, 申させていただく), an "
+        "honorific given to a thing (宅配便がお見えになる), a parody chain of set phrases, "
+        "a placeholder read as a name (〇〇商事), a sentence whose halves do not connect. "
+        "NOT a distractor wrong the way real people are wrong — one common 二重敬語, "
+        "casual speech to a superior — and NOT a 語彙・文法 option whose role is "
+        "nonexistent_form, which is meant not to be a word"
+    ),
+    "situation_incoherent": (
+        "the item does not hang together: the narration states the answer, an option "
+        "is about a different person from the one the question asks about, the 解説 "
+        "or a why describes a different situation from the stem, cause and effect in "
+        "the story run backwards, or the setup is not something that happens in a "
+        "Japanese office (asking a peer for permission to leave, asking another "
+        "department's permission on a posted notice)"
     ),
     "options_not_parallel": (
         "the options do not answer the question the stem asks, or two of them say "
@@ -107,8 +143,11 @@ def render_for_sanity(item: dict) -> str:
 
     lines.append("--- 問題 ---")
     lines.append(item.get("stem", ""))
+    # Each option with its role: `unnatural_japanese` must not fire on a
+    # 語彙・文法 distractor built not to be a word, and without the role the
+    # checker cannot tell that one from a mistake.
     for i, o in enumerate(item.get("options", [])):
-        lines.append(f"{i}. {o.get('text', '')}")
+        lines.append(f"{i}. {o.get('text', '')}　［{o.get('role', '')}］")
 
     ci = schemas.correct_index(item["options"])
     lines.append(f"正解として印がついているのは: {ci}. {item['options'][ci].get('text', '')}")

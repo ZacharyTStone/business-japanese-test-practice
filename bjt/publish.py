@@ -28,7 +28,7 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from . import seedtable
+from . import seedtable, withdrawn
 
 
 def lit(value: Any) -> str:
@@ -85,11 +85,15 @@ def scene_labels(item_type: str) -> dict[str, str]:
         return {}
 
 
-def bundle_sql(bundle: dict, bundle_id: str) -> str:
-    """The whole publish, as one transaction."""
+def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] = None) -> str:
+    """The whole publish, as one transaction.
+
+    `withdrawn_ids` defaults to the committed ledger (`batches/withdrawn.txt`).
+    """
     item_type = bundle["item_type"]
     items = bundle["items"]
     labels = scene_labels(item_type)
+    gone = withdrawn.ids() if withdrawn_ids is None else set(withdrawn_ids)
 
     parts: list[str] = [
         f"-- {bundle_id}: {len(items)} × {item_type} ({bundle['level']})",
@@ -201,9 +205,23 @@ def bundle_sql(bundle: dict, bundle_id: str) -> str:
             ["item_id", "position"],
         ),
         "",
-        "commit;",
-        "",
     ]
+
+    # After the upsert, so an item this transaction inserts for the first time
+    # is withdrawn in the same breath rather than served until the next deploy.
+    pulled = [it["id"] for it in items if it["id"] in gone]
+    if pulled:
+        parts += [
+            "-- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,",
+            "-- never a delete, so every answer already given keeps resolving. Nothing",
+            "-- here ever sets is_published back to true: a question the owner vetoed",
+            "-- in the app stays vetoed however often this file is applied.",
+            "update public.items set is_published = false",
+            f" where id in ({', '.join(lit(i) for i in pulled)});",
+            "",
+        ]
+
+    parts += ["commit;", ""]
     return "\n".join(p for p in parts if p is not None)
 
 
