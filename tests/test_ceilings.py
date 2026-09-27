@@ -273,6 +273,29 @@ def test_the_workflow_keeps_its_guards():
     assert "content/nightly-*" not in unlocked_block
 
 
+def test_the_nights_run_on_a_schedule_and_stay_cheap():
+    """The owner turned the nights back on (2026-09-27) on one condition: that
+    they stay very cheap. A scheduled night is one nobody is watching, so both
+    prices it can run at are held here — the env fallback, which is what a
+    schedule pays because a schedule has no inputs, and the `max_usd` default,
+    which is what a manual run pays when nobody types a number. An edit that
+    makes the nights dear again has to change this test to do it."""
+    text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
+
+    on = text[text.index("\non:\n"):text.index("\nconcurrency:")]
+    assert re.search(r'^  schedule:\n(?:\s*#.*\n)*\s+- cron: "[^"]+"', on, re.M), \
+        "the nights are on"
+
+    fallback = re.search(r"^\s+BJT_RUN_BUDGET_USD:.*\|\|\s*'([\d.]+)'", text, re.M)
+    assert fallback, "BJT_RUN_BUDGET_USD falls back to a literal when no input is given"
+    assert float(fallback.group(1)) <= 0.5
+
+    block = re.search(r"^      max_usd:\n(?:        .*\n)+", text, re.M)
+    assert block, "workflow_dispatch has an input named max_usd"
+    default = re.search(r'default:\s*"([\d.]+)"', block.group(0))
+    assert default and float(default.group(1)) <= 0.5
+
+
 def test_the_workflow_agrees_with_plan_on_a_nights_size():
     """CLAUDE.md states the size of a night as "`plan.DEFAULT_BUDGET` /
     `_PER_SLOT`, and the nightly workflow's own defaults, which must agree" —
