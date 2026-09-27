@@ -51,6 +51,33 @@ describe("the reading clock", () => {
     expect(budgetSeconds(readingItem("あ"), pace)).toBe(63);
   });
 
+  it("counts a graph's labels and figures as reading", () => {
+    const withChart: QueuedItem = {
+      ...readingItem("あ".repeat(400)),
+      documents: [
+        {
+          template: "progress_report",
+          title: "",
+          meta: [],
+          blocks: [
+            {
+              type: "chart",
+              kind: "bar",
+              caption: "月別 件数",
+              unit: "件",
+              categories: ["4月", "5月", "6月", "7月", "8月", "9月"],
+              series: [
+                { name: "電話", values: [330, 410, 340, 260, 240, 460] },
+                { name: "メール", values: [150, 190, 250, 320, 340, 370] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(budgetSeconds(withChart, pace)).toBeGreaterThan(budgetSeconds(readingItem("あ".repeat(400)), pace));
+  });
+
   it("has no clock for a type the audio paces", () => {
     expect(budgetSeconds({ ...readingItem("あ"), item_type: "hatsugen_choukai" }, pace)).toBe(0);
   });

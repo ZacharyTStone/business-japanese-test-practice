@@ -1331,7 +1331,11 @@ def cmd_render(args) -> int:
     import pathlib
 
     item = None
-    if args.item_type:
+    if getattr(args, "chart", False):
+        # The worked example of a document with a graph in it, which no type's
+        # own fixture carries: a 資料聴読解 item on the `figures` template.
+        item = fixtures.CHART_FIXTURE
+    elif args.item_type:
         item = fixtures.FIXTURES.get(args.item_type)
         if item is None:
             print(f"no fixture for {args.item_type!r}", file=sys.stderr)
@@ -1610,6 +1614,8 @@ def build_parser() -> argparse.ArgumentParser:
     rn.add_argument("path", nargs="?", help="a bundle .json containing document items")
     rn.add_argument("--item-type", choices=sorted(GENERATORS),
                     help="render this type's fixture instead of a bundle item")
+    rn.add_argument("--chart", action="store_true",
+                    help="render the worked example of a document carrying a graph")
     rn.add_argument("--index", type=int, default=0, help="which document item in the bundle")
     rn.add_argument("--page", action="store_true",
                     help="a standalone HTML page rather than a fragment")
