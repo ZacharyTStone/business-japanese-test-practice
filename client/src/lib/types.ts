@@ -115,6 +115,14 @@ export type QueuedItem = {
   options: ItemOption[];
   /** How many times this learner has met this item before. 0 means new. */
   times_seen: number;
+  /** When this question is here to re-test a lesson that is due — a 類題 — the
+   *  item that taught the lesson. Posted back with the answer, which then moves
+   *  that lesson's rung. Null for everything else. */
+  stands_for: string | null;
+  /** The distractor role being re-tested, or null for a lesson learnt without
+   *  being caught. Shown only after the answer: named before it, it would be a
+   *  hint about which option to avoid. */
+  lesson_trap: string | null;
 };
 
 export type VocabNote = { term: string; reading: string; meaning: string };
@@ -213,6 +221,19 @@ export type RoleTrap = {
   last_chosen_at: string;
   /** Times this trap caught them in the last 30 days — the window the queue weighs. */
   recent_times: number;
+  /** How many answers had this trap among the wrong options: the denominator
+   *  that makes three catches in twenty-two a trap they mostly see through.
+   *  Null for `timed_out`, which no option carries. */
+  times_met: number | null;
+  recent_met: number | null;
+};
+
+/** One row from v_my_review_load. */
+export type ReviewLoad = {
+  /** Lessons due now. Each comes back as a new question that sets the same trap. */
+  due_now: number;
+  tracked: number;
+  next_due_at: string | null;
 };
 
 /** An answered question, held in memory for the duration of one session. */
@@ -272,4 +293,9 @@ export type VocabEntry = VocabNote & {
    *  this word. */
   misses: number;
   last_missed_at: string;
+  /** The question it was last missed on, so the word can be seen where it was. */
+  item_id: string;
 };
+
+/** A line from a question that carries a word, and its clip when there is one. */
+export type TermSentence = { text: string; url: string | null };

@@ -21,10 +21,12 @@ import type {
   Profile,
   QueuedItem,
   ReviewDetail,
+  ReviewLoad,
   RoleTrap,
   SectionLevel,
   StimulusDocument,
   TagStat,
+  TermSentence,
   TypeStat,
   VocabEntry,
   VocabNote,
@@ -65,15 +67,27 @@ export async function finishSession(sessionId: string): Promise<void> {
 /**
  * Record an answer and find out whether it was right.
  *
- * Note what is NOT sent: user_id, is_correct, the role. The insert trigger fills
- * all three in, and `select` returns the graded row — so the value this resolves
- * to is the database's verdict, not ours.
+ * Note what is NOT sent: user_id, is_correct, the role, the time. The insert
+ * trigger fills them in, and `select` returns the graded row — so the value this
+ * resolves to is the database's verdict, not ours. Since 2026-09-27 the database
+ * refuses those columns outright rather than overwriting them.
+ *
+ * What IS sent, beyond the answer, is how it was given, because the ladder and
+ * the level both care: `thinkMs` (from the end of the audio, or from the question
+ * appearing on a reading item — null when the audio did not set the pace),
+ * `replays` and `peeked` (the exam plays once, and a right answer given with
+ * help is not yet a known one), and `standsFor` (the lesson a 類題 re-tests,
+ * which the database checks before believing).
  */
 export async function recordAttempt(args: {
   itemId: string;
   chosenIndex: number;
   sessionId: string | null;
   elapsedMs: number | null;
+  thinkMs: number | null;
+  replays: number;
+  peeked: boolean;
+  standsFor: string | null;
 }): Promise<{ isCorrect: boolean; chosenRole: string }> {
   const { data, error } = await supabase
     .from("attempts")
@@ -82,6 +96,10 @@ export async function recordAttempt(args: {
       chosen_index: args.chosenIndex,
       session_id: args.sessionId,
       elapsed_ms: args.elapsedMs,
+      think_ms: args.thinkMs,
+      replays: args.replays,
+      peeked: args.peeked,
+      stands_for: args.standsFor,
     })
     .select("is_correct, chosen_role")
     .single();
@@ -294,6 +312,17 @@ export async function fetchRoleTraps(): Promise<RoleTrap[]> {
   return (data ?? []) as RoleTrap[];
 }
 
+/** How many lessons are due. Home says it in the button's second line, because
+ *  "ten questions, three of them on traps that caught you" is what the set is. */
+export async function fetchReviewLoad(): Promise<ReviewLoad> {
+  const { data, error } = await supabase
+    .from("v_my_review_load")
+    .select("due_now, tracked, next_due_at")
+    .single();
+  if (error) throw error;
+  return data as ReviewLoad;
+}
+
 export async function fetchStreak(): Promise<number> {
   const { data, error } = await supabase.rpc("my_streak");
   if (error) throw error;
@@ -392,12 +421,16 @@ export function sceneUrl(imagePath: string | null): string | null {
  * than an embedded select, because PostgREST's nested filtering across a
  * many-to-one would still fetch the same rows and the join is clearer here.
  */
-export async function fetchHistory(limit = 50): Promise<HistoryEntry[]> {
-  const { data: attempts, error } = await supabase
+export async function fetchHistory(limit = 50, itemId?: string): Promise<HistoryEntry[]> {
+  // One question's answers, when the review screen is opened from a word on
+  // the vocabulary screen: that question may be older than the latest fifty.
+  let query = supabase
     .from("attempts")
     .select("id, item_id, answered_at, is_correct, chosen_index, chosen_role")
     .order("answered_at", { ascending: false })
     .limit(limit);
+  if (itemId) query = query.eq("item_id", itemId);
+  const { data: attempts, error } = await query;
   if (error) throw error;
   if (!attempts?.length) return [];
 
@@ -541,8 +574,86 @@ export async function fetchVocab(limit = 200): Promise<VocabEntry[]> {
     for (const note of notesOf.get(attempt.item_id) ?? []) {
       const seen = byTerm.get(note.term);
       if (seen) seen.misses += 1;
-      else byTerm.set(note.term, { ...note, misses: 1, last_missed_at: attempt.answered_at });
+      else
+        byTerm.set(note.term, {
+          ...note,
+          misses: 1,
+          last_missed_at: attempt.answered_at,
+          item_id: attempt.item_id as string,
+        });
     }
   }
   return [...byTerm.values()];
+}
+
+/**
+ * The line of a question a word was met in — a turn of the conversation, the
+ * narration, or an option — with its clip when that has been synthesised.
+ *
+ * A word learnt from a list is a word that is recognised on a list. The exam
+ * says it in a sentence, at speed, so this finds the sentence. Asked for one
+ * word at a time, when its entry is opened: a question's clips cannot all be
+ * asked for in one request line anyway (see fetchReviewDetail). Null when the
+ * word does not appear as written — a note may give the dictionary form of a
+ * verb that the question conjugates.
+ */
+export async function fetchTermSentence(itemId: string, term: string): Promise<TermSentence | null> {
+  const [item, options] = await Promise.all([
+    supabase.from("items").select("stem, dialogue, narration_clip_id").eq("id", itemId).single(),
+    supabase.from("item_options").select("text, clip_id").eq("item_id", itemId).order("position"),
+  ]);
+  if (item.error) throw item.error;
+  if (options.error) throw options.error;
+  const turns = (item.data.dialogue ?? []) as { text: string; clip_id: string | null }[];
+  const lines: { text: string; clip_id: string | null }[] = [
+    ...turns,
+    { text: item.data.stem as string, clip_id: item.data.narration_clip_id as string | null },
+    ...((options.data ?? []) as { text: string; clip_id: string | null }[]),
+  ];
+  const line = lines.find((l) => l.text?.includes(term));
+  if (!line) return null;
+  let url: string | null = null;
+  if (line.clip_id) {
+    const { data: clip } = await supabase
+      .from("audio_clips")
+      .select("audio_path")
+      .eq("id", line.clip_id)
+      .maybeSingle();
+    url = clipUrl((clip?.audio_path as string | null) ?? null);
+  }
+  return { text: line.text, url };
+}
+
+/**
+ * The learner's own notes on questions, by item — 復習ノート.
+ *
+ * The table has been in the schema since the first migration, because an
+ * answer is worth little if you cannot come back to the one that caught you,
+ * and until 2026-09-27 nothing wrote it. A note is the learner's sentence about
+ * why they fell for it, which is the part of a review that does the learning.
+ */
+export async function fetchNotes(itemIds: string[]): Promise<Record<string, string>> {
+  if (itemIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from("review_notes")
+    .select("item_id, note")
+    .in("item_id", itemIds);
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((row) => [row.item_id as string, row.note as string]));
+}
+
+/** Keep a note, or remove it when it has been emptied. */
+export async function saveNote(itemId: string, note: string): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("not signed in");
+  const text = note.trim();
+  if (!text) {
+    const { error } = await supabase.from("review_notes").delete().eq("item_id", itemId);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase
+    .from("review_notes")
+    .upsert({ user_id: auth.user.id, item_id: itemId, note: text }, { onConflict: "user_id,item_id" });
+  if (error) throw error;
 }

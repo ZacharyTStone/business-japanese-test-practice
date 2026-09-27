@@ -57,7 +57,17 @@ function releaseVoice(owner: object) {
  * anywhere else on the option answers, which is the same split as a number and
  * a speaker button on the exam room's answer sheet.
  */
-export function MiniPlay({ url, label }: { url: string; label: string }) {
+export function MiniPlay({
+  url,
+  label,
+  onPlay,
+}: {
+  url: string;
+  label: string;
+  /** Told when it starts playing (not when it is stopped): the practice screen
+   *  counts a spoken option heard again before the answer as a replay. */
+  onPlay?: () => void;
+}) {
   const player = useAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
   const playing = status.playing;
@@ -76,6 +86,7 @@ export function MiniPlay({ url, label }: { url: string; label: string }) {
           takeVoice(owner, () => player.pause());
           player.seekTo(0);
           player.play();
+          onPlay?.();
         }
       }}
       style={({ pressed }) => [styles.mini, pressed && { opacity: 0.85 }]}
@@ -426,10 +437,14 @@ export function AutoPlaylist({
   urls,
   autoplay,
   onFinished,
+  onReplay,
 }: {
   urls: string[];
   autoplay: boolean;
   onFinished?: () => void;
+  /** Told each time "listen again" is pressed. The exam plays once, so the
+   *  practice screen records a replay with the answer (attempts.replays). */
+  onReplay?: () => void;
 }) {
   const { t } = useLang();
   const [finished, setFinished] = React.useState(!autoplay || urls.length === 0);
@@ -458,7 +473,10 @@ export function AutoPlaylist({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t("listen_again")}
-        onPress={queue.start}
+        onPress={() => {
+          onReplay?.();
+          queue.start();
+        }}
         style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
       >
         <View style={styles.playIcon}>

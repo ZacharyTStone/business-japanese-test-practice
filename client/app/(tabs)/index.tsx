@@ -21,7 +21,7 @@ import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchDay, fetchProfile, fetchSectionLevels, fetchStreak } from "../../src/lib/db";
+import { fetchDay, fetchProfile, fetchReviewLoad, fetchSectionLevels, fetchStreak } from "../../src/lib/db";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
@@ -55,6 +55,8 @@ export default function Home() {
   const [streak, setStreak] = useState(0);
   const [day, setDay] = useState<DayStatus | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
+  // Lessons due for a 類題. Furniture: the button works without it.
+  const [due, setDue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -65,17 +67,19 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, d, lv] = await Promise.all([
+          const [p, s, d, lv, load] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchDay(),
             fetchSectionLevels(),
+            fetchReviewLoad().catch(() => null),
           ]);
           if (cancelled) return;
           setProfile(p);
           setStreak(s);
           setDay(d);
           setLevels(lv);
+          setDue(load?.due_now ?? 0);
         } catch (e) {
           // Without this the screen sat on its spinner for ever when the record
           // failed to load, which looks exactly like an app that has hung.
@@ -226,9 +230,16 @@ export default function Home() {
               />
             </View>
 
+            {/* Not a narration of the machinery — one number, because "ten
+                questions, some of them on traps that caught you" is what the
+                set is. The queue serves at most two fifths of a set as 類題. */}
             <Button
               label={t("btn_today")}
-              sub={t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done) })}
+              sub={
+                due > 0
+                  ? t("btn_today_sub_due", { n: goal - done, min: minutesFor(goal - done), due })
+                  : t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done) })
+              }
               tone="onAccent"
               icon="play"
               onPress={() => router.push("/practice")}

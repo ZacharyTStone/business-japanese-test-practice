@@ -16,12 +16,20 @@
  * and the notes. 55 of the exam's 80 questions turn on a document or a
  * conversation, and reviewing one of those from its question line alone is
  * reviewing the half that was never the problem.
+ *
+ * And a line of the learner's own under it — 復習ノート. Reading why an answer
+ * was wrong is the explanation's job; writing, in your own words, why you fell
+ * for it is the part of a review that does the learning, and it is what you
+ * want to read again the next time the same trap comes round in a new question.
+ *
+ * Opened with `?item=<id>` (from a word on the vocabulary screen) it shows that
+ * one question's answers, opened, with a way back to the whole list.
  */
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { clipUrl, fetchHistory, fetchReviewDetail } from "../src/lib/db";
+import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
@@ -41,24 +49,39 @@ export default function History() {
   const leave = () =>
     router.canGoBack() ? router.back() : router.replace("/progress");
   const { lang, t } = useLang();
+  const { item: onlyItem } = useLocalSearchParams<{ item?: string }>();
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [wrongOnly, setWrongOnly] = useState(true);
+  const [wrongOnly, setWrongOnly] = useState(!onlyItem);
   const [open, setOpen] = useState<string | null>(null);
   /** The rest of each question opened so far, by item: loaded on first
    *  opening and kept, so closing and reopening one costs nothing. */
   const [details, setDetails] = useState<Record<string, ReviewDetail | "loading" | "error">>({});
+  /** The learner's notes, as saved, by item. Furniture: the list works without. */
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isConfigured) return;
     let cancelled = false;
-    fetchHistory()
-      .then((rows) => !cancelled && setEntries(rows))
+    setEntries(null);
+    fetchHistory(50, onlyItem || undefined)
+      .then((rows) => {
+        if (cancelled) return;
+        setEntries(rows);
+        fetchNotes([...new Set(rows.map((r) => r.item_id))])
+          .then((n) => !cancelled && setNotes(n))
+          .catch(() => {});
+        // Arriving for one question: open it, rather than making them find it.
+        if (onlyItem && rows[0]) {
+          setWrongOnly(false);
+          toggle(rows[0]);
+        }
+      })
       .catch((e) => !cancelled && setError(errorText(e)));
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onlyItem]);
 
   const shown = useMemo(
     () => (entries ?? []).filter((e) => !wrongOnly || !e.is_correct),
@@ -120,10 +143,17 @@ export default function History() {
         <Text style={type.h2}>{t("hist_wrong_n", { n: wrong })}</Text>
       </Card>
 
-      <View style={styles.row}>
-        <Chip label={t("hist_wrong_chip")} selected={wrongOnly} onPress={() => setWrongOnly(true)} />
-        <Chip label={t("hist_all")} selected={!wrongOnly} onPress={() => setWrongOnly(false)} />
-      </View>
+      {onlyItem ? (
+        <View style={[styles.row, { alignItems: "center" }]}>
+          <Text style={[type.small, { flex: 1 }]}>{t("hist_only_item")}</Text>
+          <Chip label={t("hist_show_all")} selected={false} onPress={() => router.setParams({ item: "" })} />
+        </View>
+      ) : (
+        <View style={styles.row}>
+          <Chip label={t("hist_wrong_chip")} selected={wrongOnly} onPress={() => setWrongOnly(true)} />
+          <Chip label={t("hist_all")} selected={!wrongOnly} onPress={() => setWrongOnly(false)} />
+        </View>
+      )}
 
       {shown.length === 0 ? (
         <Notice title={t("hist_none_wrong")} body={t("hist_keep")} />
@@ -241,6 +271,13 @@ export default function History() {
                     ))}
                   </View>
                 ) : null}
+
+                <NoteEditor
+                  key={`${entry.item_id}-note`}
+                  itemId={entry.item_id}
+                  saved={notes[entry.item_id] ?? ""}
+                  onSaved={(text) => setNotes((n) => ({ ...n, [entry.item_id]: text }))}
+                />
               </View>
             ) : null}
           </View>
@@ -250,8 +287,77 @@ export default function History() {
   );
 }
 
+/**
+ * One line of the learner's own about a question: why it caught them. Saved on
+ * the button rather than on every keystroke, so a half-written thought is not
+ * a write, and emptied it is removed rather than kept as a blank.
+ */
+function NoteEditor({
+  itemId,
+  saved,
+  onSaved,
+}: {
+  itemId: string;
+  saved: string;
+  onSaved: (text: string) => void;
+}) {
+  const { t } = useLang();
+  const [text, setText] = useState(saved);
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  useEffect(() => setText(saved), [saved]);
+  const dirty = text.trim() !== saved.trim();
+  return (
+    <View style={{ gap: space.xs }}>
+      <Text style={type.small}>{t("note_label")}</Text>
+      <TextInput
+        value={text}
+        onChangeText={(v) => {
+          setText(v);
+          setState("idle");
+        }}
+        placeholder={t("note_placeholder")}
+        placeholderTextColor={colors.muted}
+        accessibilityLabel={t("note_label")}
+        multiline
+        style={styles.note}
+      />
+      {dirty || state !== "idle" ? (
+        <View style={[styles.row, { alignItems: "center" }]}>
+          <Chip
+            label={state === "saving" ? t("loading") : t("note_save")}
+            selected={false}
+            onPress={() => {
+              if (state === "saving" || !dirty) return;
+              setState("saving");
+              saveNote(itemId, text)
+                .then(() => {
+                  onSaved(text.trim());
+                  setState("saved");
+                })
+                .catch(() => setState("failed"));
+            }}
+          />
+          {state === "saved" ? <Text style={type.small}>{t("note_saved")}</Text> : null}
+          {state === "failed" ? <Text style={[type.small, { color: colors.wrong }]}>{t("note_failed")}</Text> : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  note: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    minHeight: 44,
+    fontSize: 15,
+    color: colors.text,
+  },
   row: { flexDirection: "row", gap: space.sm },
   entry: {
     backgroundColor: colors.surface,

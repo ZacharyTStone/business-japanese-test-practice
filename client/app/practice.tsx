@@ -61,9 +61,10 @@ import {
   sceneUrl,
   startSession,
 } from "../src/lib/db";
+import { examIsNear } from "../src/lib/exam";
 import { useLang, type Key } from "../src/lib/i18n";
 import { budgetSeconds, type TypePace } from "../src/lib/pace";
-import { verdictFor } from "../src/lib/roles";
+import { roleInfo, verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import { NO_ANSWER, type AnsweredItem, type QueuedItem, type SectionLevel } from "../src/lib/types";
@@ -237,6 +238,18 @@ export default function Practice() {
   // so the second press finds the door already shut.
   const answeredFor = useRef<number | null>(null);
   const advancedFrom = useRef<number | null>(null);
+  // How the answer was given, sent with it. `answerFrom` is when the question
+  // became answerable with its stimulus over: the moment it was on screen for
+  // a reading item, the end of the audio for a listening one. The ladder
+  // holds a right answer that took longer than the question allows — timed
+  // from here, not from the start of a two-minute conversation. `replays` and
+  // `peeked` are the help the exam does not give: another listen, or the
+  // spoken options read as text. None of it is state: nothing on screen
+  // depends on it, and a ref is written the moment it happens.
+  const answerFrom = useRef<number>(Date.now());
+  const answerFromFor = useRef<number | null>(null);
+  const replays = useRef(0);
+  const peeked = useRef(false);
 
   useEffect(() => {
     if (!isConfigured || !session?.user) return;
@@ -257,7 +270,10 @@ export default function Practice() {
         // section whose level moved rather than just that something did.
         levelsBefore.current = levels;
         setPace(paces);
-        setTimed(profile?.timed_reading ?? false);
+        // In the last two weeks before the exam date the reading clock runs
+        // whatever the setting says: that is when exam pace is the thing left
+        // to practise. The account screen says so beside the switch.
+        setTimed((profile?.timed_reading ?? false) || examIsNear(profile?.exam_date));
         setLabels(spokenLabels);
         // The size is what the day has left of its set, or the bonus set once
         // the set is done: the rest of the allowance, or a full set for an
@@ -276,6 +292,7 @@ export default function Practice() {
         mayVeto().then(setCanVeto).catch(() => setCanVeto(false));
         setSessionId(await startSession(session.user.id));
         questionShownAt.current = Date.now();
+        answerFrom.current = questionShownAt.current;
       } catch (e) {
         if (!cancelled) setError(errorText(e));
       }
@@ -369,10 +386,17 @@ export default function Practice() {
   // playing must not be undone by the playlist finishing and asking for the
   // answer stage. Read from the setter so the check sees the latest state,
   // not the render the playlist's callback was created in.
-  const go = (next: Stage) =>
+  const go = (next: Stage) => {
+    // The first time this question reaches its options with nothing left to
+    // hear: the moment the time to answer starts.
+    if (next === "answer" && answerFromFor.current !== index && answeredFor.current !== index) {
+      answerFromFor.current = index;
+      answerFrom.current = Date.now();
+    }
     setStageAt((prev) =>
       prev?.index === index && prev.stage === "reveal" && next !== "reveal" ? prev : { index, stage: next }
     );
+  };
 
   // Narration that exists only as text — a listening type whose clip has not
   // been synthesised, or a reading type, where the stem *is* the question.
@@ -400,14 +424,35 @@ export default function Practice() {
     buzz(ranOut ? 60 : 12);
     setBusy(true);
     setChosen(position);
+    const now = Date.now();
+    // A reading type is timed from the question appearing. A listening one is
+    // timed from the end of its audio — zero if it was answered before the
+    // audio finished, which spoken options allow. A listening item whose clips
+    // do not exist yet is being read, not heard, and has no think time: the
+    // database falls back to its two-minute rule for those.
+    const selfPaced = Boolean(pace[item.item_type]);
+    const thinkMs = selfPaced
+      ? now - answerFrom.current
+      : listenable
+        ? stage === "answer"
+          ? now - answerFrom.current
+          : 0
+        : null;
     try {
       const result = await recordAttempt({
         itemId: item.id,
         chosenIndex: position,
         sessionId,
-        elapsedMs: Date.now() - questionShownAt.current,
+        elapsedMs: now - questionShownAt.current,
+        thinkMs: thinkMs === null ? null : Math.max(0, thinkMs),
+        replays: replays.current,
+        peeked: peeked.current,
+        standsFor: item.stands_for ?? null,
       });
       setGraded(result);
+      // The explanation is where a miss teaches, so after one it is open
+      // already; after a right answer it stays folded for whoever wants it.
+      setShowDetails(!result.isCorrect);
       setAnswers((prev) => [
         ...prev,
         { item, chosenIndex: position, isCorrect: result.isCorrect, role: result.chosenRole },
@@ -419,6 +464,7 @@ export default function Practice() {
       const isCorrect = !ranOut && position === item.correct_index;
       const role = ranOut ? "timed_out" : (options[position]?.role ?? "");
       setGraded({ isCorrect, chosenRole: role });
+      setShowDetails(!isCorrect);
       setAnswers((prev) => [...prev, { item, chosenIndex: position, isCorrect, role }]);
     } finally {
       setBusy(false);
@@ -470,6 +516,10 @@ export default function Practice() {
     setOptionsAsText(false);
     setHovered(null);
     questionShownAt.current = Date.now();
+    answerFrom.current = questionShownAt.current;
+    answerFromFor.current = null;
+    replays.current = 0;
+    peeked.current = false;
   }
 
   async function next() {
@@ -495,6 +545,10 @@ export default function Practice() {
     setHovered(null);
     scrolledFor.current = null;
     questionShownAt.current = Date.now();
+    answerFrom.current = questionShownAt.current;
+    answerFromFor.current = null;
+    replays.current = 0;
+    peeked.current = false;
   }
 
   const revealed = stage === "reveal" && graded !== null;
@@ -570,7 +624,11 @@ export default function Practice() {
           height={6}
           style={{ flex: 1 }}
         />
-        {item.times_seen > 0 ? <Tag tone="amber">{t("again_tag")}</Tag> : null}
+        {item.stands_for ? (
+          <Tag tone="violet">{t("retest_tag")}</Tag>
+        ) : item.times_seen > 0 ? (
+          <Tag tone="amber">{t("again_tag")}</Tag>
+        ) : null}
       </View>
 
       {/* The clock, on the reading questions only, directly under the counter:
@@ -633,6 +691,9 @@ export default function Practice() {
                 urls={playlist}
                 autoplay={stage === "listen"}
                 onFinished={() => go("answer")}
+                onReplay={() => {
+                  if (answeredFor.current !== index) replays.current += 1;
+                }}
               />
             ) : null}
 
@@ -663,7 +724,11 @@ export default function Practice() {
           {spokenOptions !== null && stage === "answer" ? (
             <Pressable
               accessibilityRole="button"
-              onPress={() => setOptionsAsText((v) => !v)}
+              onPress={() => {
+                // Reading the spoken options is help the exam does not give.
+                if (!optionsAsText && answeredFor.current !== index) peeked.current = true;
+                setOptionsAsText(!optionsAsText);
+              }}
               style={({ pressed }) => [pressed && { opacity: 0.85 }]}
             >
               <Text style={[type.small, styles.toggle]}>
@@ -732,6 +797,9 @@ export default function Practice() {
                       <MiniPlay
                         url={spokenOptions[i]}
                         label={t("play_option", { label: NUMBERS[i] })}
+                        onPlay={() => {
+                          if (answeredFor.current !== index) replays.current += 1;
+                        }}
                       />
                     ) : null}
                     {show ? (
@@ -801,6 +869,15 @@ export default function Practice() {
               </View>
             </View>
             {!graded.isCorrect && !ranOut ? <RudenessMeter role={role} showLabel={false} /> : null}
+            {/* Why this question was here, said once it can no longer be a
+                hint: a 類題 re-tests a trap that caught them before. */}
+            {item.stands_for ? (
+              <Text style={type.small}>
+                {item.lesson_trap
+                  ? t("retest_note_trap", { trap: roleInfo(item.lesson_trap, lang).label })
+                  : t("retest_note")}
+              </Text>
+            ) : null}
           </Card>
 
           <Pressable
