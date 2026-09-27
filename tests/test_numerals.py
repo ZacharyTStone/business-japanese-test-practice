@@ -164,6 +164,61 @@ def test_document_faults_names_what_is_left():
 def test_to_arabic_survives_a_malformed_document():
     assert numerals.to_arabic("not a document") == 0
     assert numerals.to_arabic({"title": "九月", "blocks": [None, {"type": "table"}]}) == 1
+    assert numerals.to_arabic({"title": "", "blocks": [
+        {"type": "chart", "categories": "九月", "series": [None, {"values": [1]}]}]}) == 0
+
+
+def _chart_doc():
+    return {
+        "template": "figures",
+        "title": "十月の実績",
+        "meta": [],
+        "blocks": [{
+            "type": "chart", "kind": "bar", "caption": "上期（四月〜九月）の件数", "unit": "千件",
+            "categories": ["四月", "五月", "第一四半期"],
+            "series": [{"name": "十月入社", "values": [3, 4, 5]},
+                       {"name": "一覧", "values": [1, 2, 3]}],
+        }],
+    }
+
+
+def test_a_charts_printed_labels_follow_the_rule_and_its_figures_are_left_alone():
+    """The labels under the bars are column headings by another name, the
+    caption is a title, the legend is printed: 「四月」 there is the same fault
+    it is anywhere on the page. The figures are numbers and never text."""
+    doc = _chart_doc()
+    assert numerals.document_faults(doc) == ["九", "五", "十", "四"]
+    numerals.to_arabic(doc)
+    block = doc["blocks"][0]
+    assert doc["title"] == "10月の実績"
+    assert block["caption"] == "上期（4月〜9月）の件数"
+    assert block["categories"] == ["4月", "5月", "第一四半期"]   # an ordinal keeps its kanji
+    assert [s["name"] for s in block["series"]] == ["10月入社", "一覧"]
+    assert [s["values"] for s in block["series"]] == [[3, 4, 5], [1, 2, 3]]
+    assert numerals.document_faults(doc) == []
+
+
+@pytest.mark.parametrize("unit", ["千件", "千円", "百万円", "万円", "%"])
+def test_a_charts_unit_is_a_scale_word_and_is_left_alone(unit):
+    """「単位：千円」 is thousands of yen. Read as a number it is 「単位：1000円」,
+    which is a different and wrong sentence, so the unit is neither rewritten
+    nor flagged."""
+    doc = _chart_doc()
+    doc["title"], doc["blocks"][0]["unit"] = "実績", unit
+    doc["blocks"][0]["caption"], doc["blocks"][0]["categories"] = "件数", ["4月", "5月", "6月"]
+    doc["blocks"][0]["series"] = [{"name": "", "values": [1, 2, 3]}]
+    assert numerals.document_faults(doc) == []
+    assert numerals.to_arabic(doc) == 0
+    assert doc["blocks"][0]["unit"] == unit
+
+
+def test_the_bundle_normalises_a_chart_on_the_way_in():
+    """`batch.normalise_numerals` is the one funnel every item passes through;
+    it reaches a chart because `to_arabic` does."""
+    item = _item("shiryou_choudokkai", document=_chart_doc())
+    batch.normalise_numerals(item)
+    assert item["document"]["blocks"][0]["categories"][:2] == ["4月", "5月"]
+    assert batch.normalise_numerals(item) == 0
 
 
 # ----- the item-level policy --------------------------------------------

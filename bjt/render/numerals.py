@@ -202,12 +202,22 @@ def to_arabic(doc: Any) -> int:
     for block in doc.get("blocks") or []:
         if not isinstance(block, dict):
             continue
-        for key in ("text", "sender", "sent_at"):
+        # A caption is printed above its table or chart: 「十月の実績」 over a
+        # graph is the same fault as in a title. A chart's `unit` is not
+        # reached, on purpose — 千円, 百万円 and 千件 are scale words, not
+        # quantities, and this converter would print 「単位：1000円」.
+        for key in ("text", "sender", "sent_at", "caption"):
             if key in block:
                 block[key] = fix(block[key])
-        for key in ("items", "columns"):
+        # A chart's categories are the labels under its bars (「四月」 is a
+        # column heading by another name) and a series name is its legend.
+        # Its figures are numbers, so there is nothing in them to rewrite.
+        for key in ("items", "columns", "categories"):
             if isinstance(block.get(key), list):
                 block[key] = [fix(x) for x in block[key]]
+        for series in block.get("series") or []:
+            if isinstance(series, dict) and "name" in series:
+                series["name"] = fix(series["name"])
         if isinstance(block.get("rows"), list):
             block["rows"] = [
                 [fix(c) for c in row] if isinstance(row, list) else row
@@ -232,9 +242,13 @@ def printed_strings(doc: Any) -> list[str]:
     for block in doc.get("blocks") or []:
         if not isinstance(block, dict):
             continue
-        out += [str(block.get(k, "")) for k in ("text", "sender", "sent_at")]
+        # Not a chart's `unit`: see `to_arabic`, which leaves it alone, and a
+        # check must not flag what the converter will not move.
+        out += [str(block.get(k, "")) for k in ("text", "sender", "sent_at", "caption")]
         out += [str(x) for x in block.get("items") or []]
         out += [str(c) for c in block.get("columns") or []]
+        out += [str(c) for c in block.get("categories") or []]
+        out += [str(s.get("name", "")) for s in block.get("series") or [] if isinstance(s, dict)]
         for row in block.get("rows") or []:
             if isinstance(row, list):
                 out += [str(c) for c in row]

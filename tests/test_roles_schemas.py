@@ -113,3 +113,9 @@ def test_every_item_type_has_distinct_distractor_roles(item_type):
     assert len(roles.DISTRACTOR_ROLES[item_type]) >= 3
     for role in roles.DISTRACTOR_ROLES[item_type]:
         assert role in roles.ROLE_DESCRIPTIONS, f"{role} has no description"
+
+
+def test_the_chart_fixture_is_a_valid_item():
+    """The one fixture whose 資料 is a graph — proof that a chart can actually
+    be filled in, before a paid batch run finds out."""
+    assert schemas.validate_item("shiryou_choudokkai", fixtures.CHART_FIXTURE) == []

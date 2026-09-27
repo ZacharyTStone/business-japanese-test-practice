@@ -554,3 +554,41 @@ def test_no_type_lets_you_pass_it_by_option_length(extreme):
     skewed = {t: f"{hit}/{n}" for t, (hit, n) in by_type.items()
               if n >= 8 and hit / n > 0.5}
     assert not skewed, f"correct option is the {extreme} in: {skewed}"
+
+
+# ----- a graph in a bundle ----------------------------------------------------
+
+def _chart_bundle():
+    from bjt import fixtures
+    item = copy.deepcopy(fixtures.CHART_FIXTURE)
+    item["seed_cell"] = {"id": "figures_meeting+superior_to_subordinate+choose_the_option@J2",
+                         "setting": "figures_meeting", "relation": "superior_to_subordinate",
+                         "function": "choose_the_option", "level": "J2", "channel": "in_person"}
+    return batch.build_bundle("shiryou_choudokkai", "J2", [item], "test")
+
+
+def test_a_bundle_with_a_chart_ships():
+    """Nothing committed carries a chart yet; the first one must pass the same
+    checks as everything else, the numeral rule and the length band included."""
+    report = batch.check_bundle(_chart_bundle())
+    assert report.ok, [(c.name, c.detail) for c in report.failed]
+    assert report.warned == [], [(c.name, c.detail) for c in report.warned]
+    assert report.noted == [], [(c.name, c.detail) for c in report.noted]
+
+
+def test_a_hand_edited_chart_label_spelled_out_fails_the_bundle():
+    """`to_bundle_item` rewrites a chart's labels on the way in, so a spelled-out
+    one in a bundle means somebody edited the JSON by hand — the same failure
+    as a spelled-out table heading."""
+    bundle = _chart_bundle()
+    bundle["items"][0]["documents"][0]["blocks"][0]["categories"][0] = "四月"
+    check = next(c for c in batch.check_bundle(bundle).checks
+                 if c.name == "numbers are written as digits")
+    assert check.status == "fail" and "四" in check.detail
+
+
+def test_a_chart_the_validator_refuses_fails_the_bundle():
+    bundle = _chart_bundle()
+    bundle["items"][0]["documents"][0]["blocks"][0]["series"][0]["values"][2] = 12_500_000
+    check = next(c for c in batch.check_bundle(bundle).checks if c.name == "item validity")
+    assert check.status == "fail" and "six digits" in check.detail

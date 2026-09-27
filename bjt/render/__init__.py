@@ -12,11 +12,14 @@ not a preference.
     render.document_schema()           # -> the schema the model emits against
     render.to_arabic(doc)              # spelled-out numbers -> digits, in place
     render.document_faults(doc)        # the numbers still spelled out, [] == clean
-    render.TEMPLATES                   # -> the eight templates
+    render.TEMPLATES                   # -> the nine templates
+    render.chart                       # the graph block: bounds, text, axis
 """
+from . import chart  # noqa: F401
 from .document import (  # noqa: F401
     BLOCK_TYPES,
     CALLOUT_TONES,
+    CHART_KINDS,
     document_schema,
     prune_empty_blocks,
     text_of,

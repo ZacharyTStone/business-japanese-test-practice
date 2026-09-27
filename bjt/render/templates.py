@@ -7,10 +7,11 @@ the bottom of the minutes. Recognising the shape *is* part of the skill, so the
 templates supply it and the generated content supplies only the original
 business writing that goes inside.
 
-Each template declares the header fields it cannot do without and the item types
-it suits. `required_meta` is enforced by ``document.validate_document``: an email
-with no 件名 is not an email, and an item built on one would be testing something
-other than what it claims.
+Each template declares the header fields it cannot do without, the item types it
+suits, and whether it may carry a graph. `required_meta` and `charts` are
+enforced by ``document.validate_document``: an email with no 件名 is not an
+email, and an item built on one would be testing something other than what it
+claims.
 
 Every template is our own design and the content is always fictional — invented
 companies, people, dates and amounts. No real brand, and no transcription of any
@@ -35,6 +36,11 @@ class Template:
     #: Ways this template is allowed to vary, so a library of them does not
     #: become visually predictable. Handed to the generator as a menu.
     variations: tuple[str, ...] = field(default_factory=tuple)
+    #: Whether a `chart` block may appear in it. A graph belongs on a handout of
+    #: figures and in a progress report; in an email body, on a sign or on a
+    #: quotation it is not what arrives on a desk, so `validate_document`
+    #: refuses it there rather than drawing it.
+    charts: bool = False
 
 
 _ALL_DOC_TYPES = ("shiryou_choudokkai", "sougou_choudokkai", "sougou_dokkai")
@@ -107,6 +113,7 @@ TEMPLATES: dict[str, Template] = {
             "a summary paragraph, a milestone table, or a risks-and-actions list",
             "on schedule, slipping, or recovered after a slip",
         ),
+        charts=True,
     ),
     "quote_order": Template(
         id="quote_order",
@@ -130,6 +137,25 @@ TEMPLATES: dict[str, Template] = {
             "rules as a list, or as a short procedure",
             "a deadline, a location, or a contact as the tested detail",
         ),
+    ),
+    # The 資料 as a graph: what 資料聴読解 puts in front of the candidate when
+    # the question is about a trend or a comparison rather than a cell. Its
+    # header is a schedule's — the period the figures cover and who compiled
+    # them — because that is what a handout of figures carries, and the app
+    # draws it on the same sheet. The owner asked for this (2026-09-27).
+    "figures": Template(
+        id="figures",
+        ja="集計資料",
+        description="A handout of figures: a bar or line chart of results over a "
+        "period, with a line or two of notes, as handed round at a meeting.",
+        required_meta=("期間", "作成者"),
+        suits=("shiryou_choudokkai", "sougou_choudokkai"),
+        variations=(
+            "a bar chart comparing branches, products or periods, or a line chart of a trend",
+            "one series, or two or three compared (this year against last, plan against actual)",
+            "a note under the chart about one figure (a one-off, an estimate, a change of method)",
+        ),
+        charts=True,
     ),
 }
 
