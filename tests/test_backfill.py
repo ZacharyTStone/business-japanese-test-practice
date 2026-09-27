@@ -11,8 +11,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from bjt import batch, cli, config, llm, publish, withdrawn
-from bjt.fidelity import answerability, difficulty
+from bjt import backfill, batch, cli, config, llm, publish, withdrawn
+from bjt.fidelity import answerability, difficulty, sanity
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 #: Two small committed bundles, two live items each, in this order on disk.
@@ -159,3 +159,194 @@ def test_an_unreachable_model_stops_the_pass_and_writes_nothing(bank, monkeypatc
 def test_a_probe_that_cannot_mean_anything_is_refused(argv, capsys):
     assert cli.main(argv) == 2
     assert capsys.readouterr().err
+
+
+# ----- the regate ----------------------------------------------------------------
+
+def _key(item):
+    return next(i for i, o in enumerate(item["options"]) if o["role"] == "correct")
+
+
+def _ids(d):
+    return [it["id"] for name in SHELVES for it in batch.load(d / name)["items"]]
+
+
+@pytest.fixture
+def reviewers(bank, monkeypatch):
+    """A proofreader and a gate that say, by seed cell, what the test decides:
+    the first question is clean and kept, the second reads unnaturally, the
+    third's options give it away, the fourth's key is disputed. Each
+    proofreading bills one call. Returns what each was asked about."""
+    cells = _cells(bank, SHELVES[0]) + _cells(bank, SHELVES[1])
+    plan = dict(zip(cells, ["kept", "unnatural", "leaky", "wrong"]))
+    asked = {"sanity": [], "gate": []}
+
+    def proofread(item, **k):
+        cell = item["seed_cell"]["id"]
+        asked["sanity"].append(cell)
+        llm.spend.add("claude-haiku-4-5", SimpleNamespace(input_tokens=100, output_tokens=10))
+        if plan.get(cell) == "down":
+            return sanity.SanityResult(checked=False, notes="API request failed: overloaded")
+        if plan.get(cell) == "unnatural":
+            return sanity.SanityResult(faults=["unnatural_japanese", "broken_japanese"],
+                                       notes="「お借りさせていただかせていただいても」は\n誰も言わない。")
+        return sanity.SanityResult()
+
+    def gate(item):
+        cell = item["seed_cell"]["id"]
+        asked["gate"].append(cell)
+        ci = _key(item)
+        other = (ci + 1) % 4
+        T = answerability.Trial
+        cold = [T("cold", 0, other, False), T("cold", 1, other, False)]
+        if plan.get(cell) == "leaky":
+            return answerability.GateResult(1.0, None, "discarded:leaky", [
+                T("cold", 0, ci, True, "only this option answers a request"),
+                T("cold", 1, ci, True, "the others are refusals")])
+        if plan.get(cell) == "wrong":
+            return answerability.GateResult(0.0, 0.0, "discarded:ambiguous", [
+                T("full", 0, other, False, "the document says Tuesday"),
+                T("full", 1, other, False), *cold])
+        if plan.get(cell) == "unreachable":
+            return answerability.GateResult(0.0, 1.0, "kept", [
+                T("full", 0, ci, True), T("full", 1, None, False), *cold])
+        return answerability.GateResult(0.0, 1.0, "kept", [
+            T("full", 0, ci, True), T("full", 1, ci, True), *cold])
+
+    monkeypatch.setattr(sanity, "run_check", proofread)
+    monkeypatch.setattr(answerability, "run_gate", gate)
+    return SimpleNamespace(cells=cells, plan=plan, asked=asked)
+
+
+def test_the_regate_dry_run_counts_the_calls_and_spends_nothing(capsys, monkeypatch):
+    def explode(*a, **k):
+        raise AssertionError("--dry-run must not reach a model")
+    monkeypatch.setattr(sanity, "run_check", explode)
+    monkeypatch.setattr(answerability, "run_gate", explode)
+
+    gone, done = withdrawn.ids(), backfill.load_regated()
+    todo = sum(1 for p in batch.bundles() for it in withdrawn.live_items(batch.load(p), gone)
+               if it["id"] not in done)
+    assert cli.main(["regate", "--all", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    if todo:
+        assert f"{todo} live question(s) in" in out
+        assert f"at most {todo * (1 + 2 * config.GATE_TRIALS)} call(s)" in out
+
+
+def test_every_verdict_is_written_down_and_the_failures_are_proposed(bank, reviewers, capsys):
+    ledger = (bank / withdrawn.LEDGER_NAME).read_text(encoding="utf-8")
+    assert cli.main(["regate", "--all"]) == 0
+    out = capsys.readouterr().out
+
+    ids = _ids(bank)
+    got = backfill.load_regated()
+    assert [(got[i].verdict, got[i].reason) for i in ids] == [
+        ("kept", "-"),
+        ("discarded:sanity", "unnatural"),
+        ("discarded:leaky", "other"),
+        ("discarded:ambiguous", "wrong_answer")]
+    # The proofreader never hands the gate a question it already failed.
+    assert reviewers.asked["gate"] == [reviewers.cells[0], reviewers.cells[2], reviewers.cells[3]]
+    assert "unnatural_japanese+broken_japanese" in got[ids[1]].note
+    assert "\n" not in got[ids[1]].note
+    assert "only this option answers a request" in got[ids[2]].note
+    assert "chose option" in got[ids[3]].note and "the document says Tuesday" in got[ids[3]].note
+
+    # Proposed, not written: the ledger is untouched without --withdraw.
+    assert (bank / withdrawn.LEDGER_NAME).read_text(encoding="utf-8") == ledger
+    assert "`--withdraw` appends these" in out
+    assert out.count(f"  {ids[1]}  unnatural") == 1
+
+
+def test_withdraw_appends_the_proposals_and_publishes_them(bank, reviewers):
+    before = (bank / withdrawn.LEDGER_NAME).read_text(encoding="utf-8")
+    bundles = {name: (bank / name).read_bytes() for name in SHELVES}
+    assert cli.main(["regate", "--all", "--withdraw"]) == 0
+
+    after = (bank / withdrawn.LEDGER_NAME).read_text(encoding="utf-8")
+    assert after.startswith(before), "nothing in the ledger is rewritten or removed"
+    assert "proposed by `bjt regate`" in after
+    ids = _ids(bank)
+    ledger = withdrawn.load()
+    assert {i: w.reason for i, w in ledger.items()} == {
+        ids[1]: "unnatural", ids[2]: "other", ids[3]: "wrong_answer"}
+    assert all(len(w.note) >= 20 for w in ledger.values())
+
+    # The bundles are not edited; their SQL is what `bjt publish` writes now,
+    # and it unpublishes exactly the proposals.
+    assert {name: (bank / name).read_bytes() for name in SHELVES} == bundles
+    for name in SHELVES:
+        assert _sql_is_published(bank, name)
+    unpublished = (bank / SHELVES[0]).with_suffix(".sql").read_text(
+        encoding="utf-8").split("is_published = false")[1]
+    assert ids[1] in unpublished and ids[0] not in unpublished
+
+    # A second run finds nothing left to check and nothing new to add.
+    assert cli.main(["regate", "--all", "--withdraw"]) == 0
+    assert (bank / withdrawn.LEDGER_NAME).read_text(encoding="utf-8") == after
+
+
+def test_a_regate_stopped_by_its_ceiling_carries_on_where_it_stopped(bank, reviewers,
+                                                                        monkeypatch):
+    # Each question costs one proofreading call here; two calls' allowance
+    # stops the run after two questions.
+    monkeypatch.setattr("bjt.config.RUN_MAX_CALLS", 2)
+    assert cli.main(["regate", "--all"]) == 0
+    assert list(backfill.load_regated()) == _ids(bank)[:2]
+
+    monkeypatch.setattr(llm, "spend", llm.Spend())
+    assert cli.main(["regate", "--all"]) == 0
+    assert reviewers.asked["sanity"] == reviewers.cells, "each question checked exactly once"
+    assert list(backfill.load_regated()) == _ids(bank)
+
+
+def test_an_outage_decides_nothing(bank, reviewers):
+    for cell in reviewers.cells:
+        reviewers.plan[cell] = "down"
+    assert cli.main(["regate", "--all", "--withdraw"]) == 1
+    assert len(reviewers.asked["sanity"]) == backfill.UNREACHABLE_PATIENCE
+    assert not backfill.regate_ledger_path().exists()
+    assert withdrawn.load() == {}
+
+
+def test_a_gate_that_could_not_answer_every_trial_decides_nothing(bank, reviewers):
+    reviewers.plan[reviewers.cells[0]] = "unreachable"
+    assert cli.main(["regate", "--all"]) == 0
+    assert _ids(bank)[0] not in backfill.load_regated()
+
+
+def test_an_overruled_or_withdrawn_question_is_left_alone(bank, reviewers):
+    ids = _ids(bank)
+    backfill.record_regated(backfill.Regated(ids[1], "overruled", "2026-09-27", "unnatural",
+                                             "Read by the owner, who keeps it."))
+    (bank / withdrawn.LEDGER_NAME).write_text(
+        f"{ids[2]}  unclear       Withdrawn by hand before the regate ran.\n", encoding="utf-8")
+
+    assert cli.main(["regate", "--all", "--withdraw"]) == 0
+    assert reviewers.asked["sanity"] == [reviewers.cells[0], reviewers.cells[3]]
+    assert set(withdrawn.load()) == {ids[2], ids[3]}, "only the fresh failure is added"
+
+
+def test_every_proofreader_flag_has_a_reason_in_the_ledgers_set():
+    assert set(backfill.SANITY_REASONS) == set(sanity.RULES)
+    assert set(backfill.SANITY_REASONS.values()) <= set(withdrawn.REASONS)
+
+
+def test_the_withdrawn_ledger_only_grows(tmp_path):
+    path = tmp_path / "w.txt"
+    path.write_text("# a header\nabc123  unnatural     Nobody says this, for the test.",
+                    encoding="utf-8")
+    W = withdrawn.Withdrawal
+    for bad in (W("abc123", "unclear", "Already withdrawn, so refused."),
+                W("def456", "boring", "Not a reason in the closed set."),
+                W("def456", "unclear", "Two\nlines are not one line."),
+                W("def456", "unclear", "  ")):
+        with pytest.raises(ValueError):
+            withdrawn.append([bad], path=path)
+    assert withdrawn.append([W("def456", "wrong_answer", "The key cannot be right.")],
+                            heading="proposed by a test", path=path) == 1
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("# a header\nabc123  unnatural     Nobody says this, for the test.\n")
+    assert text.endswith("\n# proposed by a test\ndef456  wrong_answer  The key cannot be right.\n")
+    assert set(withdrawn.load(path)) == {"abc123", "def456"}

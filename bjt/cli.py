@@ -14,6 +14,8 @@ Commands
     quality       print the fidelity report (all six mechanisms)
     discriminate  run the discriminator loop and report the discrimination rate
     calibrate     sit the official sample items and compare accuracy to generated
+    probe         measure difficulty for live items that shipped without it
+    regate        put committed items through the proofreader and the gate
 
 The commands are thin on purpose. What they drive lives in the modules they
 call: one draft's checks and a shelf's loop in `bjt/pipeline.py`, the bundle and
@@ -700,6 +702,105 @@ def cmd_probe(args) -> int:
     print("\nThe bundles and their SQL are content — commit them and let the deploy "
           "workflow apply the SQL.")
     return 0
+
+
+def cmd_regate(args) -> int:
+    """Put committed questions through the proofreader and the gate they skipped.
+
+    142 of the first 146 committed questions came in through `bjt importbatch`,
+    which checks an item's shape and nothing else, and a review by hand on
+    2026-09-26 withdrew 39 of them. This asks every live question the two
+    things a fresh draft is asked before it ships — does a proofreader find a
+    fault, and does the gate find it answerable and not leaky — in the same
+    order and by the same rules (bjt/backfill.py).
+
+    Every verdict is written to batches/regated.txt as it is reached, so a run
+    stopped by the ceilings in bjt/llm.py carries on where it stopped and a
+    question is never paid for twice. A failure is reported, and proposed for
+    batches/withdrawn.txt in that ledger's format with a reason from its
+    closed set; `--withdraw` appends the proposals and rewrites the SQL of the
+    bundles they are in through the publish path. Nothing is ever taken out of
+    the ledger, no bundle is edited, and nothing is published until the diff is
+    merged.
+    """
+    try:
+        paths = backfill.select_bundles(args.paths, args.all)
+        shelves = backfill.survey_regate(paths)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 2
+
+    for shelf in shelves:
+        if shelf.todo or not args.all:
+            print(f"{shelf.path.name}: {shelf.n_items} item(s), {len(shelf.todo)} not yet "
+                  "regated" + (f" ({shelf.n_withdrawn} withdrawn, skipped)"
+                               if shelf.n_withdrawn else ""))
+    work = [s for s in shelves if s.todo]
+    items = sum(len(s.todo) for s in work)
+    per_item = 1 + 2 * config.GATE_TRIALS
+
+    if args.dry_run:
+        for shelf in work:
+            for it in shelf.todo:
+                print(f"  would check {it['id']} ({it['item_type']} {it['level']})")
+        if items:
+            print(f"\n{items} live question(s) in {len(work)} bundle(s) have no verdict yet.")
+            print(f"That is at most {items * per_item} call(s): one to {config.SANITY_MODEL} "
+                  f"and up to {2 * config.GATE_TRIALS} to {config.JUDGE_MODEL} per question.")
+            print(backfill.runs_estimate(items * per_item))
+        else:
+            print("Every live question here has a verdict.")
+        _print_proposals(backfill.proposals(paths), appended=False)
+        return 0
+
+    run = None
+    if items:
+        if not config.SANITY_ENABLED:
+            print("The proofreader is switched off (BJT_SANITY=0), and a regate is the "
+                  "proofreader and then the gate; nothing checked.", file=sys.stderr)
+            return 2
+        run = backfill.regate_bank([s.path for s in work])
+        verdicts = {}
+        for _, verdict in run.checked:
+            verdicts[verdict] = verdicts.get(verdict, 0) + 1
+        print(f"\nChecked {len(run.checked)} question(s)"
+              + (": " + ", ".join(f"{v} × {n}" for v, n in sorted(verdicts.items()))
+                 if verdicts else "")
+              + (f"; {run.unchecked} could not be checked" if run.unchecked else "")
+              + f"; {run.todo - len(run.checked)} still without a verdict.")
+        if run.stopped:
+            print(f"Stopped before the end: {run.stopped}. The next run starts where this "
+                  "one stopped.")
+        print(llmmod.spend.report())
+    else:
+        print("Every live question here has a verdict.")
+
+    found = backfill.proposals(paths)
+    if found and args.withdraw:
+        try:
+            sqls = backfill.withdraw(found)
+        except ValueError as e:
+            print(f"withdrawn.txt not changed: {e}", file=sys.stderr)
+            return 2
+        _print_proposals(found, appended=True)
+        for sql in sqls:
+            print(f"  rewrote {sql}")
+    else:
+        _print_proposals(found, appended=False)
+    if run is not None and not run.checked:
+        print("\nNothing checked.", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _print_proposals(found, *, appended: bool) -> None:
+    if not found:
+        return
+    print(f"\n{len(found)} question(s) failed and nobody has overruled them"
+          + (f"; appended to batches/{withdrawn.LEDGER_NAME}:" if appended
+             else f"; `--withdraw` appends these to batches/{withdrawn.LEDGER_NAME}:"))
+    for _, entry in found:
+        print("  " + withdrawn.line(backfill.as_withdrawal(entry)))
 
 
 def cmd_nightly(args) -> int:
@@ -1549,6 +1650,18 @@ def build_parser() -> argparse.ArgumentParser:
                      help="list what would be measured, count the calls, and spend nothing")
     prb.add_argument("--summary", default=None, help="write a markdown summary here")
     prb.set_defaults(func=cmd_probe)
+
+    rg = sub.add_parser("regate", help="put committed questions through the proofreader and "
+                                       "the gate they skipped")
+    rg.add_argument("paths", nargs="*", metavar="PATH", help="committed bundles (batches/*.json)")
+    rg.add_argument("--all", action="store_true", help="every committed bundle")
+    rg.add_argument("--dry-run", action="store_true",
+                    help="list what would be checked, count the calls, show what --withdraw "
+                         "would append, and spend nothing")
+    rg.add_argument("--withdraw", action="store_true",
+                    help="append every failure nobody has overruled to "
+                         f"batches/{withdrawn.LEDGER_NAME} and rewrite its bundle's SQL")
+    rg.set_defaults(func=cmd_regate)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")

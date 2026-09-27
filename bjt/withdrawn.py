@@ -30,6 +30,11 @@ publish from unpublishing the item, but it does not publish it again, because
 the bundle SQL never sets `is_published = true`: that is what keeps an owner's
 veto from the app from being undone by the next deploy. Putting an item back is
 one `update public.items set is_published = true where id = '…'`, by hand.
+
+The ledger is written by hand, and by one tool: `bjt regate --withdraw`
+proposes lines through `append`, which adds after what is there and never
+rewrites or removes one. A tool may make the ledger longer; only a person makes
+it shorter.
 """
 from __future__ import annotations
 
@@ -90,6 +95,48 @@ def load(path: Optional[Path] = None) -> dict[str, Withdrawal]:
 
 def ids(path: Optional[Path] = None) -> frozenset[str]:
     return frozenset(load(path))
+
+
+def line(entry: Withdrawal) -> str:
+    """One ledger line, laid out the way the hand-written ones are."""
+    return f"{entry.item_id}  {entry.reason:<12}  {entry.note}"
+
+
+def append(entries: Iterable[Withdrawal], *, heading: str = "",
+           path: Optional[Path] = None) -> int:
+    """Add lines after everything already in the ledger. Returns how many.
+
+    Append-only on purpose, and the only writer this module has. Nothing here
+    rewrites or removes a line: a line removed is a question put back in front
+    of learners, and that is a decision for a person with an editor, never for
+    a tool. Every line is held to the rules `load` applies — a reason from the
+    closed set, a note on one line — and an item already in the ledger is
+    refused rather than written twice, before anything is written at all.
+    `heading` goes above the new lines as comments, to say who proposed them.
+    """
+    path = Path(path) if path is not None else ledger_path()
+    existing = load(path)
+    entries = list(entries)
+    seen: set[str] = set()
+    for e in entries:
+        if e.reason not in REASONS:
+            raise ValueError(f"{e.item_id}: reason {e.reason!r} is not one of {', '.join(REASONS)}")
+        if e.item_id in existing or e.item_id in seen:
+            raise ValueError(f"{e.item_id} is already withdrawn")
+        if not e.note.strip() or "\n" in e.note or len(e.item_id.split()) != 1:
+            raise ValueError(f"{e.item_id}: a withdrawal is an id and a one-line note")
+        seen.add(e.item_id)
+    if not entries:
+        return 0
+    before = path.read_text(encoding="utf-8") if path.exists() else ""
+    block = [""] if before else []
+    block += [f"# {h}".rstrip() for h in heading.splitlines()]
+    block += [line(e) for e in entries]
+    with path.open("a", encoding="utf-8") as fh:
+        if before and not before.endswith("\n"):
+            fh.write("\n")
+        fh.write("\n".join(block) + "\n")
+    return len(entries)
 
 
 def live_items(bundle: dict, withdrawn: Optional[Iterable[str]] = None) -> list[dict]:
