@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from bjt import cli, config, llm, plan
+from bjt import cli, config, llm, pipeline, plan
 
 
 def _usage(**kw):
@@ -138,7 +138,7 @@ def test_the_spend_limit_is_a_billing_error_so_the_run_stops(store, monkeypatch)
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", over)
     monkeypatch.setattr("bjt.config.SANITY_ENABLED", False)
     with pytest.raises(llm.LLMBillingError):
-        cli.run_batch(store, "goi_bunpou", "J2", 4, gate=False, sanity_check=False)
+        pipeline.run_batch(store, "goi_bunpou", "J2", 4, gate=False, sanity_check=False)
     assert len(calls) == 1
 
 
@@ -271,6 +271,55 @@ def test_the_workflow_keeps_its_guards():
     unlocked = text.index("name: which of tonight's work is unlocked")
     unlocked_block = text[unlocked:text.index("- name:", unlocked + 1)]
     assert "content/nightly-*" not in unlocked_block
+
+
+def test_the_nights_run_on_a_schedule_and_stay_cheap():
+    """The owner turned the nights back on (2026-09-27) on one condition: that
+    they stay very cheap. A scheduled night is one nobody is watching, so both
+    prices it can run at are held here — the env fallback, which is what a
+    schedule pays because a schedule has no inputs, and the `max_usd` default,
+    which is what a manual run pays when nobody types a number. An edit that
+    makes the nights dear again has to change this test to do it."""
+    text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
+
+    on = text[text.index("\non:\n"):text.index("\nconcurrency:")]
+    assert re.search(r'^  schedule:\n(?:\s*#.*\n)*\s+- cron: "[^"]+"', on, re.M), \
+        "the nights are on"
+
+    fallback = re.search(r"^\s+BJT_RUN_BUDGET_USD:.*\|\|\s*'([\d.]+)'", text, re.M)
+    assert fallback, "BJT_RUN_BUDGET_USD falls back to a literal when no input is given"
+    assert float(fallback.group(1)) <= 0.5
+
+    block = re.search(r"^      max_usd:\n(?:        .*\n)+", text, re.M)
+    assert block, "workflow_dispatch has an input named max_usd"
+    default = re.search(r'default:\s*"([\d.]+)"', block.group(0))
+    assert default and float(default.group(1)) <= 0.5
+
+
+def test_the_probe_is_a_manual_run_that_does_nothing_else():
+    """The difficulty probe rides the nightly job — the same ceilings, the same
+    artifact, checks and pull request — but only when somebody asks for it
+    from the Actions tab: inputs exist only on a manual run, so a scheduled
+    night can never turn into a probe. A probe run writes no items, draws no
+    pictures and points the database at nothing."""
+    text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
+
+    def step(name):
+        start = text.index(f"name: {name}")
+        return text[start:text.index("- name:", start + 1)]
+
+    keys = step("which of tonight's work is unlocked")
+    assert ('[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && '
+            '[ "${{ github.event.inputs.probe }}" = "true" ]; then probe=true') in keys
+    assert 'if [ "$probe" = "true" ]; then\n            echo "art=false"' in keys
+
+    probe = step("measure the difficulty the bank is missing")
+    assert "if: steps.keys.outputs.probe == 'true'" in probe
+    assert "python -m bjt probe --all" in probe
+    assert "psql" not in probe and "SUPABASE" not in probe
+    assert "if: steps.keys.outputs.write == 'true'" in step("write tonight's items")
+    # The ceilings are the job's env, so the probe runs under them like a night.
+    assert text.index("BJT_RUN_BUDGET_USD:") < text.index("name: measure the difficulty")
 
 
 def test_the_workflow_agrees_with_plan_on_a_nights_size():

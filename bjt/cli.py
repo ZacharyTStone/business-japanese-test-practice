@@ -11,9 +11,16 @@ Commands
     publish       turn a checked bundle into idempotent SQL for the database
     gen           generate one item, gate it, store it, print it
     practice      answer a run of items interactively (--demo needs no key)
-    quality       print the fidelity report (mechanisms 1-5)
+    quality       print the fidelity report (all six mechanisms)
     discriminate  run the discriminator loop and report the discrimination rate
     calibrate     sit the official sample items and compare accuracy to generated
+    probe         measure difficulty for live items that shipped without it
+    regate        put committed items through the proofreader and the gate
+
+The commands are thin on purpose. What they drive lives in the modules they
+call: one draft's checks and a shelf's loop in `bjt/pipeline.py`, the passes
+over the bank that already shipped (probe, regate) in `bjt/backfill.py`, the
+bundle and its offline checks in `bjt/batch.py`, the SQL in `bjt/publish.py`.
 """
 from __future__ import annotations
 
@@ -25,9 +32,12 @@ import textwrap
 
 from . import batch as batchmod
 from . import (
+    backfill,
+    calibration,
     config,
     fixtures,
     levels,
+    pipeline,
     plan,
     publish,
     render,
@@ -39,7 +49,7 @@ from . import (
 from . import llm as llmmod
 from .llm import LLMBillingError, LLMError
 from .db import Store
-from .fidelity import answerability, dedupe, difficulty, discriminator, roles, sanity, vocab
+from .fidelity import discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
 
 
@@ -87,167 +97,6 @@ def _print_item_answer(item: dict) -> None:
         for n in notes:
             print(f"    {n['term']}（{n['reading']}） — {n['meaning']}")
     print()
-
-
-# ----- generation + gating -----------------------------------------------
-
-def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_check: bool = True,
-                       cell=None, feedback: "str | None" = None):
-    """Generate one item, run every per-item check, persist with metrics.
-    Returns (item, item_id, kept: bool, detail: str, reason: str | None) —
-    `reason` is what review said, in a sentence the next draft for the same
-    shelf is told (`feedback`), and None for an item that was kept.
-
-    The order is cheapest-first, and that is the point. The offline vocab check
-    costs nothing. The proofreader is one small call. The answerability gate is
-    six large ones, and it only runs on an item the first two did not already
-    condemn — so a generation that came out broken costs a Haiku call instead of
-    six Opus calls, and the gate's budget is spent on items that might survive it.
-    The difficulty probe comes last, a few small calls, and only for an item that
-    is going to ship: measuring the difficulty of a discarded item buys nothing.
-    """
-    gen = get_generator(item_type, store)
-    if cell is None and gen.requires_cell:
-        cell = _next_cell(store, item_type, level)
-    item = gen.generate(level, cell=cell, feedback=feedback)
-
-    vres = vocab.check_item(item, level)
-    sres = sanity.run_check(item) if sanity_check else sanity.SanityResult(checked=False)
-    gate_verdict = "skipped"
-    cold = full = None
-    if not sres.ok:
-        # No gate for an item with a fault a proofreader can see. Six calls to a
-        # strong model cannot repair an explanation that names the wrong option,
-        # and this is the whole saving.
-        gate_verdict = "discarded:sanity"
-    elif gate:
-        gres = answerability.run_gate(item)
-        cold, full, gate_verdict = gres.cold_success_rate, gres.full_success_rate, gres.verdict
-    # A vocab violation (when enforced) is an independent discard reason — it can
-    # fail an item the answerability gate passed or skipped.
-    if vres.enforced and not vres.ok and not gate_verdict.startswith("discarded"):
-        gate_verdict = "discarded:vocab"
-    kept = gate_verdict in ("kept", "skipped")
-
-    # The difficulty probe: a weaker model sits the full view a few times, and
-    # its pass rate is the difficulty prior. Only for an item that is going to
-    # ship — a discarded item's difficulty is nobody's business — and skipped
-    # entirely when switched off, which the result says rather than hides.
-    dres = difficulty.measure(item) if kept else difficulty.DifficultyResult(
-        measured=False, notes="not probed: item discarded")
-
-    item_id = store.insert_item(
-        item_type, level, item, config.GEN_MODEL,
-        cold_success_rate=cold, full_success_rate=full,
-        gate_verdict=gate_verdict, vocab_violations=vres.violations,
-    )
-    if gate and gate_verdict != "discarded:sanity":
-        for t in gres.trials:
-            store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
-    if dres.measured:
-        # Only a measurement is worth keeping: the trials of a probe that could
-        # not reach its model would read, later, as an item nobody could answer.
-        for t in dres.trials:
-            store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
-
-    # The difficulty prior travels with the item from here: the bundle carries
-    # it, `bjt publish` writes it, and the practice queue uses it as the prior
-    # for an item nobody has answered yet. It is the probe's rate when the probe
-    # ran, and the gate's full-view rate otherwise — the older, coarser number,
-    # which is still an honest one. See supabase/migrations/20260916000500 — it
-    # is a property of the question and is never shown to anybody.
-    if dres.measured:
-        item["model_p_correct"] = dres.rate
-    elif full is not None:
-        item["model_p_correct"] = full
-
-    detail = _gate_detail(cold, full, gate_verdict, vres, sres, dres)
-    gres_for_reason = gres if gate and gate_verdict != "discarded:sanity" else None
-    return item, item_id, kept, detail, _rejection_reason(
-        item_type, gate_verdict, sres, vres, gres_for_reason)
-
-
-def _rejection_reason(item_type: str, verdict: str, sres, vres, gres=None) -> "str | None":
-    """Why review rejected this draft, as one sentence for the next one."""
-    if verdict == "discarded:leaky":
-        return answerability.leak_description(item_type, gres)
-    if verdict == "discarded:ambiguous":
-        return ("a reviewer with the whole stimulus could not pick the marked answer "
-                "consistently — another option was just as defensible, or the stimulus "
-                "did not settle it")
-    if verdict == "discarded:sanity":
-        faults = "+".join(sres.faults) if sres is not None else "a proofreading fault"
-        note = (sres.notes[:200] if sres is not None and sres.notes else "")
-        return f"the proofreader flagged {faults}" + (f": {note}" if note else "")
-    if verdict == "discarded:vocab":
-        return ("it used kanji above the level's band: "
-                + " ".join(vres.violations[:8]))
-    return None
-
-
-def _spent_cells(store, item_type: str) -> set:
-    """Every seed cell this item type has already used.
-
-    Two ledgers, unioned. The committed bundles in `batches/` are the
-    authoritative one — they are what ships, and they survive a fresh clone. The
-    local SQLite database is consulted as well because it holds cells spent on
-    items generated but not yet bundled, which exist only on this machine.
-
-    Reading only the database was the bug: it is gitignored, so on a new
-    checkout every cell looked free and the next batch re-spent cells the
-    library had already used.
-    """
-    return store.used_cell_ids(item_type) | batchmod.spent_cell_ids(item_type)
-
-
-def _next_cell(store, item_type: str, level: str):
-    """One unused seed-table cell. Raises if the table for this type is exhausted
-    — better a clear stop than silently writing the same cell twice."""
-    table = seedtable.load(item_type)
-    picked = table.sample(1, level=level, exclude_ids=_spent_cells(store, item_type))
-    if not picked:
-        raise LLMError(
-            f"every {item_type} seed cell at {level} has been used; extend "
-            f"seedtable/{item_type}.json before generating more"
-        )
-    return picked[0]
-
-
-def _sample_cells(store, item_type: str, level: str, n: int) -> list:
-    """N unused cells for a run, spread across the axes. Empty list for types
-    that do not use a seed table."""
-    if not get_generator(item_type).requires_cell:
-        return []
-    table = seedtable.load(item_type)
-    cells = table.sample(n, level=level, exclude_ids=_spent_cells(store, item_type))
-    if len(cells) < n:
-        raise LLMError(
-            f"only {len(cells)} unused {item_type} cell(s) left at {level}; extend "
-            f"seedtable/{item_type}.json"
-        )
-    return cells
-
-
-def _gate_detail(cold, full, verdict, vres, sres=None, dres=None) -> str:
-    bits = []
-    if sres is not None and (not sres.ok or not sres.checked):
-        bits.append(sres.detail())
-    if cold is not None:
-        # No full rate for a leaky item: the gate stops at the cold side.
-        bits.append(f"cold={cold:.0%} full=" + ("n/a" if full is None else f"{full:.0%}"))
-    if dres is not None and (dres.measured or dres.trials):
-        # Say which model measured it: a rate from the gate's strong model and a
-        # rate from the probe's weak one are not comparable numbers.
-        bits.append(dres.detail())
-    bits.append(f"verdict={verdict}")
-    if vres.enforced and vres.violations:
-        bits.append(f"above-band kanji: {' '.join(vres.violations)}")
-    # A fault's note, or the reason no check ran. A whole night of
-    # "sanity=skipped" with the reason kept to itself is a night nobody can
-    # diagnose from the log, which is where the log was read.
-    if sres is not None and (not sres.ok or not sres.checked) and sres.notes:
-        bits.append(f"({sres.notes[:200]})")
-    return "  ".join(bits)
 
 
 # ----- commands ----------------------------------------------------------
@@ -319,7 +168,7 @@ def cmd_selftest(args) -> int:
 def cmd_gen(args) -> int:
     store = Store()
     try:
-        item, iid, kept, detail, _ = _generate_and_gate(
+        item, iid, kept, detail, _ = pipeline.generate_and_gate(
             store, args.type, args.level, gate=not args.no_gate,
             sanity_check=not args.no_sanity,
         )
@@ -344,10 +193,10 @@ def cmd_smoke(args) -> int:
     kept_n = 0
     verdicts: dict[str, int] = {}
     try:
-        cells = _sample_cells(store, args.type, args.level, args.n)
+        cells = pipeline.sample_cells(store, args.type, args.level, args.n)
         for i in range(args.n):
             try:
-                item, iid, kept, detail, _ = _generate_and_gate(
+                item, iid, kept, detail, _ = pipeline.generate_and_gate(
                     store, args.type, args.level, gate=not args.no_gate,
                     cell=cells[i] if cells else None,
                 )
@@ -435,7 +284,7 @@ def cmd_practice(args) -> int:
         attempts_budget = target * 4  # cap regen attempts so a bad streak can't loop forever
         while served < target and attempts_budget > 0:
             attempts_budget -= 1
-            item, iid, kept, detail, _ = _generate_and_gate(
+            item, iid, kept, detail, _ = pipeline.generate_and_gate(
                 store, args.type, args.level, gate=not args.fast
             )
             if not kept:
@@ -553,7 +402,9 @@ def cmd_quality(args) -> int:
             for reason in row["reasons"][:3]:
                 print(f"      tell: {reason}")
 
-        print("\n[4 · genre templates] phase 2 (総合読解) — not built yet.")
+        print("\n[4 · document templates] the shapes a 資料 is set in (bjt/render/templates.py):")
+        print(f"  {len(render.TEMPLATES)} templates: {', '.join(render.TEMPLATES)}")
+        print("  every document is held to its template's required fields by `bjt checkbatch`")
 
         print("\n[5 · sanity check] items the proofreader stopped before the gate:")
         stopped = sum(row["n"] for row in vc if row["gate_verdict"] == "discarded:sanity")
@@ -569,7 +420,8 @@ def cmd_quality(args) -> int:
         print(f"  official CAN-DO level descriptors: "
               f"{'yes' if levels.using_official_descriptors() else 'no (using neutral defaults)'}")
 
-        print("\n[calibrate] run `bjt calibrate --type <t>` after answering official + generated items.")
+        print("\n[calibrate] `bjt calibrate --type <t> --attempts-csv <file>` sets your score on the")
+        print("  official samples beside your first attempts in the app (the export SQL is in its --help).")
         print("=" * 60)
     finally:
         store.close()
@@ -619,6 +471,15 @@ def cmd_discriminate(args) -> int:
 
 
 def cmd_calibrate(args) -> int:
+    """Sit the official samples here; set the score beside the bank's.
+
+    Right over answered on both sides, with how much was answered said
+    separately: a skip is not a wrong answer. The bank's side is your first
+    attempts in the app, from `--attempts-csv` (the export SQL is
+    `calibration.ATTEMPTS_EXPORT_SQL`, printed by `bjt calibrate --help`), or
+    what `bjt practice` recorded here when no file is given. See
+    bjt/calibration.py for why both used to flatter the bank.
+    """
     from .generators.base import load_seed_json
 
     official = _normalize_official(load_seed_json("official", args.type), args.type)
@@ -626,10 +487,23 @@ def cmd_calibrate(args) -> int:
         print(f"No official items at seeds/official/{args.type}.json to sit.", file=sys.stderr)
         return 2
 
+    # The file is read before the sitting, so a wrong export is found before
+    # anybody has answered ten questions rather than after.
+    bank = None
+    if args.attempts_csv:
+        try:
+            bank = calibration.read_attempts_csv(pathlib.Path(args.attempts_csv), args.type)
+        except (OSError, ValueError) as e:
+            print(f"cannot read {args.attempts_csv}: {e}", file=sys.stderr)
+            return 2
+        source = f"your first attempts in the app ({pathlib.Path(args.attempts_csv).name})"
+    else:
+        source = "what `bjt practice` recorded here (--attempts-csv reads the app instead)"
+
     store = Store()
     try:
         print(f"Sitting {len(official)} official {args.type} sample items.\n")
-        n_correct = 0
+        sat = calibration.Tally(total=len(official))
         for i, item in enumerate(official):
             if len(item.get("options", [])) > len(LETTERS):
                 print(f"\n(skipping official item {i+1}: more than {len(LETTERS)} options)")
@@ -641,33 +515,17 @@ def cmd_calibrate(args) -> int:
             if choice is None:
                 continue
             correct = choice == ci
-            n_correct += int(correct)
+            sat.answered += 1
+            sat.right += int(correct)
             print(f"  {'✓' if correct else '✗'}  正解: {LETTERS[ci]}\n")
 
-        official_acc = n_correct / len(official) if official else None
-
-        gen_rows = [r for r in store.accuracy_by_type() if r["item_type"] == args.type]
-        gen_acc = gen_rows[0]["accuracy"] if gen_rows else None
-        n_gen = gen_rows[0]["answered"] if gen_rows else 0
-
-        store.insert_calibration_run(args.type, official_acc, gen_acc, len(official), n_gen)
-
-        print("\n" + "=" * 50)
-        print("CALIBRATION")
-        oa = f"{official_acc:.0%}" if official_acc is not None else "n/a"
-        ga = f"{gen_acc:.0%}" if gen_acc is not None else "n/a"
-        print(f"  official items:  {oa}  (n={len(official)})")
-        print(f"  generated items: {ga}  (n={n_gen})")
-        if official_acc is not None and gen_acc is not None:
-            gap = gen_acc - official_acc
-            if gap > 0.1:
-                print("  → Generated items look consistently EASIER than official ones.")
-                print("    The prompts may have drifted soft — tighten them.")
-            elif gap < -0.1:
-                print("  → Generated items look harder than official ones.")
-            else:
-                print("  → Generated and official difficulty look comparable.")
-        print("=" * 50)
+        if bank is None:
+            bank = calibration.from_store(store, args.type)
+        # Each rate with the count it is a rate of: the answered items, not
+        # the paper or the file.
+        store.insert_calibration_run(args.type, sat.accuracy, bank.accuracy,
+                                     sat.answered, bank.answered)
+        print(calibration.report(args.type, sat, bank, source))
     finally:
         store.close()
     return 0
@@ -735,101 +593,6 @@ def cmd_seedtable(args) -> int:
     return 0
 
 
-def run_batch(
-    store,
-    item_type: str,
-    level: str,
-    n: int,
-    *,
-    gate: bool = True,
-    sanity_check: bool = True,
-    force: bool = False,
-    out: "pathlib.Path | None" = None,
-) -> tuple["pathlib.Path | None", int]:
-    """Generate, gate and bundle one batch. Returns (bundle path, items kept).
-
-    Split out of `cmd_batch` so the nightly run can write several batches in one
-    process against one open store — reopening it per shelf would re-read the
-    spent-cell ledger each time and, worse, would let two shelves in the same run
-    spend the same cell.
-    """
-    kept_items: list[dict] = []
-    cells = _sample_cells(store, item_type, level, n)
-    attempts = 0
-    budget = n * 3
-    # Discards in a row. A shelf whose first three drafts all fail the gate is
-    # a shelf the generator cannot write tonight, and every further draft is
-    # the same money for the same answer. Reset by a keep.
-    strikes = 0
-    idx = 0
-    # What review said about the last draft for this shelf, told to the next
-    # one. A shelf's second and third drafts used to be written blind, and
-    # they failed the same way as the first (2026-09-19: three leaky
-    # 状況把握 drafts in a row, one shelf, nothing written).
-    #
-    # And told about the SAME cell: a draft the gate refused was a fine
-    # situation with options that gave it away, so the next draft is that
-    # situation again with the reviewer's reason in hand. Moving to a new
-    # cell on every discard — as the loop did until 2026-09-19 — threw the
-    # reason at a different situation, and the fresh draft failed the same
-    # way. Only a keep or a near-duplicate (the situation itself collides)
-    # moves the shelf on to its next cell.
-    feedback: "str | None" = None
-    while len(kept_items) < n and attempts < budget:
-        if strikes >= config.SLOT_PATIENCE:
-            print(f"  [{len(kept_items)}/{n}] giving up on this shelf: "
-                  f"{strikes} discards in a row")
-            break
-        attempts += 1
-        cell = cells[idx % len(cells)] if cells else None
-        try:
-            item, iid, kept, detail, reason = _generate_and_gate(
-                store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell,
-                feedback=feedback,
-            )
-        except LLMBillingError:
-            raise  # nothing after this can succeed; the caller ends the run
-        except LLMError as e:
-            print(f"  [{len(kept_items)}/{n}] generation failed: {e}")
-            strikes += 1
-            feedback = f"it did not validate ({str(e)[:200]})"
-            continue
-        if not kept:
-            print(f"  [{len(kept_items)}/{n}] dropped — {detail}")
-            strikes += 1
-            feedback = reason
-            continue
-        close = dedupe.max_similarity(item, kept_items)
-        if close >= dedupe.DEFAULT_THRESHOLD:
-            print(f"  [{len(kept_items)}/{n}] dropped — near-duplicate "
-                  f"of an item already in this batch ({close:.2f})")
-            strikes += 1
-            idx += 1
-            feedback = ("it was a near-duplicate of another item in this batch "
-                        f"({item.get('topic', '')!r}); write a clearly different situation")
-            continue
-        strikes = 0
-        idx += 1
-        feedback = None
-        kept_items.append(item)
-        print(f"  [{len(kept_items)}/{n}] kept  {item.get('topic','')!r}  {detail}")
-
-    if not kept_items:
-        print("\nNothing passed the gates; no bundle written.", file=sys.stderr)
-        return None, 0
-
-    bundle = batchmod.build_bundle(item_type, level, kept_items, config.GEN_MODEL)
-    report = batchmod.check_bundle(bundle)
-    _print_bundle_report(bundle, report)
-    if not report.ok and not force:
-        print("\nBundle NOT written — fix the failures above or pass --force.",
-              file=sys.stderr)
-        return None, 0
-    path = batchmod.save(bundle, out)
-    print(f"\nWrote {len(kept_items)} item(s) to {path}")
-    return path, len(kept_items)
-
-
 def cmd_batch(args) -> int:
     """Generate a batch offline and write a shippable bundle.
 
@@ -838,7 +601,7 @@ def cmd_batch(args) -> int:
     whole-batch checks that a per-item gate cannot see."""
     store = Store()
     try:
-        path, kept = run_batch(
+        path, kept = pipeline.run_batch(
             store, args.type, args.level, args.n,
             gate=not args.no_gate, sanity_check=not args.no_sanity,
             force=args.force, out=args.out,
@@ -872,7 +635,7 @@ def cmd_plan(args) -> int:
 
 
 def cmd_probe(args) -> int:
-    """Measure the difficulty of items that shipped without a measurement.
+    """Measure the difficulty of live items that shipped without a measurement.
 
     `items.model_p_correct` is the queue's prior on how hard a question is, and
     it is the only term in `next_items()` that tells two items of the same type
@@ -885,52 +648,160 @@ def cmd_probe(args) -> int:
     pitch was doing nothing at all across almost the whole library.
 
     This is the catch-up pass: the same probe, the same weaker model and the
-    same trial count, run over a committed bundle rather than over a draft. It
-    touches only items whose rate is missing, so re-running it is cheap and
-    safe, and it obeys the run ceilings in `bjt/llm.py` like everything else —
-    a bank-wide catch-up is exactly the shape of run those ceilings exist for,
-    so expect to run it more than once rather than to raise them.
+    same trial count, run over committed bundles (named, or `--all`) rather
+    than over a draft. It touches only live items whose rate is missing, so
+    re-running it is cheap and safe, and it obeys the run ceilings in
+    `bjt/llm.py` like everything else — a bank-wide catch-up is exactly the
+    shape of run those ceilings exist for, so it writes each bundle as soon as
+    it is done and expects to be run more than once rather than to have them
+    raised (bjt/backfill.py).
 
     Needs an API key. Without one every item reports unmeasured and the bundle
     is left exactly as it was, because a fabricated prior is worse than none:
     the queue would trust it.
     """
-    import pathlib
+    try:
+        paths = backfill.select_bundles(args.paths, args.all)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 2
 
-    from .fidelity import difficulty
-
-    path = pathlib.Path(args.path)
-    bundle = batchmod.load(path)
-    items = bundle.get("items", [])
-    # A withdrawn item is never served, so its difficulty is nobody's business.
-    gone = withdrawn.ids()
-    todo = [it for it in items if it.get("model_p_correct") is None and it["id"] not in gone]
-    print(f"{path.name}: {len(items)} item(s), {len(todo)} without a difficulty signal"
-          + (" (withdrawn ones skipped)" if any(it["id"] in gone for it in items) else ""))
-    if not todo:
+    shelves = backfill.survey_probe(paths)
+    for shelf in shelves:
+        if shelf.todo or not args.all:
+            print(f"{shelf.path.name}: {shelf.n_items} item(s), {len(shelf.todo)} without a "
+                  "difficulty signal"
+                  + (f" ({shelf.n_withdrawn} withdrawn, skipped)" if shelf.n_withdrawn else ""))
+    work = [s for s in shelves if s.todo]
+    items = sum(len(s.todo) for s in work)
+    if not items:
         print("Nothing to measure.")
         return 0
     if args.dry_run:
-        for it in todo:
-            print(f"  would measure {it['id']} ({it['item_type']} {it['level']})")
+        for shelf in work:
+            for it in shelf.todo:
+                print(f"  would measure {it['id']} ({it['item_type']} {it['level']})")
+        print(f"\n{items} live item(s) in {len(work)} bundle(s) have no difficulty signal.")
+        calls = items * config.DIFFICULTY_TRIALS
+        print(f"That is {calls} call(s) to {config.DIFFICULTY_MODEL}, "
+              f"{config.DIFFICULTY_TRIALS} per item.")
+        print(backfill.runs_estimate(calls))
         return 0
-
-    measured = 0
-    for it in todo:
-        result = difficulty.measure(batchmod._as_generator_shape(it))
-        print(f"  {it['id']}  {result.detail()}")
-        if result.measured and result.rate is not None:
-            it["model_p_correct"] = result.rate
-            measured += 1
-    if not measured:
-        print("\nNothing measured — the bundle is unchanged.", file=sys.stderr)
+    if not config.DIFFICULTY_ENABLED:
+        print("The difficulty probe is switched off (BJT_DIFFICULTY=0); nothing measured.",
+              file=sys.stderr)
         return 1
 
-    batchmod.save(bundle, path)
-    out, _ = publish.publish_bundle(path)
-    print(f"\nMeasured {measured} item(s); wrote {path} and {out}.")
-    print("Both are content — commit them and let the deploy workflow apply the SQL.")
+    run = backfill.probe_bank([s.path for s in work])
+    print()
+    print(run.summary(llmmod.spend))
+    if args.summary:
+        pathlib.Path(args.summary).write_text(run.summary(llmmod.spend) + "\n", encoding="utf-8")
+    if not run.measured:
+        print("\nNothing measured — every bundle is unchanged.", file=sys.stderr)
+        return 1
+    print("\nThe bundles and their SQL are content — commit them and let the deploy "
+          "workflow apply the SQL.")
     return 0
+
+
+def cmd_regate(args) -> int:
+    """Put committed questions through the proofreader and the gate they skipped.
+
+    142 of the first 146 committed questions came in through `bjt importbatch`,
+    which checks an item's shape and nothing else, and a review by hand on
+    2026-09-26 withdrew 39 of them. This asks every live question the two
+    things a fresh draft is asked before it ships — does a proofreader find a
+    fault, and does the gate find it answerable and not leaky — in the same
+    order and by the same rules (bjt/backfill.py).
+
+    Every verdict is written to batches/regated.txt as it is reached, so a run
+    stopped by the ceilings in bjt/llm.py carries on where it stopped and a
+    question is never paid for twice. A failure is reported, and proposed for
+    batches/withdrawn.txt in that ledger's format with a reason from its
+    closed set; `--withdraw` appends the proposals and rewrites the SQL of the
+    bundles they are in through the publish path. Nothing is ever taken out of
+    the ledger, no bundle is edited, and nothing is published until the diff is
+    merged.
+    """
+    try:
+        paths = backfill.select_bundles(args.paths, args.all)
+        shelves = backfill.survey_regate(paths)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 2
+
+    for shelf in shelves:
+        if shelf.todo or not args.all:
+            print(f"{shelf.path.name}: {shelf.n_items} item(s), {len(shelf.todo)} not yet "
+                  "regated" + (f" ({shelf.n_withdrawn} withdrawn, skipped)"
+                               if shelf.n_withdrawn else ""))
+    work = [s for s in shelves if s.todo]
+    items = sum(len(s.todo) for s in work)
+    per_item = 1 + 2 * config.GATE_TRIALS
+
+    if args.dry_run:
+        for shelf in work:
+            for it in shelf.todo:
+                print(f"  would check {it['id']} ({it['item_type']} {it['level']})")
+        if items:
+            print(f"\n{items} live question(s) in {len(work)} bundle(s) have no verdict yet.")
+            print(f"That is at most {items * per_item} call(s): one to {config.SANITY_MODEL} "
+                  f"and up to {2 * config.GATE_TRIALS} to {config.JUDGE_MODEL} per question.")
+            print(backfill.runs_estimate(items * per_item))
+        else:
+            print("Every live question here has a verdict.")
+        _print_proposals(backfill.proposals(paths), appended=False)
+        return 0
+
+    run = None
+    if items:
+        if not config.SANITY_ENABLED:
+            print("The proofreader is switched off (BJT_SANITY=0), and a regate is the "
+                  "proofreader and then the gate; nothing checked.", file=sys.stderr)
+            return 2
+        run = backfill.regate_bank([s.path for s in work])
+        verdicts = {}
+        for _, verdict in run.checked:
+            verdicts[verdict] = verdicts.get(verdict, 0) + 1
+        print(f"\nChecked {len(run.checked)} question(s)"
+              + (": " + ", ".join(f"{v} × {n}" for v, n in sorted(verdicts.items()))
+                 if verdicts else "")
+              + (f"; {run.unchecked} could not be checked" if run.unchecked else "")
+              + f"; {run.todo - len(run.checked)} still without a verdict.")
+        if run.stopped:
+            print(f"Stopped before the end: {run.stopped}. The next run starts where this "
+                  "one stopped.")
+        print(llmmod.spend.report())
+    else:
+        print("Every live question here has a verdict.")
+
+    found = backfill.proposals(paths)
+    if found and args.withdraw:
+        try:
+            sqls = backfill.withdraw(found)
+        except ValueError as e:
+            print(f"withdrawn.txt not changed: {e}", file=sys.stderr)
+            return 2
+        _print_proposals(found, appended=True)
+        for sql in sqls:
+            print(f"  rewrote {sql}")
+    else:
+        _print_proposals(found, appended=False)
+    if run is not None and not run.checked:
+        print("\nNothing checked.", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _print_proposals(found, *, appended: bool) -> None:
+    if not found:
+        return
+    print(f"\n{len(found)} question(s) failed and nobody has overruled them"
+          + (f"; appended to batches/{withdrawn.LEDGER_NAME}:" if appended
+             else f"; `--withdraw` appends these to batches/{withdrawn.LEDGER_NAME}:"))
+    for _, entry in found:
+        print("  " + withdrawn.line(backfill.as_withdrawal(entry)))
 
 
 def cmd_nightly(args) -> int:
@@ -966,7 +837,7 @@ def cmd_nightly(args) -> int:
             print(f"\n--- {w.n} × {w.item_type} {w.level} " + "-" * 32)
             before = llmmod.spend.usd
             try:
-                path, kept = run_batch(
+                path, kept = pipeline.run_batch(
                     store, w.item_type, w.level, w.n, gate=not args.no_gate,
                     sanity_check=not args.no_sanity, force=False,
                 )
@@ -1112,7 +983,7 @@ def cmd_importbatch(args) -> int:
 
     bundle = batchmod.build_bundle(item_type, level, items, model)
     report = batchmod.check_bundle(bundle)
-    _print_bundle_report(bundle, report)
+    pipeline.print_bundle_report(bundle, report)
     if not report.ok and not args.force:
         print("\nBundle NOT written — fix the failures above or pass --force.", file=sys.stderr)
         return 1
@@ -1127,7 +998,7 @@ def cmd_checkbatch(args) -> int:
 
     bundle = batchmod.load(pathlib.Path(args.path))
     report = batchmod.check_bundle(bundle)
-    _print_bundle_report(bundle, report)
+    pipeline.print_bundle_report(bundle, report)
     if args.show:
         for bi in bundle["items"]:
             item = dict(bi)
@@ -1146,7 +1017,7 @@ def cmd_publish(args) -> int:
     bundle = batchmod.load(path)
     report = batchmod.check_bundle(bundle)
     if not report.ok and not args.force:
-        _print_bundle_report(bundle, report)
+        pipeline.print_bundle_report(bundle, report)
         print("\nRefusing to publish a bundle that fails its own checks.", file=sys.stderr)
         return 1
 
@@ -1185,7 +1056,7 @@ def cmd_synth(args) -> int:
     bundle = batchmod.load(path)
     report = batchmod.check_bundle(bundle)
     if not report.ok and not args.force:
-        _print_bundle_report(bundle, report)
+        pipeline.print_bundle_report(bundle, report)
         print("\nRefusing to synthesise audio for a bundle that fails its own checks.",
               file=sys.stderr)
         print("A clip is expensive and permanent; an item that has not cleared its "
@@ -1574,26 +1445,11 @@ def cmd_tester(args) -> int:
     return 0
 
 
-def _print_bundle_report(bundle: dict, report) -> None:
-    marks = {"pass": "OK  ", "note": "NOTE", "warn": "WARN", "fail": "FAIL"}
-    print("\n" + "=" * 62)
-    print(f"BUNDLE CHECK — {bundle['item_type']} / {bundle['level']} / "
-          f"{len(bundle['items'])} item(s)")
-    print("=" * 62)
-    for c in report.checks:
-        print(f"  [{marks[c.status]}] {c.name}: {c.detail}")
-    print("-" * 62)
-    print(f"  {len(report.failed)} failure(s), {len(report.warned)} warning(s), "
-          f"{len(report.noted)} note(s) — "
-          f"{'SHIPPABLE' if report.ok else 'NOT SHIPPABLE'}")
-    print("  (offline checks only: the answerability gate and the discriminator "
-          "need an API key)")
-
-
 # ----- argument parsing --------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="bjt", description="BJT practice item generator (phase 1)")
+    p = argparse.ArgumentParser(
+        prog="bjt", description="Write, gate, check and publish BJT-format practice items")
     sub = p.add_subparsers(dest="command", required=True)
 
     types = sorted(GENERATORS)
@@ -1788,24 +1644,38 @@ def build_parser() -> argparse.ArgumentParser:
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 
-    pr = sub.add_parser("probe", help="measure difficulty for items that shipped without it")
-    pr.add_argument("path", help="a committed bundle (batches/*.json)")
-    pr.add_argument("--dry-run", action="store_true",
-                    help="list what would be measured and spend nothing")
-    pr.set_defaults(func=cmd_probe)
+    prb = sub.add_parser("probe", help="measure difficulty for live items that shipped without it")
+    prb.add_argument("paths", nargs="*", metavar="PATH", help="committed bundles (batches/*.json)")
+    prb.add_argument("--all", action="store_true", help="every committed bundle")
+    prb.add_argument("--dry-run", action="store_true",
+                     help="list what would be measured, count the calls, and spend nothing")
+    prb.add_argument("--summary", default=None, help="write a markdown summary here")
+    prb.set_defaults(func=cmd_probe)
+
+    rg = sub.add_parser("regate", help="put committed questions through the proofreader and "
+                                       "the gate they skipped")
+    rg.add_argument("paths", nargs="*", metavar="PATH", help="committed bundles (batches/*.json)")
+    rg.add_argument("--all", action="store_true", help="every committed bundle")
+    rg.add_argument("--dry-run", action="store_true",
+                    help="list what would be checked, count the calls, show what --withdraw "
+                         "would append, and spend nothing")
+    rg.add_argument("--withdraw", action="store_true",
+                    help="append every failure nobody has overruled to "
+                         f"batches/{withdrawn.LEDGER_NAME} and rewrite its bundle's SQL")
+    rg.set_defaults(func=cmd_regate)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")
     cb.add_argument("--show", action="store_true", help="also print every item with its 解説")
     cb.set_defaults(func=cmd_checkbatch)
 
-    pr = sub.add_parser("practice", help="answer a run of items interactively")
-    pr.add_argument("--type", choices=types, help="restrict to one item type")
-    pr.add_argument("--level", default="J2", choices=levels.LEVELS)
-    pr.add_argument("-n", type=int, default=10, help="how many items")
-    pr.add_argument("--fast", action="store_true", help="skip the gate for speed")
-    pr.add_argument("--demo", action="store_true", help="offline demo with sample items (no API key)")
-    pr.set_defaults(func=cmd_practice)
+    prc = sub.add_parser("practice", help="answer a run of items interactively")
+    prc.add_argument("--type", choices=types, help="restrict to one item type")
+    prc.add_argument("--level", default="J2", choices=levels.LEVELS)
+    prc.add_argument("-n", type=int, default=10, help="how many items")
+    prc.add_argument("--fast", action="store_true", help="skip the gate for speed")
+    prc.add_argument("--demo", action="store_true", help="offline demo with sample items (no API key)")
+    prc.set_defaults(func=cmd_practice)
 
     sub.add_parser("quality", help="print the fidelity report").set_defaults(func=cmd_quality)
 
@@ -1814,8 +1684,19 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("-n", type=int, default=6, help="max items per side")
     d.set_defaults(func=cmd_discriminate)
 
-    c = sub.add_parser("calibrate", help="sit official items, compare to generated accuracy")
+    c = sub.add_parser(
+        "calibrate", help="sit official items, compare to your accuracy on the bank",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=("Your side of the bank comes from the app. Export it with this read-only\n"
+                "SQL in the Supabase SQL editor (your sign-in address in place of\n"
+                "you@example.com), download the result as CSV, and pass the file:\n\n"
+                + textwrap.indent(calibration.ATTEMPTS_EXPORT_SQL, "    ")))
     c.add_argument("--type", required=True, choices=types)
+    c.add_argument("--attempts-csv", metavar="PATH",
+                   help="your first attempts in the app, exported with the SQL below "
+                        "(columns item_type and is_correct, and chosen_index so a "
+                        "timed-out answer is not counted as one); without it, what "
+                        "`bjt practice` recorded in the local database")
     c.set_defaults(func=cmd_calibrate)
 
     return p

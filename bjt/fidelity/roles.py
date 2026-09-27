@@ -6,8 +6,10 @@ nameable reason that the official 解説 spell out; encoding that reason as a
 required, enum-constrained field is what forces the generator to build traps the
 way the exam does, and lets us reject sloppy items mechanically.
 
-Enums are derived from the official 解説 for each item type. Listening types are
-stubbed here and will be filled in the same way when we reach them.
+Enums are derived from the official 解説 for each item type — every type the
+pipeline writes, the listening and document types included, where the traps are
+about direction of respect, 場面 fit, memory and which source was used rather
+than grammar.
 """
 from __future__ import annotations
 

@@ -99,7 +99,7 @@ def test_the_first_generated_answer_in_the_narration_is_the_one_withdrawn():
     """The pattern was written for this item; it must keep catching it."""
     item = next(it for p in batch.bundles() for it in batch.load(p)["items"]
                 if it["id"] == "c21b2af994")
-    assert any("says the answer" in f for f in naturalness.faults(batch._as_generator_shape(item)))
+    assert any("says the answer" in f for f in naturalness.faults(batch.as_generator_shape(item)))
 
 
 def test_every_item_with_a_tell_is_withdrawn_and_every_served_item_is_clean():
@@ -109,7 +109,7 @@ def test_every_item_with_a_tell_is_withdrawn_and_every_served_item_is_clean():
     caught, served_dirty = set(), []
     for path in batch.bundles():
         for it in batch.load(path)["items"]:
-            if naturalness.faults(batch._as_generator_shape(it)):
+            if naturalness.faults(batch.as_generator_shape(it)):
                 caught.add(it["id"])
                 if it["id"] not in ledger:
                     served_dirty.append(it["id"])

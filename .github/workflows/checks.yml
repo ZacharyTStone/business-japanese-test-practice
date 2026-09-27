@@ -30,6 +30,13 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - run: pytest -q
+      # Bugs, not style: undefined names, redefinitions, unused variables,
+      # comparisons that do not mean what they say. The rule set, and why it
+      # stops there, is [tool.ruff] in pyproject.toml. It runs even when a
+      # test failed, so one push reports both.
+      - name: ruff check
+        if: ${{ !cancelled() }}
+        run: ruff check .
 
   bundles:
     name: checkbatch — every committed bundle
