@@ -300,6 +300,22 @@ const S = {
   vocab_no_sentence: ["問題の中では、この形のままでは出てきません（活用した形で出ています）。", "It doesn't appear in exactly this form in the question (it's conjugated there)."],
   vocab_sentence_err: ["文を読み込めませんでした", "Couldn't load the sentence"],
 
+  // the word list — every word noted by a question already answered
+  title_words: ["ことば一覧", "Word list"],
+  words_btn: ["ことば一覧", "Word list"],
+  words_sub: ["解いた問題に出てきたことばを、例文といっしょに", "Words from questions you've answered, with a sentence each"],
+  words_loading: ["ことばを集めています…", "Gathering words…"],
+  words_empty: ["まだありません", "Nothing yet"],
+  words_empty_body: ["問題を解くと、そこに出てきたことばがここに並びます。", "Words from the questions you answer collect here."],
+  words_none_match: ["当てはまることばはありません", "No words match"],
+  words_search: ["ことば・読み方・意味で検索", "Search words, readings, meanings"],
+  words_count: ["{n}語", "{n} word|{n} words"],
+  words_furigana_on: ["ふりがなを表示", "Show furigana"],
+  words_example: ["例文", "Example"],
+  words_no_example: ["例文はありません", "No example sentence"],
+  words_more: ["もっと見る（残り{n}語）", "Show more ({n} left)"],
+  words_all: ["すべて", "All"],
+
   // audio
   dialogue_pending: ["会話（音声は準備中）", "Conversation (audio coming soon)"],
   show_text: ["本文を見る", "Show text"],

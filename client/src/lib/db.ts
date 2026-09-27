@@ -15,14 +15,17 @@
  */
 import type { TypePace } from "./pace";
 import { supabase } from "./supabase";
+import { buildWordList, type WordEntry, type WordSourceItem } from "./words";
 import type {
   DayStatus,
   HistoryEntry,
+  Level,
   Profile,
   QueuedItem,
   ReviewDetail,
   ReviewLoad,
   RoleTrap,
+  Section,
   SectionLevel,
   StimulusDocument,
   TagStat,
@@ -622,6 +625,79 @@ export async function fetchTermSentence(itemId: string, term: string): Promise<T
     url = clipUrl((clip?.audio_path as string | null) ?? null);
   }
   return { text: line.text, url };
+}
+
+/**
+ * Every word noted by a question this learner has already answered, each with
+ * a sentence from those questions — the word list.
+ *
+ * Read from the bank as it stands, and nothing written for it: the notes are
+ * the ones each item shipped with, and the sentence is found in the questions
+ * (see `words.ts`). Only answered questions, sentences included, so the list
+ * never shows a line — or a correct answer — before the question is met. A
+ * timed-out answer counts: the question was on screen.
+ *
+ * Attempts are paged, because PostgREST stops at a thousand rows, and the
+ * items asked for a hundred ids at a time, so the request line stays short.
+ * Row-level security already narrows attempts to this learner and hides
+ * unpublished questions, so a withdrawn one's words go with it.
+ */
+export async function fetchWordList(): Promise<WordEntry[]> {
+  const PAGE = 1000;
+  const answered = new Set<string>();
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("attempts")
+      .select("item_id")
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    for (const row of data ?? []) answered.add(row.item_id as string);
+    if (!data || data.length < PAGE) break;
+  }
+  if (answered.size === 0) return [];
+
+  const ids = [...answered];
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
+  const [itemPages, correctPages, types] = await Promise.all([
+    Promise.all(
+      chunks.map((chunk) =>
+        supabase
+          .from("items")
+          .select("id, item_type, level, stem, dialogue, documents, vocab_notes")
+          .in("id", chunk)
+      )
+    ),
+    Promise.all(
+      chunks.map((chunk) =>
+        supabase.from("item_options").select("item_id, text").eq("role", "correct").in("item_id", chunk)
+      )
+    ),
+    supabase.from("item_types").select("id, section"),
+  ]);
+  if (types.error) throw types.error;
+  const items = itemPages.flatMap((page) => {
+    if (page.error) throw page.error;
+    return page.data ?? [];
+  });
+  const correct = correctPages.flatMap((page) => {
+    if (page.error) throw page.error;
+    return page.data ?? [];
+  });
+  const sectionOf = new Map((types.data ?? []).map((t) => [t.id as string, t.section as Section]));
+  const answerOf = new Map(correct.map((o) => [o.item_id as string, o.text as string]));
+  const sources: WordSourceItem[] = items.map((i) => ({
+    id: i.id as string,
+    level: i.level as Level,
+    section: sectionOf.get(i.item_type as string) ?? "dokkai",
+    stem: (i.stem as string) ?? "",
+    dialogue: (i.dialogue ?? []) as { text: string }[],
+    documents: (i.documents ?? []) as StimulusDocument[],
+    vocab_notes: (i.vocab_notes ?? []) as VocabNote[],
+    correct_text: answerOf.get(i.id as string) ?? null,
+  }));
+  return buildWordList(sources);
 }
 
 /**
