@@ -223,7 +223,11 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt render <bundle.json>` | Render a document stimulus to HTML, to look at while writing one. |
 | `bjt grant <user-id>` | SQL granting or revoking the ad-free unlock, as the service role. |
 | `bjt tester <email>` | SQL letting one email address use the app while it is in testing; `--remove` takes them off. |
-| `bjt calibrate --type T` | Sit the official sample items; compare your accuracy there to your accuracy on generated items. |
+| `bjt calibrate --type T [--attempts-csv FILE]` | Your right/answered on the official samples (a skip is not wrong) beside your first attempts in the app. The read-only export SQL is in `--help`. |
+| `bjt probe <bundle.json>… \| --all [--dry-run]` | Measure the difficulty prior for live items that shipped without one. Each bundle and its SQL are written as soon as it is done, so a run stopped by the `BJT_RUN_*` ceilings resumes next time. The nightly workflow's manual "probe" input runs `--all` into a pull request. |
+| `bjt regate <bundle.json>… \| --all [--dry-run] [--withdraw]` | Put committed live questions through the proofreader and the gate they skipped on import. Verdicts go into `batches/regated.txt` (mark a failure `overruled` to keep it); `--withdraw` appends failures to `batches/withdrawn.txt` with a closed-set reason and rewrites the affected SQL. |
+| `python -m bjt.client_constants` | Rewrite `client/src/lib/generated.ts`: the distractor roles the app must describe and the Japanese name of every tag. A test fails when it is stale. |
+| `python supabase/snapshot.py` | Rewrite `supabase/current.sql`: the latest definition of every function, view and trigger, read out of the migrations. A test fails when it is stale. |
 
 Levels are `J3` / `J2` / `J1`. Config via env vars: `BJT_MODEL`,
 `BJT_JUDGE_MODEL`, `BJT_DB_PATH`, `BJT_SEEDS_DIR`, `BJT_SEEDTABLE_DIR`,
@@ -591,8 +595,11 @@ from.
 ### What runs, and when
 
 `.github/workflows/nightly.yml` has two halves, and the first needs nothing.
-It has no schedule since 2026-09-25: it runs when somebody starts it from the
-Actions tab, and restoring its `cron` trigger turns the nights back on.
+It runs every night at 03:00 JST, and cheaply: three items at most, reading
+first, and never more than fifty cents a night (`BJT_RUN_BUDGET_USD`, pinned
+by a test). It was off from 2026-09-25 until the owner turned it back on, very
+cheap, on 2026-09-27; a manual run from the Actions tab still works, and can
+ask for the difficulty probe (`bjt probe --all`) instead of new items.
 
 * **the survey** — `bjt plan` into the run summary, on every run, offline. This is
   the half that tells you sixteen shelves are empty.
@@ -648,7 +655,13 @@ stops raising a score.
 
 `section_levels` holds three levels and `adjust_level()` moves each on the same
 rule, counted inside that section: ten answers to begin with and twenty once
-there is a record, 80% right moves it up, 40% or fewer moves it down. A learner
+there is a record, 80% right moves it up, 40% or fewer moves it down. The
+window is never larger than the questions the level has left for the learner
+and never judged on fewer than five, nobody is moved into a level with fewer
+than five questions left to meet, and an answer given after a replay or with
+the spoken options read counts for neither direction — the exam plays once.
+Most shelves of the bank hold fewer than ten questions, and until 2026-09-27 a
+learner who reached one of them could never leave it. A learner
 can sit at 読解 J1 and 聴解 J3 at once, which describes a great many people
 studying for this exam. Nobody is asked anything; there is still nothing to
 choose. `profiles.target_level` survives as the one-line summary — the middle of
@@ -665,10 +678,20 @@ nothing. Four buckets, in this order:
 
 | | | |
 |---|---|---|
-| 0 | **due** | items the spacing ladder says are due today, most overdue first, at any level. Capped at two fifths of the set, so a backlog after a week away cannot crowd out everything new. |
+| 0 | **due** | lessons the spacing ladder says are due today, misses first — each served as a **類題**: an unseen question of the same type that sets the trap which caught the learner (or shares its 機能, for a lesson learnt without being caught). Never the same question while a new one exists. Capped at two fifths of the set, so a backlog after a week away cannot crowd out everything new. |
 | 1 | **fresh** | unseen items at their section's level, weakest ground first, spread across problem types and settings. |
 | 2 | **stretch** | exactly one unseen item from the level above, taken from the section they are **strongest** in — a probe is worth most where a promotion is closest. `adjust_level()` ignores it, so it can never cost one. |
-| 3 | **the rest** | everything else at their level, then the adjacent levels, so a thin level still fills a set instead of ending it early. |
+| 3 | **the rest** | every other unseen question — their level, then the adjacent levels, then anything further — before any question already met, so a thin level still fills a set instead of ending it early, and a repeat is the last resort rather than the backlog. |
+
+**A due review is a new question, not the same one.** Re-meeting the same four
+sentences a day later tests whether you remember "it was 3"; the exam asks the
+trap again, in a situation you have not seen. So the ladder schedules the
+*lesson* an item taught, and `next_items()` re-tests a due lesson with a
+question the learner has never met that carries the same trap among its wrong
+options. It arrives with `stands_for` naming the lesson; the answer moves that
+lesson's rung, and `grade_attempt()` clears a `stands_for` the queue could not
+have served. Two misses on one trap get two different questions. The owner
+asked for this (2026-09-27): "I HATE taking the same question over and over."
 
 "Weakest ground" is four things, and every one of them is arithmetic you can
 check by hand.
@@ -693,7 +716,7 @@ check by hand.
   (below); the queue prefers items near a target, and the target slides:
 
   ```
-  target = 0.85 − (your accuracy at this problem type) × 0.33,  held in [0.50, 0.80]
+  target = 0.85 − (your accuracy at this problem type) × 0.35,  held in [0.50, 0.80]
   ```
 
   Someone at 90% on 発言聴解 is handed items the bank answers right 55% of the
@@ -719,17 +742,25 @@ There used to be a manual mode (`free`, `mock`) that served one chosen type at
 one chosen level. It is gone, along with the screen that asked for it.
 
 **The spacing ladder is a trigger.** `review_schedule` holds one row per
-(learner, item): when it is next worth meeting, and which rung of a five-rung
-ladder it is on — 20 hours, 3 days, 1 week, 3 weeks, 2 months. A right answer
-climbs a rung; a wrong one drops all the way to the bottom, because a trap you
-still fall for after three weeks is a trap you have not learned. It is a fixed
+(learner, lesson): when it is next worth re-testing, which rung of a five-rung
+ladder it is on — 20 hours, 3 days, 1 week, 3 weeks, 2 months — and which trap
+caught them. A right answer climbs a rung; a wrong one drops all the way to the
+bottom, because a trap you still fall for after three weeks is a trap you have
+not learned. A question known at first sight starts on the three-day rung. A
+right answer holds its rung when it was slow — past the reading clock's own
+maximum for a reading type, or thirty seconds after the audio for a listening
+one, timed from when the question could be answered (`think_ms`) — or when it
+was helped by a replay or the spoken options read. With an exam date set, every
+due date is brought in ahead of it, and the last two weeks follow the exam's
+section mix strictly. It is a fixed
 table of intervals rather than a fitted forgetting curve on purpose: a curve
 needs calibration these items do not have, and "tomorrow, then in three days,
 then in a week" is a promise a learner can hold the app to. The client cannot
 write it — same rule as `attempts`, for the same reason.
 
 **The bank is shared, and it gets better as people use it.** `item_stats` counts
-how often each item is answered correctly across *every* learner;
+how often each item is answered correctly across *every* learner — each
+person's first answer, timeouts left out;
 `refresh_item_stats()` recomputes it out of hours, as the service role, never on
 the path of somebody waiting for five questions. The queue prefers items near a
 target success rate, because too easy teaches nothing and so does too hard.
@@ -742,7 +773,7 @@ Two things guard that, and both matter:
 * **The raw counts are not readable by a client.** With a handful of users,
   "answered 1, correct 0" is a statement about a person. `item_stats` has RLS on
   and no policy; what clients can read is `v_item_difficulty`, which only exists
-  above eight answers.
+  above eight answers, from eight different people.
 
 An item nobody has answered yet has no measured rate, and that is the common case
 the day a batch ships. So a rate measured at generation time travels with the
@@ -876,7 +907,11 @@ bjt/
   seedtable.py   場面×関係×機能×レベル → cells
   plan.py        which shelf of the bank is emptiest, and tonight's work order
                  (not tts/plan.py, which decides what to synthesise)
-  batch.py       batch runs, the bundle format, the whole-batch checks
+  batch.py       the bundle format and the whole-batch checks
+  pipeline.py    one draft through every check, and a shelf of drafts (bjt batch, bjt nightly)
+  backfill.py    passes over the bank that already shipped: bjt probe, bjt regate
+  calibration.py official samples against your first attempts in the app
+  client_constants.py  the roles and tag names the app needs, written as client/src/lib/generated.ts
   schemas.py     item JSON schema + validation
   levels.py      CAN-DO descriptors (loadable from seeds)
   llm.py         Anthropic client wrapper (structured output only)
@@ -886,6 +921,8 @@ batches/         bundles, their published SQL, and the reference batch — commi
 seeds.example/   committed templates; real content goes in gitignored seeds/
 supabase/
   migrations/    schema, RLS, stats views, the selection RPC
+  current.sql    the latest definition of every function, view and trigger — generated, read-only
+  snapshot.py    writes current.sql from the migrations
   test/          run.sh — the whole schema, proved against a throwaway Postgres
 client/          the Expo app (see client/README.md)
 ```

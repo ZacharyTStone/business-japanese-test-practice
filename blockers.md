@@ -36,6 +36,22 @@ tell us the generated items are actually close to the exam. Until they run, the
 claim rests on the hand-written reference batches, which were written by the
 same judgement that would be grading them.
 
+**Two catch-up passes are ready and waiting on the same key** (2026-09-27):
+
+```bash
+bjt probe --all --dry-run    # 105 live items with no difficulty: 525 calls to the small model
+bjt probe --all              # the practice queue's difficulty term sorts nothing until this runs
+bjt regate --all --dry-run   # 107 live items never proofread or gated: at most 749 calls
+bjt regate --all             # verdicts into batches/regated.txt; add --withdraw to propose failures
+```
+
+Each stops at the run ceilings and resumes where it stopped, so the whole bank
+is two or three runs of each; the nightly workflow's manual "probe" input runs
+the first into a pull request. `bjt calibrate --attempts-csv` compares your
+official-sample accuracy with your first attempts in the app; it needs the
+official items in `seeds/official/` and an export the owner runs in the
+Supabase SQL editor (the query is in `bjt calibrate --help`).
+
 ---
 
 ## 2. The bank has a voice and no key to speak with
@@ -256,10 +272,12 @@ leaving a pull request for somebody to read. The survey half runs on every run:
 it needs no key, no network and no project, and it is the thing that says out
 loud that sixteen of the twenty-seven shelves are empty.
 
-**Paused (2026-09-25).** The workflow's schedule is off at the owner's request:
-the app is used too little to pay for a night of questions. It runs only when
-started from the Actions tab; restoring the `cron` in `nightly.yml` turns the
-nights back on.
+**Back on, very cheap (2026-09-27).** The schedule was off from 2026-09-25 —
+the app was used too little to pay for a night of questions — and the owner
+turned it back on asking that it stay very cheap: every night at 03:00 JST,
+three items at most, reading first, and never more than fifty cents
+(`BJT_RUN_BUDGET_USD` in `nightly.yml`, pinned at or below 0.5 by a test). A
+night that needs its retries stops short and ships what it has.
 
 **What is blocked.** The writing half needs one secret:
 
