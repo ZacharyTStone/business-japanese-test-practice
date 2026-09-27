@@ -6,7 +6,7 @@ import copy
 
 import pytest
 
-from bjt import cli, fixtures, llm
+from bjt import fixtures, llm, pipeline
 from bjt.fidelity import answerability, difficulty
 
 
@@ -142,7 +142,7 @@ def test_kept_item_ships_with_the_probes_rate_not_the_gates(store, monkeypatch, 
         _gate_answerer(kept=True),
         _answerer([True, False, False, True, False], probe_calls)))
 
-    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert kept
     assert len(probe_calls) == 5
@@ -161,7 +161,7 @@ def test_unmeasured_item_falls_back_to_the_gates_rate(store, monkeypatch, genera
 
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(_gate_answerer(kept=True), down))
 
-    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert kept
     assert item["model_p_correct"] == 1.0
@@ -176,7 +176,7 @@ def test_switched_off_leaves_the_gates_rate_and_makes_no_call(store, monkeypatch
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(
         _gate_answerer(kept=True), _answerer([True] * 5, probe_calls)))
 
-    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert kept
     assert probe_calls == []
@@ -190,7 +190,7 @@ def test_discarded_item_is_never_probed(store, monkeypatch, generated):
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(
         _gate_answerer(kept=False), _answerer([True] * 5, probe_calls)))
 
-    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "goi_bunpou", "J2", gate=True)
 
     assert not kept and "discarded:leaky" in detail
     assert probe_calls == []
@@ -204,7 +204,7 @@ def test_probe_runs_when_the_gate_is_skipped(store, monkeypatch, generated):
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(
         _gate_answerer(kept=True), _answerer([True, True, True, True, False], probe_calls)))
 
-    item, iid, kept, detail, _ = cli._generate_and_gate(store, "goi_bunpou", "J2", gate=False)
+    item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "goi_bunpou", "J2", gate=False)
 
     assert kept and len(probe_calls) == 5
     assert item["model_p_correct"] == pytest.approx(4 / 5)
@@ -214,6 +214,6 @@ def test_probe_runs_when_the_gate_is_skipped(store, monkeypatch, generated):
 def test_quality_summary_reads_the_probes_trials(store, monkeypatch, generated):
     monkeypatch.setattr(answerability.llm, "answer_choice", _route(
         _gate_answerer(kept=True), _answerer([True, False, True, False, True])))
-    cli._generate_and_gate(store, "goi_bunpou", "J2", gate=True)
+    pipeline.generate_and_gate(store, "goi_bunpou", "J2", gate=True)
     rows = store.difficulty_summary()
     assert rows == [{"item_type": "goi_bunpou", "avg_rate": pytest.approx(3 / 5), "n": 1}]

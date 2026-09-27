@@ -44,12 +44,19 @@ export function RudenessMeter({ role, showLabel = true }: { role: string; showLa
   const info = roleInfo(role, lang);
   if (role === "correct") return null;
 
+  // A misread table offends nobody. Where the question is about reading or
+  // hearing correctly, the bars would read "rudeness: none" under every miss,
+  // which is true and says nothing — the advice is the part worth the space.
   return (
     <View style={styles.wrap}>
       {showLabel ? <Text style={type.h2}>{info.label}</Text> : null}
-      <Bar label={t("rudeness")} value={info.rudeness} tone={colors.wrong} />
-      <Bar label={t("miss")} value={info.miss} tone={colors.warn} />
-      <Text style={[type.small, { marginTop: space.xs }]}>{info.advice}</Text>
+      {info.manner ? (
+        <>
+          <Bar label={t("rudeness")} value={info.rudeness} tone={colors.wrong} />
+          <Bar label={t("miss")} value={info.miss} tone={colors.warn} />
+        </>
+      ) : null}
+      <Text style={[type.small, info.manner && { marginTop: space.xs }]}>{info.advice}</Text>
     </View>
   );
 }

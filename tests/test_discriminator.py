@@ -85,6 +85,18 @@ def test_the_rendering_carries_the_document():
     assert "GEN-stem" in rendered
 
 
+def test_the_rendering_carries_a_charts_figures():
+    """The discriminator sees what the learner sees, and a learner sees the
+    bars. A graph that reached the judge as its title alone could neither
+    lower the score nor be named as a tell."""
+    import copy
+    from bjt import fixtures
+    rendered = textutil.render_for_discriminator(copy.deepcopy(fixtures.CHART_FIXTURE))
+    assert "--- 資料 ---" in rendered
+    assert "【棒グラフ】月別 問い合わせ件数（単位：件）" in rendered
+    assert "電話：4月 330 / 5月 410" in rendered
+
+
 def test_the_rendering_carries_the_dialogue():
     item = _document_item("GEN", with_document=False)
     item["dialogue"] = [{"speaker_role": "manager_m", "text": "お願いします。"}]

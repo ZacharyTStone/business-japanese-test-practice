@@ -432,7 +432,10 @@ def validate_item(item_type: str, item: dict) -> list[str]:
 
 #: A conversation with two turns is not a conversation, and one with twelve is a
 #: memory test rather than a listening test. Both ends are enforced.
-DIALOGUE_MIN_TURNS, DIALOGUE_MAX_TURNS = 3, 10
+# What the model is told (the dialogue schema's description above) and what is
+# accepted are the same bounds. The validator used to allow ten while the model
+# was asked for eight; the longest committed conversation is six turns.
+DIALOGUE_MIN_TURNS, DIALOGUE_MAX_TURNS = 3, 8
 
 #: At most this many documents per item. Two is already a lot to hold on a
 #: phone screen; three would be testing scrolling.

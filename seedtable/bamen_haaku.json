@@ -1,6 +1,6 @@
 {
   "item_type": "bamen_haaku",
-  "_note": "Original design, not licensed material. The `function` axis is WHAT THE QUESTION ASKS ABOUT the situation — where this is, who is speaking, what happens next. That is the axis that has to vary: ten items all asking 「ここはどこですか」 is one item asked ten times, however different the scenes are.",
+  "_note": "Original design, not licensed material. The `function` axis is WHAT THE QUESTION ASKS ABOUT the situation — where this is, who is speaking, what happens next. That is the axis that has to vary: ten items all asking 「ここはどこですか」 is one item asked ten times, however different the scenes are. `uchi_to_soto` is offered only to the questions about who is speaking and to whom: how somebody refers to their own boss （「部長の田中は…」） is the clue that the listener is outside the company. A negotiation is a setting: what is asked about it is still where, who, why and what happens next. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -103,6 +103,15 @@
       "scenes": [
         "scene_video_call_laptop"
       ]
+    },
+    {
+      "id": "negotiation_table",
+      "ja": "商談の席（価格・条件の交渉）",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room",
+        "scene_client_office_sofa"
+      ]
     }
   ],
   "relations": [
@@ -145,6 +154,11 @@
       "id": "staff_to_customer",
       "ja": "社員 → 顧客",
       "direction": "out"
+    },
+    {
+      "id": "uchi_to_soto",
+      "ja": "自社 → 社外（身内のことを話す）",
+      "direction": "out"
     }
   ],
   "functions": [
@@ -177,7 +191,8 @@
         "other_department",
         "staff_to_client",
         "staff_to_visitor",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "in_person",
@@ -196,7 +211,8 @@
         "other_department",
         "staff_to_client",
         "staff_to_visitor",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "in_person",
@@ -285,7 +301,8 @@
     "reception": [
       "staff_to_visitor",
       "staff_to_customer",
-      "peer_to_peer"
+      "peer_to_peer",
+      "uchi_to_soto"
     ],
     "office_floor": [
       "subordinate_to_superior",
@@ -300,7 +317,8 @@
       "superior_to_subordinate",
       "peer_to_peer",
       "other_department",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ],
     "corridor": [
       "subordinate_to_superior",
@@ -314,14 +332,16 @@
       "staff_to_client",
       "staff_to_visitor",
       "staff_to_customer",
-      "peer_to_peer"
+      "peer_to_peer",
+      "uchi_to_soto"
     ],
     "event_venue": [
       "staff_to_client",
       "staff_to_visitor",
       "staff_to_customer",
       "peer_to_peer",
-      "other_department"
+      "other_department",
+      "uchi_to_soto"
     ],
     "dining": [
       "subordinate_to_superior",
@@ -329,7 +349,8 @@
       "superior_to_subordinate",
       "peer_to_peer",
       "other_department",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ],
     "phone_desk": [
       "subordinate_to_superior",
@@ -339,7 +360,8 @@
       "other_department",
       "staff_to_client",
       "staff_to_visitor",
-      "staff_to_customer"
+      "staff_to_customer",
+      "uchi_to_soto"
     ],
     "video_call": [
       "subordinate_to_superior",
@@ -347,7 +369,13 @@
       "superior_to_subordinate",
       "peer_to_peer",
       "other_department",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
+    ],
+    "negotiation_table": [
+      "staff_to_client",
+      "subordinate_to_superior",
+      "uchi_to_soto"
     ]
   }
 }

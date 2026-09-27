@@ -184,13 +184,6 @@ class Store:
         ).fetchall()
         return [r["topic"] for r in rows if r["topic"]]
 
-    def recent_stems(self, item_type: str, limit: int) -> list[str]:
-        rows = self.conn.execute(
-            "SELECT stem FROM items WHERE item_type = ? ORDER BY id DESC LIMIT ?",
-            (item_type, limit),
-        ).fetchall()
-        return [r["stem"] for r in rows]
-
     # ----- responses ------------------------------------------------------
 
     def record_response(self, item_id: int, chosen_index: int, correct: bool) -> None:

@@ -22,10 +22,17 @@ All of these run offline — no API key, no Supabase project, no network:
 
 ```bash
 pytest                                  # the item pipeline
+ruff check .                            # bugs only: undefined names, unused variables, bad comparisons
 supabase/test/run.sh                    # schema + RLS + publish, on a throwaway Postgres
 cd client && npm run typecheck          # the app
+cd client && npm test                   # the app's pure parts: the practice reducer, the clock, the roles
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json   # the reference batch
 ```
+
+Two generated files ride along with the changes that make them stale, and
+`pytest` fails until they are regenerated: `python -m bjt.client_constants`
+(the app's list of distractor roles and tag names, from `bjt/` and
+`seedtable/`) and `python supabase/snapshot.py` (`supabase/current.sql`).
 
 `python -m bjt plan` is not a check, but run it after anything that touches the
 library: it says in one screen whether the bank is still the shape the practice
@@ -44,10 +51,13 @@ accident is not.
 - **Nothing is generated while somebody is practising.** Generation is a batch
   job (`bjt batch`, or `bjt nightly` from the **nightly** workflow); content
   ships as reviewable SQL (`bjt publish`). This is why the running cost is
-  zero. The workflow has no schedule: it runs only when started by hand from
-  the Actions tab (the owner, 2026-09-25 — the app is used too little to pay
-  for a night of questions, and four nights had sat unread on branches). Put
-  the `cron` back in `nightly.yml` to turn the nights on again. The nightly job
+  zero. The workflow runs every night at 03:00 JST, and it is kept very cheap:
+  three items at most, reading first, and never more than fifty cents a night
+  (`BJT_RUN_BUDGET_USD` and the `max_usd` default in `nightly.yml`, both pinned
+  at or below 0.5 by `tests/test_ceilings.py`). The owner took the schedule off
+  on 2026-09-25, when the app was used too little to pay for a night of
+  questions, and put it back, very cheap, on 2026-09-27. A manual run can ask
+  for the difficulty probe (`bjt probe --all`) instead of new items. The nightly job
   opens a pull request and never publishes — that branch is the review gate the
   roadmap asks for, and it is the one exception to the rule above. Merging it
   is the decision to ship: the **deploy database** workflow runs by itself
@@ -100,16 +110,27 @@ accident is not.
   learner can be 読解 J1 and 聴解 J3 at once, which is most people.
   `profiles.target_level` is only the one-line summary (the middle of the three)
   and must never be what decides which questions are served.
+  The window is ten first attempts at the level (twenty once the section has a
+  record) but never more than the questions the level has left for this
+  learner, and never judged on fewer than five; nobody is moved into a level
+  with fewer than five questions left to meet; and an answer given after a
+  replay or with the spoken options read counts for neither direction, because
+  the exam plays once. Most shelves hold fewer than ten questions, and before
+  2026-09-27 a learner who reached one could never leave it.
+  `level_evidence()` is the one definition `adjust_level()` and `v_my_levels`
+  share.
 - **Good at something means harder questions in it, and vice versa.** Inside a
   level the queue aims at `target = 0.85 − (accuracy at this problem type) ×
-  0.33`, held in [0.50, 0.80], against the bank's measured success rate. This is
+  0.35`, held in [0.50, 0.80], against the bank's measured success rate (0.33
+  until 2026-09-27, which could never reach its own floor). This is
   the fine grain the three-way level cannot give; it moves on every answer.
   It runs on `items.model_p_correct`, which is written at generation time or
   never — so an item that reached the bank through `bjt importbatch` has none,
   and with none the term falls back to a constant and sorts nothing. On
   2026-09-22 that was 142 of 146 items, i.e. the pitch was off across almost
-  the whole library while looking like it was on. `bjt probe <bundle>` is the
+  the whole library while looking like it was on. `bjt probe --all` is the
   catch-up pass (same weaker model, same trials, only the items with no rate,
+  a bundle at a time so a run stopped by its ceiling resumes,
   and it writes nothing when it cannot measure — a fabricated prior is worse
   than none, because the queue would trust it), and `bjt plan` now prints the
   coverage so the gap cannot go quiet again.
@@ -125,17 +146,40 @@ accident is not.
   The model's contribution is attached to the item *before* it ships (the seed
   cell's tags, the distractor roles, `model_p_correct`); it is never consulted at
   practice time, and never per learner.
+- **A due review is a new question, never the same one while a new one
+  exists.** The ladder schedules the *lesson* an item taught, and a lesson that
+  is due is re-tested by an unseen question of the same type that carries the
+  trap which caught the learner as a wrong option — or, for a lesson learnt
+  without being caught, shares its 機能: a 類題, served by `next_items()` with
+  `stands_for` naming the lesson. The answer moves that lesson's rung and starts
+  no lesson of its own; `grade_attempt()` clears a `stands_for` the queue could
+  not have served. Lessons are served misses first, each taking the best
+  question no earlier lesson has taken. The same question comes back only when
+  nothing unseen is left to ask, and every unseen question, at any level, comes
+  before any repeat. Re-meeting the same four sentences tests whether the
+  learner remembers "it was 3"; the exam asks the trap again in a situation
+  they have not seen. The owner asked for this (2026-09-27): "I HATE taking the
+  same question over and over."
 - **The spacing ladder is fixed and stated.** Five rungs — 20 hours, 3 days, 1
-  week, 3 weeks, 2 months. Right climbs one; wrong drops to the bottom. A right
-  answer that took more than two minutes holds its rung rather than climbing. A
-  fitted forgetting curve needs calibration these items do not have, and the app tells
-  the learner the intervals on the start screen, so they are a promise rather
-  than an implementation detail.
+  week, 3 weeks, 2 months. Right climbs one; wrong drops to the bottom and
+  remembers the trap. A question known at first sight — right, in time, unaided
+  — starts on the three-day rung, not beside the misses. A right answer holds
+  its rung when it was slow — longer than the reading clock's own maximum for a
+  reading type (`pace_max_scale()`, which a test holds equal to `MAX_SCALE` in
+  `pace.ts`), or thirty seconds after the audio ended for a listening one,
+  timed from when the question could be answered (`attempts.think_ms`) — or
+  when it was helped by a replay or the spoken options read. With an exam date
+  set, a due date on or after the last two days before it is brought into
+  them. A fitted forgetting curve needs calibration these items do not have,
+  and the app tells the learner the intervals on the start screen, so they are
+  a promise rather than an implementation detail.
 - **`item_stats` is not readable by a client, and `review_schedule` is not
   writable by one.** The first because raw per-item counts over a handful of
   users are a statement about a person (`v_item_difficulty` is the k-anonymous
   surface, floor of eight); the second for the same reason `attempts` has no
-  update policy.
+  update policy. `refresh_item_stats()` counts each person's first answer to
+  each question, timeouts left out, and recounts from nothing, so the floor of
+  eight is eight people and a reset history leaves no count behind.
 - **`items.model_p_correct` is a property of the question, never of a person.**
   It is how often a model answered the item correctly at generation time: the
   difficulty probe (a weaker model, `BJT_DIFFICULTY_MODEL`) when it ran, else
@@ -150,7 +194,37 @@ accident is not.
   wrong", which is the thing not to have; a settings button that erases
   everything is not that. Settings, entitlements and item reports are not
   progress and are left alone. The owner asked for a way to start again
-  (2026-09-20).
+  (2026-09-20). A client may insert only the columns it has any business
+  sending — `item_id`, `chosen_index`, `session_id`, `elapsed_ms`, `think_ms`,
+  `replays`, `peeked`, `stands_for` — and `answered_at` is not among them,
+  because the day's door and the ladder both read it.
+- **Every distractor role has its own feedback, and the app's list of roles is
+  generated.** `python -m bjt.client_constants` writes `client/src/lib/generated.ts`
+  from `bjt/fidelity/roles.py` and the seed tables (the Japanese name of every
+  tag, for the progress screen); `roles.ts` is typed as a `Record` over the
+  generated roles, so a role with no sentence is a type error, and a stale file
+  fails `tests/test_client_constants.py`. Every verdict is written out: a label
+  with でした glued on is ungrammatical whenever the label ends in a verb. The
+  comprehension roles are `manner: false`, and the 失礼度メーター steps aside
+  for them — a misread table offends nobody. Until 2026-09-27 17 of the 34 roles
+  fell through to 「この場面に合わない」.
+- **A chart is data, and every reader sees its figures.** Only templates with
+  `charts=True` (`figures`, `progress_report`) carry one, one per document;
+  `document.text_of` writes each figure beside its label for the gate, the
+  proofreader, the probe and the discriminator; the app prints every bar's
+  figure, and a line is asked about by its shape; the unit is exempt from the
+  numeral rule (it would turn 千円 into 1000円); and a block type the app does
+  not draw fails a test. The owner asked for charts (2026-09-27).
+- **ウチ/ソト is a relation a batch can aim at.** `uchi_to_soto` is speaking to
+  an outsider about one's own people; it is cast in `staff_to_client`'s voice,
+  so no role is recast, and a test requires every relation to have a voice.
+  Seed tables only ever grow — a test holds every committed item's cell to its
+  table.
+- **`supabase/current.sql` is the schema made readable, and generated.**
+  `python supabase/snapshot.py` writes the latest definition of every function,
+  view and trigger from the migrations, comments included. Read it to see what
+  the queue does today; never apply it — the migrations are the schema. A test
+  fails when it is stale.
 - **A printed number is written with digits, and the whole screen agrees.** A
   booking grid headed 「十時〜十二時」 or a quotation for 「数量二百個」 is
   grammatical and is not what comes off an office printer; kanji numerals
@@ -225,6 +299,12 @@ accident is not.
   about *how you practise* is not a setting about *what you are served*, and
   that is the line — anything that would change which item comes next belongs
   on the wrong side of it.
+  `profiles.exam_date` is not a choice about the questions but a fact about
+  the learner, and since 2026-09-27 the record reads it: every due date is
+  brought in ahead of it, and in its last two weeks the set follows the exam's
+  section mix strictly (a full point per item beyond a section's share rather
+  than a quarter) and the reading clock runs whatever `timed_reading` says.
+  The owner asked for this (2026-09-27).
 - **The set is shaped like the exam, and so is the bank.** The exam asks 80
   questions in a fixed proportion — 聴解 25, 聴読解 25, 読解 30, and inside those
   場面把握 5 / 発言聴解 10 / 総合聴解 10, 状況把握 5 / 資料聴読解 10 / 総合聴読解
@@ -245,7 +325,10 @@ accident is not.
   four minutes. A question nobody answers in time is recorded as one nobody
   answered: `attempts.chosen_index = -1`, graded wrong, role `timed_out`. The
   owner asked for this (2026-09-19). A schema test holds the three budgets to
-  summing to the exam's block, which is the part not to break.
+  summing to the exam's block, which is the part not to break. In the last two
+  weeks before the exam date the clock runs even with `timed_reading` off
+  (`examIsNear` in `client/src/lib/exam.ts`, fourteen days, as the queue counts
+  them).
 - **第1部 speaks its options.** All three 聴解 types read their four candidates
   aloud rather than printing them — the exam shows the picture and the bare
   numerals, and in 総合聴解 shows nothing at all. `TYPE_AUDIO` in
@@ -301,6 +384,12 @@ accident is not.
   line added and not published fails. A review on 2026-09-26 withdrew 39 of 146,
   almost all for Japanese nobody would say: 142 of the 146 had come in through
   `bjt importbatch`, which skips the proofreader and the gate.
+  `bjt regate` puts those questions through both after the fact. Every verdict
+  goes into `batches/regated.txt` as it is reached (so a run stopped by its
+  ceiling resumes), a failure is proposed for withdrawal with a reason from the
+  same closed set, and `--withdraw` may only *append* to `withdrawn.txt` —
+  never remove a line or edit a bundle. Marking a verdict `overruled` in
+  `regated.txt` keeps the question and stops it being proposed again.
 - **A distractor is wrong the way people are wrong.** An over-polite option is
   wording people really use somewhere more formal, or one 二重敬語 people really
   say — never an invented stack (させていただかせていただく was the commonest

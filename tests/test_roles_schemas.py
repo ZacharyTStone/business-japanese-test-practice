@@ -80,7 +80,7 @@ def test_schema_constrains_role_enum():
 
 
 def test_every_item_type_has_role_descriptions():
-    for item_type, role_list in roles.DISTRACTOR_ROLES.items():
+    for role_list in roles.DISTRACTOR_ROLES.values():
         for r in role_list:
             assert r in roles.ROLE_DESCRIPTIONS, f"{r} missing a description"
 
@@ -113,3 +113,9 @@ def test_every_item_type_has_distinct_distractor_roles(item_type):
     assert len(roles.DISTRACTOR_ROLES[item_type]) >= 3
     for role in roles.DISTRACTOR_ROLES[item_type]:
         assert role in roles.ROLE_DESCRIPTIONS, f"{role} has no description"
+
+
+def test_the_chart_fixture_is_a_valid_item():
+    """The one fixture whose 資料 is a graph — proof that a chart can actually
+    be filled in, before a paid batch run finds out."""
+    assert schemas.validate_item("shiryou_choudokkai", fixtures.CHART_FIXTURE) == []

@@ -23,6 +23,39 @@ from .. import config, levels, llm, phrasebook, render, schemas, seedtable
 from ..fidelity import naturalness, roles
 
 
+#: What a relation means when its label cannot carry all of it. Almost every
+#: label can: 部下 → 上司 says everything a writer needs. ウチ/ソト cannot, because
+#: the person the item turns on is neither of the two people talking — it is the
+#: one being talked about — and a model shown only the arrow writes an ordinary
+#: 社外 item in which nobody from the speaker's own side is mentioned at all.
+#: The relation exists so a batch can aim at that on purpose (2026-09-27).
+RELATION_NOTES: dict[str, str] = {
+    "uchi_to_soto": (
+        "関係 is ウチ/ソト: the speaker is addressing someone outside the company — a "
+        "client, a visitor, a customer — ABOUT someone inside it, usually their own "
+        "superior. Toward an outsider one's own people are ウチ: named without a title "
+        "or さん, given no 尊敬語, what they do said in 謙譲語 （「部長の田中は外出して"
+        "おります」「田中がよろしくと申しておりました」, never 「田中部長はお出かけに"
+        "なっています」）. Put that colleague at the centre of what has to be said — "
+        "their absence, their message, their apology, their regards — so that the item "
+        "turns on how they are referred to."
+    ),
+}
+
+
+def relation_note(cell) -> str:
+    """The note for this cell's relation, or "" for the ones whose label says it."""
+    return RELATION_NOTES.get(getattr(cell, "relation", ""), "")
+
+
+def with_relation_note(spec: str, cell) -> str:
+    """A cell spec with its relation's note after it, when the relation has one.
+    Every `cell_spec` ends here, so a relation that needs saying is said to
+    every type whose table offers it."""
+    note = relation_note(cell)
+    return f"{spec}\n{note}" if note else spec
+
+
 def load_seed_json(subdir: str, item_type: str) -> list[dict]:
     """Load a licensed seed file, e.g. seeds/fewshot/goi_bunpou.json. Missing
     files return [] — the caller decides how loudly to complain."""
@@ -143,13 +176,14 @@ class Generator:
     def cell_spec(self, cell: seedtable.Cell) -> str:
         """Render the seed cell as a hard assignment. Overridden by types that
         need to say more about their cell (scenes, channel, and so on)."""
-        return (
+        return with_relation_note(
             "Write this item for the following assigned situation. These are "
             "requirements, not suggestions — do not substitute a different "
             "setting, relationship, or communicative function:\n"
             f"- 場面: {cell.setting_ja}\n"
             f"- 関係: {cell.relation_ja}\n"
-            f"- 機能（この発話でしたいこと）: {cell.function_ja}"
+            f"- 機能（この発話でしたいこと）: {cell.function_ja}",
+            cell,
         )
 
     def system_prompt(self, level: str) -> str:
@@ -248,7 +282,7 @@ class Generator:
         user = self.user_prompt(level, avoid, cell, feedback)
 
         last_errors: list[str] = []
-        for attempt in range(max_attempts):
+        for _attempt in range(max_attempts):
             prompt = user
             if last_errors:
                 prompt = (

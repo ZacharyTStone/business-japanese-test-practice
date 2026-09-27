@@ -53,6 +53,13 @@ OPTION_LABELS = ("いち", "に", "さん", "よん")
 
 #: Relation → the voice of the person doing the speaking (the left side of the
 #: 関係 arrow). Fixed for the life of the library.
+#:
+#: A relation added later borrows a voice from the cast rather than bringing
+#: its own: the seven roles are the cast (`providers.VOICE_IDS`), a live clip is
+#: never re-made, and a new voice would be one more the learner has to tell
+#: apart. `uchi_to_soto` — talking to an outsider about one's own boss — is the
+#: same staff member facing the same outsider as `staff_to_client`, so it is
+#: that voice (2026-09-27).
 RELATION_VOICES: dict[str, str] = {
     "subordinate_to_superior": "staff_junior_m",
     "junior_to_senior": "staff_junior_f",
@@ -62,6 +69,7 @@ RELATION_VOICES: dict[str, str] = {
     "staff_to_client": "staff_mid_m",
     "staff_to_visitor": "reception_f",
     "staff_to_customer": "staff_mid_f",
+    "uchi_to_soto": "staff_mid_m",
 }
 _FALLBACK_VOICE = "staff_mid_m"
 

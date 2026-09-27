@@ -211,8 +211,12 @@ def to_bundle_item(item: dict) -> dict:
     # the scene id is derived from the item id so the picture job, the
     # database and the app all find it under one name (bjt/scenes.py).
     if item.get("image_brief"):
+        # Imported here rather than at the top: scenes.py imports this module
+        # to read the bundles, and the name should be spelled in one place.
+        from .scenes import picture_scene_id
+
         out["image_brief"] = item["image_brief"]
-        out["scene_id"] = f"pic_{iid}"
+        out["scene_id"] = picture_scene_id(iid)
 
     # The difficulty prior: how often the difficulty model (a deliberately weak
     # one, bjt/fidelity/difficulty.py) answered this item correctly with the
@@ -375,7 +379,7 @@ def check_bundle(
     # 1. Every item still validates on its own.
     invalid = []
     for it in items:
-        errs = schemas.validate_item(item_type, _as_generator_shape(it))
+        errs = schemas.validate_item(item_type, as_generator_shape(it))
         if errs:
             invalid.append(f"{it.get('id')}: {errs}")
     add(
@@ -507,7 +511,7 @@ def check_bundle(
     spelled_out: dict[str, str] = {}
     n_docs = 0
     for it in items:
-        shaped = _as_generator_shape(it)
+        shaped = as_generator_shape(it)
         docs = schemas.documents_of(shaped)
         n_docs += len(docs)
         moved = normalise_numerals(copy.deepcopy(shaped))
@@ -532,7 +536,7 @@ def check_bundle(
     #     thing that blocks a batch.
     mixed: dict[str, list[str]] = {}
     for it in items:
-        shaped = _as_generator_shape(it)
+        shaped = as_generator_shape(it)
         if not schemas.DOCUMENT_FIELDS.get(shaped.get("item_type", "")):
             continue
         spoken = tts_plan.audio_policy(shaped["item_type"])
@@ -565,7 +569,7 @@ def check_bundle(
     for it in items:
         if it.get("id") in gone:
             continue
-        found = naturalness.faults(_as_generator_shape(it))
+        found = naturalness.faults(as_generator_shape(it))
         if found:
             unnatural[it.get("id", "?")] = found
     served = sum(1 for it in items if it.get("id") not in gone)
@@ -598,7 +602,7 @@ def check_bundle(
     #    item plans none.
     clips = bundle.get("audio_manifest", [])
     planned = sum(
-        len(tts_plan.plan_item(_as_generator_shape(it), it["id"])) for it in items
+        len(tts_plan.plan_item(as_generator_shape(it), it["id"])) for it in items
     )
     if not planned:
         add("audio manifest", "pass", "no audio — this item type is read, not heard")
@@ -630,14 +634,14 @@ def _measured_lengths(field_name: str, items: list[dict]) -> list[int]:
     if field_name == "document":
         out = []
         for it in items:
-            docs = schemas.documents_of(_as_generator_shape(it))
+            docs = schemas.documents_of(as_generator_shape(it))
             if docs:
                 out.append(sum(len(document.text_of(d)) for d in docs))
         return out
     return []
 
 
-def _as_generator_shape(bundle_item: dict) -> dict:
+def as_generator_shape(bundle_item: dict) -> dict:
     """Turn a bundle item back into what the generator emitted, so the same
     validator can be re-run over it.
 
@@ -670,6 +674,12 @@ def _as_generator_shape(bundle_item: dict) -> dict:
             if isinstance(t, dict)
         ]
     return it
+
+
+#: The name `as_generator_shape` had while it was private, which did not stop
+#: the probe, the lint and a handful of tests from calling it. Kept so a caller
+#: that has not moved yet keeps working; delete it once nothing says it.
+_as_generator_shape = as_generator_shape
 
 
 def _worst_pair_score(items: list[dict]) -> float:

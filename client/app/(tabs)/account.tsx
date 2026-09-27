@@ -241,6 +241,10 @@ export default function Account() {
               <Chip label={t("clear")} selected={false} onPress={() => setExamDate(null)} />
             </View>
           ) : null}
+          {/* What the date is for, beyond the countdown: the ladder brings
+              every review in ahead of it, and the last two weeks are set in
+              the exam's own proportions. Said once, here, where it is set. */}
+          <Text style={type.small}>{t("acc_exam_sub")}</Text>
         </Card>
       </View>
 
@@ -295,6 +299,7 @@ export default function Account() {
             />
           </View>
           <Text style={type.small}>{t("acc_timer_sub")}</Text>
+          <Text style={type.small}>{t("acc_timer_exam")}</Text>
         </Card>
       </View>
 

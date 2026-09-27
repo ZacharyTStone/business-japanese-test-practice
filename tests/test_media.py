@@ -591,7 +591,7 @@ def test_a_picture_item_carries_its_brief_and_a_scene_of_its_own():
     assert out["image_brief"] == item["image_brief"]
     # ...and re-validates as the model emitted it, without the derived scene id.
     from bjt import schemas
-    assert schemas.validate_item("gazou_haaku", batchmod._as_generator_shape(out)) == []
+    assert schemas.validate_item("gazou_haaku", batchmod.as_generator_shape(out)) == []
 
 
 def test_a_live_clip_is_left_alone_unless_it_is_named_for_re_making(tmp_path):

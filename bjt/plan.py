@@ -387,7 +387,7 @@ def render(survey_result: Survey, order: list[WorkItem]) -> str:
             f"  {have}/{total} carry a difficulty signal"
             + ("." if have == total else
                " — for the rest the queue's difficulty term is a constant, so it "
-               "sorts nothing. `bjt probe <bundle>` measures them.")
+               "sorts nothing. `bjt probe --all` measures them.")
         )
     lines.append("")
 

@@ -58,6 +58,14 @@ function documentChars(doc: StimulusDocument): number {
     for (const col of b.columns ?? []) n += col.length;
     for (const row of b.rows ?? []) for (const cell of row) n += cell.length;
     for (const pair of b.pairs ?? []) n += pair.label.length + pair.value.length;
+    // A graph is read too: its labels, its legend, and a figure off the axis
+    // for every point that has to be compared.
+    n += (b.unit ?? "").length;
+    for (const label of b.categories ?? []) n += label.length;
+    for (const s of b.series ?? []) {
+      n += (s.name ?? "").length;
+      for (const v of s.values ?? []) n += String(v).length;
+    }
   }
   return n;
 }

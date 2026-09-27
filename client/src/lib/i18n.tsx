@@ -54,7 +54,7 @@ const S = {
   wel_p1_title: ["レベルは、分野ごとに答えが決めます", "Your answers set the level, section by section"],
   wel_p1_body: ["自己申告はありません。聴解・聴読解・読解を別々に見て、得意な分野はどんどん難しく、苦手な分野はやさしくします。読むのは得意だけれど聞き取りは苦手、という人がほとんどだからです。", "Nothing to declare about yourself. Listening, listening-and-reading and reading are judged separately: what you are good at gets harder, what you struggle with gets gentler. Almost everybody reads better than they listen."],
   wel_p2_title: ["弱いところを、狙って出します", "It aims at your weak spots"],
-  wel_p2_body: ["正誤だけでなく、どのまちがえ方をしたかまで見ます。まちがえた問題は一晩おいて、できた問題も三日後・一週間後と間をあけて、もう一度出します。", "Not just right or wrong — which way you went wrong. A question that caught you comes back after a night's sleep; one you got right comes back in three days, then a week, then longer."],
+  wel_p2_body: ["正誤だけでなく、どのまちがえ方をしたかまで見ます。ひっかかったわなは一晩おいて、同じわなを持つ別の問題でもう一度確かめます。できたら三日後、一週間後と間をあけていきます。新しい問題が残っているかぎり、同じ問題はくり返しません。", "Not just right or wrong — which way you went wrong. A trap that caught you comes back after a night's sleep, in a new question that sets the same trap; get it right and the next one comes in three days, then a week, then longer. You won't meet the same question twice while there are new ones left."],
   wel_p3_title: ["あなたがすることは、答えるだけ", "Your part is to answer"],
   wel_p3_body: ["1日10問、6分ほど。読解の問題には本番と同じだけの時間をはかります（設定で外せます）。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about six minutes. Reading questions are timed at exam pace — you can turn that off in settings. The longer you keep at it, the better the questions fit you."],
   wel_start: ["始める", "Get started"],
@@ -74,6 +74,7 @@ const S = {
   btn_more_sub: ["あと{n}問", "{n} more question|{n} more questions"],
   btn_today: ["今日の練習をする", "Practice today"],
   btn_today_sub: ["{n}問・約{min}分", "{n} questions · about {min} min"],
+  btn_today_sub_due: ["{n}問・約{min}分・復習待ち{due}", "{n} questions · about {min} min · {due} due for review"],
   // The full stop. Shown once the day's ceiling is reached; nothing on it
   // leads to a question.
   day_done_title: ["今日のぶんは終わりました 🙂", "That's today done 🙂"],
@@ -109,6 +110,8 @@ const S = {
   acc_timer_off: ["時間をはからない", "No clock"],
   acc_timer_sub: ["読解の問題だけです。聴解・聴読解は音声が進み方を決めるので、時計は出ません。", "Reading questions only. In listening the audio sets the pace, so there is no clock."],
   acc_timer_body: ["本番の読解は自分で時間を配ります。1問ずつ、本番と同じだけの時間をはかり、切れたら不正解として次へ進みます。", "The real reading section is self-paced. This gives each question the time the exam allows; when it runs out the question is marked wrong and you move on."],
+  acc_timer_exam: ["試験日まで2週間を切ると、この設定にかかわらず時間をはかります。", "In the last two weeks before your exam date, reading questions are timed whatever this says."],
+  acc_exam_sub: ["試験日を入れると、復習が試験の前にひととおり来るように調整し、最後の2週間は本番と同じ分野の割合で出します。", "With an exam date, every review is scheduled to come round before the exam, and the last two weeks follow the exam's own mix of sections."],
   // How long a sitting is. Only an account whose row carries a number of its
   // own ever sees this card — v_my_day.goal_max is null for everybody else —
   // and it is still a setting about how you practise rather than about which
@@ -160,6 +163,7 @@ const S = {
   axis_setting: ["どこでの話か", "Where"],
   axis_channel: ["どう伝わるか", "How (in person, phone…)"],
   pct_n: ["{pct}%（{n}問）", "{pct}% ({n})"],
+  trap_rate: ["{c}/{m}回", "{c} of {m}"],
   review: ["見返す", "Review"],
   review_btn: ["解いた問題を見返す", "Review answered questions"],
   review_sub: ["まちがえた問題と、その解説", "The ones you missed, with explanations"],
@@ -173,6 +177,12 @@ const S = {
   no_q_title: ["出せる問題がありません", "No questions to serve"],
   no_q_body: ["いまのレベルの問題をすべて解いたか、まだ問題が公開されていません。", "You've answered everything at your level, or nothing is published yet."],
   again_tag: ["もう一度", "Again"],
+  // A 類題: an unseen question, here to re-test a trap that caught them. The
+  // tag is all that is said before the answer — naming the trap would tell
+  // them which option to avoid.
+  retest_tag: ["類題", "Same trap"],
+  retest_note_trap: ["前にひっかかった「{trap}」を、別の問題でもう一度確かめる問題でした。", "A new question on a trap that caught you before: {trap}."],
+  retest_note: ["前に解いた問題の類題でした。", "A new question on something you met before."],
   q_of_n: ["{n}問中{i}問目", "Question {i} of {n}"],
   key_hint_answer: ["キーボードの 1〜4 でも選べます", "You can also press 1–4"],
   key_hint_next: ["Enter で次へ", "Press Enter for the next question"],
@@ -249,7 +259,7 @@ const S = {
   all_correct: ["全問正解です", "All correct"],
   all_correct_body: ["同じ場面でも、相手が変わると答えは変わります。明日も続けましょう。", "Same scene, different listener, different answer. Keep going tomorrow."],
   breakdown: ["この回の内訳", "This set"],
-  retry_promise: ["まちがえた問題は、明日からの練習で、もう一度出します。", "The ones you missed come back in practice from tomorrow."],
+  retry_promise: ["ひっかかったわなは、明日から、別の問題でもう一度出します。", "The traps that caught you come back from tomorrow, in new questions."],
   review_wrong: ["まちがえた問題を見返す", "Review the ones you missed"],
 
   // history
@@ -258,6 +268,14 @@ const S = {
   hist_empty_body: ["一組やってみると、ここに残ります。", "Do one set and it will be here."],
   hist_recent: ["直近 {n} 問", "Last {n} answers"],
   hist_wrong_n: ["まちがえたのは {n} 問", "{n} wrong"],
+  hist_only_item: ["この問題だけを表示しています", "Showing this question only"],
+  hist_show_all: ["すべて表示", "Show all"],
+  // 復習ノート: the learner's own line about why a question caught them.
+  note_label: ["自分のメモ", "Your note"],
+  note_placeholder: ["なぜひっかかったか、ひとこと", "Why it caught you, in a line"],
+  note_save: ["メモを保存", "Save note"],
+  note_saved: ["保存しました", "Saved"],
+  note_failed: ["保存できませんでした", "Couldn't save"],
   hist_wrong_chip: ["まちがえた問題", "Wrong ones"],
   hist_all: ["すべて", "All"],
   hist_none_wrong: ["まちがえた問題はありません", "Nothing wrong"],
@@ -274,6 +292,13 @@ const S = {
   vocab_empty_body: ["まちがえた問題に出てきたことばが、ここにたまります。", "Words from the questions you miss collect here."],
   vocab_count: ["{n}語", "{n} word|{n} words"],
   vocab_head: ["まちがえた問題に出てきたことば", "From the questions you missed"],
+  vocab_hide: ["読み方と意味をかくす", "Hide readings and meanings"],
+  vocab_show: ["読み方と意味を表示", "Show readings and meanings"],
+  vocab_tap: ["タップして思い出せたか確かめる", "Tap to check yourself"],
+  vocab_in_context: ["出てきた問題を見る", "See the question"],
+  vocab_sentence: ["出てきた文", "Where it appeared"],
+  vocab_no_sentence: ["問題の中では、この形のままでは出てきません（活用した形で出ています）。", "It doesn't appear in exactly this form in the question (it's conjugated there)."],
+  vocab_sentence_err: ["文を読み込めませんでした", "Couldn't load the sentence"],
 
   // audio
   dialogue_pending: ["会話（音声は準備中）", "Conversation (audio coming soon)"],
@@ -311,6 +336,11 @@ const S = {
   doc_progress_report: ["進捗報告書", "Progress report"],
   doc_quote_order: ["見積書・注文書", "Quote / order form"],
   doc_office_sign: ["掲示・案内", "Sign / notice"],
+  doc_figures: ["集計資料", "Figures handout"],
+  // What a screen reader says a chart is, before it reads the figures.
+  chart_bar: ["棒グラフ", "Bar chart"],
+  chart_line: ["折れ線グラフ", "Line chart"],
+  chart_unit: ["単位", "unit"],
 
   // faces
   mood_happy: ["相手は満足しています", "They're pleased"],

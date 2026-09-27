@@ -10,8 +10,9 @@ import copy
 
 import pytest
 
-from bjt import cli, config, fixtures, llm
+from bjt import config, fixtures, llm, pipeline
 from bjt.fidelity import answerability
+from bjt.generators import get_generator
 
 
 @pytest.fixture
@@ -35,7 +36,7 @@ def test_a_shelf_that_keeps_discarding_is_abandoned_after_three(store, monkeypat
                             fixtures.FIXTURES["goi_bunpou"]["options"]), "reason": "x"})
     monkeypatch.setattr("bjt.config.SLOT_PATIENCE", 3)
 
-    path, kept = cli.run_batch(store, "goi_bunpou", "J2", 4, gate=True, sanity_check=False)
+    path, kept = pipeline.run_batch(store, "goi_bunpou", "J2", 4, gate=True, sanity_check=False)
 
     assert path is None and kept == 0
     # Four items asked for would have allowed twelve attempts; three were spent.
@@ -63,7 +64,7 @@ def test_a_keep_resets_the_patience(store, monkeypatch, quiet, tmp_path):
 
     # force, because two copies of one fixture are a near-duplicate pair and
     # the bundle check would (rightly) refuse them; the loop is what is tested.
-    path, kept = cli.run_batch(store, "goi_bunpou", "J2", 2, gate=True, sanity_check=False,
+    path, kept = pipeline.run_batch(store, "goi_bunpou", "J2", 2, gate=True, sanity_check=False,
                                force=True, out=tmp_path / "b.json")
     assert kept == 2 and len(generations) == 6
 
@@ -77,7 +78,7 @@ def test_an_empty_account_ends_the_run_at_once(store, monkeypatch, quiet):
 
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", broke)
     with pytest.raises(llm.LLMBillingError):
-        cli.run_batch(store, "goi_bunpou", "J2", 4, gate=True, sanity_check=False)
+        pipeline.run_batch(store, "goi_bunpou", "J2", 4, gate=True, sanity_check=False)
     assert len(calls) == 1, "one refusal is enough; the rest are not tried"
 
 
@@ -155,7 +156,7 @@ def test_a_discard_is_explained_to_the_next_draft(store, monkeypatch, quiet, tmp
 
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
     monkeypatch.setattr(answerability, "run_gate", gate)
-    path, kept = cli.run_batch(store, "goi_bunpou", "J2", 1, gate=True, sanity_check=False,
+    path, kept = pipeline.run_batch(store, "goi_bunpou", "J2", 1, gate=True, sanity_check=False,
                                out=tmp_path / "b.json")
     assert kept == 1 and len(prompts) == 2
     assert "REJECTED" not in prompts[0]
@@ -185,14 +186,14 @@ def test_a_refused_draft_is_retried_on_the_same_cell_with_the_judges_words(
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
     monkeypatch.setattr(answerability.llm, "answer_choice", judge)
     prompts = []
-    real_user_prompt = cli.get_generator("goi_bunpou").__class__.user_prompt
+    real_user_prompt = get_generator("goi_bunpou").__class__.user_prompt
 
     def spy(self, level, avoid, cell=None, feedback=None):
         prompts.append((cell.id if cell else None, feedback))
         return real_user_prompt(self, level, avoid, cell, feedback)
 
-    monkeypatch.setattr(cli.get_generator("goi_bunpou").__class__, "user_prompt", spy)
-    path, kept = cli.run_batch(store, "goi_bunpou", "J2", 1, gate=True, sanity_check=False,
+    monkeypatch.setattr(get_generator("goi_bunpou").__class__, "user_prompt", spy)
+    path, kept = pipeline.run_batch(store, "goi_bunpou", "J2", 1, gate=True, sanity_check=False,
                                out=tmp_path / "b.json")
     assert kept == 1 and len(prompts) == 2
     assert prompts[0][0] == prompts[1][0], "the same cell, not the next one"

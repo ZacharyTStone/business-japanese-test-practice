@@ -193,3 +193,86 @@ def test_library_lines_are_the_ones_the_bank_already_repeats():
     # With the bar at one, every spoken line of the bank qualifies, and the
     # list is capped so the prompt stays small.
     assert len(phrasebook.library_lines(min_count=1, limit=5)) <= 5
+
+
+# ----- graphs in the 資料 ------------------------------------------------------
+
+CHART_GUIDANCE = "A `chart` block draws figures"
+
+
+def _cell(item_type, setting):
+    return next(c for c in seedtable.load(item_type).cells("J2") if c.setting == setting)
+
+
+@pytest.mark.parametrize("item_type,setting,told", [
+    ("shiryou_choudokkai", "figures_meeting", True),     # figures only
+    ("shiryou_choudokkai", "meeting_handout", True),     # figures among others
+    ("shiryou_choudokkai", "quotation", False),          # a quotation cannot carry one
+    ("sougou_choudokkai", "regular_meeting", True),      # figures and a progress report
+    ("sougou_choudokkai", "client_review", True),        # a progress report
+    ("sougou_choudokkai", "negotiation", False),
+    ("sougou_dokkai", "project_update", False),          # a reading type is never told
+])
+def test_the_chart_guidance_reaches_a_cell_that_can_draw_one_and_no_other(
+        item_type, setting, told):
+    """Telling a writer about graphs on a cell that assigns an email is asking
+    for a draft the validator will send back."""
+    cell = _cell(item_type, setting)
+    prompt = get_generator(item_type).user_prompt("J2", [], cell)
+    assert (CHART_GUIDANCE in prompt) is told
+    if told:
+        assert "neither the chart nor the audio answers alone" in prompt
+        carriers = [t for t in cell.templates if t in ("figures", "progress_report")]
+        assert f"`{carriers[0]}`" in prompt.split(CHART_GUIDANCE)[1]
+
+
+def test_the_listening_and_reading_tables_offer_a_graph_at_every_level():
+    for item_type in ("shiryou_choudokkai", "sougou_choudokkai"):
+        table = seedtable.load(item_type)
+        for level in table.levels:
+            assert any("figures" in c.templates for c in table.cells(level)), (item_type, level)
+
+
+def _chart_draft(**changes):
+    item = copy.deepcopy(fixtures.CHART_FIXTURE)
+    del item["item_type"]          # as the model returns it
+    item.update(changes)
+    return item
+
+
+def test_a_generated_chart_is_written_like_print_before_anyone_judges_it(monkeypatch):
+    """The generator normalises numbers before the gate, the proofreader and
+    the discriminator see a draft — a chart's labels included — so all three
+    judge the item as it will ship."""
+    cell = _cell("shiryou_choudokkai", "figures_meeting")
+    draft = _chart_draft()
+    chart = draft["document"]["blocks"][0]
+    chart["categories"] = ["四月", "五月", "六月", "七月", "八月", "九月"]
+    chart["caption"] = "月別 問い合わせ件数（四月〜九月）"
+    monkeypatch.setattr("bjt.generators.base.llm.generate_structured", lambda *a, **k: draft)
+    item = get_generator("shiryou_choudokkai").generate(cell=cell, seed=0)
+    got = item["document"]["blocks"][0]
+    assert got["categories"] == ["4月", "5月", "6月", "7月", "8月", "9月"]
+    assert got["caption"] == "月別 問い合わせ件数（4月〜9月）"
+    assert schemas.validate_item("shiryou_choudokkai", item) == []
+
+
+def test_a_chart_the_template_cannot_carry_is_sent_back_with_the_reason(monkeypatch):
+    cell = _cell("shiryou_choudokkai", "meeting_handout")
+    first = _chart_draft()
+    first["document"]["template"] = "quote_order"
+    first["document"]["meta"] = [{"label": "宛先", "value": "みどり物産 御中"},
+                                 {"label": "発行者", "value": "山川商事"},
+                                 {"label": "発行日", "value": "10月1日"}]
+    drafts = iter([first, _chart_draft()])
+    prompts = []
+
+    def fake(system, user, schema, model=None):
+        prompts.append(user)
+        return next(drafts)
+
+    monkeypatch.setattr("bjt.generators.base.llm.generate_structured", fake)
+    item = get_generator("shiryou_choudokkai").generate(cell=cell, seed=0)
+    assert len(prompts) == 2
+    assert "does not carry one" in prompts[1]
+    assert item["document"]["template"] == "figures"

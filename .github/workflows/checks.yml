@@ -30,6 +30,13 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - run: pytest -q
+      # Bugs, not style: undefined names, redefinitions, unused variables,
+      # comparisons that do not mean what they say. The rule set, and why it
+      # stops there, is [tool.ruff] in pyproject.toml. It runs even when a
+      # test failed, so one push reports both.
+      - name: ruff check
+        if: ${{ !cancelled() }}
+        run: ruff check .
 
   bundles:
     name: checkbatch — every committed bundle
@@ -86,7 +93,7 @@ jobs:
       - run: supabase/test/run.sh
 
   app:
-    name: typecheck — the Expo app
+    name: typecheck and unit tests — the Expo app
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -100,3 +107,6 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      # The pure parts of the app — the practice reducer, the reading clock,
+      # the exam date, the levels, the role table — in Node, no device.
+      - run: npm test

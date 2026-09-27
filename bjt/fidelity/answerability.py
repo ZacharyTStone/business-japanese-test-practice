@@ -63,7 +63,7 @@ class Trial:
     correct: bool
     #: The judge's one-sentence justification. Kept because on the cold side it
     #: says exactly what gave the answer away, which is what the next draft on
-    #: the same shelf needs to hear (bjt/cli.py feeds it back).
+    #: the same shelf needs to hear (bjt/pipeline.py feeds it back).
     reason: str = ""
 
 
@@ -241,7 +241,7 @@ def questions(item: dict) -> tuple[str, str]:
 
 def leak_description(item_type: str, result: "GateResult | None" = None) -> str:
     """What a leaky verdict means for this type, in one sentence for the
-    generator's next attempt (bjt/cli.py feeds it back) — with the judge's own
+    generator's next attempt (bjt/pipeline.py feeds it back) — with the judge's own
     words for how it found the answer, when the result is given. "The
     distractors gave it away" was not enough on 2026-09-19: three drafts in a
     row failed the same way on four shelves. "Option 2 was the only one in

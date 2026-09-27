@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from bjt import cli, fixtures, llm, schemas
+from bjt import fixtures, llm, pipeline, schemas
 from bjt.fidelity import sanity
 
 
@@ -84,6 +84,16 @@ def test_render_includes_a_document_stimulus():
     assert item["document"]["title"] in text
 
 
+def test_render_includes_a_charts_figures():
+    """A proofreader checking that the key is right needs the figures the key
+    was read from: a chart shown as its title would make every graph item look
+    like one whose marked answer cannot be checked."""
+    item = copy.deepcopy(fixtures.CHART_FIXTURE)
+    text = sanity.render_for_sanity(item)
+    assert "【棒グラフ】月別 問い合わせ件数（単位：件）" in text
+    assert "電話：4月 330 / 5月 410" in text and "メール：4月 150 / 5月 190" in text
+
+
 def test_render_includes_a_dialogue_stimulus():
     item = copy.deepcopy(fixtures.FIXTURES["sougou_choukai"])
     text = sanity.render_for_sanity(item)
@@ -103,7 +113,7 @@ def test_a_flagged_item_never_reaches_the_gate(tmp_path, monkeypatch, store):
     monkeypatch.setattr("bjt.fidelity.answerability.run_gate",
                         lambda item: gate_calls.append(item) or None)
 
-    item, iid, kept, detail, _ = cli._generate_and_gate(store, "hyougen", "J2", gate=True)
+    item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "hyougen", "J2", gate=True)
 
     assert gate_calls == []
     assert not kept
@@ -123,7 +133,7 @@ def test_a_clean_item_goes_on_to_the_gate(tmp_path, monkeypatch, store):
     monkeypatch.setattr(sanity.llm, "sanity_check", _clean())
     monkeypatch.setattr("bjt.fidelity.answerability.run_gate", fake_gate)
 
-    item, iid, kept, detail, _ = cli._generate_and_gate(store, "hyougen", "J2", gate=True)
+    item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "hyougen", "J2", gate=True)
 
     assert len(gate_calls) == 1
     assert kept

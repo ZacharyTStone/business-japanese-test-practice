@@ -32,6 +32,7 @@ import {
   fetchTypeStats,
   hasAdFree,
 } from "../../src/lib/db";
+import { TAG_LABELS } from "../../src/lib/generated";
 import { useLang, type Key } from "../../src/lib/i18n";
 import { placedLevel } from "../../src/lib/levels";
 import { roleInfo } from "../../src/lib/roles";
@@ -73,6 +74,25 @@ const SECTIONS: { id: Section; key: Key; icon: IconName; tone: BadgeTone }[] = [
  *  a weakness, and presenting it as one sends people off to drill noise.
  *  Counted over the last 30 days, the window the queue weighs. */
 const MIN_ANSWERS_PER_TAG = 4;
+
+/** A trap is ranked by how often it caught them out of how often it was on
+ *  offer, and below three offers that share is noise too. */
+const MIN_TIMES_MET = 3;
+
+const CHANNEL_LABEL: Record<string, Key> = {
+  in_person: "ch_in_person",
+  phone: "ch_phone",
+  video: "ch_video",
+  written: "ch_written",
+};
+
+/** A tag as a person would say it: 「不在を伝える」, not `phone_absence`. The
+ *  seed tables name every tag (client/src/lib/generated.ts); the four channels
+ *  are words the app already translates. */
+function tagLabel(axis: TagStat["axis"], tag: string, t: (key: Key) => string): string {
+  if (axis === "channel") return CHANNEL_LABEL[tag] ? t(CHANNEL_LABEL[tag]) : tag;
+  return TAG_LABELS[axis]?.[tag] ?? tag;
+}
 
 export default function Progress() {
   const router = useRouter();
@@ -162,15 +182,21 @@ export default function Progress() {
     .sort((a, b) => a.acc - b.acc)
     .slice(0, 6);
 
-  // Same rule for the traps: the ones that caught them in the last 30 days,
-  // ranked by how often, or the all-time list when none did.
+  // Same window rule for the traps: the last 30 days, or all-time when nothing
+  // is recent. Ranked by the share of the times a trap was on offer that it
+  // caught them — a bare count put the traps that are in every question on
+  // top whether or not they were the problem. The clock is no option's trap
+  // and has no share; it gets its own line.
   const trapsRecent = traps.some((t) => t.recent_times > 0);
-  const topTraps = (
-    trapsRecent
-      ? traps.filter((t) => t.recent_times > 0).map((t) => ({ ...t, n: t.recent_times }))
-      : traps.map((t) => ({ ...t, n: t.times_chosen }))
-  )
-    .sort((a, b) => b.n - a.n)
+  const trapRows = traps.map((tr) => ({
+    ...tr,
+    n: trapsRecent ? tr.recent_times : tr.times_chosen,
+    met: (trapsRecent ? tr.recent_met : tr.times_met) ?? 0,
+  }));
+  const timeouts = trapRows.find((tr) => tr.role === "timed_out" && tr.n > 0) ?? null;
+  const topTraps = trapRows
+    .filter((tr) => tr.role !== "timed_out" && tr.n > 0 && tr.met >= MIN_TIMES_MET)
+    .sort((a, b) => b.n / b.met - a.n / a.met || b.n - a.n)
     .slice(0, 5);
 
   const answered = types.reduce((n, t) => n + t.answered, 0);
@@ -216,7 +242,7 @@ export default function Progress() {
         </Card>
       </FadeIn>
 
-      {topTraps.length > 0 ? (
+      {topTraps.length > 0 || timeouts ? (
         <Card style={{ gap: space.lg }}>
           <View style={styles.row}>
             <Text style={[type.h2, { flex: 1 }]}>{t("prog_mistakes")}</Text>
@@ -229,9 +255,19 @@ export default function Progress() {
                 <Text style={type.body}>{roleInfo(trap.role, lang).label}</Text>
                 <Text style={type.small}>{roleInfo(trap.role, lang).advice}</Text>
               </View>
-              <Tag tone="pink">{t("times", { n: trap.n })}</Tag>
+              <Tag tone="pink">{t("trap_rate", { c: trap.n, m: trap.met })}</Tag>
             </View>
           ))}
+          {timeouts ? (
+            <View style={styles.trapRow}>
+              <IconBadge name="alert" tone="amber" size={30} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={type.body}>{roleInfo("timed_out", lang).label}</Text>
+                <Text style={type.small}>{roleInfo("timed_out", lang).advice}</Text>
+              </View>
+              <Tag tone="amber">{t("times", { n: timeouts.n })}</Tag>
+            </View>
+          ) : null}
         </Card>
       ) : null}
 
@@ -245,7 +281,7 @@ export default function Progress() {
             <View key={`${tag.axis}:${tag.tag}`} style={{ gap: 6 }}>
               <View style={styles.row}>
                 <Text style={[type.small, { flex: 1 }]}>
-                  {t(AXIS_KEY[tag.axis])} · {tag.tag}
+                  {t(AXIS_KEY[tag.axis])} · {tagLabel(tag.axis, tag.tag, t)}
                 </Text>
                 <Text style={[type.small, tabular, { fontWeight: "700", color: colors.text }]}>
                   {t("pct_n", { pct: Math.round(tag.acc * 100), n: tag.n })}

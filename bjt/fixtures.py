@@ -346,6 +346,71 @@ FIXTURES["shiryou_choudokkai"] = {
     ],
 }
 
+#: A second 資料聴読解 item, whose 資料 is a graph. Kept out of FIXTURES, which
+#: holds exactly one item per type (`selftest` and `practice --demo` walk it),
+#: and used wherever a chart has to be shown to work end to end: validation,
+#: the text every model reads, the page, the bundle, the numerals.
+#:
+#: The pair is built the way the type needs. The chart alone says July and
+#: August; only the spoken instruction — leave out September's 170 outage calls
+#: — adds September, and the audio alone has no figures at all. Every
+#: difference the answer turns on is one a reader can see between two bars.
+CHART_FIXTURE: dict = {
+    "item_type": "shiryou_choudokkai",
+    "level": "J2",
+    "topic": "問い合わせ件数の比較",
+    "scene_id": "scene_meeting_room_table",
+    "channel": "in_person",
+    "document": {
+        "template": "figures",
+        "title": "問い合わせ件数の推移（上期）",
+        "meta": [
+            {"label": "期間", "value": "4月〜9月"},
+            {"label": "作成者", "value": "カスタマーサポート部 山田"},
+        ],
+        "blocks": [
+            {"type": "chart", "kind": "bar", "caption": "月別 問い合わせ件数", "unit": "件",
+             "categories": ["4月", "5月", "6月", "7月", "8月", "9月"],
+             "series": [
+                 {"name": "電話", "values": [330, 410, 340, 260, 240, 460]},
+                 {"name": "メール", "values": [150, 190, 250, 320, 340, 370]},
+             ]},
+            {"type": "callout", "tone": "info",
+             "text": "件数は、受け付けた窓口（電話・メール）ごとに集計。"},
+        ],
+    },
+    "stem": (
+        "会議で、課長がグラフを見ながら話しています。"
+        "「9月の電話には、システム障害の問い合わせが170件ほど含まれています。"
+        "今回はその分を除いて比べてください。」"
+        "電話よりメールの問い合わせのほうが多かったのは、何月ですか。"
+    ),
+    "options": [
+        {"text": "7月、8月、9月", "role": "correct",
+         "why": "9月は障害の170件を除くと電話が約290件になりメールの370件を下回り、7月と8月はグラフのままでメールのほうが多い。"},
+        {"text": "7月と8月", "role": "ignores_the_spoken_change",
+         "why": "グラフの数字のまま比べており、9月の障害分を除くという課長の指示が反映されていない。"},
+        {"text": "4月、5月、6月", "role": "reads_wrong_row",
+         "why": "電話とメールの棒を取り違えていて、電話のほうが多かった月を答えている。"},
+        {"text": "9月だけ", "role": "surface_keyword_match",
+         "why": "課長が話題にした9月だけを答えているが、7月と8月もメールのほうが多い。"},
+    ],
+    "explanation_ja": (
+        "課長は、9月の電話に含まれる障害関連の問い合わせ約170件を除いて比べるよう指示している。"
+        "除くと9月の電話は約290件となり、メールの370件を下回る。"
+        "7月（電話260件・メール320件）と8月（240件・340件）は、グラフのままでもメールのほうが多い。"
+        "したがって答えは7月、8月、9月。グラフだけで比べると9月が抜け、話だけを聞くと9月にしか目が行かない。"
+    ),
+    "explanation_en": (
+        "Without the 170 outage calls September's phone figure falls to about 290, below "
+        "email's 370; July and August were higher for email already."
+    ),
+    "vocab_notes": [
+        {"term": "問い合わせ", "reading": "といあわせ", "meaning": "inquiry"},
+        {"term": "障害", "reading": "しょうがい", "meaning": "(system) failure, outage"},
+    ],
+}
+
 FIXTURES["sougou_choudokkai"] = {
     "item_type": "sougou_choudokkai",
     "level": "J1",
