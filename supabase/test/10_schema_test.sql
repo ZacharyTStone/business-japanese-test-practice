@@ -1773,6 +1773,24 @@ begin
 end
 $$;
 
+-- Longest ago first, and a minute is enough to decide it. The tie-break noise
+-- in this band was once random()/1e6 against epoch/1e12 — worth eleven days of
+-- `last_at` — so "longest ago" was a coin toss between two questions answered a
+-- minute apart. Eight draws of a coin toss do not all come up the same way.
+do $$
+declare
+    j integer;
+begin
+    raise notice 'the rested band is ordered by when, not by chance';
+    for j in 1..8 loop
+        perform test.check(
+            (select q.ordinality from public.next_items(50) with ordinality as q where q.id = 'itm_c_r1')
+            < (select q.ordinality from public.next_items(50) with ordinality as q where q.id = 'itm_c_r2'),
+            'answered a minute earlier, served first — draw ' || j);
+    end loop;
+end
+$$;
+
 do $$
 declare
     d record;
