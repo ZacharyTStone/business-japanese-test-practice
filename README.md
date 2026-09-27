@@ -281,6 +281,17 @@ so it **is** committed. Extending the library is a matter of adding rows to it,
 and "will we run out of questions?" becomes a counting question rather than a
 prompting one.
 
+Tables only ever grow: `item_id` hashes the cell, so a renamed or removed
+setting, relation or function would orphan a spent cell, and a test holds every
+committed item's cell to its table. On 2026-09-27 they grew by what the exam
+tests and they could not produce: ウチ/ソト is a relation of its own,
+`uchi_to_soto` — speaking to an outsider about one's own people, the classic
+「部長の田中は外出しております」 — rather than only a distractor role; and
+negotiation (price, terms, 納期), meetings (stating an opinion, objecting
+politely, chairing), instructions, consulting, introductions, appointments and
+condolences are functions for the "what do you say" types and settings for the
+comprehension ones. 9,682 cells are left to write.
+
 ---
 
 ## The six fidelity mechanisms
@@ -333,14 +344,20 @@ can see in `bjt quality`.
    are auto-injected into that type's generator prompt, so the next items are
    written to avoid them. The rate should trend toward 50%.
 
-4. **Document templates** (`bjt/render/templates.py`). Eight templates — external
+4. **Document templates** (`bjt/render/templates.py`). Nine templates — external
    email, email thread, internal notice, minutes, schedule, progress report,
-   quotation, office sign — each declaring the header fields it cannot do without
+   quotation, office sign, and `figures` (集計資料) — each declaring the header
+   fields it cannot do without
    and the axes it is allowed to vary along, so a library of them does not become
    visually predictable. A document is **data**, rendered by us: a screenshot of
    an email cannot be selected, scaled, or read aloud, and an image model cannot
    spell 御中. The template is assigned by the seed cell exactly as a scene id is,
-   and an item that substitutes a different one is rejected.
+   and an item that substitutes a different one is rejected. A `figures` or
+   progress-report document may carry one **chart** (`bjt/render/chart.py`): a
+   bar or line graph drawn from numbers, written out figure by figure for every
+   model that reads the page, drawn by the app with each bar's figure printed —
+   because 資料聴読解 regularly asks about a figure read off a graph and changed
+   by what is heard.
 
 5. **Sanity check** (`bjt/fidelity/sanity.py`). One small call (Haiku by default,
    `BJT_SANITY_MODEL`) the moment an item exists, before anything expensive
@@ -902,7 +919,7 @@ bjt/
   tts/           what to synthesise, in which voice, over which channel — and the
                  offline job that does it (plan.py, synth.py, channel.py, providers.py)
   scenes.py      what the scene bank needs, and what exists
-  render/        document data → semantic HTML, and the eight templates
+  render/        document data → semantic HTML, the nine templates, and charts
   db/            SQLite store + schema
   seedtable.py   場面×関係×機能×レベル → cells
   plan.py        which shelf of the bank is emptiest, and tonight's work order

@@ -208,6 +208,18 @@ accident is not.
   comprehension roles are `manner: false`, and the 失礼度メーター steps aside
   for them — a misread table offends nobody. Until 2026-09-27 17 of the 34 roles
   fell through to 「この場面に合わない」.
+- **A chart is data, and every reader sees its figures.** Only templates with
+  `charts=True` (`figures`, `progress_report`) carry one, one per document;
+  `document.text_of` writes each figure beside its label for the gate, the
+  proofreader, the probe and the discriminator; the app prints every bar's
+  figure, and a line is asked about by its shape; the unit is exempt from the
+  numeral rule (it would turn 千円 into 1000円); and a block type the app does
+  not draw fails a test. The owner asked for charts (2026-09-27).
+- **ウチ/ソト is a relation a batch can aim at.** `uchi_to_soto` is speaking to
+  an outsider about one's own people; it is cast in `staff_to_client`'s voice,
+  so no role is recast, and a test requires every relation to have a voice.
+  Seed tables only ever grow — a test holds every committed item's cell to its
+  table.
 - **`supabase/current.sql` is the schema made readable, and generated.**
   `python supabase/snapshot.py` writes the latest definition of every function,
   view and trigger from the migrations, comments included. Read it to see what
