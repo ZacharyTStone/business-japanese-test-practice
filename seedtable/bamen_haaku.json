@@ -1,6 +1,6 @@
 {
   "item_type": "bamen_haaku",
-  "_note": "Original design, not licensed material. The `function` axis is WHAT THE QUESTION ASKS ABOUT the situation — where this is, who is speaking, what happens next. That is the axis that has to vary: ten items all asking 「ここはどこですか」 is one item asked ten times, however different the scenes are. `uchi_to_soto` is offered only to the questions about who is speaking and to whom: how somebody refers to their own boss （「部長の田中は…」） is the clue that the listener is outside the company. The owner asked for this (2026-09-27).",
+  "_note": "Original design, not licensed material. The `function` axis is WHAT THE QUESTION ASKS ABOUT the situation — where this is, who is speaking, what happens next. That is the axis that has to vary: ten items all asking 「ここはどこですか」 is one item asked ten times, however different the scenes are. `uchi_to_soto` is offered only to the questions about who is speaking and to whom: how somebody refers to their own boss （「部長の田中は…」） is the clue that the listener is outside the company. The owner asked for this (2026-09-27). A negotiation is a setting: what is asked about it is still where, who, why and what happens next. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -102,6 +102,15 @@
       "channel": "video",
       "scenes": [
         "scene_video_call_laptop"
+      ]
+    },
+    {
+      "id": "negotiation_table",
+      "ja": "商談の席（価格・条件の交渉）",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room",
+        "scene_client_office_sofa"
       ]
     }
   ],
@@ -361,6 +370,11 @@
       "peer_to_peer",
       "other_department",
       "staff_to_client",
+      "uchi_to_soto"
+    ],
+    "negotiation_table": [
+      "staff_to_client",
+      "subordinate_to_superior",
       "uchi_to_soto"
     ]
   }

@@ -1,6 +1,6 @@
 {
   "item_type": "shiryou_choudokkai",
-  "_note": "Original design, not licensed material. A document on the page, a prompt in the ear, and usually a value to find. The `function` axis is what has to be extracted; the template axis is which document it has to be extracted from.",
+  "_note": "Original design, not licensed material. A document on the page, a prompt in the ear, and usually a value to find. The `function` axis is what has to be extracted; the template axis is which document it has to be extracted from. A negotiation over a quotation is the setting this type's own prompt describes （「支払条件がちょっと…」）. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -82,6 +82,18 @@
         "schedule",
         "quote_order",
         "email_thread"
+      ]
+    },
+    {
+      "id": "negotiation",
+      "ja": "条件交渉の席で見積書を見ながら",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room",
+        "scene_meeting_room_table"
+      ],
+      "templates": [
+        "quote_order"
       ]
     }
   ],
@@ -281,6 +293,10 @@
       "peer_to_peer",
       "other_department",
       "staff_to_client"
+    ],
+    "negotiation": [
+      "staff_to_client",
+      "subordinate_to_superior"
     ]
   }
 }

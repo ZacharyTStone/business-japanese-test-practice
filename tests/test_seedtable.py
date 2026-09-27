@@ -210,3 +210,82 @@ def test_every_referenced_scene_has_a_label(table):
 
 def test_no_orphan_labels(table):
     assert set(table.scene_labels) == set(table.scene_bank)
+
+
+@pytest.mark.parametrize("item_type", TABLES)
+def test_every_scene_any_table_asks_for_has_a_label(item_type):
+    """`bjt publish` labels a scene from its table. A setting that offers a
+    scene its table has no words for publishes a picture with a blank label."""
+    table = seedtable.load(item_type)
+    for scene in table.scene_bank:
+        assert table.scene_labels.get(scene), f"{item_type}: {scene} has no label"
+
+
+# ----- the situations the exam tests (2026-09-27) ----------------------------
+#
+# Negotiation, the meeting, instructions, consulting, introductions,
+# appointments and condolences were missing from the tables, so no batch could
+# be written about them however it was prompted. They are functions where the
+# type is about what somebody says, and settings where it is about what
+# somebody understands.
+
+SPOKEN_ACTS = ("negotiate_price", "negotiate_terms", "state_opinion", "object_politely",
+               "chair_meeting", "instruct", "consult", "introduce_other",
+               "make_appointment", "condolence")
+
+
+@pytest.mark.parametrize("item_type", ["hatsugen_choukai", "hyougen"])
+@pytest.mark.parametrize("function", SPOKEN_ACTS)
+def test_every_missing_speech_act_now_has_cells(item_type, function):
+    table = seedtable.load(item_type)
+    for level in table.levels:
+        assert any(c.function == function for c in table.cells(level)), (function, level)
+
+
+@pytest.mark.parametrize("item_type,settings", [
+    ("sougou_choukai", ("negotiation", "regular_meeting")),
+    ("sougou_choudokkai", ("negotiation", "regular_meeting")),
+    ("shiryou_choudokkai", ("negotiation",)),
+    ("sougou_dokkai", ("negotiation_thread", "meeting_record", "condolence_notice")),
+    ("bamen_haaku", ("negotiation_table",)),
+])
+def test_the_comprehension_types_gain_situations_not_questions(item_type, settings):
+    """Their function axis is what the question asks — who decided, what
+    changed, what comes next — and those questions already fit a negotiation or
+    a regular meeting. What they lacked was the situation to ask them about."""
+    table = seedtable.load(item_type)
+    for setting in settings:
+        for level in table.levels:
+            assert any(c.setting == setting for c in table.cells(level)), (setting, level)
+
+
+@pytest.mark.parametrize("item_type", ["hatsugen_choukai", "hyougen"])
+def test_the_meeting_acts_happen_in_meetings(item_type):
+    """An opinion, an objection and the chair belong to a meeting — face to
+    face or online, or (for a written objection) in the email thread about it —
+    never at the reception counter or over a dinner table."""
+    meetings = {"meeting_room", "client_office", "video_call",
+                "email_external", "email_internal", "chat_internal"}
+    for cell in seedtable.load(item_type).cells():
+        if cell.function in ("state_opinion", "object_politely", "chair_meeting"):
+            assert cell.setting in meetings, cell.id
+        if cell.function == "chair_meeting":
+            assert cell.channel in ("in_person", "video"), cell.id
+
+
+@pytest.mark.parametrize("item_type", ["hatsugen_choukai", "hyougen"])
+def test_condolences_are_never_sent_by_chat_or_a_screen(item_type):
+    """お見舞い and お悔やみ are said in person, on the phone, or in a considered
+    email. A chat message, a posted notice or a video call is the wrong
+    medium, and an item set there would teach that it is not."""
+    for cell in seedtable.load(item_type).cells():
+        if cell.function == "condolence":
+            assert cell.channel in ("in_person", "phone", "written"), cell.id
+            assert cell.setting not in ("chat_internal", "notice_document"), cell.id
+
+
+@pytest.mark.parametrize("item_type", ["hatsugen_choukai", "hyougen"])
+def test_only_a_superior_gives_instructions(item_type):
+    for cell in seedtable.load(item_type).cells():
+        if cell.function == "instruct":
+            assert cell.relation == "superior_to_subordinate", cell.id

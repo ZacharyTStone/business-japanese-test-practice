@@ -1,6 +1,6 @@
 {
   "item_type": "sougou_choukai",
-  "_note": "Original design, not licensed material. This type plays a multi-speaker exchange once and then asks about it, so every distractor is a memory trap: true of someone else, or true earlier in the conversation. The `function` axis is what the question is about.",
+  "_note": "Original design, not licensed material. This type plays a multi-speaker exchange once and then asks about it, so every distractor is a memory trap: true of someone else, or true earlier in the conversation. The `function` axis is what the question is about. A negotiation and a regular meeting are settings here, not functions: what a listener is asked about either is still who decides, what was decided, what changed and where the numbers landed. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -71,6 +71,23 @@
       "channel": "phone",
       "scenes": [
         "scene_phone_desk"
+      ]
+    },
+    {
+      "id": "negotiation",
+      "ja": "取引先との条件交渉（価格・納期）",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room",
+        "scene_meeting_room_table"
+      ]
+    },
+    {
+      "id": "regular_meeting",
+      "ja": "部内の定例会議",
+      "channel": "in_person",
+      "scenes": [
+        "scene_meeting_room_table"
       ]
     }
   ],
@@ -278,6 +295,17 @@
       "peer_to_peer",
       "other_department",
       "staff_to_client"
+    ],
+    "negotiation": [
+      "staff_to_client",
+      "other_department"
+    ],
+    "regular_meeting": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
     ]
   }
 }

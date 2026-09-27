@@ -1,6 +1,6 @@
 {
   "item_type": "hatsugen_choukai",
-  "_note": "Original design, not licensed material — this file is committed on purpose. Diversity is produced HERE (by enumerating valid 場面×関係×機能×レベル cells and consuming them without replacement), not by asking the prompt to 'be varied'. The relation `uchi_to_soto` is the one arrow whose subject is a third person: the speaker talks to an outsider ABOUT their own people, which is where ウチ/ソト is asked for on purpose instead of turning up only as a distractor (`wrong_uchi_soto`). The telephone absence, transfer and message cells are ウチ/ソト by construction already and keep `staff_to_client`. The owner asked for this (2026-09-27).",
+  "_note": "Original design, not licensed material — this file is committed on purpose. Diversity is produced HERE (by enumerating valid 場面×関係×機能×レベル cells and consuming them without replacement), not by asking the prompt to 'be varied'. The relation `uchi_to_soto` is the one arrow whose subject is a third person: the speaker talks to an outsider ABOUT their own people, which is where ウチ/ソト is asked for on purpose instead of turning up only as a distractor (`wrong_uchi_soto`). The telephone absence, transfer and message cells are ウチ/ソト by construction already and keep `staff_to_client`. The owner asked for this (2026-09-27). Negotiation, the meeting (an opinion, a polite objection, the chair), instructions, consulting, introducing somebody, making an appointment and condolences are what the exam asks about and the table could not produce. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -481,6 +481,210 @@
         "in_person",
         "video"
       ]
+    },
+    {
+      "id": "negotiate_price",
+      "ja": "価格を交渉する",
+      "relations": [
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "event_venue",
+        "phone_external",
+        "video_call"
+      ]
+    },
+    {
+      "id": "negotiate_terms",
+      "ja": "納期や条件の調整を申し入れる",
+      "relations": [
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "office_desk",
+        "meeting_room",
+        "client_office",
+        "phone_internal",
+        "phone_external",
+        "video_call"
+      ]
+    },
+    {
+      "id": "state_opinion",
+      "ja": "会議で意見を述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "video_call"
+      ]
+    },
+    {
+      "id": "object_politely",
+      "ja": "反対意見をやんわり述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "video_call"
+      ]
+    },
+    {
+      "id": "chair_meeting",
+      "ja": "会議を進行する・議論をまとめる",
+      "relations": [
+        "superior_to_subordinate",
+        "subordinate_to_superior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "video_call"
+      ]
+    },
+    {
+      "id": "instruct",
+      "ja": "仕事の指示を出す",
+      "relations": [
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "office_desk",
+        "meeting_room",
+        "corridor",
+        "phone_internal",
+        "video_call"
+      ]
+    },
+    {
+      "id": "consult",
+      "ja": "相談を持ちかける",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "office_desk",
+        "meeting_room",
+        "corridor",
+        "client_office",
+        "dining",
+        "phone_internal",
+        "phone_external",
+        "video_call"
+      ]
+    },
+    {
+      "id": "introduce_other",
+      "ja": "人を紹介する",
+      "relations": [
+        "uchi_to_soto",
+        "subordinate_to_superior",
+        "superior_to_subordinate",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "make_appointment",
+      "ja": "面会の約束（アポイント）を取る",
+      "relations": [
+        "staff_to_client",
+        "staff_to_customer",
+        "uchi_to_soto"
+      ],
+      "channels": [
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "event_venue",
+        "phone_external",
+        "video_call"
+      ]
+    },
+    {
+      "id": "condolence",
+      "ja": "お見舞い・お悔やみを述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "phone"
+      ],
+      "settings": [
+        "office_desk",
+        "corridor",
+        "meeting_room",
+        "client_office",
+        "phone_internal",
+        "phone_external"
+      ]
     }
   ],
   "setting_relations": {
@@ -538,7 +742,8 @@
       "subordinate_to_superior",
       "junior_to_senior",
       "peer_to_peer",
-      "other_department"
+      "other_department",
+      "superior_to_subordinate"
     ],
     "phone_external": [
       "staff_to_client",
@@ -550,7 +755,8 @@
       "peer_to_peer",
       "other_department",
       "staff_to_client",
-      "uchi_to_soto"
+      "uchi_to_soto",
+      "superior_to_subordinate"
     ]
   }
 }

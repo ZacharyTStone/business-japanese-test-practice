@@ -1,6 +1,6 @@
 {
   "item_type": "hyougen",
-  "_note": "Original design, not licensed material — committed on purpose. Same axis shape as 発言聴解 because the type asks the same question in writing, but with written settings included: choosing an expression for an email is a different skill from choosing one to say out loud, and the traps differ accordingly. `uchi_to_soto` is the relation whose subject is a third person — an email or a remark to an outsider about one's own boss — so ウチ/ソト can be asked for rather than met only as a distractor. The owner asked for this (2026-09-27).",
+  "_note": "Original design, not licensed material — committed on purpose. Same axis shape as 発言聴解 because the type asks the same question in writing, but with written settings included: choosing an expression for an email is a different skill from choosing one to say out loud, and the traps differ accordingly. `uchi_to_soto` is the relation whose subject is a third person — an email or a remark to an outsider about one's own boss — so ウチ/ソト can be asked for rather than met only as a distractor. The owner asked for this (2026-09-27). The meeting, negotiation, instruction, consultation, introduction, appointment and condolence functions are what the exam tests and the table lacked; a condolence is never offered over chat, a posted notice or a video call. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -389,6 +389,213 @@
       "channels": [
         "written",
         "in_person"
+      ]
+    },
+    {
+      "id": "negotiate_price",
+      "ja": "価格を交渉する",
+      "relations": [
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "email_external",
+        "meeting_room",
+        "client_office",
+        "phone_call",
+        "video_call"
+      ]
+    },
+    {
+      "id": "negotiate_terms",
+      "ja": "納期や条件の調整を申し入れる",
+      "relations": [
+        "staff_to_client",
+        "other_department"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "email_external",
+        "email_internal",
+        "chat_internal",
+        "meeting_room",
+        "client_office",
+        "phone_call",
+        "video_call"
+      ]
+    },
+    {
+      "id": "state_opinion",
+      "ja": "会議で意見を述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "video_call"
+      ]
+    },
+    {
+      "id": "object_politely",
+      "ja": "反対意見をやんわり述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "client_office",
+        "video_call",
+        "email_external",
+        "email_internal",
+        "chat_internal"
+      ]
+    },
+    {
+      "id": "chair_meeting",
+      "ja": "会議を進行する・議論をまとめる",
+      "relations": [
+        "superior_to_subordinate",
+        "subordinate_to_superior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "in_person",
+        "video"
+      ],
+      "settings": [
+        "meeting_room",
+        "video_call"
+      ]
+    },
+    {
+      "id": "instruct",
+      "ja": "仕事の指示を出す",
+      "relations": [
+        "superior_to_subordinate"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ]
+    },
+    {
+      "id": "consult",
+      "ja": "相談を持ちかける",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "email_external",
+        "email_internal",
+        "chat_internal",
+        "meeting_room",
+        "desk_conversation",
+        "client_office",
+        "phone_call",
+        "video_call"
+      ]
+    },
+    {
+      "id": "introduce_other",
+      "ja": "人を紹介する",
+      "relations": [
+        "uchi_to_soto",
+        "subordinate_to_superior",
+        "superior_to_subordinate",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "video"
+      ]
+    },
+    {
+      "id": "make_appointment",
+      "ja": "面会の約束（アポイント）を取る",
+      "relations": [
+        "staff_to_client",
+        "staff_to_customer",
+        "uchi_to_soto"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone",
+        "video"
+      ],
+      "settings": [
+        "email_external",
+        "client_office",
+        "phone_call",
+        "video_call"
+      ]
+    },
+    {
+      "id": "condolence",
+      "ja": "お見舞い・お悔やみを述べる",
+      "relations": [
+        "subordinate_to_superior",
+        "junior_to_senior",
+        "superior_to_subordinate",
+        "peer_to_peer",
+        "other_department",
+        "staff_to_client"
+      ],
+      "channels": [
+        "written",
+        "in_person",
+        "phone"
+      ],
+      "settings": [
+        "email_external",
+        "email_internal",
+        "desk_conversation",
+        "client_office",
+        "phone_call"
       ]
     }
   ],
