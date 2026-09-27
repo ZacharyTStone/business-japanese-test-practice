@@ -29,6 +29,7 @@ import textwrap
 
 from . import batch as batchmod
 from . import (
+    calibration,
     config,
     fixtures,
     levels,
@@ -415,7 +416,8 @@ def cmd_quality(args) -> int:
         print(f"  official CAN-DO level descriptors: "
               f"{'yes' if levels.using_official_descriptors() else 'no (using neutral defaults)'}")
 
-        print("\n[calibrate] run `bjt calibrate --type <t>` after answering official + generated items.")
+        print("\n[calibrate] `bjt calibrate --type <t> --attempts-csv <file>` sets your score on the")
+        print("  official samples beside your first attempts in the app (the export SQL is in its --help).")
         print("=" * 60)
     finally:
         store.close()
@@ -465,6 +467,15 @@ def cmd_discriminate(args) -> int:
 
 
 def cmd_calibrate(args) -> int:
+    """Sit the official samples here; set the score beside the bank's.
+
+    Right over answered on both sides, with how much was answered said
+    separately: a skip is not a wrong answer. The bank's side is your first
+    attempts in the app, from `--attempts-csv` (the export SQL is
+    `calibration.ATTEMPTS_EXPORT_SQL`, printed by `bjt calibrate --help`), or
+    what `bjt practice` recorded here when no file is given. See
+    bjt/calibration.py for why both used to flatter the bank.
+    """
     from .generators.base import load_seed_json
 
     official = _normalize_official(load_seed_json("official", args.type), args.type)
@@ -472,10 +483,23 @@ def cmd_calibrate(args) -> int:
         print(f"No official items at seeds/official/{args.type}.json to sit.", file=sys.stderr)
         return 2
 
+    # The file is read before the sitting, so a wrong export is found before
+    # anybody has answered ten questions rather than after.
+    bank = None
+    if args.attempts_csv:
+        try:
+            bank = calibration.read_attempts_csv(pathlib.Path(args.attempts_csv), args.type)
+        except (OSError, ValueError) as e:
+            print(f"cannot read {args.attempts_csv}: {e}", file=sys.stderr)
+            return 2
+        source = f"your first attempts in the app ({pathlib.Path(args.attempts_csv).name})"
+    else:
+        source = "what `bjt practice` recorded here (--attempts-csv reads the app instead)"
+
     store = Store()
     try:
         print(f"Sitting {len(official)} official {args.type} sample items.\n")
-        n_correct = 0
+        sat = calibration.Tally(total=len(official))
         for i, item in enumerate(official):
             if len(item.get("options", [])) > len(LETTERS):
                 print(f"\n(skipping official item {i+1}: more than {len(LETTERS)} options)")
@@ -487,33 +511,17 @@ def cmd_calibrate(args) -> int:
             if choice is None:
                 continue
             correct = choice == ci
-            n_correct += int(correct)
+            sat.answered += 1
+            sat.right += int(correct)
             print(f"  {'✓' if correct else '✗'}  正解: {LETTERS[ci]}\n")
 
-        official_acc = n_correct / len(official) if official else None
-
-        gen_rows = [r for r in store.accuracy_by_type() if r["item_type"] == args.type]
-        gen_acc = gen_rows[0]["accuracy"] if gen_rows else None
-        n_gen = gen_rows[0]["answered"] if gen_rows else 0
-
-        store.insert_calibration_run(args.type, official_acc, gen_acc, len(official), n_gen)
-
-        print("\n" + "=" * 50)
-        print("CALIBRATION")
-        oa = f"{official_acc:.0%}" if official_acc is not None else "n/a"
-        ga = f"{gen_acc:.0%}" if gen_acc is not None else "n/a"
-        print(f"  official items:  {oa}  (n={len(official)})")
-        print(f"  generated items: {ga}  (n={n_gen})")
-        if official_acc is not None and gen_acc is not None:
-            gap = gen_acc - official_acc
-            if gap > 0.1:
-                print("  → Generated items look consistently EASIER than official ones.")
-                print("    The prompts may have drifted soft — tighten them.")
-            elif gap < -0.1:
-                print("  → Generated items look harder than official ones.")
-            else:
-                print("  → Generated and official difficulty look comparable.")
-        print("=" * 50)
+        if bank is None:
+            bank = calibration.from_store(store, args.type)
+        # Each rate with the count it is a rate of: the answered items, not
+        # the paper or the file.
+        store.insert_calibration_run(args.type, sat.accuracy, bank.accuracy,
+                                     sat.answered, bank.answered)
+        print(calibration.report(args.type, sat, bank, source))
     finally:
         store.close()
     return 0
@@ -1550,8 +1558,19 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("-n", type=int, default=6, help="max items per side")
     d.set_defaults(func=cmd_discriminate)
 
-    c = sub.add_parser("calibrate", help="sit official items, compare to generated accuracy")
+    c = sub.add_parser(
+        "calibrate", help="sit official items, compare to your accuracy on the bank",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=("Your side of the bank comes from the app. Export it with this read-only\n"
+                "SQL in the Supabase SQL editor (your sign-in address in place of\n"
+                "you@example.com), download the result as CSV, and pass the file:\n\n"
+                + textwrap.indent(calibration.ATTEMPTS_EXPORT_SQL, "    ")))
     c.add_argument("--type", required=True, choices=types)
+    c.add_argument("--attempts-csv", metavar="PATH",
+                   help="your first attempts in the app, exported with the SQL below "
+                        "(columns item_type and is_correct, and chosen_index so a "
+                        "timed-out answer is not counted as one); without it, what "
+                        "`bjt practice` recorded in the local database")
     c.set_defaults(func=cmd_calibrate)
 
     return p
