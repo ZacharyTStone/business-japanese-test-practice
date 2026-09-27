@@ -12,7 +12,7 @@ assigns it: ten items are ten different grammar points by construction.
 """
 from __future__ import annotations
 
-from .base import Generator
+from .base import Generator, with_relation_note
 
 
 class GoiBunpouGenerator(Generator):
@@ -57,7 +57,7 @@ class GoiBunpouGenerator(Generator):
             "in_person": "The carrier sentence is something said out loud at work.",
             "phone": "The carrier sentence is something said on the telephone.",
         }[cell.channel]
-        return (
+        return with_relation_note(
             "Write this item for the following assignment. These are requirements, not "
             "suggestions:\n"
             f"- 場面（この文が現れる場所）: {cell.setting_ja}\n"
@@ -67,5 +67,6 @@ class GoiBunpouGenerator(Generator):
             "The blank must test exactly the 出題ポイント above. A sentence where the "
             "blank happens to be fillable by testing something else instead is a failed "
             "item: the whole point of the assignment is that a batch of ten covers ten "
-            "different points rather than ten flavours of 敬語."
+            "different points rather than ten flavours of 敬語.",
+            cell,
         )

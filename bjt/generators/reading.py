@@ -14,7 +14,7 @@ emits the structure and the template it was assigned; we render it.
 """
 from __future__ import annotations
 
-from .base import Generator
+from .base import Generator, with_relation_note
 from .. import render
 
 #: The constraint that defines every listening-and-reading type. Repeated in
@@ -65,7 +65,7 @@ class _DocumentGenerator(Generator):
         if cell.scenes:
             lines.append(f"- scene_id: choose exactly one of: {'、'.join(cell.scenes)}")
         spec = self._template_spec(cell)
-        return "\n".join(lines) + (f"\n\n{spec}" if spec else "")
+        return with_relation_note("\n".join(lines), cell) + (f"\n\n{spec}" if spec else "")
 
     def validate_extra(self, item: dict, cell=None) -> list[str]:
         """The template is an assignment, exactly as the scene id is.

@@ -7,7 +7,7 @@ direction, or speech act.
 """
 from __future__ import annotations
 
-from .base import Generator
+from .base import Generator, with_relation_note
 
 
 class HyougenGenerator(Generator):
@@ -45,7 +45,7 @@ class HyougenGenerator(Generator):
                      "see the other and the fixed call conventions apply.",
             "video": "The options are spoken in an online meeting.",
         }[cell.channel]
-        return (
+        return with_relation_note(
             "Write this item for the following assigned situation. These are "
             "requirements, not suggestions — do not substitute a different setting, "
             "relationship, or communicative function:\n"
@@ -55,5 +55,6 @@ class HyougenGenerator(Generator):
             f"- channel: {cell.channel} — {channel_note}\n"
             "The stem states the situation and asks which expression fits. It must name "
             "who is addressing whom and what they are trying to do, because the options "
-            "alone must not reveal the answer."
+            "alone must not reveal the answer.",
+            cell,
         )

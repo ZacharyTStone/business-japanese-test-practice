@@ -12,7 +12,7 @@ to be in there, said plainly, in the order somebody would actually say it.
 """
 from __future__ import annotations
 
-from .base import Generator
+from .base import Generator, with_relation_note
 
 #: Said once, in every prompt for a heard item. The single biggest difference
 #: between an item that works and one that merely reads well is whether it
@@ -61,7 +61,7 @@ class BamenHaakuGenerator(Generator):
 
     def cell_spec(self, cell) -> str:
         scenes = "、".join(cell.scenes)
-        return (
+        return with_relation_note(
             "Write this item for the following assigned situation. These are "
             "requirements, not suggestions:\n"
             f"- 場面: {cell.setting_ja}\n"
@@ -70,7 +70,8 @@ class BamenHaakuGenerator(Generator):
             f"- channel: {cell.channel}\n"
             f"- scene_id: choose exactly one of: {scenes}\n"
             "The question must ask exactly the 設問が問うこと above. Set `channel` to the "
-            "value given."
+            "value given.",
+            cell,
         )
 
     def validate_extra(self, item: dict, cell=None) -> list[str]:
@@ -113,7 +114,7 @@ class SougouChoukaiGenerator(Generator):
 
     def cell_spec(self, cell) -> str:
         scenes = "、".join(cell.scenes)
-        return (
+        return with_relation_note(
             "Write this item for the following assigned situation. These are "
             "requirements, not suggestions:\n"
             f"- 場面: {cell.setting_ja}\n"
@@ -121,7 +122,8 @@ class SougouChoukaiGenerator(Generator):
             f"- 設問が問うこと: {cell.function_ja}\n"
             f"- channel: {cell.channel}\n"
             f"- scene_id: choose exactly one of: {scenes}\n"
-            "Every turn's `speaker_role` must be consistent with 参加者の関係."
+            "Every turn's `speaker_role` must be consistent with 参加者の関係.",
+            cell,
         )
 
     def validate_extra(self, item: dict, cell=None) -> list[str]:

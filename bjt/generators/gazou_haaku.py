@@ -21,7 +21,7 @@ being depicted — never from the prompt.
 """
 from __future__ import annotations
 
-from .base import Generator
+from .base import Generator, with_relation_note
 
 
 class GazouHaakuGenerator(Generator):
@@ -55,13 +55,14 @@ class GazouHaakuGenerator(Generator):
     )
 
     def cell_spec(self, cell) -> str:
-        return (
+        return with_relation_note(
             "Write this item for the following assigned situation. These are "
             "requirements, not suggestions — the picture must show exactly this:\n"
             f"- 場面（絵の場所）: {cell.setting_ja}\n"
             f"- 関係（絵の中の人物）: {cell.relation_ja}（矢印の左側の人が、設問で問われる人）\n"
             f"- 描かれている行動（正解の内容）: {cell.function_ja}\n"
-            "Set `channel` to \"in_person\"."
+            "Set `channel` to \"in_person\".",
+            cell,
         )
 
     def validate_extra(self, item: dict, cell=None) -> list[str]:

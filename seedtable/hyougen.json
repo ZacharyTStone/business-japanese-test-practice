@@ -1,6 +1,6 @@
 {
   "item_type": "hyougen",
-  "_note": "Original design, not licensed material — committed on purpose. Same axis shape as 発言聴解 because the type asks the same question in writing, but with written settings included: choosing an expression for an email is a different skill from choosing one to say out loud, and the traps differ accordingly.",
+  "_note": "Original design, not licensed material — committed on purpose. Same axis shape as 発言聴解 because the type asks the same question in writing, but with written settings included: choosing an expression for an email is a different skill from choosing one to say out loud, and the traps differ accordingly. `uchi_to_soto` is the relation whose subject is a third person — an email or a remark to an outsider about one's own boss — so ウチ/ソト can be asked for rather than met only as a distractor. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -98,6 +98,11 @@
       "id": "staff_to_customer",
       "ja": "社員 → 顧客",
       "direction": "out"
+    },
+    {
+      "id": "uchi_to_soto",
+      "ja": "自社 → 社外（身内のことを話す）",
+      "direction": "out"
     }
   ],
   "functions": [
@@ -112,7 +117,8 @@
         "other_department",
         "staff_to_client",
         "staff_to_visitor",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "written",
@@ -132,7 +138,8 @@
         "other_department",
         "staff_to_client",
         "staff_to_visitor",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "written",
@@ -150,7 +157,8 @@
         "staff_to_client",
         "staff_to_visitor",
         "staff_to_customer",
-        "peer_to_peer"
+        "peer_to_peer",
+        "uchi_to_soto"
       ],
       "channels": [
         "written",
@@ -170,7 +178,8 @@
         "other_department",
         "staff_to_client",
         "staff_to_visitor",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "written",
@@ -327,7 +336,8 @@
         "other_department",
         "staff_to_client",
         "staff_to_visitor",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "written",
@@ -387,7 +397,8 @@
       "staff_to_client",
       "staff_to_visitor",
       "staff_to_customer",
-      "subordinate_to_superior"
+      "subordinate_to_superior",
+      "uchi_to_soto"
     ],
     "email_internal": [
       "subordinate_to_superior",
@@ -413,7 +424,8 @@
       "superior_to_subordinate",
       "peer_to_peer",
       "other_department",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ],
     "desk_conversation": [
       "subordinate_to_superior",
@@ -425,13 +437,15 @@
     "reception": [
       "staff_to_visitor",
       "staff_to_customer",
-      "peer_to_peer"
+      "peer_to_peer",
+      "uchi_to_soto"
     ],
     "client_office": [
       "staff_to_client",
       "staff_to_visitor",
       "staff_to_customer",
-      "peer_to_peer"
+      "peer_to_peer",
+      "uchi_to_soto"
     ],
     "phone_call": [
       "subordinate_to_superior",
@@ -441,7 +455,8 @@
       "other_department",
       "staff_to_client",
       "staff_to_visitor",
-      "staff_to_customer"
+      "staff_to_customer",
+      "uchi_to_soto"
     ],
     "video_call": [
       "subordinate_to_superior",
@@ -449,7 +464,8 @@
       "superior_to_subordinate",
       "peer_to_peer",
       "other_department",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ]
   }
 }

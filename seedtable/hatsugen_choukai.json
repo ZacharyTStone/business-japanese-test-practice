@@ -1,6 +1,6 @@
 {
   "item_type": "hatsugen_choukai",
-  "_note": "Original design, not licensed material — this file is committed on purpose. Diversity is produced HERE (by enumerating valid 場面×関係×機能×レベル cells and consuming them without replacement), not by asking the prompt to 'be varied'.",
+  "_note": "Original design, not licensed material — this file is committed on purpose. Diversity is produced HERE (by enumerating valid 場面×関係×機能×レベル cells and consuming them without replacement), not by asking the prompt to 'be varied'. The relation `uchi_to_soto` is the one arrow whose subject is a third person: the speaker talks to an outsider ABOUT their own people, which is where ウチ/ソト is asked for on purpose instead of turning up only as a distractor (`wrong_uchi_soto`). The telephone absence, transfer and message cells are ウチ/ソト by construction already and keep `staff_to_client`. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -153,6 +153,11 @@
       "id": "staff_to_customer",
       "ja": "自社 → 一般のお客様",
       "direction": "out"
+    },
+    {
+      "id": "uchi_to_soto",
+      "ja": "自社 → 社外（身内のことを話す）",
+      "direction": "out"
     }
   ],
   "functions": [
@@ -165,7 +170,8 @@
         "peer_to_peer",
         "other_department",
         "staff_to_client",
-        "superior_to_subordinate"
+        "superior_to_subordinate",
+        "uchi_to_soto"
       ],
       "channels": [
         "in_person",
@@ -196,7 +202,8 @@
         "peer_to_peer",
         "staff_to_client",
         "staff_to_customer",
-        "other_department"
+        "other_department",
+        "uchi_to_soto"
       ],
       "channels": [
         "in_person",
@@ -210,7 +217,8 @@
       "relations": [
         "subordinate_to_superior",
         "staff_to_client",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "in_person",
@@ -227,7 +235,8 @@
         "peer_to_peer",
         "other_department",
         "staff_to_client",
-        "staff_to_visitor"
+        "staff_to_visitor",
+        "uchi_to_soto"
       ],
       "channels": [
         "in_person",
@@ -344,10 +353,16 @@
       "ja": "来客を迎えて案内する",
       "relations": [
         "staff_to_visitor",
-        "staff_to_customer"
+        "staff_to_customer",
+        "uchi_to_soto"
       ],
       "channels": [
         "in_person"
+      ],
+      "settings": [
+        "reception",
+        "corridor",
+        "event_venue"
       ]
     },
     {
@@ -482,7 +497,8 @@
       "superior_to_subordinate",
       "peer_to_peer",
       "other_department",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ],
     "corridor": [
       "subordinate_to_superior",
@@ -490,28 +506,33 @@
       "superior_to_subordinate",
       "peer_to_peer",
       "other_department",
-      "staff_to_visitor"
+      "staff_to_visitor",
+      "uchi_to_soto"
     ],
     "reception": [
       "staff_to_visitor",
       "staff_to_customer",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ],
     "client_office": [
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ],
     "dining": [
       "staff_to_client",
       "subordinate_to_superior",
       "junior_to_senior",
       "superior_to_subordinate",
-      "peer_to_peer"
+      "peer_to_peer",
+      "uchi_to_soto"
     ],
     "event_venue": [
       "staff_to_client",
       "staff_to_visitor",
       "staff_to_customer",
-      "peer_to_peer"
+      "peer_to_peer",
+      "uchi_to_soto"
     ],
     "phone_internal": [
       "subordinate_to_superior",
@@ -521,13 +542,15 @@
     ],
     "phone_external": [
       "staff_to_client",
-      "staff_to_customer"
+      "staff_to_customer",
+      "uchi_to_soto"
     ],
     "video_call": [
       "subordinate_to_superior",
       "peer_to_peer",
       "other_department",
-      "staff_to_client"
+      "staff_to_client",
+      "uchi_to_soto"
     ]
   }
 }
