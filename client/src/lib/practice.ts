@@ -21,7 +21,17 @@
  * effect keyed on that value, so it is posted once however many presses there
  * were.
  */
-import type { AnsweredItem, QueuedItem } from "./types";
+import { NO_ANSWER, type AnsweredItem, type QueuedItem } from "./types";
+
+/**
+ * How soon after a question appears a press on one of its options is taken as
+ * an answer. A double tap on "next" advances once — but its second tap lands on
+ * whatever the next question put under the finger, and answered it: a browser
+ * run caught exactly that (2026-09-27). Nobody reads a question and answers it
+ * in a third of a second, so a press that early is the tail of the last one.
+ * The clock's own timeout is never refused.
+ */
+export const SETTLE_MS = 350;
 
 export type Stage = "scene" | "listen" | "answer" | "reveal";
 
@@ -134,6 +144,7 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
     case "choose":
       // One answer per question, however many presses arrive.
       if (state.chosen !== null || state.pending || !state.items[state.index]) return state;
+      if (action.position !== NO_ANSWER && action.now - state.shownAt < SETTLE_MS) return state;
       return {
         ...state,
         chosen: action.position,

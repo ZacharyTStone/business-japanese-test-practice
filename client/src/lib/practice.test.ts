@@ -83,6 +83,26 @@ describe("one press, one move", () => {
     expect(s.graded).toBeNull();
   });
 
+  it("does not let the tail of a double tap on next answer the question after it", () => {
+    const s = run([
+      loaded(3),
+      { type: "choose", position: 0, stage: "answer", now: 2000 },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } },
+      { type: "next", now: 3000 },
+      { type: "next", now: 3080 },
+      { type: "choose", position: 3, stage: "answer", now: 3090 },
+    ]);
+    expect(s.index).toBe(1);
+    expect(s.chosen).toBeNull();
+    // ...while a real answer, a moment later, is taken.
+    expect(practiceReducer(s, { type: "choose", position: 2, stage: "answer", now: 4200 }).chosen).toBe(2);
+  });
+
+  it("always takes the clock's own timeout", () => {
+    const s = run([loaded(1), { type: "choose", position: -1, stage: "answer", now: 1001 }]);
+    expect(s.chosen).toBe(-1);
+  });
+
   it("does not advance past a question nobody has answered", () => {
     const s = run([loaded(3), { type: "next", now: 3000 }]);
     expect(s.index).toBe(0);
