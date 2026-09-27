@@ -15,14 +15,17 @@
  */
 import type { TypePace } from "./pace";
 import { supabase } from "./supabase";
+import { buildWordList, type WordEntry, type WordSourceItem } from "./words";
 import type {
   DayStatus,
   HistoryEntry,
+  Level,
   Profile,
   QueuedItem,
   ReviewDetail,
   ReviewLoad,
   RoleTrap,
+  Section,
   SectionLevel,
   StimulusDocument,
   TagStat,
@@ -622,6 +625,63 @@ export async function fetchTermSentence(itemId: string, term: string): Promise<T
     url = clipUrl((clip?.audio_path as string | null) ?? null);
   }
   return { text: line.text, url };
+}
+
+/**
+ * Every word the published questions carry notes for, each with a sentence
+ * from a question that uses it — the word list.
+ *
+ * Read from the bank as it stands, and nothing written for it: the notes are
+ * the ones each item shipped with, and the sentence is found in the questions
+ * (see `words.ts`). Paged, because PostgREST stops at a thousand rows and the
+ * bank will not stay under that. Row-level security already hides unpublished
+ * questions, so a withdrawn one's words go with it.
+ */
+export async function fetchWordList(): Promise<WordEntry[]> {
+  const PAGE = 1000;
+  async function all<T>(
+    page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+  ): Promise<T[]> {
+    const out: T[] = [];
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await page(from, from + PAGE - 1);
+      if (error) throw error;
+      out.push(...(data ?? []));
+      if (!data || data.length < PAGE) return out;
+    }
+  }
+  const [items, correct, types] = await Promise.all([
+    all((from, to) =>
+      supabase
+        .from("items")
+        .select("id, item_type, level, stem, dialogue, documents, vocab_notes")
+        .order("id")
+        .range(from, to)
+    ),
+    all((from, to) =>
+      supabase
+        .from("item_options")
+        .select("item_id, text")
+        .eq("role", "correct")
+        .order("item_id")
+        .range(from, to)
+    ),
+    supabase.from("item_types").select("id, section"),
+  ]);
+  if (types.error) throw types.error;
+  const sectionOf = new Map((types.data ?? []).map((t) => [t.id as string, t.section as Section]));
+  const answerOf = new Map(correct.map((o) => [o.item_id as string, o.text as string]));
+  const sources: WordSourceItem[] = items.map((i) => ({
+    id: i.id as string,
+    level: i.level as Level,
+    section: sectionOf.get(i.item_type as string) ?? "dokkai",
+    stem: (i.stem as string) ?? "",
+    dialogue: (i.dialogue ?? []) as { text: string }[],
+    documents: (i.documents ?? []) as StimulusDocument[],
+    vocab_notes: (i.vocab_notes ?? []) as VocabNote[],
+    correct_text: answerOf.get(i.id as string) ?? null,
+  }));
+  return buildWordList(sources);
 }
 
 /**

@@ -117,6 +117,10 @@ function Navigator() {
             name="vocab"
             options={{ title: t("title_vocab"), headerLeft: () => <BackToRecord /> }}
           />
+          <Stack.Screen
+            name="words"
+            options={{ title: t("title_words"), headerLeft: () => <BackToRecord /> }}
+          />
         </Stack>
   );
 }
