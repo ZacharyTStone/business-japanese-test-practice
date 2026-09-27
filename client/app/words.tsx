@@ -2,10 +2,12 @@
  * Every word the questions carry notes for, each with a sentence it is used in.
  *
  * The companion to ことばメモ: that screen keeps the words of the questions
- * that caught you; this one is the whole bank's vocabulary, searchable, with a
- * level and a section to narrow it by and furigana to switch on. Nothing on it
- * is written for it — the words, readings and meanings are the notes each
- * question shipped with, and the example is a line of a question (`words.ts`).
+ * that caught you; this one keeps the words of every question you have
+ * answered, searchable, with a level and a section to narrow it by and
+ * furigana to switch on. Nothing on it is written for it — the words, readings
+ * and meanings are the notes each question shipped with, and the example is a
+ * line of one of those questions (`words.ts`). Never a question not yet met:
+ * its sentence could be its answer.
  *
  * A reference, not a drill, and not a choice about the questions: nothing here
  * is recorded, and what is served next is still next_items() alone.
@@ -87,7 +89,7 @@ export default function Words() {
   if (words.length === 0) {
     return (
       <View style={styles.page}>
-        <Notice title={t("words_empty")} body="" />
+        <Notice title={t("words_empty")} body={t("words_empty_body")} />
       </View>
     );
   }

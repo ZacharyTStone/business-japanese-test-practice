@@ -1,6 +1,7 @@
 /**
- * Every word the bank's questions carry notes for, in one list, each with a
- * sentence it is used in.
+ * Every word the given questions carry notes for, in one list, each with a
+ * sentence it is used in. The app gives it the questions a learner has
+ * answered (`fetchWordList`).
  *
  * Nothing here is written for the list. The words, readings and meanings are
  * the `vocab_notes` each item shipped with, and the sentence is a line of a
@@ -239,7 +240,7 @@ const SECTION_ORDER: Section[] = ["choukai", "choudokkai", "dokkai"];
  * One entry per term across the bank. A term noted by several questions keeps
  * the first note's reading and meaning and every question's level and section;
  * its sentence comes from a question that noted it where one uses it, and from
- * any other question otherwise.
+ * any other question in the list otherwise.
  */
 export function buildWordList(items: WordSourceItem[]): WordEntry[] {
   const byTerm = new Map<string, { note: VocabNote; items: WordSourceItem[] }>();
