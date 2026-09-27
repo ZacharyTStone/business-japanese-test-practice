@@ -14,6 +14,10 @@ Commands
     quality       print the fidelity report (mechanisms 1-5)
     discriminate  run the discriminator loop and report the discrimination rate
     calibrate     sit the official sample items and compare accuracy to generated
+
+The commands are thin on purpose. What they drive lives in the modules they
+call: one draft's checks and a shelf's loop in `bjt/pipeline.py`, the bundle and
+its offline checks in `bjt/batch.py`, the SQL in `bjt/publish.py`.
 """
 from __future__ import annotations
 
@@ -28,6 +32,7 @@ from . import (
     config,
     fixtures,
     levels,
+    pipeline,
     plan,
     publish,
     render,
@@ -39,7 +44,7 @@ from . import (
 from . import llm as llmmod
 from .llm import LLMBillingError, LLMError
 from .db import Store
-from .fidelity import answerability, dedupe, difficulty, discriminator, roles, sanity, vocab
+from .fidelity import discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
 
 
@@ -87,167 +92,6 @@ def _print_item_answer(item: dict) -> None:
         for n in notes:
             print(f"    {n['term']}（{n['reading']}） — {n['meaning']}")
     print()
-
-
-# ----- generation + gating -----------------------------------------------
-
-def _generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_check: bool = True,
-                       cell=None, feedback: "str | None" = None):
-    """Generate one item, run every per-item check, persist with metrics.
-    Returns (item, item_id, kept: bool, detail: str, reason: str | None) —
-    `reason` is what review said, in a sentence the next draft for the same
-    shelf is told (`feedback`), and None for an item that was kept.
-
-    The order is cheapest-first, and that is the point. The offline vocab check
-    costs nothing. The proofreader is one small call. The answerability gate is
-    six large ones, and it only runs on an item the first two did not already
-    condemn — so a generation that came out broken costs a Haiku call instead of
-    six Opus calls, and the gate's budget is spent on items that might survive it.
-    The difficulty probe comes last, a few small calls, and only for an item that
-    is going to ship: measuring the difficulty of a discarded item buys nothing.
-    """
-    gen = get_generator(item_type, store)
-    if cell is None and gen.requires_cell:
-        cell = _next_cell(store, item_type, level)
-    item = gen.generate(level, cell=cell, feedback=feedback)
-
-    vres = vocab.check_item(item, level)
-    sres = sanity.run_check(item) if sanity_check else sanity.SanityResult(checked=False)
-    gate_verdict = "skipped"
-    cold = full = None
-    if not sres.ok:
-        # No gate for an item with a fault a proofreader can see. Six calls to a
-        # strong model cannot repair an explanation that names the wrong option,
-        # and this is the whole saving.
-        gate_verdict = "discarded:sanity"
-    elif gate:
-        gres = answerability.run_gate(item)
-        cold, full, gate_verdict = gres.cold_success_rate, gres.full_success_rate, gres.verdict
-    # A vocab violation (when enforced) is an independent discard reason — it can
-    # fail an item the answerability gate passed or skipped.
-    if vres.enforced and not vres.ok and not gate_verdict.startswith("discarded"):
-        gate_verdict = "discarded:vocab"
-    kept = gate_verdict in ("kept", "skipped")
-
-    # The difficulty probe: a weaker model sits the full view a few times, and
-    # its pass rate is the difficulty prior. Only for an item that is going to
-    # ship — a discarded item's difficulty is nobody's business — and skipped
-    # entirely when switched off, which the result says rather than hides.
-    dres = difficulty.measure(item) if kept else difficulty.DifficultyResult(
-        measured=False, notes="not probed: item discarded")
-
-    item_id = store.insert_item(
-        item_type, level, item, config.GEN_MODEL,
-        cold_success_rate=cold, full_success_rate=full,
-        gate_verdict=gate_verdict, vocab_violations=vres.violations,
-    )
-    if gate and gate_verdict != "discarded:sanity":
-        for t in gres.trials:
-            store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
-    if dres.measured:
-        # Only a measurement is worth keeping: the trials of a probe that could
-        # not reach its model would read, later, as an item nobody could answer.
-        for t in dres.trials:
-            store.record_gate_trial(item_id, t.side, t.trial, t.chosen, t.correct)
-
-    # The difficulty prior travels with the item from here: the bundle carries
-    # it, `bjt publish` writes it, and the practice queue uses it as the prior
-    # for an item nobody has answered yet. It is the probe's rate when the probe
-    # ran, and the gate's full-view rate otherwise — the older, coarser number,
-    # which is still an honest one. See supabase/migrations/20260916000500 — it
-    # is a property of the question and is never shown to anybody.
-    if dres.measured:
-        item["model_p_correct"] = dres.rate
-    elif full is not None:
-        item["model_p_correct"] = full
-
-    detail = _gate_detail(cold, full, gate_verdict, vres, sres, dres)
-    gres_for_reason = gres if gate and gate_verdict != "discarded:sanity" else None
-    return item, item_id, kept, detail, _rejection_reason(
-        item_type, gate_verdict, sres, vres, gres_for_reason)
-
-
-def _rejection_reason(item_type: str, verdict: str, sres, vres, gres=None) -> "str | None":
-    """Why review rejected this draft, as one sentence for the next one."""
-    if verdict == "discarded:leaky":
-        return answerability.leak_description(item_type, gres)
-    if verdict == "discarded:ambiguous":
-        return ("a reviewer with the whole stimulus could not pick the marked answer "
-                "consistently — another option was just as defensible, or the stimulus "
-                "did not settle it")
-    if verdict == "discarded:sanity":
-        faults = "+".join(sres.faults) if sres is not None else "a proofreading fault"
-        note = (sres.notes[:200] if sres is not None and sres.notes else "")
-        return f"the proofreader flagged {faults}" + (f": {note}" if note else "")
-    if verdict == "discarded:vocab":
-        return ("it used kanji above the level's band: "
-                + " ".join(vres.violations[:8]))
-    return None
-
-
-def _spent_cells(store, item_type: str) -> set:
-    """Every seed cell this item type has already used.
-
-    Two ledgers, unioned. The committed bundles in `batches/` are the
-    authoritative one — they are what ships, and they survive a fresh clone. The
-    local SQLite database is consulted as well because it holds cells spent on
-    items generated but not yet bundled, which exist only on this machine.
-
-    Reading only the database was the bug: it is gitignored, so on a new
-    checkout every cell looked free and the next batch re-spent cells the
-    library had already used.
-    """
-    return store.used_cell_ids(item_type) | batchmod.spent_cell_ids(item_type)
-
-
-def _next_cell(store, item_type: str, level: str):
-    """One unused seed-table cell. Raises if the table for this type is exhausted
-    — better a clear stop than silently writing the same cell twice."""
-    table = seedtable.load(item_type)
-    picked = table.sample(1, level=level, exclude_ids=_spent_cells(store, item_type))
-    if not picked:
-        raise LLMError(
-            f"every {item_type} seed cell at {level} has been used; extend "
-            f"seedtable/{item_type}.json before generating more"
-        )
-    return picked[0]
-
-
-def _sample_cells(store, item_type: str, level: str, n: int) -> list:
-    """N unused cells for a run, spread across the axes. Empty list for types
-    that do not use a seed table."""
-    if not get_generator(item_type).requires_cell:
-        return []
-    table = seedtable.load(item_type)
-    cells = table.sample(n, level=level, exclude_ids=_spent_cells(store, item_type))
-    if len(cells) < n:
-        raise LLMError(
-            f"only {len(cells)} unused {item_type} cell(s) left at {level}; extend "
-            f"seedtable/{item_type}.json"
-        )
-    return cells
-
-
-def _gate_detail(cold, full, verdict, vres, sres=None, dres=None) -> str:
-    bits = []
-    if sres is not None and (not sres.ok or not sres.checked):
-        bits.append(sres.detail())
-    if cold is not None:
-        # No full rate for a leaky item: the gate stops at the cold side.
-        bits.append(f"cold={cold:.0%} full=" + ("n/a" if full is None else f"{full:.0%}"))
-    if dres is not None and (dres.measured or dres.trials):
-        # Say which model measured it: a rate from the gate's strong model and a
-        # rate from the probe's weak one are not comparable numbers.
-        bits.append(dres.detail())
-    bits.append(f"verdict={verdict}")
-    if vres.enforced and vres.violations:
-        bits.append(f"above-band kanji: {' '.join(vres.violations)}")
-    # A fault's note, or the reason no check ran. A whole night of
-    # "sanity=skipped" with the reason kept to itself is a night nobody can
-    # diagnose from the log, which is where the log was read.
-    if sres is not None and (not sres.ok or not sres.checked) and sres.notes:
-        bits.append(f"({sres.notes[:200]})")
-    return "  ".join(bits)
 
 
 # ----- commands ----------------------------------------------------------
@@ -319,7 +163,7 @@ def cmd_selftest(args) -> int:
 def cmd_gen(args) -> int:
     store = Store()
     try:
-        item, iid, kept, detail, _ = _generate_and_gate(
+        item, iid, kept, detail, _ = pipeline.generate_and_gate(
             store, args.type, args.level, gate=not args.no_gate,
             sanity_check=not args.no_sanity,
         )
@@ -344,10 +188,10 @@ def cmd_smoke(args) -> int:
     kept_n = 0
     verdicts: dict[str, int] = {}
     try:
-        cells = _sample_cells(store, args.type, args.level, args.n)
+        cells = pipeline.sample_cells(store, args.type, args.level, args.n)
         for i in range(args.n):
             try:
-                item, iid, kept, detail, _ = _generate_and_gate(
+                item, iid, kept, detail, _ = pipeline.generate_and_gate(
                     store, args.type, args.level, gate=not args.no_gate,
                     cell=cells[i] if cells else None,
                 )
@@ -435,7 +279,7 @@ def cmd_practice(args) -> int:
         attempts_budget = target * 4  # cap regen attempts so a bad streak can't loop forever
         while served < target and attempts_budget > 0:
             attempts_budget -= 1
-            item, iid, kept, detail, _ = _generate_and_gate(
+            item, iid, kept, detail, _ = pipeline.generate_and_gate(
                 store, args.type, args.level, gate=not args.fast
             )
             if not kept:
@@ -735,101 +579,6 @@ def cmd_seedtable(args) -> int:
     return 0
 
 
-def run_batch(
-    store,
-    item_type: str,
-    level: str,
-    n: int,
-    *,
-    gate: bool = True,
-    sanity_check: bool = True,
-    force: bool = False,
-    out: "pathlib.Path | None" = None,
-) -> tuple["pathlib.Path | None", int]:
-    """Generate, gate and bundle one batch. Returns (bundle path, items kept).
-
-    Split out of `cmd_batch` so the nightly run can write several batches in one
-    process against one open store — reopening it per shelf would re-read the
-    spent-cell ledger each time and, worse, would let two shelves in the same run
-    spend the same cell.
-    """
-    kept_items: list[dict] = []
-    cells = _sample_cells(store, item_type, level, n)
-    attempts = 0
-    budget = n * 3
-    # Discards in a row. A shelf whose first three drafts all fail the gate is
-    # a shelf the generator cannot write tonight, and every further draft is
-    # the same money for the same answer. Reset by a keep.
-    strikes = 0
-    idx = 0
-    # What review said about the last draft for this shelf, told to the next
-    # one. A shelf's second and third drafts used to be written blind, and
-    # they failed the same way as the first (2026-09-19: three leaky
-    # 状況把握 drafts in a row, one shelf, nothing written).
-    #
-    # And told about the SAME cell: a draft the gate refused was a fine
-    # situation with options that gave it away, so the next draft is that
-    # situation again with the reviewer's reason in hand. Moving to a new
-    # cell on every discard — as the loop did until 2026-09-19 — threw the
-    # reason at a different situation, and the fresh draft failed the same
-    # way. Only a keep or a near-duplicate (the situation itself collides)
-    # moves the shelf on to its next cell.
-    feedback: "str | None" = None
-    while len(kept_items) < n and attempts < budget:
-        if strikes >= config.SLOT_PATIENCE:
-            print(f"  [{len(kept_items)}/{n}] giving up on this shelf: "
-                  f"{strikes} discards in a row")
-            break
-        attempts += 1
-        cell = cells[idx % len(cells)] if cells else None
-        try:
-            item, iid, kept, detail, reason = _generate_and_gate(
-                store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell,
-                feedback=feedback,
-            )
-        except LLMBillingError:
-            raise  # nothing after this can succeed; the caller ends the run
-        except LLMError as e:
-            print(f"  [{len(kept_items)}/{n}] generation failed: {e}")
-            strikes += 1
-            feedback = f"it did not validate ({str(e)[:200]})"
-            continue
-        if not kept:
-            print(f"  [{len(kept_items)}/{n}] dropped — {detail}")
-            strikes += 1
-            feedback = reason
-            continue
-        close = dedupe.max_similarity(item, kept_items)
-        if close >= dedupe.DEFAULT_THRESHOLD:
-            print(f"  [{len(kept_items)}/{n}] dropped — near-duplicate "
-                  f"of an item already in this batch ({close:.2f})")
-            strikes += 1
-            idx += 1
-            feedback = ("it was a near-duplicate of another item in this batch "
-                        f"({item.get('topic', '')!r}); write a clearly different situation")
-            continue
-        strikes = 0
-        idx += 1
-        feedback = None
-        kept_items.append(item)
-        print(f"  [{len(kept_items)}/{n}] kept  {item.get('topic','')!r}  {detail}")
-
-    if not kept_items:
-        print("\nNothing passed the gates; no bundle written.", file=sys.stderr)
-        return None, 0
-
-    bundle = batchmod.build_bundle(item_type, level, kept_items, config.GEN_MODEL)
-    report = batchmod.check_bundle(bundle)
-    _print_bundle_report(bundle, report)
-    if not report.ok and not force:
-        print("\nBundle NOT written — fix the failures above or pass --force.",
-              file=sys.stderr)
-        return None, 0
-    path = batchmod.save(bundle, out)
-    print(f"\nWrote {len(kept_items)} item(s) to {path}")
-    return path, len(kept_items)
-
-
 def cmd_batch(args) -> int:
     """Generate a batch offline and write a shippable bundle.
 
@@ -838,7 +587,7 @@ def cmd_batch(args) -> int:
     whole-batch checks that a per-item gate cannot see."""
     store = Store()
     try:
-        path, kept = run_batch(
+        path, kept = pipeline.run_batch(
             store, args.type, args.level, args.n,
             gate=not args.no_gate, sanity_check=not args.no_sanity,
             force=args.force, out=args.out,
@@ -917,7 +666,7 @@ def cmd_probe(args) -> int:
 
     measured = 0
     for it in todo:
-        result = difficulty.measure(batchmod._as_generator_shape(it))
+        result = difficulty.measure(batchmod.as_generator_shape(it))
         print(f"  {it['id']}  {result.detail()}")
         if result.measured and result.rate is not None:
             it["model_p_correct"] = result.rate
@@ -966,7 +715,7 @@ def cmd_nightly(args) -> int:
             print(f"\n--- {w.n} × {w.item_type} {w.level} " + "-" * 32)
             before = llmmod.spend.usd
             try:
-                path, kept = run_batch(
+                path, kept = pipeline.run_batch(
                     store, w.item_type, w.level, w.n, gate=not args.no_gate,
                     sanity_check=not args.no_sanity, force=False,
                 )
@@ -1112,7 +861,7 @@ def cmd_importbatch(args) -> int:
 
     bundle = batchmod.build_bundle(item_type, level, items, model)
     report = batchmod.check_bundle(bundle)
-    _print_bundle_report(bundle, report)
+    pipeline.print_bundle_report(bundle, report)
     if not report.ok and not args.force:
         print("\nBundle NOT written — fix the failures above or pass --force.", file=sys.stderr)
         return 1
@@ -1127,7 +876,7 @@ def cmd_checkbatch(args) -> int:
 
     bundle = batchmod.load(pathlib.Path(args.path))
     report = batchmod.check_bundle(bundle)
-    _print_bundle_report(bundle, report)
+    pipeline.print_bundle_report(bundle, report)
     if args.show:
         for bi in bundle["items"]:
             item = dict(bi)
@@ -1146,7 +895,7 @@ def cmd_publish(args) -> int:
     bundle = batchmod.load(path)
     report = batchmod.check_bundle(bundle)
     if not report.ok and not args.force:
-        _print_bundle_report(bundle, report)
+        pipeline.print_bundle_report(bundle, report)
         print("\nRefusing to publish a bundle that fails its own checks.", file=sys.stderr)
         return 1
 
@@ -1185,7 +934,7 @@ def cmd_synth(args) -> int:
     bundle = batchmod.load(path)
     report = batchmod.check_bundle(bundle)
     if not report.ok and not args.force:
-        _print_bundle_report(bundle, report)
+        pipeline.print_bundle_report(bundle, report)
         print("\nRefusing to synthesise audio for a bundle that fails its own checks.",
               file=sys.stderr)
         print("A clip is expensive and permanent; an item that has not cleared its "
@@ -1574,22 +1323,6 @@ def cmd_tester(args) -> int:
     return 0
 
 
-def _print_bundle_report(bundle: dict, report) -> None:
-    marks = {"pass": "OK  ", "note": "NOTE", "warn": "WARN", "fail": "FAIL"}
-    print("\n" + "=" * 62)
-    print(f"BUNDLE CHECK — {bundle['item_type']} / {bundle['level']} / "
-          f"{len(bundle['items'])} item(s)")
-    print("=" * 62)
-    for c in report.checks:
-        print(f"  [{marks[c.status]}] {c.name}: {c.detail}")
-    print("-" * 62)
-    print(f"  {len(report.failed)} failure(s), {len(report.warned)} warning(s), "
-          f"{len(report.noted)} note(s) — "
-          f"{'SHIPPABLE' if report.ok else 'NOT SHIPPABLE'}")
-    print("  (offline checks only: the answerability gate and the discriminator "
-          "need an API key)")
-
-
 # ----- argument parsing --------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1788,24 +1521,24 @@ def build_parser() -> argparse.ArgumentParser:
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 
-    pr = sub.add_parser("probe", help="measure difficulty for items that shipped without it")
-    pr.add_argument("path", help="a committed bundle (batches/*.json)")
-    pr.add_argument("--dry-run", action="store_true",
-                    help="list what would be measured and spend nothing")
-    pr.set_defaults(func=cmd_probe)
+    prb = sub.add_parser("probe", help="measure difficulty for items that shipped without it")
+    prb.add_argument("path", help="a committed bundle (batches/*.json)")
+    prb.add_argument("--dry-run", action="store_true",
+                     help="list what would be measured and spend nothing")
+    prb.set_defaults(func=cmd_probe)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")
     cb.add_argument("path")
     cb.add_argument("--show", action="store_true", help="also print every item with its 解説")
     cb.set_defaults(func=cmd_checkbatch)
 
-    pr = sub.add_parser("practice", help="answer a run of items interactively")
-    pr.add_argument("--type", choices=types, help="restrict to one item type")
-    pr.add_argument("--level", default="J2", choices=levels.LEVELS)
-    pr.add_argument("-n", type=int, default=10, help="how many items")
-    pr.add_argument("--fast", action="store_true", help="skip the gate for speed")
-    pr.add_argument("--demo", action="store_true", help="offline demo with sample items (no API key)")
-    pr.set_defaults(func=cmd_practice)
+    prc = sub.add_parser("practice", help="answer a run of items interactively")
+    prc.add_argument("--type", choices=types, help="restrict to one item type")
+    prc.add_argument("--level", default="J2", choices=levels.LEVELS)
+    prc.add_argument("-n", type=int, default=10, help="how many items")
+    prc.add_argument("--fast", action="store_true", help="skip the gate for speed")
+    prc.add_argument("--demo", action="store_true", help="offline demo with sample items (no API key)")
+    prc.set_defaults(func=cmd_practice)
 
     sub.add_parser("quality", help="print the fidelity report").set_defaults(func=cmd_quality)
 

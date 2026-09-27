@@ -136,7 +136,7 @@ def faults(item: dict) -> list[str]:
     sentence the next draft can act on. Empty means none was found — which is
     not the same as natural: most of what makes a line unnatural takes a reader.
 
-    Takes an item in generator shape (`batch._as_generator_shape` converts a
+    Takes an item in generator shape (`batch.as_generator_shape` converts a
     bundle item), because that is what both callers hold.
     """
     found: list[str] = []

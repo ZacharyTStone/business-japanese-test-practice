@@ -135,7 +135,7 @@ def test_the_rate_does_not_break_re_validation():
     """checkbatch re-runs the item validator over a bundle item, so a
     bundle-only field has to be stripped on the way back."""
     bundle = _bundle_with_rate(0.5)
-    shape = batchmod._as_generator_shape(bundle["items"][0])
+    shape = batchmod.as_generator_shape(bundle["items"][0])
     assert "model_p_correct" not in shape
     assert schemas.validate_item("goi_bunpou", shape) == []
 

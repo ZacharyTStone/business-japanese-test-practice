@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from bjt import cli, config, llm, plan
+from bjt import cli, config, llm, pipeline, plan
 
 
 def _usage(**kw):
@@ -138,7 +138,7 @@ def test_the_spend_limit_is_a_billing_error_so_the_run_stops(store, monkeypatch)
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured", over)
     monkeypatch.setattr("bjt.config.SANITY_ENABLED", False)
     with pytest.raises(llm.LLMBillingError):
-        cli.run_batch(store, "goi_bunpou", "J2", 4, gate=False, sanity_check=False)
+        pipeline.run_batch(store, "goi_bunpou", "J2", 4, gate=False, sanity_check=False)
     assert len(calls) == 1
 
 
