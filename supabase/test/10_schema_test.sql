@@ -433,9 +433,12 @@ declare
     f text;
 begin
     raise notice 'definer functions are not reachable over the API';
+    -- ...and the two helpers only the triggers call: one answers about any
+    -- learner it is handed, and neither is anything a client needs.
     foreach f in array array['handle_new_user()', 'sync_profile_identity()', 'grade_attempt()',
                              'schedule_review()', 'refresh_item_stats()',
-                             'keep_the_daily_goal_under_its_ceiling()']
+                             'keep_the_daily_goal_under_its_ceiling()',
+                             'questions_left(uuid, text, text)', 'pace_max_scale()']
     loop
         perform test.check(
             not has_function_privilege('anon', 'public.' || f, 'execute'),
@@ -452,9 +455,14 @@ begin
     perform test.check(
         has_function_privilege('authenticated', 'public.next_items(integer)', 'execute'),
         'next_items stays callable — it is the app''s own RPC');
+    -- v_my_levels reads it as the person looking, and it reads nobody else.
+    perform test.check(
+        has_function_privilege('authenticated', 'public.level_evidence(text)', 'execute')
+        and not has_function_privilege('anon', 'public.level_evidence(text)', 'execute'),
+        'level_evidence is callable by a signed-in user, for their own record only');
 
     -- ...with a pinned search_path, so a caller cannot shadow what they read.
-    foreach f in array array['my_streak', 'next_items']
+    foreach f in array array['my_streak', 'next_items', 'level_evidence']
     loop
         perform test.check(
             (select proconfig is not null
@@ -863,12 +871,18 @@ $$;
 -- questions. And two sections rather than one, which is the whole point: they
 -- have to move independently or a strong reader is still being drowned in
 -- listening.
+--
+-- Plus five 聴解 questions at J1 and five 読解 questions at J3, because nobody
+-- is moved into a level with fewer than five questions left to meet: a window
+-- there could never fill, and the learner would be stuck until the bank grew.
 begin;
 set local role service_role;
 insert into public.bundles (id, item_type, level, generator_model, generated_at) values
     ('bnd_lvl', 'hatsugen_choukai', 'J2', 'author-composed', now()),
     ('bnd_dok', 'sougou_dokkai',    'J2', 'author-composed', now()),
-    ('bnd_cdk', 'joukyou_haaku',    'J2', 'author-composed', now());
+    ('bnd_cdk', 'joukyou_haaku',    'J2', 'author-composed', now()),
+    ('bnd_lv1', 'hatsugen_choukai', 'J1', 'author-composed', now()),
+    ('bnd_dk3', 'sougou_dokkai',    'J3', 'author-composed', now());
 insert into public.items (id, bundle_id, item_type, level, seed_cell_id, setting, relation,
                           function, channel, topic, stem, correct_index)
 select 'itm_lvl_' || n, 'bnd_lvl', 'hatsugen_choukai', 'J2', 'office_desk+peer_to_peer+request@J2',
@@ -881,7 +895,15 @@ select 'itm_dok_' || n, 'bnd_dok', 'sougou_dokkai', 'J2', 'report_document+other
 union all
 select 'itm_cdk_' || n, 'bnd_cdk', 'joukyou_haaku', 'J2', null,
        null, null, null, null, '聴読解', '状況として正しいものは。', 0
-  from generate_series(1, 10) n;
+  from generate_series(1, 10) n
+union all
+select 'itm_lv1_' || n, 'bnd_lv1', 'hatsugen_choukai', 'J1', null,
+       null, null, null, null, '依頼', '上司に頼む場面です。', 0
+  from generate_series(1, 5) n
+union all
+select 'itm_dk3_' || n, 'bnd_dk3', 'sougou_dokkai', 'J3', null,
+       null, null, null, null, '読解', 'お知らせから分かることは。', 0
+  from generate_series(1, 5) n;
 insert into public.item_options (item_id, position, text, role, why)
 select i.id, p.pos, p.text, p.role, p.why
   from public.items i
@@ -890,7 +912,7 @@ select i.id, p.pos, p.text, p.role, p.why
                     (2, '逆。',       'wrong_honorific_direction', '逆。'),
                     (3, '答えない。', 'content_mismatch',          '答えていない。'))
        as p(pos, text, role, why)
- where i.bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk');
+ where i.bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3');
 commit;
 
 do $$ begin perform test.become('11111111-1111-1111-1111-111111111111'); end $$;
@@ -1039,8 +1061,8 @@ begin
 end
 $$;
 
-delete from public.items where bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk');
-delete from public.bundles where id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk');
+delete from public.items where bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3');
+delete from public.bundles where id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3');
 
 -- ---------------------------------------------------------------------------
 -- The spacing ladder, and the shared bank.
@@ -1060,26 +1082,43 @@ begin;
 -- created before the role is dropped, exactly as the entitlement test does.
 insert into auth.users (id, email, is_anonymous) values
     ('44444444-4444-4444-4444-444444444444', 'd@example.com', false);
-insert into public.testers (email) values ('d@example.com');
+-- Unlimited: the ladder below takes more than a day's fifteen answers to walk,
+-- and the door is tested on its own further down.
+insert into public.testers (email, unlimited) values ('d@example.com', true);
 set local role service_role;
 insert into public.bundles (id, item_type, level, generator_model, generated_at) values
-    ('bnd_bank', 'goi_bunpou', 'J2', 'author-composed', now());
+    ('bnd_bank',  'goi_bunpou',       'J2', 'author-composed', now()),
+    ('bnd_heard', 'hatsugen_choukai', 'J2', 'author-composed', now());
 -- One item the gate found trivial and one it found about right. Nobody has
 -- answered either, so model_p_correct is all the queue has to go on — which is
 -- exactly the cold-start case it exists for.
+--
+-- Two more for the ladder: one to be known at first sight, carrying none of
+-- the traps the others share, and one listening item, whose pace the audio
+-- sets rather than a clock.
 insert into public.items (id, bundle_id, item_type, level, topic, stem, correct_index,
                           model_p_correct)
-values ('itm_easy', 'bnd_bank', 'goi_bunpou', 'J2', '易しすぎ', '空欄に入るものは。', 0, 1.0),
-       ('itm_fit',  'bnd_bank', 'goi_bunpou', 'J2', 'ちょうど', '空欄に入るものは。', 0, 0.7);
+values ('itm_easy',  'bnd_bank',  'goi_bunpou',       'J2', '易しすぎ', '空欄に入るものは。', 0, 1.0),
+       ('itm_fit',   'bnd_bank',  'goi_bunpou',       'J2', 'ちょうど', '空欄に入るものは。', 0, 0.7),
+       ('itm_known', 'bnd_bank',  'goi_bunpou',       'J2', '既知',     '空欄に入るものは。', 0, 1.0),
+       ('itm_heard', 'bnd_heard', 'hatsugen_choukai', 'J2', '聞く',     '電話の場面です。',   0, null);
 insert into public.item_options (item_id, position, text, role, why) values
-    ('itm_easy', 0, 'あ', 'correct',              '正解。'),
-    ('itm_easy', 1, 'い', 'register_too_casual',  '砕けすぎ。'),
-    ('itm_easy', 2, 'う', 'grammar_form_error',   '形が誤り。'),
-    ('itm_easy', 3, 'え', 'collocation_error',    '結びつかない。'),
-    ('itm_fit',  0, 'か', 'correct',              '正解。'),
-    ('itm_fit',  1, 'き', 'register_too_casual',  '砕けすぎ。'),
-    ('itm_fit',  2, 'く', 'grammar_form_error',   '形が誤り。'),
-    ('itm_fit',  3, 'け', 'collocation_error',    '結びつかない。');
+    ('itm_easy',  0, 'あ', 'correct',              '正解。'),
+    ('itm_easy',  1, 'い', 'register_too_casual',  '砕けすぎ。'),
+    ('itm_easy',  2, 'う', 'grammar_form_error',   '形が誤り。'),
+    ('itm_easy',  3, 'え', 'collocation_error',    '結びつかない。'),
+    ('itm_fit',   0, 'か', 'correct',              '正解。'),
+    ('itm_fit',   1, 'き', 'register_too_casual',  '砕けすぎ。'),
+    ('itm_fit',   2, 'く', 'grammar_form_error',   '形が誤り。'),
+    ('itm_fit',   3, 'け', 'collocation_error',    '結びつかない。'),
+    ('itm_known', 0, 'さ', 'correct',              '正解。'),
+    ('itm_known', 1, 'し', 'register_too_casual',  '砕けすぎ。'),
+    ('itm_known', 2, 'す', 'grammar_form_error',   '形が誤り。'),
+    ('itm_known', 3, 'せ', 'set_phrase_misfit',    '定型句の誤用。'),
+    ('itm_heard', 0, 'た', 'correct',              '正解。'),
+    ('itm_heard', 1, 'ち', 'wrong_uchi_soto',      'ウチ・ソト。'),
+    ('itm_heard', 2, 'つ', 'register_too_casual',  '砕けすぎ。'),
+    ('itm_heard', 3, 'て', 'content_mismatch',     '答えていない。');
 commit;
 
 do $$ begin perform test.become('44444444-4444-4444-4444-444444444444'); end $$;
@@ -1121,9 +1160,9 @@ begin
         'one wrong answer drops it all the way back rather than one rung — a trap '
         'you still fall for after three weeks is a trap you have not learned');
 
-    -- Right, but slowly. Two minutes covers the scene, the listening and the
-    -- reading of four options; a right answer that still took longer was not
-    -- known, and holds its rung rather than climbing one.
+    -- Right, but slowly. A 語彙・文法 question is thirty seconds on the reading
+    -- clock and never more than 1.6 times that; a right answer that took three
+    -- minutes was worked out, not known, and holds its rung.
     insert into public.attempts (item_id, chosen_index, elapsed_ms)
     values ('itm_fit', 0, 180000);                                          -- right, slow
     select * into r from public.review_schedule where item_id = 'itm_fit';
@@ -1132,15 +1171,53 @@ begin
                                     and r.last_at + interval '21 hours',
         'and comes back at the same distance as before, not a rung further out');
 
-    insert into public.attempts (item_id, chosen_index, elapsed_ms)
-    values ('itm_fit', 0, 120000);                                          -- right, on time
+    insert into public.attempts (item_id, chosen_index, elapsed_ms, think_ms)
+    values ('itm_fit', 0, 120000, 48000);                                   -- right, on the clock
     select * into r from public.review_schedule where item_id = 'itm_fit';
-    perform test.check(r.step = 1, 'exactly two minutes is on time, and climbs');
+    perform test.check(r.step = 1,
+        'the reading clock''s longest allowance (30s x 1.6) is on time, and climbs');
 
     insert into public.attempts (item_id, chosen_index, elapsed_ms)
     values ('itm_fit', 3, 5000);                                            -- wrong, fast
     select * into r from public.review_schedule where item_id = 'itm_fit';
     perform test.check(r.step = 0, 'a fast wrong answer is still wrong, and drops');
+    perform test.check(r.trap = 'collocation_error' and r.missed,
+        'and the lesson remembers which trap caught them');
+
+    raise notice 'known at first sight';
+    insert into public.attempts (item_id, chosen_index, think_ms) values ('itm_known', 0, 9000);
+    select * into r from public.review_schedule where item_id = 'itm_known';
+    perform test.check(r.step = 1 and not r.missed and r.trap is null,
+        'a question known at first sight starts on the three-day rung, not beside the misses');
+    perform test.check(r.due_at > now() + interval '2 days',
+        'and is not checked again tomorrow');
+
+    raise notice 'a listening answer is timed from the end of the audio';
+    -- Two and a half minutes of item, four seconds of it after the audio: the
+    -- length of the conversation is not held against the learner.
+    insert into public.attempts (item_id, chosen_index, elapsed_ms, think_ms)
+    values ('itm_heard', 0, 150000, 4000);
+    select * into r from public.review_schedule where item_id = 'itm_heard';
+    perform test.check(r.step = 1, 'a long item answered promptly after its audio is on time');
+
+    insert into public.attempts (item_id, chosen_index, elapsed_ms, think_ms)
+    values ('itm_heard', 0, 60000, 45000);
+    select * into r from public.review_schedule where item_id = 'itm_heard';
+    perform test.check(r.step = 1, 'forty-five seconds after the audio is slow, and holds');
+
+    raise notice 'the exam plays once';
+    insert into public.attempts (item_id, chosen_index, think_ms, replays)
+    values ('itm_heard', 0, 3000, 1);
+    select * into r from public.review_schedule where item_id = 'itm_heard';
+    perform test.check(r.step = 1, 'a right answer after a replay holds its rung');
+    insert into public.attempts (item_id, chosen_index, think_ms, peeked)
+    values ('itm_heard', 0, 3000, true);
+    select * into r from public.review_schedule where item_id = 'itm_heard';
+    perform test.check(r.step = 1, 'and so does one given with the spoken options read as text');
+    insert into public.attempts (item_id, chosen_index, think_ms)
+    values ('itm_heard', 0, 3000);
+    select * into r from public.review_schedule where item_id = 'itm_heard';
+    perform test.check(r.step = 2, 'one listen, answered in time: it climbs');
 
     begin
         insert into public.review_schedule (user_id, item_id, due_at)
@@ -1163,16 +1240,21 @@ begin
 
     select count(*) into n from public.v_my_review_load;
     perform test.check(n = 1, 'home gets exactly one row to print, always');
-    perform test.check((select tracked from public.v_my_review_load) = 1,
+    perform test.check((select tracked from public.v_my_review_load) = 3,
         'and it says how much the ladder is tracking');
 end
 $$;
 
+-- A due lesson is re-tested by a question the learner has never met that sets
+-- the same trap — never by the same question while a new one exists. The owner
+-- asked for this (2026-09-27).
 do $$
 declare
-    due_id text;
+    q record;
+    r record;
+    v record;
 begin
-    raise notice 'a due item comes first';
+    raise notice 'a due lesson comes back as a new question';
     set local role service_role;
     update public.review_schedule set due_at = now() - interval '1 hour'
      where user_id = '44444444-4444-4444-4444-444444444444' and item_id = 'itm_fit';
@@ -1180,9 +1262,50 @@ begin
     set local role authenticated;
     perform test.check((select due_now from public.v_my_review_load) = 1,
         'the count home prints follows the ladder');
-    select id into due_id from public.next_items(1);
-    perform test.check(due_id = 'itm_fit',
-        'and the item the ladder says is due beats an unseen one');
+    select * into q from public.next_items(1);
+    perform test.check(q.id = 'itm_easy' and q.stands_for = 'itm_fit'
+                       and q.lesson_trap = 'collocation_error' and q.times_seen = 0,
+        'the lesson that is due comes first — as an unseen question setting the '
+        'trap that caught them, not as the question itself');
+
+    -- Answered, the 類題 moves the lesson it stands for, and starts no row of
+    -- its own: it WAS the lesson's re-test.
+    insert into public.attempts (item_id, chosen_index, think_ms, stands_for)
+    values ('itm_easy', 0, 5000, 'itm_fit');
+    select * into v from public.attempts order by id desc limit 1;
+    perform test.check(v.stands_for = 'itm_fit', 'a genuine re-test keeps its stands_for');
+    select * into r from public.review_schedule where item_id = 'itm_fit';
+    perform test.check(r.step = 1 and r.due_at > now() + interval '2 days'
+                       and r.trap = 'collocation_error' and not r.missed,
+        'right on the new question: the lesson climbs, and keeps its trap for next time');
+    perform test.check(not exists (select 1 from public.review_schedule where item_id = 'itm_easy'),
+        'and the new question starts no lesson of its own');
+
+    raise notice 'a claim the queue could not have made is cleared';
+    set local role service_role;
+    update public.review_schedule set due_at = now() - interval '1 hour'
+     where user_id = '44444444-4444-4444-4444-444444444444' and item_id = 'itm_known';
+    reset role;
+    set local role authenticated;
+    -- itm_heard is a listening question: it cannot re-test a 語彙・文法 lesson.
+    insert into public.attempts (item_id, chosen_index, stands_for) values ('itm_heard', 0, 'itm_known');
+    select * into v from public.attempts order by id desc limit 1;
+    perform test.check(v.stands_for is null, 'a question of another type re-tests nothing');
+    -- itm_easy has been met: an answer to it is not a new question.
+    insert into public.attempts (item_id, chosen_index, stands_for) values ('itm_easy', 0, 'itm_known');
+    select * into v from public.attempts order by id desc limit 1;
+    perform test.check(v.stands_for is null, 'nor does a question already answered');
+    -- itm_fit is not due.
+    select * into r from public.review_schedule where item_id = 'itm_known';
+    perform test.check(r.step = 1, 'and the lessons named are left where they were');
+
+    raise notice 'with nothing new left, the lesson comes back as itself';
+    -- Every question of this type has now been met, so the due 語彙・文法 lesson
+    -- has no new question to be re-tested by. It is served as itself — the one
+    -- case the same question comes back — ahead of everything else answered.
+    select * into q from public.next_items(1);
+    perform test.check(q.id = 'itm_known' and q.stands_for is null and q.times_seen = 1,
+        'the due lesson, as itself, once there is nothing unseen to ask instead');
     reset role;
 end
 $$;
@@ -1195,17 +1318,25 @@ begin
     raise notice 'the shared bank';
 
     set local role service_role;
+    -- A row left from a history that has since been erased: the recount starts
+    -- from nothing, so it does not survive.
+    insert into public.item_stats (item_id, answered, correct, p_correct)
+    values ('itm_heard', 40, 10, 0.25)
+    on conflict (item_id) do update set answered = 40, correct = 10, p_correct = 0.25;
+    delete from public.attempts where item_id = 'itm_heard';
     perform public.refresh_item_stats();
     select * into r from public.item_stats where item_id = 'itm_fit';
-    perform test.check(r.answered = 7, 'the bank counts every answer, from everybody');
-    perform test.check(r.correct = 4 and round(r.p_correct, 6) = round(4::numeric / 7, 6),
-        'and the rate is what those answers say, not what anybody hoped');
+    perform test.check(r.answered = 1 and r.correct = 0 and r.p_correct = 0,
+        'the bank counts each person''s first answer: seven attempts by one learner are one answer, '
+        'and it was wrong');
+    perform test.check(not exists (select 1 from public.item_stats where item_id = 'itm_heard'),
+        'and a count with no answers left behind it is gone');
     reset role;
 
     set local role authenticated;
     perform test.check(
         (select count(*) from public.v_item_difficulty where item_id = 'itm_fit') = 0,
-        'seven answers is one person, and an item that thin has no published difficulty');
+        'one person is not a difficulty, and an item that thin has none published');
     reset role;
 
     set local role service_role;
@@ -1232,8 +1363,8 @@ $$;
 
 reset role;
 
-delete from public.items where id in ('itm_easy', 'itm_fit');
-delete from public.bundles where id = 'bnd_bank';
+delete from public.items where id in ('itm_easy', 'itm_fit', 'itm_known', 'itm_heard');
+delete from public.bundles where id in ('bnd_bank', 'bnd_heard');
 delete from auth.users where id = '44444444-4444-4444-4444-444444444444';
 
 \echo 'ALL LADDER AND BANK TESTS PASSED'
@@ -1487,12 +1618,13 @@ delete from auth.users where id = '99999999-9999-9999-9999-999999999999';
 -- --- the rest, and the due cap ---------------------------------------------
 
 -- Fourteen items for one learner: two answered wrong two days ago (due), two
--- answered right four days ago and again two days ago (rested, due tomorrow),
--- five to answer today, three never seen, one from the level below, never
--- seen, and one kept for a forty-day-old answer at the end. Fourteen and not
--- more because the day allows fifteen answers, and the ordering test wants
--- the whole window inside what is left after two of them. answered_at is
--- supplied on the insert, which the app may also do; the trigger keeps it.
+-- answered right four days ago and again two days ago (rested, due in five
+-- days), five to answer today, three never seen, one from the level below,
+-- never seen, and one kept for a forty-day-old answer at the end. Fourteen and
+-- not more because the day allows fifteen answers, and the ordering test wants
+-- the whole window inside what is left after two of them. The dated answers
+-- are inserted as the test's own role: a client can no longer name
+-- answered_at, which is asserted further down.
 begin;
 insert into auth.users (id, email, is_anonymous) values
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'h@example.com', false);
@@ -1520,39 +1652,64 @@ commit;
 do $$ begin perform test.become('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); end $$;
 set role authenticated;
 
+reset role;
 do $$
 declare
     i integer;
-    n integer;
-    d record;
 begin
-    raise notice 'the set is sized by what the day has left';
+    -- Dated answers, as the test's own role with the learner's claims: the
+    -- grading and the ladder run exactly as they do for the app.
     for i in 1..2 loop
         insert into public.attempts (item_id, chosen_index, answered_at)
         values ('itm_c_d' || i, 1, now() - interval '2 days' - (i || ' minutes')::interval);
     end loop;
-    -- Rested means on rung 1 or higher: a first right answer only reaches rung
-    -- 0 and is due after a night, so these two were met four days ago and
-    -- again two days ago, and are due tomorrow.
+    -- Rested: known at first sight four days ago (the three-day rung), and
+    -- right again two days ago (the week rung), so due in five days.
     for i in 1..2 loop
         insert into public.attempts (item_id, chosen_index, answered_at)
         values ('itm_c_r' || i, 0, now() - interval '4 days' + (i || ' minutes')::interval);
         insert into public.attempts (item_id, chosen_index, answered_at)
         values ('itm_c_r' || i, 0, now() - interval '2 days' + (i || ' minutes')::interval);
     end loop;
+end
+$$;
+set role authenticated;
+
+do $$
+declare
+    n integer;
+    d record;
+    denied boolean := false;
+begin
+    raise notice 'the set is sized by what the day has left';
     perform test.check((select due_now from public.v_my_review_load) = 2
                        and (select tracked from public.v_my_review_load) = 4,
-        'two items are due and two are rested, on answers dated days ago');
+        'two lessons are due and two are rested, on answers dated days ago');
+
+    begin
+        insert into public.attempts (item_id, chosen_index, answered_at)
+        values ('itm_c_u1', 0, now() - interval '3 days');
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied,
+        'a client cannot date its own answer: the day''s door and the ladder both read it');
 
     select * into d from public.v_my_day;
     perform test.check(d.goal = 10 and d.answered_today = 0 and d.max_today = 15
                        and d.left_today = 15 and not d.unlimited,
         'a fresh day: ten to do, fifteen allowed, nothing answered yet');
 
-    -- Two fifths of whatever is served goes to the backlog: two of five.
-    select count(*) into n from public.next_items(5) q where q.times_seen > 0;
+    -- Two fifths of whatever is served goes to the backlog: two of five. Both
+    -- due lessons were caught by the same trap on the same kind of question,
+    -- and each gets a new question of its own rather than sharing one.
+    select count(*) into n from public.next_items(5) q where q.stands_for is not null;
     perform test.check(n = 2,
-        'a set of five carries two due items and no more');
+        'a set of five carries two due lessons and no more');
+    perform test.check(
+        (select count(distinct q.stands_for) from public.next_items(5) q) = 2
+        and (select count(*) from public.next_items(5) q where q.times_seen > 0) = 0,
+        'each re-tested by a question of its own, and not one of the five has been met before');
     perform test.check((select count(*) from public.next_items(50)) = 14,
         'and while the day is open a set of fifty is the whole window: fourteen items');
 
@@ -1574,33 +1731,40 @@ $$;
 do $$
 declare
     ord_unseen_max integer;
+    ord_retest_max integer;
+    ord_due_min    integer;
     ord_due_max    integer;
     ord_rest_min   integer;
     ord_rest_max   integer;
     ord_today_min  integer;
     ord_lo         integer;
 begin
-    raise notice 'nothing answered today is served before anything unseen';
+    raise notice 'nothing already met is served before anything unseen';
     create temporary table q_order on commit drop as
-        select q.id, q.times_seen, q.level, q.ordinality as ord
+        select q.id, q.times_seen, q.level, q.stands_for, q.ordinality as ord
           from public.next_items(50) with ordinality as q;
     perform test.check((select count(*) from q_order) = 13,
         'a set of fifty is what the day has left: thirteen of the fourteen');
 
-    select max(ord) into ord_due_max    from q_order where id like 'itm_c_d%';
+    select max(ord) into ord_retest_max from q_order where stands_for is not null;
     select max(ord) into ord_unseen_max from q_order where times_seen = 0;
+    select min(ord), max(ord) into ord_due_min, ord_due_max from q_order where id like 'itm_c_d%';
     select min(ord), max(ord) into ord_rest_min, ord_rest_max from q_order where id like 'itm_c_r%';
     select min(ord) into ord_today_min  from q_order where id in ('itm_c_t1', 'itm_c_t2');
     select ord      into ord_lo         from q_order where id = 'itm_c_lo';
 
-    perform test.check(ord_due_max = 2,
-        'the two due items come first, whatever else is in the window');
-    perform test.check(ord_unseen_max < ord_rest_min,
-        'every unseen item precedes every item already answered and not due');
-    perform test.check(ord_lo < ord_rest_min,
-        'including the unseen item from the level below');
+    perform test.check(ord_retest_max = 2
+                       and (select count(*) from q_order
+                             where stands_for in ('itm_c_d1', 'itm_c_d2') and times_seen = 0) = 2,
+        'the two due lessons come first, each as a question never met before');
+    perform test.check(ord_unseen_max < ord_due_min,
+        'and every unseen question precedes the due questions themselves');
+    perform test.check(ord_due_max < ord_rest_min,
+        'which, among the questions already met, come first: they are due, and they caught them');
+    perform test.check(ord_lo < ord_due_min,
+        'the unseen item from the level below precedes every repeat');
     perform test.check(ord_lo > (select max(ord) from q_order where times_seen = 0 and level = 'J2'),
-        'which comes after the unseen items at this level');
+        'and comes after the unseen items at this level');
     perform test.check(ord_rest_max < ord_today_min,
         'an item rested for two days precedes one answered today');
     perform test.check(ord_today_min = 13
@@ -1825,6 +1989,12 @@ update public.profiles set daily_goal = 10
 commit;
 
 do $$ begin perform test.become('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'); end $$;
+
+-- One more answer, forty days old, so lifetime and recent differ. Dated, so
+-- inserted as the test's own role.
+insert into public.attempts (item_id, chosen_index, answered_at)
+values ('itm_c_old', 1, now() - interval '40 days');
+
 set role authenticated;
 
 do $$
@@ -1832,10 +2002,6 @@ declare
     r record;
 begin
     raise notice 'the record shows what the queue is using';
-    -- One more answer, forty days old, so lifetime and recent differ.
-    insert into public.attempts (item_id, chosen_index, answered_at)
-    values ('itm_c_old', 1, now() - interval '40 days');
-
     select * into r from public.v_my_type_stats where item_type = 'goi_bunpou';
     perform test.check(r.answered = 22 and r.recent_answered = 21,
         'the type view counts twenty-two answers, twenty-one of them in the last thirty days');
@@ -1855,6 +2021,12 @@ begin
     select * into r from public.v_my_role_traps where role = 'register_too_casual';
     perform test.check(r.times_chosen = 3 and r.recent_times = 2,
         'the trap view counts three catches, two of them recent');
+    -- ...out of how many times the trap was on offer. register_too_casual is a
+    -- wrong option in every one of these questions, so it was met on all
+    -- twenty-two answers: three catches in twenty-two is a trap they mostly
+    -- see through, which a bare count of three could not say.
+    perform test.check(r.times_met = 22 and r.recent_met = 21,
+        'and how often it was on offer, so a screen can rank traps by how often they catch');
 end
 $$;
 
@@ -1865,6 +2037,233 @@ delete from public.bundles where id = 'bnd_cap';
 delete from auth.users where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 \echo 'ALL QUEUE-PROMISE TESTS PASSED'
+
+-- ---------------------------------------------------------------------------
+-- A level the bank has barely stocked, and a level judged on one listen.
+--
+-- Most shelves of the bank hold fewer than the ten or twenty first attempts a
+-- level move used to need, so a learner who reached one could never leave it.
+-- The window is now never larger than what the level has left to ask, never
+-- judged on fewer than five, and nobody is moved into a level with fewer than
+-- five questions left for them. Answers given after a replay, or with the
+-- spoken options read, are not the exam's conditions and count for neither
+-- direction. The owner asked for both (2026-09-27).
+
+begin;
+insert into auth.users (id, email, is_anonymous) values
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'l@example.com', false);
+insert into public.testers (email, unlimited) values ('l@example.com', true);
+set local role service_role;
+insert into public.bundles (id, item_type, level, generator_model, generated_at) values
+    ('bnd_thin', 'goi_bunpou',       'J2', 'author-composed', now()),
+    ('bnd_once', 'hatsugen_choukai', 'J2', 'author-composed', now());
+insert into public.items (id, bundle_id, item_type, level, topic, stem, correct_index)
+select 'itm_th2_' || n, 'bnd_thin', 'goi_bunpou', 'J2', '薄い棚', '空欄は。', 0
+  from generate_series(1, 6) n
+union all
+select 'itm_th1_' || n, 'bnd_thin', 'goi_bunpou', 'J1', '薄い棚', '空欄は。', 0
+  from generate_series(1, 2) n
+union all
+select 'itm_on2_' || n, 'bnd_once', 'hatsugen_choukai', 'J2', '一度だけ', '電話の場面です。', 0
+  from generate_series(1, 10) n
+union all
+select 'itm_on1_' || n, 'bnd_once', 'hatsugen_choukai', 'J1', '一度だけ', '電話の場面です。', 0
+  from generate_series(1, 5) n;
+insert into public.item_options (item_id, position, text, role, why)
+select i.id, p.pos, p.text, p.role, p.why
+  from public.items i
+ cross join (values (0, 'あ', 'correct',             '正解。'),
+                    (1, 'い', 'register_too_casual', '砕けすぎ。'),
+                    (2, 'う', 'grammar_form_error',  '形が誤り。'),
+                    (3, 'え', 'collocation_error',   '結びつかない。'))
+       as p(pos, text, role, why)
+ where i.bundle_id in ('bnd_thin', 'bnd_once');
+commit;
+
+do $$ begin perform test.become('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'); end $$;
+set role authenticated;
+
+do $$
+declare
+    i integer;
+begin
+    raise notice 'a level the bank has barely stocked';
+    -- Six 読解 questions at J2, all right. The window would have been ten and
+    -- could never have filled; it is six, and six of six is a promotion — to
+    -- a level with two questions in it, which would be a level nobody could
+    -- ever be judged at again. So the section stays, placed.
+    for i in 1..6 loop
+        insert into public.attempts (item_id, chosen_index, think_ms) values ('itm_th2_' || i, 0, 4000);
+    end loop;
+    perform test.check(
+        (select level from public.v_my_levels where section = 'dokkai') = 'J2'
+        and (select placed from public.v_my_levels where section = 'dokkai'),
+        'a window never asks for more questions than the level has, and J2 is now a finding');
+    perform test.check(
+        (select moves from public.section_levels where section = 'dokkai') = 0,
+        'but nobody is moved into a level with fewer than five questions left to meet');
+end
+$$;
+
+reset role;
+begin;
+set local role service_role;
+insert into public.items (id, bundle_id, item_type, level, topic, stem, correct_index)
+select 'itm_th1_' || n, 'bnd_thin', 'goi_bunpou', 'J1', '薄い棚', '空欄は。', 0
+  from generate_series(3, 5) n;
+insert into public.item_options (item_id, position, text, role, why)
+select i.id, p.pos, p.text, p.role, p.why
+  from public.items i
+ cross join (values (0, 'あ', 'correct',             '正解。'),
+                    (1, 'い', 'register_too_casual', '砕けすぎ。'),
+                    (2, 'う', 'grammar_form_error',  '形が誤り。'),
+                    (3, 'え', 'collocation_error',   '結びつかない。'))
+       as p(pos, text, role, why)
+ where i.id in ('itm_th1_3', 'itm_th1_4', 'itm_th1_5');
+commit;
+do $$ begin perform test.become('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'); end $$;
+set role authenticated;
+
+do $$
+declare
+    i integer;
+begin
+    -- The shelf above now has five. The next answer — a repeat, which is not
+    -- evidence in itself — is the moment the same six first attempts are
+    -- judged again, and now there is somewhere to go.
+    insert into public.attempts (item_id, chosen_index) values ('itm_th2_1', 0);
+    perform test.check(
+        (select level from public.v_my_levels where section = 'dokkai') = 'J1'
+        and (select moves from public.section_levels where section = 'dokkai') = 1,
+        'once the level above has five questions to ask, the same evidence promotes');
+
+    raise notice 'a level is judged on one listen';
+    for i in 1..10 loop
+        insert into public.attempts (item_id, chosen_index, think_ms, replays)
+        values ('itm_on2_' || i, 0, 3000, 1);
+    end loop;
+    perform test.check(
+        (select level from public.v_my_levels where section = 'choukai') = 'J2'
+        and not (select placed from public.v_my_levels where section = 'choukai'),
+        'ten right answers after a replay are not ten answers on one listen: no move, not placed');
+end
+$$;
+
+reset role;
+delete from public.items where bundle_id in ('bnd_thin', 'bnd_once');
+delete from public.bundles where id in ('bnd_thin', 'bnd_once');
+delete from auth.users where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+
+-- ---------------------------------------------------------------------------
+-- The exam date.
+--
+-- A date the learner typed in on the account screen, and until now only a
+-- countdown. Two things now follow from it: a lesson whose next rung would
+-- land in the last two days before the exam, or after it, is brought forward
+-- so it is re-tested before the day it counts; and in the last two weeks the
+-- set follows the exam's section mix strictly rather than leaning toward it.
+-- The owner asked for both (2026-09-27).
+
+begin;
+insert into auth.users (id, email, is_anonymous) values
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'x@example.com', false);
+insert into public.testers (email, unlimited) values ('x@example.com', true);
+set local role service_role;
+insert into public.bundles (id, item_type, level, generator_model, generated_at) values
+    ('bnd_exam', 'goi_bunpou', 'J2', 'author-composed', now());
+-- Nine 読解 questions over its three types, all on a 機能 this learner keeps
+-- missing; four 聴解 and four 聴読解 on one nobody has touched; three more 聴解
+-- for the ladder half; and a driver to miss. Distinct settings, no difficulty
+-- prior, one shared trap: what separates them is the weak tag, the section and
+-- the variety nudges.
+insert into public.items (id, bundle_id, item_type, level, setting, function, topic, stem, correct_index)
+select 'itm_x_' || t.code || n, 'bnd_exam', t.item_type, 'J2', 'set_' || t.code || n, t.fn,
+       '試験前', '問題文。', 0
+  from (values ('g', 'goi_bunpou',       'weak'),
+               ('h', 'hyougen',          'weak'),
+               ('s', 'sougou_dokkai',    'weak'),
+               ('c', 'hatsugen_choukai', 'neutral'),
+               ('j', 'joukyou_haaku',    'neutral'),
+               ('k', 'hatsugen_choukai', 'other')) as t(code, item_type, fn)
+ cross join generate_series(1, 4) n
+ where t.code in ('c', 'j') or n <= 3
+union all
+select 'itm_x_drv', 'bnd_exam', 'goi_bunpou', 'J2', 'set_drv', 'weak', '練習台', '問題文。', 0;
+insert into public.item_options (item_id, position, text, role, why)
+select i.id, p.pos, p.text, p.role, p.why
+  from public.items i
+ cross join (values (0, 'あ', 'correct',             '正解。'),
+                    (1, 'い', 'register_too_casual', '砕けすぎ。'),
+                    (2, 'う', 'grammar_form_error',  '形が誤り。'),
+                    (3, 'え', 'collocation_error',   '結びつかない。'))
+       as p(pos, text, role, why)
+ where i.bundle_id = 'bnd_exam';
+commit;
+
+do $$ begin perform test.become('cccccccc-cccc-cccc-cccc-cccccccccccc'); end $$;
+set role authenticated;
+
+do $$
+declare
+    r      record;
+    v_exam timestamptz;
+    j      integer;
+    n_dok  integer;
+begin
+    raise notice 'the review lands before the exam';
+    insert into public.attempts (item_id, chosen_index, think_ms) values ('itm_x_k1', 0, 3000);
+    select * into r from public.review_schedule where item_id = 'itm_x_k1';
+    perform test.check(r.step = 1 and r.due_at > now() + interval '71 hours',
+        'with no exam date, known at first sight is three days away');
+
+    update public.profiles set exam_date = (now() at time zone 'Asia/Tokyo')::date + 5
+     where id = (select auth.uid());
+    select (p.exam_date::timestamp at time zone 'Asia/Tokyo') into v_exam from public.profiles p;
+    insert into public.attempts (item_id, chosen_index, think_ms) values ('itm_x_k2', 0, 3000);
+    select * into r from public.review_schedule where item_id = 'itm_x_k2';
+    perform test.check(r.step = 1
+                       and r.due_at <= v_exam - interval '2 days'
+                       and r.due_at >= now() + interval '20 hours',
+        'with the exam five days off, the three-day rung is brought into the last two days before it');
+
+    insert into public.attempts (item_id, chosen_index) values ('itm_x_k3', 1);
+    select * into r from public.review_schedule where item_id = 'itm_x_k3';
+    perform test.check(r.due_at between now() + interval '19 hours' and now() + interval '21 hours',
+        'a miss is already back before then, and is left alone');
+
+    raise notice 'the last two weeks follow the exam''s section mix';
+    for j in 1..6 loop
+        insert into public.attempts (item_id, chosen_index) values ('itm_x_drv', 1);
+    end loop;
+
+    update public.profiles set exam_date = (now() at time zone 'Asia/Tokyo')::date + 60
+     where id = (select auth.uid());
+    select count(*) into n_dok
+      from public.next_items(10) q join public.item_types it on it.id = q.item_type
+     where it.section = 'dokkai';
+    perform test.check(n_dok > 4,
+        'two months out, a weak section leans the set past its share of the exam');
+
+    update public.profiles set exam_date = (now() at time zone 'Asia/Tokyo')::date + 7
+     where id = (select auth.uid());
+    for j in 1..4 loop
+        perform test.check(
+            (select count(*) filter (where it.section = 'dokkai')     = 4
+                and count(*) filter (where it.section = 'choukai')    = 3
+                and count(*) filter (where it.section = 'choudokkai') = 3
+               from public.next_items(10) q
+               join public.item_types it on it.id = q.item_type),
+            'a week out, a set of ten is the exam''s own 4 / 3 / 3 — draw ' || j);
+    end loop;
+end
+$$;
+
+reset role;
+delete from public.items where bundle_id = 'bnd_exam';
+delete from public.bundles where id = 'bnd_exam';
+delete from auth.users where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+\echo 'ALL NEW-QUESTION, LEVEL AND EXAM TESTS PASSED'
 
 -- ---------------------------------------------------------------------------
 -- Starting again.
