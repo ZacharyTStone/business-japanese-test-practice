@@ -101,6 +101,7 @@ with caught as (
            count(*) filter (where a.answered_at >= now() - interval '30 days')::int
                                         as recent_times
       from public.attempts a
+      join public.items i on i.id = a.item_id and i.is_published
      where not a.is_correct
      group by a.chosen_role
 ),
@@ -110,7 +111,7 @@ met as (
            count(*) filter (where a.answered_at >= now() - interval '30 days')::int
                          as recent_met
       from public.attempts a
-      join public.items i on i.id = a.item_id
+      join public.items i on i.id = a.item_id and i.is_published
       join public.item_options o on o.item_id = a.item_id and o.position <> i.correct_index
      group by o.role
 )
@@ -1121,8 +1122,9 @@ declare
     v_rows integer;
 begin
     -- From nothing, every time: a history that was reset must not leave its
-    -- counts behind, and a full recount is still one pass at this scale.
-    delete from public.item_stats;
+    -- counts behind, and a full recount is still one pass at this scale. The
+    -- `where true` is for pg-safeupdate, which refuses a bare delete.
+    delete from public.item_stats where true;
 
     -- Each person's first answer to each question, and never a timeout. A
     -- second answer comes after the explanation was read, and a timeout is a

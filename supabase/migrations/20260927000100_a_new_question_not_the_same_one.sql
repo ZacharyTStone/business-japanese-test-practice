@@ -579,8 +579,9 @@ declare
     v_rows integer;
 begin
     -- From nothing, every time: a history that was reset must not leave its
-    -- counts behind, and a full recount is still one pass at this scale.
-    delete from public.item_stats;
+    -- counts behind, and a full recount is still one pass at this scale. The
+    -- `where true` is for pg-safeupdate, which refuses a bare delete.
+    delete from public.item_stats where true;
 
     -- Each person's first answer to each question, and never a timeout. A
     -- second answer comes after the explanation was read, and a timeout is a
@@ -619,9 +620,10 @@ comment on view public.v_item_difficulty is
 
 -- Same four columns first, then how often each trap was on offer: every answer
 -- to a question carrying the role as a wrong option. Both halves count the same
--- answers (published questions only, repeats included), so the share is a
--- share. A timeout is no option's role and has no exposure; the screen shows it
--- as a count.
+-- answers — published questions only (row-level security sees to that for
+-- `met`, and the join does for `caught`), repeats included — so the share is a
+-- share and never more than one. A timeout is no option's role and has no
+-- exposure; the screen shows it as a count.
 create or replace view public.v_my_role_traps
 with (security_invoker = on) as
 with caught as (
@@ -631,6 +633,7 @@ with caught as (
            count(*) filter (where a.answered_at >= now() - interval '30 days')::int
                                         as recent_times
       from public.attempts a
+      join public.items i on i.id = a.item_id and i.is_published
      where not a.is_correct
      group by a.chosen_role
 ),
@@ -640,7 +643,7 @@ met as (
            count(*) filter (where a.answered_at >= now() - interval '30 days')::int
                          as recent_met
       from public.attempts a
-      join public.items i on i.id = a.item_id
+      join public.items i on i.id = a.item_id and i.is_published
       join public.item_options o on o.item_id = a.item_id and o.position <> i.correct_index
      group by o.role
 )
