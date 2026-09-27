@@ -587,6 +587,20 @@ def test_a_hand_edited_chart_label_spelled_out_fails_the_bundle():
     assert check.status == "fail" and "四" in check.detail
 
 
+def test_a_chart_publishes_as_numbers_in_the_documents_column():
+    """Documents are jsonb and the chart's figures travel as JSON numbers: no
+    migration, no block list in the schema to update, and nothing a JSON
+    parser — Postgres's included — would refuse (NaN never gets this far)."""
+    import re
+    from bjt import publish
+    sql = publish.bundle_sql(_chart_bundle(), "shiryou_choudokkai_J2_999", withdrawn_ids=set())
+    literal = next(m for m in re.findall(r"'((?:[^']|'')*)'::jsonb", sql) if '"chart"' in m)
+    documents = json.loads(literal.replace("''", "'"))
+    series = documents[0]["blocks"][0]["series"]
+    assert series[0]["values"] == [330, 410, 340, 260, 240, 460]
+    assert "NaN" not in sql and "Infinity" not in sql
+
+
 def test_a_chart_the_validator_refuses_fails_the_bundle():
     bundle = _chart_bundle()
     bundle["items"][0]["documents"][0]["blocks"][0]["series"][0]["values"][2] = 12_500_000

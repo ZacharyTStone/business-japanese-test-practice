@@ -178,6 +178,28 @@ def test_every_template_declares_what_it_needs(template_id):
     assert template_id in render.spec(template_id)
 
 
+def test_the_app_can_draw_every_block_and_template_the_pipeline_ships():
+    """Two renderers for one data model (html.py here, document.tsx in the app),
+    and the app's drops a block it does not know rather than crashing — which
+    is right for a learner mid-question and silent for everybody else. A block
+    type or a template added here and not there would ship documents the app
+    shows with a hole in them, so the app's lists are held to these."""
+    import pathlib
+    import re
+    client = pathlib.Path(__file__).resolve().parents[1] / "client" / "src"
+    types_ts = (client / "lib" / "types.ts").read_text(encoding="utf-8")
+    union = re.search(r"export type DocBlock = \{\s*type:([^;]*?);", types_ts, re.S)
+    assert union, "types.ts no longer declares DocBlock's type union as expected"
+    assert set(re.findall(r'"(\w+)"', union.group(1))) == set(render.BLOCK_TYPES)
+    document_tsx = (client / "ui" / "document.tsx").read_text(encoding="utf-8")
+    for table in ("TEMPLATE_KEY", "CHROME"):
+        body = re.search(rf"const {table}: Record<string, \w+> = \{{(.*?)\n\}};", document_tsx, re.S)
+        assert body, f"document.tsx no longer declares {table} as expected"
+        assert set(re.findall(r"^\s*(\w+):", body.group(1), re.M)) == set(tpl.TEMPLATES), table
+    block = re.search(r"function Block\(.*?\n\}\n", document_tsx, re.S)
+    assert block and set(re.findall(r'case "(\w+)":', block.group(0))) == set(render.BLOCK_TYPES)
+
+
 def test_every_document_item_type_has_at_least_one_template():
     for item_type in ("shiryou_choudokkai", "sougou_choudokkai", "sougou_dokkai",
                       "joukyou_haaku", "bamen_haaku"):

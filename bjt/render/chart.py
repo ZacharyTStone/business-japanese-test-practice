@@ -10,24 +10,26 @@ document had tables and no graphs. The owner asked for this (2026-09-27).
 A chart is data like every other block, never a picture. An image model cannot
 put 4月 under the right bar any more reliably than it can spell 御中, and a
 picture could be neither read aloud nor checked. The model emits categories and
-numbers; we draw them — ``html.py`` for a page, ``client/src/ui/document.tsx``
-for the app — and we write them out as text (``text``) for every reader that is
-a model: the answerability gate's two views, the proofreader, the difficulty
-probe and the discriminator all see each figure beside its label, because
-``document.text_of`` is what they read.
+numbers; we draw them — ``html.py`` for a page, ``client/src/ui/chart.tsx`` (with
+the geometry in ``plot.ts``) for the app — and we write them out as text
+(``text``) for every reader that is a model: the answerability gate's two
+views, the proofreader, the difficulty probe and the discriminator all see each
+figure beside its label, because ``document.text_of`` is what they read.
 
 Two kinds, bar and line. A bar compares a few groups; a line follows one
 quantity through time. A pie is left out on purpose: it is read by angle, which
 nobody can do to the precision a question needs.
 
-**The bounds are legibility on a phone.** A bar chart has room for eight groups
-of up to three bars at 360 points wide; a line has room for twelve points, a
-year of months. A label longer than eight characters does not fit under its
-group, a figure of seven digits does not fit on its axis — which is why a
-printed chart says 1,250万円 rather than 12,500,000円 — and a fourth series is
-more than a legend can keep apart without colour, which a document does not
-use (``document.tsx`` draws ink on paper). The validator holds all of this, so
-a draft outside it is sent back with the reason rather than drawn badly.
+**The bounds are legibility on a phone,** where a document gets about three
+hundred points of width. Eight groups of up to three bars still fit, standing
+where the columns have room and laid on their side where they do not; a line
+has room for twelve points, a year of months. A label longer than eight
+characters does not fit under its group, a figure of seven digits does not fit
+on its bar or its axis — which is why a printed chart says 1,250万円 rather than
+12,500,000円 — and a fourth series is more than a legend can keep apart without
+colour, which a document does not use: inside the sheet everything is ink.
+The validator holds all of this, so a draft outside it is sent back with the
+reason rather than drawn badly.
 """
 from __future__ import annotations
 
@@ -68,7 +70,7 @@ def is_number(value: Any) -> bool:
 
 def format_value(value: Any) -> str:
     """A figure as print sets it: thousands separated, no trailing zeros.
-    The app writes the same string (`formatValue` in document.tsx)."""
+    The app writes the same string (`formatValue` in client/src/ui/plot.ts)."""
     if not is_number(value):
         return "—"
     if float(value).is_integer():
@@ -208,7 +210,7 @@ def text(block: dict) -> str:
 
 def axis(values: Iterable[Any], target: int = 5) -> list[float]:
     """Gridline values for a chart of these figures: round numbers, zero among
-    them, spanning every figure. `niceTicks` in document.tsx is the same
+    them, spanning every figure. `niceTicks` in client/src/ui/plot.ts is the same
     arithmetic, so a page and a phone draw the same lines."""
     finite = [float(v) for v in values if is_number(v)]
     lo, hi = min([0.0, *finite]), max([0.0, *finite])

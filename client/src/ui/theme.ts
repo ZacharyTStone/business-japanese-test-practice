@@ -58,6 +58,29 @@ export const colors = {
 } as const;
 
 /**
+ * The paper's own palette, for everything drawn inside a document
+ * (ui/document.tsx) and the charts on it (ui/chart.tsx). Deliberately not
+ * `colors`: a quotation is black on white whoever's app it is being read in,
+ * and nothing on the sheet is coloured purple — the app's visual language stops
+ * at the edge of the sheet (the owner, 2026-09-17). A chart is ink too: its
+ * series are told apart by fill, dash and marker — solid, grey, open — the way
+ * a photocopied chart tells them apart, never by hue.
+ */
+export const ink = {
+  paper: "#FFFFFF",
+  text: "#1F1F1F",
+  faint: "#5C5C5C",
+  rule: "#9A9A9A",
+  ruleLight: "#D6D6D6",
+  headFill: "#F2F2F2",
+  mailFill: "#F7F7F7",
+  postit: "#FFF8D6",
+  /** The middle of a chart's three fills: solid ink, this grey, open paper.
+   *  Far enough from both that a bar is never mistaken for its neighbour. */
+  seriesGrey: "#8C8C8C",
+} as const;
+
+/**
  * The tints a counted thing can wear. Assigned per card, not per value — the
  * colour says *which* statistic this is so the eye can come back to the same one
  * tomorrow, and it never encodes whether the number is good.
