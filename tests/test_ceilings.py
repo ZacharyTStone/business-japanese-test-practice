@@ -296,6 +296,32 @@ def test_the_nights_run_on_a_schedule_and_stay_cheap():
     assert default and float(default.group(1)) <= 0.5
 
 
+def test_the_probe_is_a_manual_run_that_does_nothing_else():
+    """The difficulty probe rides the nightly job — the same ceilings, the same
+    artifact, checks and pull request — but only when somebody asks for it
+    from the Actions tab: inputs exist only on a manual run, so a scheduled
+    night can never turn into a probe. A probe run writes no items, draws no
+    pictures and points the database at nothing."""
+    text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
+
+    def step(name):
+        start = text.index(f"name: {name}")
+        return text[start:text.index("- name:", start + 1)]
+
+    keys = step("which of tonight's work is unlocked")
+    assert ('[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && '
+            '[ "${{ github.event.inputs.probe }}" = "true" ]; then probe=true') in keys
+    assert 'if [ "$probe" = "true" ]; then\n            echo "art=false"' in keys
+
+    probe = step("measure the difficulty the bank is missing")
+    assert "if: steps.keys.outputs.probe == 'true'" in probe
+    assert "python -m bjt probe --all" in probe
+    assert "psql" not in probe and "SUPABASE" not in probe
+    assert "if: steps.keys.outputs.write == 'true'" in step("write tonight's items")
+    # The ceilings are the job's env, so the probe runs under them like a night.
+    assert text.index("BJT_RUN_BUDGET_USD:") < text.index("name: measure the difficulty")
+
+
 def test_the_workflow_agrees_with_plan_on_a_nights_size():
     """CLAUDE.md states the size of a night as "`plan.DEFAULT_BUDGET` /
     `_PER_SLOT`, and the nightly workflow's own defaults, which must agree" —

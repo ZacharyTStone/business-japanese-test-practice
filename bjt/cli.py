@@ -29,6 +29,7 @@ import textwrap
 
 from . import batch as batchmod
 from . import (
+    backfill,
     calibration,
     config,
     fixtures,
@@ -631,7 +632,7 @@ def cmd_plan(args) -> int:
 
 
 def cmd_probe(args) -> int:
-    """Measure the difficulty of items that shipped without a measurement.
+    """Measure the difficulty of live items that shipped without a measurement.
 
     `items.model_p_correct` is the queue's prior on how hard a question is, and
     it is the only term in `next_items()` that tells two items of the same type
@@ -644,51 +645,60 @@ def cmd_probe(args) -> int:
     pitch was doing nothing at all across almost the whole library.
 
     This is the catch-up pass: the same probe, the same weaker model and the
-    same trial count, run over a committed bundle rather than over a draft. It
-    touches only items whose rate is missing, so re-running it is cheap and
-    safe, and it obeys the run ceilings in `bjt/llm.py` like everything else —
-    a bank-wide catch-up is exactly the shape of run those ceilings exist for,
-    so expect to run it more than once rather than to raise them.
+    same trial count, run over committed bundles (named, or `--all`) rather
+    than over a draft. It touches only live items whose rate is missing, so
+    re-running it is cheap and safe, and it obeys the run ceilings in
+    `bjt/llm.py` like everything else — a bank-wide catch-up is exactly the
+    shape of run those ceilings exist for, so it writes each bundle as soon as
+    it is done and expects to be run more than once rather than to have them
+    raised (bjt/backfill.py).
 
     Needs an API key. Without one every item reports unmeasured and the bundle
     is left exactly as it was, because a fabricated prior is worse than none:
     the queue would trust it.
     """
-    import pathlib
+    try:
+        paths = backfill.select_bundles(args.paths, args.all)
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        return 2
 
-    from .fidelity import difficulty
-
-    path = pathlib.Path(args.path)
-    bundle = batchmod.load(path)
-    items = bundle.get("items", [])
-    # A withdrawn item is never served, so its difficulty is nobody's business.
-    gone = withdrawn.ids()
-    todo = [it for it in items if it.get("model_p_correct") is None and it["id"] not in gone]
-    print(f"{path.name}: {len(items)} item(s), {len(todo)} without a difficulty signal"
-          + (" (withdrawn ones skipped)" if any(it["id"] in gone for it in items) else ""))
-    if not todo:
+    shelves = backfill.survey_probe(paths)
+    for shelf in shelves:
+        if shelf.todo or not args.all:
+            print(f"{shelf.path.name}: {shelf.n_items} item(s), {len(shelf.todo)} without a "
+                  "difficulty signal"
+                  + (f" ({shelf.n_withdrawn} withdrawn, skipped)" if shelf.n_withdrawn else ""))
+    work = [s for s in shelves if s.todo]
+    items = sum(len(s.todo) for s in work)
+    if not items:
         print("Nothing to measure.")
         return 0
     if args.dry_run:
-        for it in todo:
-            print(f"  would measure {it['id']} ({it['item_type']} {it['level']})")
+        for shelf in work:
+            for it in shelf.todo:
+                print(f"  would measure {it['id']} ({it['item_type']} {it['level']})")
+        print(f"\n{items} live item(s) in {len(work)} bundle(s) have no difficulty signal.")
+        calls = items * config.DIFFICULTY_TRIALS
+        print(f"That is {calls} call(s) to {config.DIFFICULTY_MODEL}, "
+              f"{config.DIFFICULTY_TRIALS} per item.")
+        print(backfill.runs_estimate(calls))
         return 0
-
-    measured = 0
-    for it in todo:
-        result = difficulty.measure(batchmod.as_generator_shape(it))
-        print(f"  {it['id']}  {result.detail()}")
-        if result.measured and result.rate is not None:
-            it["model_p_correct"] = result.rate
-            measured += 1
-    if not measured:
-        print("\nNothing measured — the bundle is unchanged.", file=sys.stderr)
+    if not config.DIFFICULTY_ENABLED:
+        print("The difficulty probe is switched off (BJT_DIFFICULTY=0); nothing measured.",
+              file=sys.stderr)
         return 1
 
-    batchmod.save(bundle, path)
-    out, _ = publish.publish_bundle(path)
-    print(f"\nMeasured {measured} item(s); wrote {path} and {out}.")
-    print("Both are content — commit them and let the deploy workflow apply the SQL.")
+    run = backfill.probe_bank([s.path for s in work])
+    print()
+    print(run.summary(llmmod.spend))
+    if args.summary:
+        pathlib.Path(args.summary).write_text(run.summary(llmmod.spend) + "\n", encoding="utf-8")
+    if not run.measured:
+        print("\nNothing measured — every bundle is unchanged.", file=sys.stderr)
+        return 1
+    print("\nThe bundles and their SQL are content — commit them and let the deploy "
+          "workflow apply the SQL.")
     return 0
 
 
@@ -1532,10 +1542,12 @@ def build_parser() -> argparse.ArgumentParser:
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 
-    prb = sub.add_parser("probe", help="measure difficulty for items that shipped without it")
-    prb.add_argument("path", help="a committed bundle (batches/*.json)")
+    prb = sub.add_parser("probe", help="measure difficulty for live items that shipped without it")
+    prb.add_argument("paths", nargs="*", metavar="PATH", help="committed bundles (batches/*.json)")
+    prb.add_argument("--all", action="store_true", help="every committed bundle")
     prb.add_argument("--dry-run", action="store_true",
-                     help="list what would be measured and spend nothing")
+                     help="list what would be measured, count the calls, and spend nothing")
+    prb.add_argument("--summary", default=None, help="write a markdown summary here")
     prb.set_defaults(func=cmd_probe)
 
     cb = sub.add_parser("checkbatch", help="run the offline quality checks over a bundle")

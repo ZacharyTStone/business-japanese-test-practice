@@ -10,7 +10,11 @@
 #               interleave across types because sixteen of the shelves are empty.
 #   write     — actually generate, gate, check and commit those items, and open a
 #               pull request for a person to read. Runs only when the secrets it
-#               needs are present.
+#               needs are present. A manual run can ask for the difficulty
+#               probe instead (the "probe" input, `bjt probe --all`): it
+#               measures the questions already in the bank rather than writing
+#               new ones, under the same ceilings, into the same kind of pull
+#               request.
 #
 # Splitting it that way is deliberate. A job that does nothing until somebody
 # buys an API key is a job nobody notices has rotted; this one produces a true,
@@ -98,6 +102,11 @@ on:
         default: "1"
       scenes:
         description: "Also draw the shared bank's missing scenes (item pictures are drawn on every run)"
+        type: boolean
+        required: false
+        default: false
+      probe:
+        description: "Instead of writing items, measure the difficulty of the live questions that have none (bjt probe --all): same ceilings, a pull request as usual, no pictures"
         type: boolean
         required: false
         default: false
@@ -200,7 +209,15 @@ jobs:
           weekly=false
           if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$(date -u +%u)" = "7" ]; then weekly=true; fi
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.scenes }}" = "true" ]; then weekly=true; fi
-          if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
+          # A manual run may ask for the difficulty probe instead of a night's
+          # writing. It measures questions already in the bank and does nothing
+          # else: no new items, no pictures, nothing pointed at in the database.
+          # Only a manual run has inputs, so a scheduled night is never a probe.
+          probe=false
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.probe }}" = "true" ]; then probe=true; fi
+          if [ "$probe" = "true" ]; then
+            echo "art=false" >> "$GITHUB_OUTPUT"
+          elif [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
             echo "art=true" >> "$GITHUB_OUTPUT"
             if [ "$weekly" = "true" ]; then
               echo "only=" >> "$GITHUB_OUTPUT"
@@ -225,10 +242,21 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "seeds=$HAVE_SEEDS" >> "$GITHUB_OUTPUT"
+          # go: the key is here, so something may be spent and a pull request
+          # may follow. write / probe: which of the two that something is.
           if [ "$HAVE_API_KEY" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
+            if [ "$probe" = "true" ]; then
+              echo "write=false" >> "$GITHUB_OUTPUT"
+              echo "probe=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "write=true" >> "$GITHUB_OUTPUT"
+              echo "probe=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "write=false" >> "$GITHUB_OUTPUT"
+            echo "probe=false" >> "$GITHUB_OUTPUT"
             {
               echo
               echo '### Nothing written'
@@ -264,7 +292,7 @@ jobs:
       # --------------------------------------------------------- the generation
 
       - name: unpack the licensed seeds
-        if: steps.keys.outputs.go == 'true' && steps.keys.outputs.seeds == 'true' && github.event.inputs.dry_run != 'true'
+        if: steps.keys.outputs.write == 'true' && steps.keys.outputs.seeds == 'true' && github.event.inputs.dry_run != 'true'
         env:
           SEEDS_TAR_B64: ${{ secrets.SEEDS_TAR_B64 }}
         run: |
@@ -276,7 +304,7 @@ jobs:
           python -m bjt seeds
 
       - name: build seeds from the reference batches
-        if: steps.keys.outputs.go == 'true' && steps.keys.outputs.seeds != 'true' && github.event.inputs.dry_run != 'true'
+        if: steps.keys.outputs.write == 'true' && steps.keys.outputs.seeds != 'true' && github.event.inputs.dry_run != 'true'
         run: |
           # No licensed material tonight. The bank's own hand-written items are
           # the few-shot examples instead; the summary says so, so a reader of
@@ -292,10 +320,23 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: write tonight's items
-        if: steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
+        if: steps.keys.outputs.write == 'true' && github.event.inputs.dry_run != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --summary summary.md
+
+      # The manual alternative to the step above: the difficulty prior the
+      # bank's imported questions never got (bjt/backfill.py). The same run
+      # ceilings as a night, from the env at the top of this job, and the same
+      # artifact, checks and pull request below: it rewrites bundles and their
+      # SQL, and nothing reaches the database until somebody merges. It skips
+      # what already has a rate, so a bank bigger than one run's ceiling is a
+      # few runs, never a raised ceiling.
+      - name: measure the difficulty the bank is missing
+        if: steps.keys.outputs.probe == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python -m bjt probe --all --summary summary.md
 
       # Whatever happens after this point — a push refused, a pull request
       # not permitted, the job killed by its own clock — the items that were
@@ -399,13 +440,22 @@ jobs:
           # the afternoon and the scheduled one that night used to want the
           # same branch, and the second push was refused with its items on it.
           branch="content/nightly-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
+          # A probe run measured questions already in the bank; a night wrote
+          # new ones. The commit and the title say which; nothing else differs.
+          if [ "${{ steps.keys.outputs.probe }}" = "true" ]; then
+            subject="Measure the difficulty of the questions that have none"
+            body="Written by the difficulty probe (bjt probe --all). It sets model_p_correct on live questions that shipped without one; nothing is published until this is merged and the SQL is applied."
+            title="Difficulty probe: $(date -u +%Y-%m-%d)"
+          else
+            subject="Fill the emptiest shelves of the bank"
+            body="Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied. Scene artwork, if any, passed the review gate and is already in the bucket."
+            title="Nightly content: $(date -u +%Y-%m-%d)"
+          fi
           git config user.name  "bjt nightly"
           git config user.email "noreply@github.com"
           git checkout -b "$branch"
           git add batches
-          git commit \
-            -m "Fill the emptiest shelves of the bank ($(date -u +%Y-%m-%d))" \
-            -m "Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied. Scene artwork, if any, passed the review gate and is already in the bucket."
+          git commit -m "$subject ($(date -u +%Y-%m-%d))" -m "$body"
           # The run checked out the default branch as it was hours ago. If it
           # has moved since — and on 2026-09-18 it moved by an edit to this
           # very file — a branch pushed from the old base is refused as an
@@ -428,7 +478,7 @@ jobs:
           # let Actions open pull requests, say so and how to fix it, and hand
           # over the link — a night's work is not lost over a settings toggle.
           if ! gh pr create \
-            --title "Nightly content: $(date -u +%Y-%m-%d)" \
+            --title "$title" \
             --body-file summary.md \
             --base "${{ github.event.repository.default_branch }}" \
             --head "$branch"; then
