@@ -18,8 +18,9 @@ Commands
     regate        put committed items through the proofreader and the gate
 
 The commands are thin on purpose. What they drive lives in the modules they
-call: one draft's checks and a shelf's loop in `bjt/pipeline.py`, the bundle and
-its offline checks in `bjt/batch.py`, the SQL in `bjt/publish.py`.
+call: one draft's checks and a shelf's loop in `bjt/pipeline.py`, the passes
+over the bank that already shipped (probe, regate) in `bjt/backfill.py`, the
+bundle and its offline checks in `bjt/batch.py`, the SQL in `bjt/publish.py`.
 """
 from __future__ import annotations
 
