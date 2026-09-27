@@ -32,11 +32,52 @@ _BOTH_SOURCES = (
 )
 
 
+#: When a graph earns its place in the 資料, and what it may not do. Told only
+#: to the two 聴読解 types that may draw one, and only for a cell that offers a
+#: template able to carry one (`Template.charts`) — a cell that assigns an
+#: email is not invited to draw a chart the validator will refuse. The owner
+#: asked for graphs in the 資料 (2026-09-27).
+_CHARTS = (
+    "A `chart` block draws figures as a bar or a line graph, and on the real paper the "
+    "資料 is often a graph. Use one when the question is about a comparison or a change — "
+    "which month fell, which branch overtook which, whether a figure cleared its target — "
+    "and a table when it is about looking a value up. A bar chart compares a few groups; a "
+    "line follows one quantity through time. At most three series, each named for the "
+    "legend; short labels; one `unit` for every figure; the figures as numbers.\n"
+    "The learner READS THE PICTURE, not the numbers: every difference the answer turns on "
+    "must be plain to the eye between two bars or two points (never 102 against 104), and "
+    "an option that quotes a figure must quote one a reader can take off the chart.\n"
+    "A chart does not relax the rule above. The audio must still select, qualify or change "
+    "something the chart shows （「9月は障害の問い合わせを除いて見てください」, 「来期の"
+    "計画は大阪を除いた数字です」） so that neither the chart nor the audio answers alone: "
+    "a graph whose tallest bar is the answer is a graph with decorative audio."
+)
+
+
 class _DocumentGenerator(Generator):
     """Shared machinery for the four document types."""
 
     #: Which extra field holds the document(s), for the prompt text.
     document_field = "document"
+    #: The chart guidance above, for the types that may draw one; empty for
+    #: the rest, which are then never told a chart exists.
+    chart_guidance = ""
+
+    def _chart_spec(self, cell) -> str:
+        """The chart guidance, when this type draws charts and this cell offers
+        a template that can carry one — and which of its templates those are."""
+        if not self.chart_guidance:
+            return ""
+        carriers = [t for t in cell.templates
+                    if t in render.TEMPLATES and render.TEMPLATES[t].charts]
+        if not carriers:
+            return ""
+        others = [t for t in cell.templates if t not in carriers]
+        where = ("Of the templates offered here, "
+                 + "、".join(f"`{t}`" for t in carriers)
+                 + " can carry one `chart` block"
+                 + (f"; {'、'.join(f'`{t}`' for t in others)} cannot." if others else "."))
+        return f"{self.chart_guidance}\n{where}"
 
     def _template_spec(self, cell) -> str:
         if not cell.templates:
@@ -65,7 +106,10 @@ class _DocumentGenerator(Generator):
         if cell.scenes:
             lines.append(f"- scene_id: choose exactly one of: {'、'.join(cell.scenes)}")
         spec = self._template_spec(cell)
-        return with_relation_note("\n".join(lines), cell) + (f"\n\n{spec}" if spec else "")
+        charts = self._chart_spec(cell)
+        return (with_relation_note("\n".join(lines), cell)
+                + (f"\n\n{spec}" if spec else "")
+                + (f"\n\n{charts}" if charts else ""))
 
     def validate_extra(self, item: dict, cell=None) -> list[str]:
         """The template is an assignment, exactly as the scene id is.
@@ -128,6 +172,7 @@ class ShiryouChoudokkaiGenerator(_DocumentGenerator):
     item_type = "shiryou_choudokkai"
     label = "資料聴読解問題 (document listening+reading)"
     requires_cell = True
+    chart_guidance = _CHARTS
     task_spec = (
         "Format: `document` is what the test-taker reads — an email, a schedule, a "
         "quotation. `stem` is the spoken prompt the narrator reads, ending with the "
@@ -158,6 +203,7 @@ class SougouChoudokkaiGenerator(_DocumentGenerator):
     label = "総合聴読解問題 (integrated listening+reading)"
     requires_cell = True
     document_field = "documents"
+    chart_guidance = _CHARTS
     task_spec = (
         "Format: `dialogue` is the exchange the test-taker hears — three to eight turns "
         "across two or three speaker ROLES (never personal names). `documents` holds one "

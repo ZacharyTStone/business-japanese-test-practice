@@ -1,6 +1,6 @@
 {
   "item_type": "sougou_choudokkai",
-  "_note": "Original design, not licensed material. The hardest type: a longer exchange AND its documents, where the answer is in neither alone. Every cell therefore assigns both a conversation setting and the document template it has to be read against. A negotiation over a quotation and a regular meeting over its handout are settings, not functions — the questions this type asks (who acts, what the document now says, what is left open) already fit them. The owner asked for this (2026-09-27).",
+  "_note": "Original design, not licensed material. The hardest type: a longer exchange AND its documents, where the answer is in neither alone. Every cell therefore assigns both a conversation setting and the document template it has to be read against. A negotiation over a quotation and a regular meeting over its handout are settings, not functions — the questions this type asks (who acts, what the document now says, what is left open) already fit them. The `figures` template puts a graph (a `chart` block) on the table at the regular meeting and on the shared screen. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -61,7 +61,8 @@
       "templates": [
         "meeting_minutes",
         "schedule",
-        "quote_order"
+        "quote_order",
+        "figures"
       ]
     },
     {
@@ -99,7 +100,8 @@
       ],
       "templates": [
         "meeting_minutes",
-        "progress_report"
+        "progress_report",
+        "figures"
       ]
     }
   ],
