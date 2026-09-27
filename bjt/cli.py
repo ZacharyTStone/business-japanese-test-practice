@@ -11,7 +11,7 @@ Commands
     publish       turn a checked bundle into idempotent SQL for the database
     gen           generate one item, gate it, store it, print it
     practice      answer a run of items interactively (--demo needs no key)
-    quality       print the fidelity report (mechanisms 1-5)
+    quality       print the fidelity report (all six mechanisms)
     discriminate  run the discriminator loop and report the discrimination rate
     calibrate     sit the official sample items and compare accuracy to generated
 
@@ -397,7 +397,9 @@ def cmd_quality(args) -> int:
             for reason in row["reasons"][:3]:
                 print(f"      tell: {reason}")
 
-        print("\n[4 · genre templates] phase 2 (総合読解) — not built yet.")
+        print("\n[4 · document templates] the shapes a 資料 is set in (bjt/render/templates.py):")
+        print(f"  {len(render.TEMPLATES)} templates: {', '.join(render.TEMPLATES)}")
+        print("  every document is held to its template's required fields by `bjt checkbatch`")
 
         print("\n[5 · sanity check] items the proofreader stopped before the gate:")
         stopped = sum(row["n"] for row in vc if row["gate_verdict"] == "discarded:sanity")
@@ -1326,7 +1328,8 @@ def cmd_tester(args) -> int:
 # ----- argument parsing --------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="bjt", description="BJT practice item generator (phase 1)")
+    p = argparse.ArgumentParser(
+        prog="bjt", description="Write, gate, check and publish BJT-format practice items")
     sub = p.add_subparsers(dest="command", required=True)
 
     types = sorted(GENERATORS)

@@ -143,7 +143,7 @@ BATCH_DIR = Path(_env("BJT_BATCH_DIR", str(ROOT / "batches")))
 # artwork are large, regenerable, and belong in object storage, not in git.
 MEDIA_DIR = Path(_env("BJT_MEDIA_DIR", str(ROOT / "media")))
 
-# How many recent stems/topics to feed back into a generation prompt as a
+# How many recent topics to feed back into a generation prompt as a
 # "do not repeat these" list.
 RECENT_TOPICS_WINDOW = int(_env("BJT_RECENT_TOPICS_WINDOW", "25"))
 

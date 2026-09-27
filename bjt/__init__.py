@@ -1,5 +1,5 @@
-"""BJT practice — a personal study tool that generates BJT-format practice items.
-
-Phase 1: 語彙・文法問題 and 表現読解問題 (both pure text).
+"""BJT-format practice items — the pipeline that writes, gates, checks and
+publishes the bank the app serves: all nine of the exam's problem types, and
+画像把握 besides.
 """
 __version__ = "0.1.0"
