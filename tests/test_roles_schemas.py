@@ -80,7 +80,7 @@ def test_schema_constrains_role_enum():
 
 
 def test_every_item_type_has_role_descriptions():
-    for item_type, role_list in roles.DISTRACTOR_ROLES.items():
+    for role_list in roles.DISTRACTOR_ROLES.values():
         for r in role_list:
             assert r in roles.ROLE_DESCRIPTIONS, f"{r} missing a description"
 

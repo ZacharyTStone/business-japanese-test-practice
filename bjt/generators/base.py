@@ -248,7 +248,7 @@ class Generator:
         user = self.user_prompt(level, avoid, cell, feedback)
 
         last_errors: list[str] = []
-        for attempt in range(max_attempts):
+        for _attempt in range(max_attempts):
             prompt = user
             if last_errors:
                 prompt = (

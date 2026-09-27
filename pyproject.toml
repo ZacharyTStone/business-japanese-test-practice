@@ -9,7 +9,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    # The lint step in the checks workflow. Pinned to one minor release: a new
+    # ruff can add rules to a family selected below, and the step should
+    # change when somebody decides it should, not when a release lands.
+    "ruff>=0.16,<0.17",
+]
 # Only the Google Cloud adapter needs a package; gemini and openai speak plain
 # HTTPS from the standard library, so a key is all they need.
 tts-google = ["google-cloud-texttospeech>=2.16"]
@@ -19,6 +25,32 @@ bjt = "bjt.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+# No target-version here on purpose: ruff reads `requires-python` above, so a
+# rule that depends on the interpreter (syntax 3.9 cannot parse, say) judges
+# the code by the oldest Python this package says it runs on, and the number
+# is written once.
+#
+# Agent worktrees live under .claude/ and are whole copies of this tree.
+extend-exclude = [".claude"]
+
+[tool.ruff.lint]
+# Bugs, not style. Every rule here flags code that does something other than
+# what it says; none has an opinion about layout, so the lint never asks for a
+# reformat and `ruff format` is not part of the checks. Add a rule when it
+# catches a kind of mistake this repository has made, not because it exists.
+select = [
+    "F",                                     # pyflakes: undefined names, redefinitions, unused imports and variables
+    "E9",                                    # the file does not parse
+    "E711", "E712", "E713", "E714", "E721",  # comparisons that do not mean what they say
+    "E722",                                  # a bare except, which also swallows Ctrl-C and SystemExit
+    "PLE",                                   # pylint's errors: wrong whatever the style (a bad format string, ...)
+    "B006",                                  # a mutable default argument, shared by every call
+    "B007",                                  # a loop variable nobody reads
+    "B015", "B018",                          # a comparison or an expression that does nothing: usually a lost assert
+    "B023",                                  # a closure over a loop variable, which only ever sees the last value
+]
 
 [build-system]
 requires = ["setuptools>=61"]

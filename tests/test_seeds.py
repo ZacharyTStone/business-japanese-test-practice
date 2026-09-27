@@ -8,7 +8,7 @@ from bjt.generators.base import load_seed_json
 def test_examples_come_from_the_batches_in_the_generators_shape():
     examples = seeds.examples_from_batches()
     assert "hatsugen_choukai" in examples and "goi_bunpou" in examples
-    for item_type, items in examples.items():
+    for items in examples.values():
         assert 0 < len(items) <= seeds.PER_TYPE
         for item in items:
             # The shape the generator emits and the few-shot README describes:
