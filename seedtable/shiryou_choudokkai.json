@@ -1,6 +1,6 @@
 {
   "item_type": "shiryou_choudokkai",
-  "_note": "Original design, not licensed material. A document on the page, a prompt in the ear, and usually a value to find. The `function` axis is what has to be extracted; the template axis is which document it has to be extracted from.",
+  "_note": "Original design, not licensed material. A document on the page, a prompt in the ear, and usually a value to find. The `function` axis is what has to be extracted; the template axis is which document it has to be extracted from. A negotiation over a quotation is the setting this type's own prompt describes （「支払条件がちょっと…」）. The `figures` template is the 資料 as a graph (a `chart` block): reading a trend off bars is a different skill from finding a cell in a table, and the real paper asks for both. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -68,7 +68,8 @@
       ],
       "templates": [
         "quote_order",
-        "schedule"
+        "schedule",
+        "figures"
       ]
     },
     {
@@ -81,7 +82,31 @@
       "templates": [
         "schedule",
         "quote_order",
-        "email_thread"
+        "email_thread",
+        "figures"
+      ]
+    },
+    {
+      "id": "negotiation",
+      "ja": "条件交渉の席で見積書を見ながら",
+      "channel": "in_person",
+      "scenes": [
+        "scene_client_meeting_room",
+        "scene_meeting_room_table"
+      ],
+      "templates": [
+        "quote_order"
+      ]
+    },
+    {
+      "id": "figures_meeting",
+      "ja": "会議でグラフ資料を見ながら",
+      "channel": "in_person",
+      "scenes": [
+        "scene_meeting_room_table"
+      ],
+      "templates": [
+        "figures"
       ]
     }
   ],
@@ -275,6 +300,18 @@
       "staff_to_client"
     ],
     "video_shared_doc": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
+    ],
+    "negotiation": [
+      "staff_to_client",
+      "subordinate_to_superior"
+    ],
+    "figures_meeting": [
       "subordinate_to_superior",
       "junior_to_senior",
       "superior_to_subordinate",

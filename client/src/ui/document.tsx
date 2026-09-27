@@ -32,7 +32,8 @@ import { Platform, StyleSheet, Text, useWindowDimensions, View, type TextStyle }
 
 import { useLang, type Key } from "../lib/i18n";
 import type { DocBlock, StimulusDocument } from "../lib/types";
-import { radius, space } from "./theme";
+import { ChartView } from "./chart";
+import { ink, radius, space } from "./theme";
 
 /** Below this width a table becomes stacked rows. Four columns of Japanese at
  *  16px need about this much before the cells start breaking mid-word. */
@@ -47,22 +48,15 @@ const TEMPLATE_KEY: Record<string, Key> = {
   progress_report: "doc_progress_report",
   quote_order: "doc_quote_order",
   office_sign: "doc_office_sign",
+  figures: "doc_figures",
 };
 
 // ----- ink -------------------------------------------------------------------
-
-/** The paper's own palette. Deliberately not the app theme: a quotation is
- *  black on white whoever's app it is being read in. */
-const ink = {
-  paper: "#FFFFFF",
-  text: "#1F1F1F",
-  faint: "#5C5C5C",
-  rule: "#9A9A9A",
-  ruleLight: "#D6D6D6",
-  headFill: "#F2F2F2",
-  mailFill: "#F7F7F7",
-  postit: "#FFF8D6",
-};
+//
+// The paper's own palette is `ink` in theme.ts: deliberately not the app's
+// colours, because a quotation is black on white whoever's app it is being
+// read in. It lives there rather than here so the charts on the sheet
+// (ui/chart.tsx) draw with the same ink.
 
 /** Formal paper documents are set in a mincho face where the platform has one.
  *  Web and iOS ship one; Android falls back to its system CJK face, which is
@@ -226,6 +220,11 @@ function Block({ block, stacked, face }: { block: DocBlock; stacked: boolean; fa
           <Text style={[styles.body, faceStyle(face), { flex: 1 }]}>※ {block.text}</Text>
         </View>
       );
+    case "chart":
+      // Drawn from its figures, in ink, at whatever width the sheet has
+      // (ui/chart.tsx). Too narrow for columns, the bars turn on their side,
+      // as a table's rows stack.
+      return <ChartView block={block} face={faceStyle(face)} />;
     default:
       // An unknown block type drops rather than throwing. A learner is in the
       // middle of reading this; losing one paragraph beats losing the screen.
@@ -438,6 +437,10 @@ const CHROME: Record<string, Chrome> = {
   progress_report: Report,
   quote_order: Quote,
   office_sign: Sign,
+  // 集計資料 carries a schedule's header — the period and who compiled it —
+  // and is laid out as one: the title, the period under it, the figures,
+  // the compiler bottom right.
+  figures: Schedule,
 };
 
 export function DocumentView({ doc }: { doc: StimulusDocument }) {

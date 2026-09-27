@@ -15,7 +15,7 @@ Its variety comes from the seed table, never from the prompt — see
 """
 from __future__ import annotations
 
-from .base import Generator
+from .base import Generator, with_relation_note
 
 
 class HatsugenChoukaiGenerator(Generator):
@@ -63,7 +63,7 @@ class HatsugenChoukaiGenerator(Generator):
             ),
             "in_person": "This is a face-to-face item.",
         }[cell.channel]
-        return (
+        return with_relation_note(
             "Write this item for the following assigned situation. These are "
             "requirements, not suggestions — do not substitute a different setting, "
             "relationship, or communicative function:\n"
@@ -73,7 +73,8 @@ class HatsugenChoukaiGenerator(Generator):
             f"- channel: {cell.channel} — {channel_note}\n"
             f"- scene_id: choose exactly one of: {scenes}\n"
             "Set `channel` to exactly the value above. Set `speaker_role` and "
-            "`listener_role` to short role labels consistent with 関係."
+            "`listener_role` to short role labels consistent with 関係.",
+            cell,
         )
 
     def validate_extra(self, item: dict, cell=None) -> list[str]:

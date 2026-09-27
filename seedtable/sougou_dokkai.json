@@ -1,6 +1,6 @@
 {
   "item_type": "sougou_dokkai",
-  "_note": "Original design, not licensed material. Reading only — the channel is always `written`, and nothing in this type is ever synthesised. The `function` axis is the inference the question demands, because a batch of ten 総合読解 items that all ask 「何が書いてあるか」 is not a reading test.",
+  "_note": "Original design, not licensed material. Reading only — the channel is always `written`, and nothing in this type is ever synthesised. The `function` axis is the inference the question demands, because a batch of ten 総合読解 items that all ask 「何が書いてあるか」 is not a reading test. A negotiation thread, the record of a regular meeting and a 慶弔 notice are settings — kinds of paper an office really circulates — and the inferences asked of them are the ones already on the function axis. The owner asked for this (2026-09-27).",
   "levels": [
     "J3",
     "J2",
@@ -49,6 +49,33 @@
       "channel": "written",
       "templates": [
         "schedule",
+        "email_thread"
+      ]
+    },
+    {
+      "id": "negotiation_thread",
+      "ja": "取引先との条件交渉（価格・納期）",
+      "channel": "written",
+      "templates": [
+        "email_thread",
+        "quote_order"
+      ]
+    },
+    {
+      "id": "meeting_record",
+      "ja": "定例会議の決定事項",
+      "channel": "written",
+      "templates": [
+        "meeting_minutes",
+        "memo_notice"
+      ]
+    },
+    {
+      "id": "condolence_notice",
+      "ja": "慶弔の連絡（訃報・お見舞い）",
+      "channel": "written",
+      "templates": [
+        "memo_notice",
         "email_thread"
       ]
     }
@@ -248,6 +275,25 @@
       "staff_to_client",
       "staff_to_visitor",
       "staff_to_customer"
+    ],
+    "negotiation_thread": [
+      "staff_to_client",
+      "subordinate_to_superior",
+      "other_department"
+    ],
+    "meeting_record": [
+      "subordinate_to_superior",
+      "junior_to_senior",
+      "superior_to_subordinate",
+      "peer_to_peer",
+      "other_department"
+    ],
+    "condolence_notice": [
+      "superior_to_subordinate",
+      "subordinate_to_superior",
+      "peer_to_peer",
+      "other_department",
+      "staff_to_client"
     ]
   }
 }

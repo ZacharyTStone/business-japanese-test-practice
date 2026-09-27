@@ -171,6 +171,43 @@ def test_the_integrated_type_carries_both_documents_and_every_turn():
         assert turn["text"] not in cold
 
 
+CHART_LINES = ("【棒グラフ】月別 問い合わせ件数（単位：件）",
+               "電話：4月 330 / 5月 410 / 6月 340 / 7月 260 / 8月 240 / 9月 460",
+               "メール：4月 150 / 5月 190 / 6月 250 / 7月 320 / 8月 340 / 9月 370")
+
+
+def test_a_chart_reaches_both_views_figure_by_figure():
+    """The gate sees the whole stimulus, and a graph is part of it. A chart that
+    reached the judge as its caption alone would make an item whose answer is
+    read off the bars 'ambiguous' on the full side, and would hide from the
+    cold side a graph that answers the question by itself."""
+    import copy
+    from bjt import fixtures
+    item = copy.deepcopy(fixtures.CHART_FIXTURE)
+    full, cold = answerability.questions(item)
+    for line in CHART_LINES:
+        assert line in full and line in cold
+    assert item["stem"] in full and item["stem"] not in cold
+
+
+def test_the_difficulty_probe_reads_the_chart_too(monkeypatch):
+    """The probe sits the gate's full view on a weaker model, so the difficulty
+    of reading a graph is measured on the graph's figures, not its title."""
+    import copy
+    from bjt import fixtures
+    from bjt.fidelity import difficulty
+    monkeypatch.setattr("bjt.config.DIFFICULTY_ENABLED", True)
+    seen = []
+
+    def answer(question, options, model=None):
+        seen.append(question)
+        return {"choice": 0, "reason": "x"}
+
+    monkeypatch.setattr(answerability.llm, "answer_choice", answer)
+    difficulty.measure(copy.deepcopy(fixtures.CHART_FIXTURE))
+    assert seen and all(all(line in q for line in CHART_LINES) for q in seen)
+
+
 def test_a_stem_only_type_keeps_the_options_only_cold_view(goi_item):
     full, cold = answerability.questions(goi_item)
     assert goi_item["stem"] in full

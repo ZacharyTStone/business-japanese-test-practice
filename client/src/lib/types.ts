@@ -43,10 +43,12 @@ export type DocBlock = {
     | "table"
     | "key_values"
     | "quoted_message"
-    | "callout";
+    | "callout"
+    | "chart";
   text?: string;
   level?: number;
   items?: string[];
+  /** A table's caption, or a chart's title. */
   caption?: string;
   columns?: string[];
   rows?: string[][];
@@ -55,7 +57,18 @@ export type DocBlock = {
   sent_at?: string;
   depth?: number;
   tone?: "info" | "warning" | "action";
+  /** A chart: bars compare a few groups, a line follows one quantity in time. */
+  kind?: "bar" | "line";
+  /** A chart's unit, printed once for every figure (件, 万円, %). */
+  unit?: string;
+  /** A chart's labels along its axis, in order. */
+  categories?: string[];
+  /** A chart's figures: one to three series, one number per category. Numbers,
+   *  never text — ui/plot.ts reads a value that is not one as a gap. */
+  series?: ChartSeries[];
 };
+
+export type ChartSeries = { name: string; values: number[] };
 
 /** A document the learner reads: an email, a schedule, a set of minutes.
  *

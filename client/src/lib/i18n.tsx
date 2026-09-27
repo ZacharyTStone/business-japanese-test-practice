@@ -336,6 +336,11 @@ const S = {
   doc_progress_report: ["進捗報告書", "Progress report"],
   doc_quote_order: ["見積書・注文書", "Quote / order form"],
   doc_office_sign: ["掲示・案内", "Sign / notice"],
+  doc_figures: ["集計資料", "Figures handout"],
+  // What a screen reader says a chart is, before it reads the figures.
+  chart_bar: ["棒グラフ", "Bar chart"],
+  chart_line: ["折れ線グラフ", "Line chart"],
+  chart_unit: ["単位", "unit"],
 
   // faces
   mood_happy: ["相手は満足しています", "They're pleased"],
