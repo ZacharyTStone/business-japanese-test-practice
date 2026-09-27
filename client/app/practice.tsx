@@ -43,7 +43,7 @@
  * options. See AdSlot: the placement type has no member for this screen.
  */
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 
 import { useAuth } from "../src/lib/auth";
@@ -64,10 +64,11 @@ import {
 import { examIsNear } from "../src/lib/exam";
 import { useLang, type Key } from "../src/lib/i18n";
 import { budgetSeconds, type TypePace } from "../src/lib/pace";
+import { initialPractice, practiceReducer, thinkTime, type Stage } from "../src/lib/practice";
 import { roleInfo, verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import { NO_ANSWER, type AnsweredItem, type QueuedItem, type SectionLevel } from "../src/lib/types";
+import { NO_ANSWER, type QueuedItem, type SectionLevel } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer, MiniPlay, Transcript } from "../src/ui/audio";
 import { QuestionClock } from "../src/ui/clock";
 import { Button, Card, Loading, Notice, ProgressBar, Tag } from "../src/ui/components";
@@ -115,8 +116,6 @@ const PROMPT_KEY: Record<string, Key> = {
   sougou_choudokkai: "prompt_sougou_choudokkai",
   sougou_dokkai: "prompt_sougou_dokkai",
 };
-
-type Stage = "scene" | "listen" | "answer" | "reveal";
 
 /** The types whose four options are heard rather than read — which on the exam
  *  is **all of 第1部 聴解**: the screen shows the picture and the bare numerals,
@@ -186,25 +185,19 @@ export default function Practice() {
   // always has to land somewhere.
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
-  const [items, setItems] = useState<QueuedItem[] | null>(null);
+  // The set and everything about the question on screen: one reducer, whose
+  // transitions are pure and tested (src/lib/practice.ts). What follows it here
+  // is only what the screen needs besides — what was loaded alongside the set,
+  // and the furniture of drawing it.
+  const [state, dispatch] = useReducer(practiceReducer, Date.now(), initialPractice);
+  const [loaded, setLoaded] = useState(false);
   // Asked once per screen. False for every tester but the owner, and the
   // server re-checks it, so this only decides whether a button is drawn.
   const [canVeto, setCanVeto] = useState(false);
-  const [index, setIndex] = useState(0);
-  const [stageAt, setStageAt] = useState<{ index: number; stage: Stage } | null>(null);
-  const [chosen, setChosen] = useState<number | null>(null);
-  const [graded, setGraded] = useState<{ isCorrect: boolean; chosenRole: string } | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  // The learner asked to see spoken options as text before answering. Practice
-  // is not the exam, and the fourth listen sometimes needs the page; but it is
-  // off by default and resets with every item, so the listen comes first.
-  const [optionsAsText, setOptionsAsText] = useState(false);
   /** The option under a pointer, on a machine that has one. */
   const [hovered, setHovered] = useState<number | null>(null);
-  const [answers, setAnswers] = useState<AnsweredItem[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   /** Today's count when the day's ceiling has been reached; null otherwise. */
   const [blocked, setBlocked] = useState<number | null>(null);
   /** What the exam affords each self-paced type, and whether this learner wants
@@ -218,38 +211,15 @@ export default function Practice() {
   const [labels, setLabels] = useState<string[] | null>(null);
 
   const startedAt = useRef(Date.now());
-  const questionShownAt = useRef(Date.now());
   const levelsBefore = useRef<SectionLevel[]>([]);
   // Answering a question near the bottom of a long item used to change nothing
   // a phone could see: the option turned green under the thumb and the verdict
   // appeared below the fold. This puts it on screen.
   const scroller = useRef<ScrollView>(null);
-  // Which question has already been scrolled to its verdict. onLayout fires
-  // again when the explanation is unfolded, and without this the screen would
-  // snap back to the top just as somebody started reading it.
-  const scrolledFor = useRef<number | null>(null);
-  // One press, one move. `chosen` and `index` are state, and state does not
-  // change until the next render, so two presses landing in the same tick both
-  // read the old value and both go through: a browser that delivers a tap as
-  // touch *and* click, or a key the focused control handled before this screen
-  // saw it. Answering twice wrote two attempts for one question; advancing
-  // twice stepped over a question without asking it, which is why the counter
-  // went 1 / 5 to 3 / 5 and never showed 2 / 5. A ref is written immediately,
-  // so the second press finds the door already shut.
-  const answeredFor = useRef<number | null>(null);
-  const advancedFrom = useRef<number | null>(null);
-  // How the answer was given, sent with it. `answerFrom` is when the question
-  // became answerable with its stimulus over: the moment it was on screen for
-  // a reading item, the end of the audio for a listening one. The ladder
-  // holds a right answer that took longer than the question allows — timed
-  // from here, not from the start of a two-minute conversation. `replays` and
-  // `peeked` are the help the exam does not give: another listen, or the
-  // spoken options read as text. None of it is state: nothing on screen
-  // depends on it, and a ref is written the moment it happens.
-  const answerFrom = useRef<number>(Date.now());
-  const answerFromFor = useRef<number | null>(null);
-  const replays = useRef(0);
-  const peeked = useRef(false);
+  // Which question has already been scrolled to its verdict, by id. onLayout
+  // fires again when the explanation is unfolded, and without this the screen
+  // would snap back to the top just as somebody started reading it.
+  const scrolledFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isConfigured || !session?.user) return;
@@ -288,11 +258,10 @@ export default function Practice() {
         setBlocked(remaining <= 0 ? day.answered_today : null);
         const queue = remaining > 0 ? await fetchQueue(remaining) : [];
         if (cancelled) return;
-        setItems(queue);
+        dispatch({ type: "loaded", items: queue, now: Date.now() });
+        setLoaded(true);
         mayVeto().then(setCanVeto).catch(() => setCanVeto(false));
         setSessionId(await startSession(session.user.id));
-        questionShownAt.current = Date.now();
-        answerFrom.current = questionShownAt.current;
       } catch (e) {
         if (!cancelled) setError(errorText(e));
       }
@@ -302,7 +271,73 @@ export default function Practice() {
     };
   }, [session?.user?.id]);
 
-  const item = items?.[index];
+  // An answer, posted once. The reducer accepts one `choose` per question, so
+  // however many presses arrived there is one pending answer, and this runs
+  // once for it. The database grades it; if the round trip fails, the answer
+  // is graded locally for display only and nothing is written from that.
+  useEffect(() => {
+    const pending = state.pending;
+    if (!pending) return;
+    const it = state.items[pending.index];
+    if (!it) return;
+    const ranOut = pending.position === NO_ANSWER;
+    // A longer single buzz for the clock: it is the one verdict that arrives
+    // without anybody having pressed anything, so it announces itself.
+    buzz(ranOut ? 60 : 12);
+    const thinkMs = thinkTime(state, pending, {
+      selfPaced: Boolean(pace[it.item_type]),
+      listenable: playlistFor(it, labels).length > 0,
+    });
+    recordAttempt({
+      itemId: it.id,
+      chosenIndex: pending.position,
+      sessionId,
+      elapsedMs: pending.at - state.shownAt,
+      thinkMs,
+      replays: state.replays,
+      peeked: state.peeked,
+      standsFor: it.stands_for ?? null,
+    })
+      .then((verdict) => {
+        dispatch({ type: "graded", verdict });
+        buzz(verdict.isCorrect ? [0, 18, 60, 18] : 40);
+      })
+      .catch(() => {
+        const option = it.options.find((o) => o.position === pending.position);
+        dispatch({
+          type: "graded",
+          verdict: {
+            isCorrect: !ranOut && pending.position === it.correct_index,
+            chosenRole: ranOut ? "timed_out" : (option?.role ?? ""),
+          },
+        });
+      });
+  }, [state.pending]);
+
+  // The end of the set: the result screen, or home when a veto left nothing.
+  useEffect(() => {
+    if (!state.done) return;
+    if (state.done === "home") {
+      router.replace("/");
+      return;
+    }
+    if (sessionId) void finishSession(sessionId);
+    setSummary({
+      answers: state.answers,
+      startedAt: startedAt.current,
+      finishedAt: Date.now(),
+      levelsBefore: levelsBefore.current,
+    });
+    router.replace("/result");
+  }, [state.done]);
+
+  const index = state.index;
+  const items = state.items;
+  const item = items[index];
+  const { chosen, graded, showDetails, optionsAsText } = state;
+  const busy = state.pending !== null;
+  // A new question starts with nothing under the pointer.
+  useEffect(() => setHovered(null), [item?.id]);
   const options = useMemo(
     () => (item ? [...item.options].sort((a, b) => a.position - b.position) : []),
     [item]
@@ -342,7 +377,7 @@ export default function Practice() {
       </View>
     );
   }
-  if (!items) return <Loading label={t("preparing")} />;
+  if (!loaded && blocked === null) return <Loading label={t("preparing")} />;
 
   if (blocked !== null) {
     // The door, from this side: a deep link or a stale tab past the ceiling.
@@ -352,6 +387,8 @@ export default function Practice() {
       </View>
     );
   }
+  // On the way out: the effect above is navigating.
+  if (state.done) return <Loading />;
   if (items.length === 0) {
     return (
       <View style={styles.page}>
@@ -376,27 +413,12 @@ export default function Practice() {
   // A scene is worth a pause of its own when there is something to hear or
   // something to look at. A bare reading item goes straight to the question.
   const hasScene = listenable || Boolean(sceneImage);
-  const recorded: Stage =
-    stageAt?.index === index ? stageAt.stage : hasScene ? "scene" : "answer";
+  const recorded: Stage = state.stage ?? (hasScene ? "scene" : "answer");
   // The only way out of "listen" is the playlist finishing, and with nothing
   // to play there is no playlist: the screen would wait for ever on a hint
   // about audio that does not exist, with no options and no button.
   const stage: Stage = recorded === "listen" && !listenable ? "answer" : recorded;
-  // Never back out of a reveal: an answer given while the clips were still
-  // playing must not be undone by the playlist finishing and asking for the
-  // answer stage. Read from the setter so the check sees the latest state,
-  // not the render the playlist's callback was created in.
-  const go = (next: Stage) => {
-    // The first time this question reaches its options with nothing left to
-    // hear: the moment the time to answer starts.
-    if (next === "answer" && answerFromFor.current !== index && answeredFor.current !== index) {
-      answerFromFor.current = index;
-      answerFrom.current = Date.now();
-    }
-    setStageAt((prev) =>
-      prev?.index === index && prev.stage === "reveal" && next !== "reveal" ? prev : { index, stage: next }
-    );
-  };
+  const go = (next: Stage) => dispatch({ type: "stage", stage: next, now: Date.now() });
 
   // Narration that exists only as text — a listening type whose clip has not
   // been synthesised, or a reading type, where the stem *is* the question.
@@ -414,141 +436,22 @@ export default function Practice() {
    * is that the database grades it from `chosen_index = -1` rather than from an
    * option, and hands back the role `timed_out`.
    */
-  async function choose(position: number) {
-    if (chosen !== null || busy || !item) return;
-    if (answeredFor.current === index) return;
-    answeredFor.current = index;
-    const ranOut = position === NO_ANSWER;
-    // A longer single buzz for the clock: it is the one verdict that arrives
-    // without anybody having pressed anything, so it announces itself.
-    buzz(ranOut ? 60 : 12);
-    setBusy(true);
-    setChosen(position);
-    const now = Date.now();
-    // A reading type is timed from the question appearing. A listening one is
-    // timed from the end of its audio — zero if it was answered before the
-    // audio finished, which spoken options allow. A listening item whose clips
-    // do not exist yet is being read, not heard, and has no think time: the
-    // database falls back to its two-minute rule for those.
-    const selfPaced = Boolean(pace[item.item_type]);
-    const thinkMs = selfPaced
-      ? now - answerFrom.current
-      : listenable
-        ? stage === "answer"
-          ? now - answerFrom.current
-          : 0
-        : null;
-    try {
-      const result = await recordAttempt({
-        itemId: item.id,
-        chosenIndex: position,
-        sessionId,
-        elapsedMs: now - questionShownAt.current,
-        thinkMs: thinkMs === null ? null : Math.max(0, thinkMs),
-        replays: replays.current,
-        peeked: peeked.current,
-        standsFor: item.stands_for ?? null,
-      });
-      setGraded(result);
-      // The explanation is where a miss teaches, so after one it is open
-      // already; after a right answer it stays folded for whoever wants it.
-      setShowDetails(!result.isCorrect);
-      setAnswers((prev) => [
-        ...prev,
-        { item, chosenIndex: position, isCorrect: result.isCorrect, role: result.chosenRole },
-      ]);
-      buzz(result.isCorrect ? [0, 18, 60, 18] : 40);
-    } catch (e) {
-      // Let them see the answer even if recording failed; grading locally here
-      // is a display fallback only, and nothing is written from it.
-      const isCorrect = !ranOut && position === item.correct_index;
-      const role = ranOut ? "timed_out" : (options[position]?.role ?? "");
-      setGraded({ isCorrect, chosenRole: role });
-      setShowDetails(!isCorrect);
-      setAnswers((prev) => [...prev, { item, chosenIndex: position, isCorrect, role }]);
-    } finally {
-      setBusy(false);
-      go("reveal");
-    }
+  function choose(position: number) {
+    dispatch({ type: "choose", position, stage, now: Date.now() });
   }
 
   /**
-   * The question is out of the bank; take it out of this set too.
-   *
-   * No attempt is written, so nothing is graded, nothing is scheduled for
-   * review and the day's count does not move — vetoing is instead of
-   * answering. The set simply gets one shorter: the item is spliced out and
-   * `index` stays put, which lands on what was the next question. If it was
-   * the last one, the set is over and the result screen is where we were
-   * going anyway.
+   * The question is out of the bank; take it out of this set too. No attempt
+   * is written, so nothing is graded, nothing is scheduled for review and the
+   * day's count does not move — vetoing is instead of answering. The reducer
+   * splices it out and starts the next question from its first stage.
    */
   function vetoed() {
-    const rest = items!.filter((_, i) => i !== index);
-    // The bookkeeping is keyed by index, and every index at or after this one
-    // now names a different question. Clearing it is what stops the next
-    // question inheriting this one's "already answered" — and its stage: a
-    // veto pressed while a 発言聴解 was still playing left the next question
-    // in "listen", and a reading question has nothing to listen to.
-    answeredFor.current = null;
-    advancedFrom.current = null;
-    scrolledFor.current = null;
-    setStageAt(null);
-    if (index >= rest.length) {
-      if (rest.length === 0) {
-        router.replace("/");
-        return;
-      }
-      setItems(rest);
-      if (sessionId) void finishSession(sessionId);
-      setSummary({
-        answers,
-        startedAt: startedAt.current,
-        finishedAt: Date.now(),
-        levelsBefore: levelsBefore.current,
-      });
-      router.replace("/result");
-      return;
-    }
-    setItems(rest);
-    setChosen(null);
-    setGraded(null);
-    setShowDetails(false);
-    setOptionsAsText(false);
-    setHovered(null);
-    questionShownAt.current = Date.now();
-    answerFrom.current = questionShownAt.current;
-    answerFromFor.current = null;
-    replays.current = 0;
-    peeked.current = false;
+    dispatch({ type: "vetoed", now: Date.now() });
   }
 
-  async function next() {
-    if (advancedFrom.current === index) return;
-    advancedFrom.current = index;
-    const last = index + 1 >= items!.length;
-    if (last) {
-      if (sessionId) await finishSession(sessionId);
-      setSummary({
-        answers,
-        startedAt: startedAt.current,
-        finishedAt: Date.now(),
-        levelsBefore: levelsBefore.current,
-      });
-      router.replace("/result");
-      return;
-    }
-    setIndex((i) => i + 1);
-    setChosen(null);
-    setGraded(null);
-    setShowDetails(false);
-    setOptionsAsText(false);
-    setHovered(null);
-    scrolledFor.current = null;
-    questionShownAt.current = Date.now();
-    answerFrom.current = questionShownAt.current;
-    answerFromFor.current = null;
-    replays.current = 0;
-    peeked.current = false;
+  function next() {
+    dispatch({ type: "next", now: Date.now() });
   }
 
   const revealed = stage === "reveal" && graded !== null;
@@ -691,9 +594,7 @@ export default function Practice() {
                 urls={playlist}
                 autoplay={stage === "listen"}
                 onFinished={() => go("answer")}
-                onReplay={() => {
-                  if (answeredFor.current !== index) replays.current += 1;
-                }}
+                onReplay={() => dispatch({ type: "replayed" })}
               />
             ) : null}
 
@@ -724,11 +625,9 @@ export default function Practice() {
           {spokenOptions !== null && stage === "answer" ? (
             <Pressable
               accessibilityRole="button"
-              onPress={() => {
-                // Reading the spoken options is help the exam does not give.
-                if (!optionsAsText && answeredFor.current !== index) peeked.current = true;
-                setOptionsAsText(!optionsAsText);
-              }}
+              // Reading the spoken options is help the exam does not give, and
+              // the reducer notes it (`peeked`) when it is turned on.
+              onPress={() => dispatch({ type: "toggleOptionsText" })}
               style={({ pressed }) => [pressed && { opacity: 0.85 }]}
             >
               <Text style={[type.small, styles.toggle]}>
@@ -797,9 +696,7 @@ export default function Practice() {
                       <MiniPlay
                         url={spokenOptions[i]}
                         label={t("play_option", { label: NUMBERS[i] })}
-                        onPlay={() => {
-                          if (answeredFor.current !== index) replays.current += 1;
-                        }}
+                        onPlay={() => dispatch({ type: "replayed" })}
                       />
                     ) : null}
                     {show ? (
@@ -826,7 +723,7 @@ export default function Practice() {
           {/* Before the answer, not after — the opposite of the report button
               and for the same reason. A report is about a question you engaged
               with; a veto is about one you have decided not to. */}
-          {canVeto && !revealed ? (
+          {canVeto && !revealed && chosen === null ? (
             <VetoQuestion key={`${item.id}-veto`} itemId={item.id} onVetoed={vetoed} />
           ) : null}
         </>
@@ -840,8 +737,8 @@ export default function Practice() {
           // option happened to be. onLayout fires with the y it lands at, which
           // is the only number that is right on every item length.
           onLayout={(e) => {
-            if (scrolledFor.current === index) return;
-            scrolledFor.current = index;
+            if (scrolledFor.current === item.id) return;
+            scrolledFor.current = item.id;
             const y = e.nativeEvent.layout.y;
             scroller.current?.scrollTo({ y: Math.max(0, y - space.lg), animated: true });
           }}
@@ -883,7 +780,7 @@ export default function Practice() {
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ expanded: showDetails }}
-            onPress={() => setShowDetails((v) => !v)}
+            onPress={() => dispatch({ type: "toggleDetails" })}
             style={({ pressed }) => [pressed && { opacity: 0.85 }]}
           >
             <Text style={[type.small, styles.toggle]}>

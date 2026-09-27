@@ -86,7 +86,7 @@ jobs:
       - run: supabase/test/run.sh
 
   app:
-    name: typecheck — the Expo app
+    name: typecheck and unit tests — the Expo app
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -100,3 +100,6 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      # The pure parts of the app — the practice reducer, the reading clock,
+      # the exam date, the levels, the role table — in Node, no device.
+      - run: npm test
