@@ -93,7 +93,7 @@ def normalised(block: dict) -> dict:
     """
     categories = _labels(block.get("categories"))
     series = []
-    for i, s in enumerate(block.get("series") or []):
+    for s in block.get("series") or []:
         if not isinstance(s, dict) or len(series) >= MAX_SERIES:
             continue
         raw = s.get("values") if isinstance(s.get("values"), list) else []
