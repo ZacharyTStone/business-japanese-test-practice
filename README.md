@@ -249,8 +249,10 @@ the workflow input says.
 **Secrets**, each read only by the step that needs it: `ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY` (pictures and the voice), `SUPABASE_URL` and
 `SUPABASE_SERVICE_ROLE_KEY` (uploading either), `SUPABASE_DB_URL` (the
-workflows' database steps) and `SEEDS_TAR_B64` (the licensed `seeds/`, as
-`tar czf - seeds | base64 -w0`).
+workflows' database steps), `SEEDS_TAR_B64` (the licensed `seeds/`, as
+`tar czf - seeds | base64 -w0`) and `TYPESAFE_API_KEY` (Jev, for the probe).
+One repository **variable**, `BJT_DIFFICULTY_MODEL`, chooses the probe's model
+for the nightly job; unset, it is the default.
 
 ---
 
@@ -565,10 +567,13 @@ under-covered") feeding this planner, never at one person.
 items at most, two to a shelf, at least one of them reading, and never more than
 fifty cents (`BJT_RUN_BUDGET_USD`, held at or below 0.5 by
 `tests/test_ceilings.py`). A manual run has the same defaults, and can run the
-difficulty probe (`bjt probe --all`) instead of writing.
+difficulty probe (`bjt probe --all`) instead of writing, or compare the probe's
+model with Jev (`compare_jev`, `bjt probe --all --compare jev-latest`), which
+writes nothing and leaves its table in the run summary.
 
 * **the survey** — `bjt plan` into the run summary, every run, offline.
-* **the recount** — with `SUPABASE_DB_URL`, `refresh_item_stats()`.
+* **the recount** — with `SUPABASE_DB_URL`, `refresh_item_stats()` (not on a
+  comparison run).
 * **the writing** — with `ANTHROPIC_API_KEY`: `bjt nightly`, `checkbatch` over
   every bundle old and new, then a pull request. Few-shot examples come from the
   licensed `seeds/` when `SEEDS_TAR_B64` is set, else from the reference batches

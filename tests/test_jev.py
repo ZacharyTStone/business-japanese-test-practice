@@ -206,6 +206,22 @@ def _probabilities_for_key(p_key, seen=None):
     return ask
 
 
+
+@pytest.mark.parametrize("value, expected", [("", "claude-haiku-4-5"), ("  ", "claude-haiku-4-5"),
+                                             ("jev-latest", "jev-latest")])
+def test_an_empty_difficulty_model_means_the_default(value, expected):
+    """The nightly workflow passes a repository variable that may not exist,
+    which reaches the process as an empty string."""
+    import os
+    import subprocess
+    import sys
+    env = {**os.environ, "BJT_DIFFICULTY_MODEL": value}
+    env.pop("BJT_SANITY_MODEL", None)
+    out = subprocess.run([sys.executable, "-c", "from bjt import config; print(config.DIFFICULTY_MODEL)"],
+                         env=env, capture_output=True, text=True, check=True, cwd=ROOT)
+    assert out.stdout.strip() == expected
+
+
 def test_the_rate_is_the_probability_on_the_key(jev_probe, monkeypatch, goi_item):
     seen = []
     monkeypatch.setattr(jev, "choice_probabilities", _probabilities_for_key(0.62, seen))

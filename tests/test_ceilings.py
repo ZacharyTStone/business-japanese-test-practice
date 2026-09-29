@@ -319,6 +319,40 @@ def test_the_probe_is_a_manual_run_that_does_nothing_else():
     assert text.index("BJT_RUN_BUDGET_USD:") < text.index("name: measure the difficulty")
 
 
+
+def test_the_jev_comparison_writes_nothing_and_the_key_stays_in_its_steps():
+    """A comparison run spends under the same ceilings and leaves nothing
+    behind: no commit, no pull request, no pictures, no database write. The
+    TYPESAFE key reaches only the steps that may call the probe, and which
+    model is the probe is one repository variable for the whole job."""
+    text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
+
+    def step(name):
+        start = text.index(f"name: {name}")
+        return text[start:text.index("- name:", start + 1)]
+
+    keys = step("which of tonight's work is unlocked")
+    assert ('if [ "$compare" = "true" ]; then\n            echo "go=false"') in keys
+    assert "compare=true; probe=false" in keys, "compare wins over probe"
+
+    compare = step("compare the difficulty probe with Jev")
+    assert "if: steps.keys.outputs.compare == 'true'" in compare
+    assert "python -m bjt probe --all --compare jev-latest" in compare
+    assert 'BJT_DIFFICULTY_MODEL: ""' in compare, "the baseline is the default model"
+    for forbidden in ("psql", "SUPABASE", "git ", "gh pr"):
+        assert forbidden not in compare
+    assert "compare_jev != 'true'" in step("recount how hard each item is")
+
+    job_env = text[text.index("timeout-minutes:"):text.index("    steps:")]
+    assert "BJT_DIFFICULTY_MODEL: ${{ vars.BJT_DIFFICULTY_MODEL }}" in job_env
+    assert "TYPESAFE" not in job_env
+    holders = [name for name in ("write tonight's items", "measure the difficulty the bank is missing",
+                                 "compare the difficulty probe with Jev")
+               if "TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}" in step(name)]
+    assert len(holders) == 3
+    assert text.count("secrets.TYPESAFE_API_KEY") == 4, "three steps and the presence check"
+
+
 def test_the_workflow_agrees_with_plan_on_a_nights_size():
     """`plan.py` and `nightly.yml` each hold their own copy of the same three
     numbers (as a Python default and as a YAML `workflow_dispatch` default
