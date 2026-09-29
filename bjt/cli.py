@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import textwrap
@@ -36,6 +37,7 @@ from . import (
     calibration,
     config,
     fixtures,
+    jev,
     levels,
     pipeline,
     plan,
@@ -49,7 +51,7 @@ from . import (
 from . import llm as llmmod
 from .llm import LLMBillingError, LLMError
 from .db import Store
-from .fidelity import discriminator, roles, vocab
+from .fidelity import difficulty, discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
 
 
@@ -665,6 +667,12 @@ def cmd_probe(args) -> int:
     except ValueError as e:
         print(e, file=sys.stderr)
         return 2
+    if args.compare:
+        return _probe_compare(args, paths)
+    if args.limit is not None:
+        print("--limit is for --compare; a probe measures every item without a rate.",
+              file=sys.stderr)
+        return 2
 
     shelves = backfill.survey_probe(paths)
     for shelf in shelves:
@@ -682,9 +690,9 @@ def cmd_probe(args) -> int:
             for it in shelf.todo:
                 print(f"  would measure {it['id']} ({it['item_type']} {it['level']})")
         print(f"\n{items} live item(s) in {len(work)} bundle(s) have no difficulty signal.")
-        calls = items * config.DIFFICULTY_TRIALS
-        print(f"That is {calls} call(s) to {config.DIFFICULTY_MODEL}, "
-              f"{config.DIFFICULTY_TRIALS} per item.")
+        per = difficulty.calls_per_item()
+        calls = items * per
+        print(f"That is {calls} call(s) to {config.DIFFICULTY_MODEL}, {per} per item.")
         print(backfill.runs_estimate(calls))
         return 0
     if not config.DIFFICULTY_ENABLED:
@@ -703,6 +711,53 @@ def cmd_probe(args) -> int:
     print("\nThe bundles and their SQL are content — commit them and let the deploy "
           "workflow apply the SQL.")
     return 0
+
+
+def _probe_compare(args, paths) -> int:
+    """`bjt probe --compare MODEL`: the probe's model and MODEL on the same
+    sample of live items, side by side. Writes nothing — no bundle, no SQL —
+    so it is the evidence for choosing an instrument, never the change."""
+    candidate = args.compare
+    if candidate == config.DIFFICULTY_MODEL:
+        print(f"{candidate} is already the probe's model (BJT_DIFFICULTY_MODEL); "
+              "there is nothing to compare it with.", file=sys.stderr)
+        return 2
+    limit = args.limit if args.limit is not None else backfill.COMPARE_LIMIT
+    if limit < 1:
+        print("--limit must be at least 1.", file=sys.stderr)
+        return 2
+    todo = backfill.sample(paths, limit)
+    if not todo:
+        print("No live items to compare on.")
+        return 0
+    calls = len(todo) * (difficulty.calls_per_item() + difficulty.calls_per_item(candidate))
+    if args.dry_run:
+        for it in todo:
+            print(f"  would compare on {it['id']} ({it['item_type']} {it['level']})")
+        print(f"\n{len(todo)} live item(s): {calls} call(s) in all, "
+              f"{difficulty.calls_per_item()} per item to {config.DIFFICULTY_MODEL} and "
+              f"{difficulty.calls_per_item(candidate)} to {candidate}. Nothing is written.")
+        print(f"A run stops at {config.RUN_MAX_CALLS} calls, ${config.RUN_BUDGET_USD:.2f} or "
+              f"{config.RUN_MAX_MINUTES:g} minutes (BJT_RUN_*), and a comparison that stops "
+              "keeps what it measured but does not resume.")
+        return 0
+    if not config.DIFFICULTY_ENABLED:
+        print("The difficulty probe is switched off (BJT_DIFFICULTY=0); nothing measured.",
+              file=sys.stderr)
+        return 1
+    # Checked here rather than found out three items in, after the baseline's
+    # calls on them are already spent.
+    if jev.is_jev(candidate) and not os.environ.get("TYPESAFE_API_KEY"):
+        print(f"{candidate} needs TYPESAFE_API_KEY; nothing measured.", file=sys.stderr)
+        return 1
+
+    cmp = backfill.compare_bank(paths, candidate, limit=limit)
+    text = cmp.summary(llmmod.spend)
+    print()
+    print(text)
+    if args.summary:
+        pathlib.Path(args.summary).write_text(text + "\n", encoding="utf-8")
+    return 0 if cmp.rows else 1
 
 
 def cmd_regate(args) -> int:
@@ -1656,6 +1711,12 @@ def build_parser() -> argparse.ArgumentParser:
     prb.add_argument("--dry-run", action="store_true",
                      help="list what would be measured, count the calls, and spend nothing")
     prb.add_argument("--summary", default=None, help="write a markdown summary here")
+    prb.add_argument("--compare", default=None, metavar="MODEL",
+                     help="measure a sample of live items with MODEL beside the probe's model "
+                          "(e.g. jev-latest) and print both; writes nothing")
+    prb.add_argument("--limit", type=int, default=None, metavar="N",
+                     help=f"with --compare: how many items (default {backfill.COMPARE_LIMIT}), "
+                          "taken a type at a time")
     prb.set_defaults(func=cmd_probe)
 
     rg = sub.add_parser("regate", help="put committed questions through the proofreader and "

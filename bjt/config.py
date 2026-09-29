@@ -165,6 +165,15 @@ GATE_TRIALS = int(_env("BJT_GATE_TRIALS", "3"))
 DIFFICULTY_MODEL = _env("BJT_DIFFICULTY_MODEL", SANITY_MODEL)
 DIFFICULTY_TRIALS = int(_env("BJT_DIFFICULTY_TRIALS", "5"))
 
+# A prototype, off unless asked for: BJT_DIFFICULTY_MODEL=jev-latest makes the
+# probe one call to TypeSafe AI's Jev, which returns a probability for every
+# option instead of an answer, and the probability it gives the key is the rate
+# (bjt/jev.py). DIFFICULTY_TRIALS does not apply to it. The key is read from
+# TYPESAFE_API_KEY when the call is made, as the Anthropic SDK reads its own.
+# `bjt probe --compare jev-latest` sets the two instruments side by side and
+# writes nothing, which is the evidence to read before letting it write a rate.
+JEV_URL = _env("BJT_JEV_URL", "https://api.typesafe.ai/v1/systemone")
+
 # Set BJT_DIFFICULTY=0 to skip it. An item that was not probed carries the
 # gate's full-view rate as before, which is the honest fallback rather than a
 # made-up number — see bjt/fidelity/difficulty.py.

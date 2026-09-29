@@ -14,6 +14,10 @@ had none, so the difficulty pitch sorted nothing across almost the whole bank.
 The same probe, the same weaker model and the same trials as a fresh draft
 gets (bjt/fidelity/difficulty.py), on every live item without a rate.
 
+`compare_bank` is the probe's model beside another one, on a sample of the
+bank, writing nothing: the evidence for changing the instrument (Jev, a
+prototype, bjt/jev.py) before any rate it measured reaches a bundle.
+
 `regate_bank` is the review. The proofreader (bjt/fidelity/sanity.py) and then,
 if it found nothing, the answerability gate (bjt/fidelity/answerability.py):
 the order and the rules a fresh draft meets in `pipeline.generate_and_gate`.
@@ -46,7 +50,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import batch as batchmod
-from . import config, publish, withdrawn
+from . import config, jev, publish, withdrawn
 from . import llm as llmmod
 from .fidelity import answerability, difficulty, sanity
 
@@ -215,6 +219,143 @@ def probe_bank(paths: list[Path], *, log=print) -> ProbeRun:
         if run.stopped:
             break
     return run
+
+
+# ----- the comparison -------------------------------------------------------
+
+#: How many items `bjt probe --compare` measures unless told otherwise: enough
+#: to see whether two instruments order the bank alike, few enough to be cents.
+COMPARE_LIMIT = 20
+
+
+def sample(paths: list[Path], limit: int) -> list[dict]:
+    """Up to `limit` live items, one type at a time in turn, so that a small
+    sample still sits every type rather than the first bundle's."""
+    gone = withdrawn.ids()
+    by_type: dict[str, list[dict]] = {}
+    for path in paths:
+        for it in withdrawn.live_items(batchmod.load(path), gone):
+            by_type.setdefault(it["item_type"], []).append(it)
+    out: list[dict] = []
+    while len(out) < limit and any(by_type.values()):
+        for t in sorted(by_type):
+            if by_type[t] and len(out) < limit:
+                out.append(by_type[t].pop(0))
+    return out
+
+
+def _ranks(xs: list[float]) -> list[float]:
+    """Ranks from 0, ties sharing the mean of the ranks they span."""
+    order = sorted(range(len(xs)), key=xs.__getitem__)
+    ranks = [0.0] * len(xs)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and xs[order[j + 1]] == xs[order[i]]:
+            j += 1
+        for k in range(i, j + 1):
+            ranks[order[k]] = (i + j) / 2
+        i = j + 1
+    return ranks
+
+
+def spearman(a: list[float], b: list[float]) -> Optional[float]:
+    """Rank correlation of two measurements of the same items. None when it
+    means nothing: fewer than three items, or one side giving every item the
+    same number, which has no order to agree with."""
+    if len(a) != len(b) or len(a) < 3:
+        return None
+    ra, rb = _ranks(a), _ranks(b)
+    ma, mb = sum(ra) / len(ra), sum(rb) / len(rb)
+    cov = sum((x - ma) * (y - mb) for x, y in zip(ra, rb))
+    va = sum((x - ma) ** 2 for x in ra)
+    vb = sum((y - mb) ** 2 for y in rb)
+    if va == 0 or vb == 0:
+        return None
+    return cov / (va * vb) ** 0.5
+
+
+def _unreachable(result: "difficulty.DifficultyResult") -> bool:
+    return bool(result.trials) and all(t.chosen is None for t in result.trials)
+
+
+@dataclass
+class Comparison:
+    baseline: str
+    candidate: str
+    #: (item id, item type, baseline's result, candidate's result), as measured.
+    rows: list[tuple] = field(default_factory=list)
+    stopped: Optional[str] = None
+
+    def summary(self, spend: "llmmod.Spend | None" = None) -> str:
+        """Both instruments on the same items, as something to paste into a PR."""
+        def cell(r):
+            return f"{r.rate:.2f}" if r.measured and r.rate is not None else "—"
+
+        lines = [f"`{self.baseline}` (the probe today) beside `{self.candidate}`, "
+                 f"on {len(self.rows)} live item(s).", "",
+                 f"| item | type | {self.baseline} | {self.candidate} |",
+                 "|---|---|---|---|"]
+        lines += [f"| `{iid}` | {t} | {cell(b)} | {cell(c)} |" for iid, t, b, c in self.rows]
+        lines.append("")
+        for name, col in ((self.baseline, 2), (self.candidate, 3)):
+            rates = [r[col].rate for r in self.rows if r[col].measured]
+            if rates:
+                lines.append(f"- `{name}`: measured {len(rates)} of {len(self.rows)}, mean "
+                             f"{sum(rates) / len(rates):.2f}, {len(set(rates))} distinct value(s)")
+            else:
+                lines.append(f"- `{name}`: measured none of {len(self.rows)}")
+        if jev.is_jev(self.candidate):
+            picked = [r[3] for r in self.rows if r[3].measured]
+            if picked:
+                hits = sum(1 for r in picked if r.trials and r.trials[0].correct)
+                lines.append(f"- `{self.candidate}` put the most weight on the key in {hits} of "
+                             f"{len(picked)} (chance is about one in four)")
+        pairs = [(b.rate, c.rate) for _, _, b, c in self.rows if b.measured and c.measured]
+        rho = spearman([p[0] for p in pairs], [p[1] for p in pairs])
+        lines.append(f"- rank agreement (Spearman) over the {len(pairs)} item(s) both measured: "
+                     + (f"{rho:+.2f}" if rho is not None else "not meaningful"))
+        if self.stopped:
+            lines += ["", f"Stopped before the end: {self.stopped}."]
+        if spend is not None:
+            lines += ["", "### What it cost", "", spend.report()]
+        lines += ["", "Nothing was written: no bundle, no SQL. Neither column is how learners "
+                      "do — it is two models' view of the same questions — so this says whether "
+                      "the candidate reads the Japanese at all and whether it orders the bank "
+                      "the way the probe does, not which of them is right."]
+        return "\n".join(lines)
+
+
+def compare_bank(paths: list[Path], candidate: str, *, limit: int = COMPARE_LIMIT,
+                 log=print) -> Comparison:
+    """Measure a sample of live items with the probe's model and with
+    `candidate`, keeping both numbers and writing nothing anywhere.
+
+    The candidate goes first on each item, so a candidate that cannot be
+    reached (no key, say) costs no baseline calls for that item. The ceilings
+    are the ones every run has, checked before each item as in `probe_bank`.
+    """
+    cmp = Comparison(baseline=config.DIFFICULTY_MODEL, candidate=candidate)
+    strikes = 0
+    try:
+        for it in sample(paths, limit):
+            llmmod.spend.check_ceilings()
+            item = batchmod.as_generator_shape(it)
+            cand = difficulty.measure(item, model=candidate)
+            if _unreachable(cand):
+                base = difficulty.DifficultyResult(
+                    model=cmp.baseline, notes="not run: the candidate could not be reached")
+            else:
+                base = difficulty.measure(item, model=cmp.baseline)
+            cmp.rows.append((it["id"], it["item_type"], base, cand))
+            log(f"  {it['id']}  {base.detail()}  {cand.detail()}")
+            strikes = strikes + 1 if (_unreachable(cand) or _unreachable(base)) else 0
+            if strikes >= UNREACHABLE_PATIENCE:
+                cmp.stopped = f"a model could not be reached for {strikes} items in a row"
+                break
+    except llmmod.LLMBillingError as e:
+        cmp.stopped = str(e)
+    return cmp
 
 
 # ----- the regate -----------------------------------------------------------
