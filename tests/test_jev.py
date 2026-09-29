@@ -141,13 +141,15 @@ def test_every_reply_is_on_the_bill(ledger, keyed, wire):
     assert ledger.input_tokens == 300 and ledger.usd > 0
 
 
-def test_jev_is_priced_as_the_dearest_model_until_its_rate_is_confirmed():
-    """Not in the price table on purpose: its rate was read from secondary
-    sources, and a guess too low is the one way the ledger may not be wrong.
-    When the rate is read off TypeSafe's own price list, add the row and
-    change this test."""
+def test_jev_bills_input_only_at_typesafes_rate():
+    """$0.042 per million input tokens, output free (TypeSafe's usage page)."""
     u = SimpleNamespace(input_tokens=1_000_000, output_tokens=1_000_000)
-    assert llm.price_usd(JEV, u) == llm.price_usd("claude-opus-5", u)
+    assert llm.price_usd(JEV, u) == pytest.approx(0.042)
+
+
+def test_jev_does_not_change_what_an_unknown_model_is_priced_as():
+    u = SimpleNamespace(input_tokens=1_000_000, output_tokens=1_000_000)
+    assert llm.price_usd("claude-something-new", u) == llm.price_usd("claude-opus-5", u)
 
 
 def test_a_reply_without_usage_is_priced_on_the_request_size(ledger, keyed, wire):

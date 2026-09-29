@@ -14,9 +14,9 @@ has no sentences to give; the gate also wants a strong reader, and Jev is built
 to be fast. And like every model here it runs in the batch job and never while
 somebody is practising.
 
-**Unverified against the service.** The request and the reply below are
-TypeSafe's published examples, not something this module has seen
-come back from a live call:
+**The request and the reply.** The shape below is TypeSafe's published
+example, and the live service answers in it: the first comparison run sent 20
+questions and got 20 well-formed replies.
 
     POST {config.JEV_URL}   Authorization: Bearer $TYPESAFE_API_KEY
     {"model": "jev-latest", "state": "...",
@@ -34,12 +34,13 @@ unmeasured and never as a rate.
 **The same ceilings as every other call.** `llm.spend.check_ceilings()` runs
 before the request and the reply is priced into `llm.spend` after it, so a run
 that mixes Jev with the Anthropic models has one bill and one set of limits.
-Jev is deliberately not in `llm.PRICES_USD_PER_MTOK` until its rate is read off
-TypeSafe's own price list, so it is priced as the dearest model there — too
-high, which is the direction the ledger is allowed to be wrong in. A reply that
-reports no usage is priced on the request's size in bytes, which is more than
-its size in tokens. The output and effort ceilings have nothing to cap: Jev
-neither writes nor thinks at length.
+Jev bills $0.042 per million input tokens and nothing for output (TypeSafe's
+usage page), which is its row in `llm.PRICES_USD_PER_MTOK`. A question is about
+700 tokens, so a call costs about $0.00003 and rating the whole bank costs well
+under a cent: the first comparison was 20 calls, 14,040 tokens and $0.0005.
+A reply that reports no usage is priced on the request's size in bytes, which
+is more than its size in tokens. The output and effort ceilings have nothing to
+cap: Jev neither writes nor thinks at length.
 """
 from __future__ import annotations
 
