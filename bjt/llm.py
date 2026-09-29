@@ -49,15 +49,16 @@ class LLMSpendLimitError(LLMBillingError):
 
 # ----- the spend ledger --------------------------------------------------
 #
-# Dollars per million tokens, by model family, as the price list has them.
-# Cache writes cost a quarter more than plain input and cache reads a tenth
-# of it. A model not in the table is priced as the dearest one there — the
-# ledger exists to stop a run, and a guess that is too low is the one kind of
-# wrong it must not be.
+# Dollars per million tokens (input, output), by model name prefix, as each
+# provider's price list has them. Cache writes cost a quarter more than plain
+# input and cache reads a tenth of it. A model not in the table is priced as
+# the dearest one there — the ledger exists to stop a run, and a guess that is
+# too low is the one kind of wrong it must not be.
 PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
     "claude-opus": (5.0, 25.0),
     "claude-sonnet": (2.0, 10.0),
     "claude-haiku": (1.0, 5.0),
+    "jev": (0.042, 0.0),  # TypeSafe AI bills input only (bjt/jev.py)
 }
 CACHE_WRITE_MULTIPLIER = 1.25
 CACHE_READ_MULTIPLIER = 0.10

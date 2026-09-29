@@ -294,7 +294,9 @@ are shuffled afterwards.
    (Haiku) takes the full view 5 times; its pass rate becomes `model_p_correct`.
    If it can't run, nothing is written. Prototype: **Jev** (TypeSafe AI) returns
    a probability per option in one call; off unless switched on, and `bjt probe
-   --compare jev-latest` compares the two without writing anything.
+   --compare jev-latest` compares the two without writing anything. Jev costs
+   $0.042 per million input tokens, and output is free: about 700 tokens and
+   $0.00003 a question (the first 20-question comparison cost $0.0005).
 6. **Vocabulary gate** — kanji ceiling per level (from JLPT lists, when loaded).
 7. **Discriminator** (occasional) — a judge mixes official and generated
    questions and says which is which; its reasons feed back into the prompts.
