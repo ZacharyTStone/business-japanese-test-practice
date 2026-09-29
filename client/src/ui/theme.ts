@@ -36,10 +36,9 @@ export const colors = {
 
   accent: "#6C5CE7",
   accentDeep: "#4B3BD4",
-  /** The far end of a hero's fill. A gradient run from `accent` put its lightest
-   *  violet under the hero's top-left corner, which is exactly where the small
-   *  text sits; running it from `accentDeep` instead keeps the depth and gives
-   *  that corner 2.5 more points of contrast. */
+  /** The far end of a hero's fill. The gradient runs from `accentDeep` rather
+   *  than `accent` because its lightest violet sits under the hero's top-left
+   *  corner, which is exactly where the small text sits. */
   accentInk: "#3B2EB3",
   accentSoft: "#EFEDFF",
   /** Text and controls that sit on top of an accent-filled surface. Muted is a
@@ -48,8 +47,7 @@ export const colors = {
   onAccentMuted: "#E8E4FF",
 
   /** The verdict ink. Dark enough to be *read* on its own soft background —
-   *  「正解」 on the green card, and the marked option in the review — which the
-   *  brighter pair it replaces was not: 3.0:1 and 3.9:1 against those fills. */
+   *  「正解」 on the green card, and the marked option in the review. */
   correct: "#097A52",
   correctSoft: "#E3F6EF",
   wrong: "#C62B3C",
@@ -62,9 +60,9 @@ export const colors = {
  * (ui/document.tsx) and the charts on it (ui/chart.tsx). Deliberately not
  * `colors`: a quotation is black on white whoever's app it is being read in,
  * and nothing on the sheet is coloured purple — the app's visual language stops
- * at the edge of the sheet (the owner, 2026-09-17). A chart is ink too: its
- * series are told apart by fill, dash and marker — solid, grey, open — the way
- * a photocopied chart tells them apart, never by hue.
+ * at the edge of the sheet. A chart is ink too: its series are told apart by
+ * fill, dash and marker — solid, grey, open — the way a photocopied chart tells
+ * them apart, never by hue.
  */
 export const ink = {
   paper: "#FFFFFF",

@@ -1,11 +1,12 @@
 """The scene bank: which pictures the library needs, and which exist.
 
-Items name a `scene_id` from a small shared bank, never a picture of their own.
-That is an economic decision before it is an aesthetic one — a thousand items
-cannot have a thousand commissioned drawings — but it has a quality consequence
-that matters more: because one picture serves many items, the picture cannot
-contain the answer. An illustration specific enough to give the situation away
-would make the listening optional.
+Items name a `scene_id` from a small shared bank rather than a picture of their
+own (画像把握, whose picture is the question, is the exception; see
+PICTURE_PREFIX). That is an economic decision before it is an aesthetic one — a
+thousand items cannot have a thousand commissioned drawings — but it has a
+quality consequence that matters more: because one picture serves many items,
+the picture cannot contain the answer. An illustration specific enough to give
+the situation away would make the listening optional.
 
 Which is also why text, names and numbers are never drawn into the artwork. They
 are overlaid by the app. One drawing serves many items, and nothing is at the
@@ -82,7 +83,7 @@ def picture_scene_id(item_id: str) -> str:
 #: (or given up on). The pairs are settings a listener would not tell apart
 #: from the narration: the narration says where you are, the picture only
 #: sets a tone. Never the other way round for the per-item pictures, which ARE
-#: the question. The owner asked for more reuse of the pictures (2026-09-19).
+#: the question.
 STAND_INS: dict[str, str] = {
     "scene_phone_mobile_outside": "scene_phone_desk",
     "scene_phone_desk": "scene_office_desk_pair",
@@ -213,11 +214,10 @@ STYLE = ("A clean editorial illustration of a Japanese workplace, flat colour, c
          "line weight across the whole bank, neutral professional clothing, landscape 3:2.")
 
 #: What each scene is, in the words an image model draws from. The seed
-#: tables carry only a Japanese label, and the first brief glossed every one
-#: of them as "a Japanese office setting" — so the restaurant's private room
-#: came out as a meeting room and the outdoor phone call was drawn indoors,
-#: three times, and rightly rejected each time (2026-09-19). The place is
-#: stated here, once per scene, with the channel the picture must show.
+#: tables carry only a Japanese label, and a generic gloss ("a Japanese office
+#: setting") draws the restaurant's private room as a meeting room and the
+#: outdoor phone call indoors. So the place is stated here, once per scene,
+#: with the channel the picture must show.
 #: Channel: in_person — the speaker is in the room with the viewer;
 #: phone — the speaker is on a call, the viewer is the other end of the line;
 #: video — the speaker is on the viewer's screen.
@@ -279,9 +279,9 @@ def brief_for(scene_id: str) -> tuple[str, str]:
 #: The speaker is the one principal figure, addressing the viewer. On the
 #: phone the other end of the line is the viewer, so the speaker is alone;
 #: on a video call the speaker is on the viewer's screen. Anyone else is
-#: scenery. The first drafts were crowds of equals, and then, briefly, a
-#: speaker and a listener drawn side by side even on the phone (the owner,
-#: 2026-09-19). What is being said stays invisible — this is who, not what.
+#: scenery: a crowd of equals, or a listener drawn beside the speaker, leaves
+#: it unclear who is speaking. What is being said stays invisible — this is
+#: who, not what.
 COMPOSITION: dict[str, str] = {
     "in_person": (
         "Composition: one principal figure — the person speaking — in the "

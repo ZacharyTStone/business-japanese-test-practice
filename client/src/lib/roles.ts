@@ -20,9 +20,7 @@
  * by misreading: the row next to the right one, the value before it was changed
  * aloud, the word that appears in the passage with a different referent. Those
  * have no rudeness to measure, so they are marked `manner: false` and the meter
- * steps aside for the advice. Until 2026-09-27 seventeen of them were missing
- * from this table altogether and fell through to 「この場面に合わない」, a
- * sentence about manners on a question about a table.
+ * steps aside for the advice.
  *
  * The table is typed over DISTRACTOR_ROLES, which `python -m bjt.client_constants`
  * generates from bjt/fidelity/roles.py: a role added there and not described
@@ -53,15 +51,14 @@ type Words = { label: string; advice: string; verdict: string };
 type Entry = {
   rudeness: number;
   miss: number;
-  /** Defaults to true: the older half of the table is all about manners. */
+  /** Defaults to true: a role is about manners unless it says otherwise. */
   manner?: boolean;
   ja: Words;
   en: Words;
 };
 
-// Every verdict is written out. A label followed by でした is grammatical only
-// when the label ends in a noun: 「品詞が合わないでした」 and 「この場面に合わない
-// でした」 were on screen until each verdict was written as a sentence.
+// Every verdict is written out: a label followed by でした is grammatical only
+// when the label ends in a noun, and 「品詞が合わないでした」 is not Japanese.
 const DEFAULT: Entry = {
   rudeness: 1,
   miss: 2,

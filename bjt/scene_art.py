@@ -5,18 +5,18 @@ modules because they have two different kinds of trust: the survey is
 arithmetic over committed tables, and this is a job that calls two vendors and
 writes to a storage bucket.
 
-The shape is the one the item pipeline already has. An image model drafts; a
-judge model looks at each draft and checks it against the brief's rules, the
-same rules `scenes.prompt_for` gives a human illustrator; only a draft the judge
-passes is written under the scene's name. Drafts that fail are kept as well,
-under `rejected/`, each with the reason, because a gate that throws away its
-evidence cannot be checked afterwards.
+The shape is the item pipeline's. An image model drafts; a judge model checks
+each draft against the brief's rules, the same rules `scenes.prompt_for` gives a
+human illustrator; only a draft the judge passes is written under the scene's
+name. Drafts that fail are kept as well, under `rejected/`, each with the
+reason, because a gate that throws away its evidence cannot be checked
+afterwards.
 
-The owner asked for this to run with nobody in the loop (2026-09-17). The judge
-is what stands where the person stood. The rules it applies are not softer for
-being applied by a model: readable text, a logo, a likeness, or a picture that
-gives the scenario away each fail the draft outright, and a scene that fails
-every attempt ships without a picture, which the app allows.
+It runs with nobody in the loop, so the judge stands where a person would. The
+rules it applies are not softer for being applied by a model: readable text, a
+logo, a likeness, or a picture that gives the scenario away each fail the draft
+outright, and a scene that fails every attempt ships without a picture, which
+the app allows.
 
 Nothing here runs at practice time. It runs on a laptop or in the nightly job,
 over a bank whose contents are committed.
@@ -193,9 +193,8 @@ def review_with_model(image: bytes, media_type: str, scene: scenes.Scene) -> Ver
     picture with the question and the four descriptions, a few times, and the
     draft is refused unless every trial picks the marked one. That is the
     picture's answerability gate — the text gate cannot see it — and it is
-    strict on purpose: the owner asked for pictures that are clear and not
-    generic (2026-09-19), and a picture two readers describe differently is
-    neither.
+    strict on purpose: the pictures must be clear and not generic, and a
+    picture two readers describe differently is neither.
     """
     from . import config, llm
 
@@ -477,12 +476,12 @@ def upload_approved(survey: list[scenes.Scene], bucket: Bucket,
                     media_dir: Path | None = None) -> UploadResult:
     """Push every locally approved file to the bucket.
 
-    One file failing must not stop the rest: the first real night lost ten
-    approved pictures because the fourth was over the bucket's size limit and
-    the exception ended the loop. A file the bucket would refuse is caught here
-    before a byte is sent, and any other failure is recorded against its file
-    and the loop goes on. The caller uses `failed_paths` to keep those files out
-    of the SQL, so the database is never pointed at a picture that is not there.
+    One file failing must not stop the rest: an exception that ended the loop
+    would lose every approved picture after it, to be paid for again the next
+    night. A file the bucket would refuse is caught here before a byte is sent,
+    and any other failure is recorded against its file and the loop goes on.
+    The caller uses `failed_paths` to keep those files out of the SQL, so the
+    database is never pointed at a picture that is not there.
     """
     root = Path(media_dir or config.MEDIA_DIR) / "scenes"
     result = UploadResult()

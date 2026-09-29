@@ -22,7 +22,7 @@
  *
  * **It asks once.** Not a modal with a text field — that turns a one-press
  * decision into a form. One tap arms it, the second does it, and anything else
- * on screen disarms it. Undoing is `bjt publish` or one update; this is the app
+ * on screen disarms it. Undoing is one hand-written update; this is the app
  * being quick, not the app being the admin console.
  *
  * **Nothing is recorded against the learner.** Vetoing is instead of answering,

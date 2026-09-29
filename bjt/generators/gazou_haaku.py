@@ -12,9 +12,8 @@ descriptions, and an English brief from which the picture is drawn afterwards
 reviewer checks the draft against it, and then sits the item — the draft is
 refused unless the reviewer, shown the picture and the four descriptions,
 picks the marked one every time. That is why the brief must be concrete: a
-generic office picture passes no such test. The owner asked for exactly this
-(2026-09-19): pictures that are clear and not generic, in a type that need not
-be common.
+generic office picture passes no such test. The type is meant to be rare, and
+its pictures clear and not generic.
 
 Its variety comes from the seed table — the `function` axis is the action
 being depicted — never from the prompt.

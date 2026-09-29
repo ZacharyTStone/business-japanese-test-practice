@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """The current definition of every function, view and trigger, in one file.
 
-`next_items()` has been rewritten by eight migrations, each a `create or
-replace` of the whole thing. That is the right way to change a schema and the
-wrong way to read one: the question "what does the queue do today?" meant
-finding the last migration that happened to redefine it and trusting that no
-later one touched it. So this reads every migration in order, keeps the latest
-statement for each function, view and trigger (and its latest `comment on`),
-drops the ones a later migration dropped, and writes them out:
+A migration that changes a function redefines the whole of it (`create or
+replace`). That is the right way to change a schema and the wrong way to read
+one: "what does the queue do today?" would mean finding the last migration that
+redefined `next_items()` and trusting that no later one touched it. So this
+reads every migration in order, keeps the latest statement for each function,
+view and trigger (and its latest `comment on`), drops the ones a later migration
+dropped, and writes them out:
 
     python supabase/snapshot.py            # rewrite supabase/current.sql
     python supabase/snapshot.py --check    # exit 1 if it is out of date

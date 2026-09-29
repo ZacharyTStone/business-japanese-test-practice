@@ -1,7 +1,5 @@
 /**
- * The practice reducer, and the bugs it exists to make impossible. Each of the
- * first four tests is a bug the screen shipped with at least once, written down
- * in the comments of the version before the reducer.
+ * The practice reducer, and the bugs it exists to make impossible.
  */
 import { describe, expect, it } from "vitest";
 

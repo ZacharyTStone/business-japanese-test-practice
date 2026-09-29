@@ -6,7 +6,7 @@
  * show the text instead of hiding the control: a listening item with no audio is
  * still a usable reading item, and it is much better than a dead play button.
  *
- * When the clips do exist this is also where the replay rule will live. The real
+ * When the clips do exist this is also where the replay rule lives. The real
  * exam plays once, but practice is not the exam; being able to replay is how you
  * hear the difference between 「いただく」 and 「召し上がる」 on the fourth listen.
  */
@@ -26,10 +26,9 @@ import { colors, radius, space, type } from "./theme";
  * Every control on the practice screen owns its own player — the listening
  * run, and each spoken option's play button — and the option buttons are live
  * while the run is still reading, on purpose: a learner who knows the answer at
- * the second option should not have to wait for the fourth. Nothing stopped two
- * of them sounding at once, so an option's button pressed over the run reading
- * it, or two buttons pressed in a row, played two clips on top of each other.
- * A tester heard that as distorted audio (2026-09-24). Starting any player now
+ * the second option should not have to wait for the fourth. Two clips on top of
+ * each other — an option's button pressed over the run reading it, or two
+ * buttons pressed in a row — sound like distorted audio, so starting any player
  * silences whichever one was sounding.
  */
 let voice: { owner: object; silence: () => void } | null = null;
@@ -196,7 +195,7 @@ const styles = StyleSheet.create({
  * by an ordinary time update — `didJustFinish` there is `media.ended` — and
  * time updates are throttled to exactly this interval. Chromium also fires
  * `pause` at the end, which expo-audio emits unthrottled and which says the
- * same thing, so today the end is reported twice; a browser that does not is
+ * same thing, so there the end is reported twice; a browser that does not is
  * one where a clip shorter than the interval could finish without the queue
  * ever hearing about it. 250ms is comfortably under the shortest thing the
  * library says aloud, which is an option number.
@@ -225,14 +224,13 @@ type ClipQueue = {
  * `useAudioPlayerStatus` keeps the last status it was handed until that new
  * player says something — so for one render the status of the clip that has
  * just ended is attached to the clip that is about to start. An effect that
- * advanced on `status.didJustFinish` therefore fired twice for one clip: once
- * on the finish, and again when the index it depends on changed with the same
- * stale `true` still showing. That is why a listening run played the first,
- * third and fifth clips and skipped every even one.
+ * advanced on `status.didJustFinish` would fire twice for one clip — once on
+ * the finish, and again when the index it depends on changed with the same
+ * stale `true` still showing — and skip every other clip.
  *
  * An event is delivered once, to a listener attached to the player that sent
- * it, so a status belonging to the clip before can no longer be read as this
- * one's. `handled` is the other half, and web is why: `didJustFinish` there is
+ * it, so a status belonging to the clip before cannot be read as this one's.
+ * `handled` is the other half, and web is why: `didJustFinish` there is
  * `media.ended`, a state that stays true rather than a one-shot, and a clip
  * that reaches its end reports it on the final time update *and* again on the
  * pause that follows. One advance per player is what makes that one step.
@@ -466,9 +464,8 @@ export function AutoPlaylist({
   if (urls.length === 0) return null;
 
   if (!queue.running && finished) {
-    // Always replayable. The exam plays a clip once; practice is not the exam,
-    // and the fourth listen is where a learner finally hears that it was
-    // 伺います and not 参ります.
+    // Always replayable: the exam plays a clip once, but practice is not the
+    // exam.
     return (
       <Pressable
         accessibilityRole="button"

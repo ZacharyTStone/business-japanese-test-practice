@@ -125,9 +125,9 @@ def test_the_image_prompt_carries_every_prohibition(tmp_path):
 
 def test_every_scene_has_a_brief_and_the_prompt_names_the_place(tmp_path):
     """The seed tables carry only a Japanese label; the image model draws
-    from the English brief, so every scene the tables can ask for has one,
-    and the old "a Japanese office setting" gloss is gone — it put the
-    restaurant and the outdoor phone call indoors."""
+    from the English brief, so every scene the tables can ask for has one. A
+    generic "office setting" gloss would put the restaurant and the outdoor
+    phone call indoors."""
     for scene in scenes.survey(tmp_path):
         if scene.is_picture:
             continue  # drawn from its item's own brief, below
@@ -208,10 +208,10 @@ def test_artwork_already_in_the_bucket_counts_and_is_not_resent(tmp_path, monkey
 
 
 def test_one_bad_upload_does_not_stop_the_rest(tmp_path, monkeypatch):
-    """The first real night: the fourth file was over the bucket's limit, the
-    exception ended the loop, and ten approved pictures never left the runner.
-    Now the oversized file is refused before a byte is sent, a refusal from the
-    bucket is recorded against its file, and every other file still goes."""
+    """One file over the bucket's limit must not strand every approved picture
+    on the runner. An oversized file is refused before a byte is sent, a
+    refusal from the bucket is recorded against its file, and every other file
+    still goes."""
     uploaded = []
 
     def fake_raw(method, url, body, headers):
@@ -290,7 +290,7 @@ def test_the_openai_provider_asks_for_webp_at_three_by_two(monkeypatch):
     assert captured["body"]["size"] == "1536x1024"
     assert captured["body"]["n"] == 1
     # Asked for compressed output, because the bucket has a size limit and a
-    # 1536×1024 "high" draft with no compression went over it.
+    # 1536×1024 "high" draft with no compression goes over it.
     assert captured["body"]["output_compression"] == config.IMAGE_COMPRESSION
     assert 0 <= config.IMAGE_COMPRESSION <= 100
 

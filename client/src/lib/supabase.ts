@@ -2,9 +2,8 @@
  * The Supabase client.
  *
  * The anon key here is public on purpose — it identifies the project, it does
- * not authorise anything. Every table is behind row-level security, so what a
- * holder of this key can see is exactly what an anonymous visitor is allowed to
- * see: the published item library and nothing else. The key that *would* matter
+ * not authorise anything. Every table is behind row-level security, so a holder
+ * of this key sees exactly what a policy allows them. The key that *would* matter
  * (the service role) never ships in this app; it is used from a laptop to apply
  * `bjt publish` output and nowhere else.
  */
@@ -26,8 +25,7 @@ export const supabase = createClient(url ?? "http://localhost:54321", anonKey ??
     storage: Platform.OS === "web" ? undefined : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    // Native apps have no URL bar to read a callback out of; the OAuth flow
-    // hands us the tokens explicitly instead (see auth.tsx).
+    // Native apps have no URL bar to read a callback out of.
     detectSessionInUrl: Platform.OS === "web",
   },
 });
@@ -38,12 +36,9 @@ export const MISSING_CONFIG_MESSAGE =
 /**
  * What went wrong, in words somebody can act on.
  *
- * Every screen used to write `e instanceof Error ? e.message : String(e)`, and
- * a supabase-js failure is not an `Error` — it is a plain object carrying
- * `message`, `details`, `hint` and a Postgres `code`. So `String(e)` rendered
- * the one line the user was shown as "[object Object]", for every failure in
- * the app, and a real one (the app asking a view for a column the database did
- * not have yet) was invisible until somebody went and read the server's logs.
+ * A supabase-js failure is not an `Error` — it is a plain object carrying
+ * `message`, `details`, `hint` and a Postgres `code` — so `String(e)` would
+ * show the user "[object Object]" and hide what actually went wrong.
  *
  * The `code` is kept because it is the part worth searching for: `42703` is
  * "undefined column", which says "this client is newer than this database"

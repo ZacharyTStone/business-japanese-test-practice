@@ -1,6 +1,6 @@
 """The offline synthesis job: a checked bundle's manifest → audio files → SQL.
 
-Four properties, each of which is the reason for a decision below.
+Five properties, each of which is the reason for a decision below.
 
 **It only ever runs over a bundle that already passed.** A clip is expensive and
 permanent; an item that has not cleared its gates has no business having a voice
@@ -11,9 +11,10 @@ channel, text), so a clip that already exists on disk is skipped. Re-running a
 batch after fixing one item re-synthesises that item and nothing else, and
 「かしこまりました。」 is paid for once across the whole library.
 
-**Nothing uploads itself.** The job writes files and SQL. Applying the SQL is a
-separate, deliberate act, exactly as publishing content is — which is also why no
-key that can write media ever has to exist on a build machine.
+**Nothing uploads itself.** The job writes files and SQL. Uploading is opt-in
+(`upload_clips`) and applying the SQL is a separate, deliberate act, exactly as
+publishing content is — which is why no key that can write media has to exist on
+a laptop.
 
 **Silence is a first-class outcome.** 総合読解 has no audio by design, and the
 job says so rather than reporting zero clips as though something went wrong.
@@ -110,8 +111,8 @@ def synthesise_bundle(
     """Synthesise every clip a bundle's manifest asks for that does not exist.
 
     `limit` caps how many NEW clips one run may make. A budget rather than a
-    debugging convenience: the first time this points at a paid provider it
-    should not be able to spend the afternoon's money in one command.
+    debugging convenience: a run pointed at a paid provider must not be able to
+    spend the afternoon's money in one command.
 
     `have` is the set of clip ids that are already live — synthesised, uploaded
     and pointed at by the database. They are skipped before anything else is
@@ -122,7 +123,7 @@ def synthesise_bundle(
     named clips rather than a flag. A live clip is not re-made, because a
     learner who hears one item in a different voice from the next is doing
     speaker identification instead of listening to Japanese — but that reason
-    cuts both ways. When a handful of clips were made with the wrong delivery,
+    cuts both ways. When a handful of clips are made with the wrong delivery,
     leaving them is what makes the library sound like two libraries; replacing
     exactly those is what makes it one again. So the ids are written down,
     reviewed and passed in, a re-make is reported as a re-make, and nothing is

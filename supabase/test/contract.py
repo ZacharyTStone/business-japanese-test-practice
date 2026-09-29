@@ -29,8 +29,8 @@ from pathlib import Path
 #
 # The "next query" half matters because a screen that needs two tables at once
 # fetches them in one Promise.all, which is one statement with two chains in it.
-# Stopping only at the semicolon attributed the second query's filters to the
-# first query's table, and reported a perfectly good column as missing from a
+# Stopping only at the semicolon would attribute the second query's filters to
+# the first query's table, and report a perfectly good column as missing from a
 # table that never mentioned it.
 CHAIN = re.compile(
     r'\bsupabase\s*\.\s*from\(\s*"([a-z_0-9]+)"\s*\)'
@@ -43,8 +43,8 @@ KEY = re.compile(r'(?:^|[\s,{])([a-z_][a-z_0-9]*)\s*:', re.M)
 COLUMN_FILTER = re.compile(r'\.(?:eq|neq|gt|gte|lt|lte|like|ilike|is|in|not|order)\(\s*"([a-z_0-9]+)"')
 RPC = re.compile(r'\.rpc\(\s*"([a-z_0-9]+)"\s*(?:,\s*\{(.*?)\})?\s*\)', re.S)
 
-# Written by triggers, never sent by the client — naming one here would be a bug
-# worth catching, so they are not silently allowed anywhere else.
+# JavaScript literals, not names: KEY also matches the `true :` of a ternary
+# such as `x ? true : false`.
 SKIP_KEYS = {"true", "false", "null"}
 
 

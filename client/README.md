@@ -9,6 +9,7 @@ npm install
 cp .env.example .env        # fill in your Supabase URL and anon key
 npm run web                 # or: npm run ios / npm run android
 npm run typecheck
+npm test                    # the pure parts: the practice reducer, the clock, the roles
 ```
 
 Without a `.env` the app still starts and tells you what is missing rather than
@@ -37,32 +38,30 @@ The app opens only to a signed-in user whose email is on the tester list
 (`public.testers`), and it is the database that decides: every row-level policy
 requires it, and the anon role can read nothing at all. `src/ui/gate.tsx` is the
 two screens that say so — email and password, or "not open yet" with the
-account named —
-and `src/lib/auth.tsx` asks the one RPC, `is_tester()`, that answers. Neither is
-what keeps anybody out; a client that skipped both would see an empty app.
+account named — and `src/lib/auth.tsx` asks the one RPC, `is_tester()`, that
+answers. Neither is what keeps anybody out; a client that skipped both would
+see an empty app.
 
-## Anonymous first, switched off
+## Anonymous first, when the app opens
 
-The schema was built for the app to sign everybody in anonymously before it
-showed anything: no sign-up screen, no "continue as guest", no
+The schema is shaped for a public app that signs everybody in anonymously
+before it shows anything: no sign-up screen, no "continue as guest", no
 local-storage-then-migrate dance — from the first question a real row in the
-database. That is the right shape for a public app and it is still the shape of
-the schema; it is only the client that no longer does it. Opening the app later
-means putting the anonymous sign-in back in front of the door.
+database. While the app is in testing the client does not do it, and the
+database refuses an anonymous sign-up (`refuse_unlisted_signup()`). Opening the
+app means putting an anonymous sign-in in front of the door.
 
-Linking Google later attaches an identity to the **same user id**, so nothing is
+Linking Google then attaches an identity to the **same user id**, so nothing is
 copied or merged. That is the whole reason for doing it in this order: the
 alternative — keep progress locally, reconcile on sign-in — means writing and
 testing a merge path that is hard to get right and impossible to verify after the
-fact when it goes wrong.
-
-The honest cost is stated on the account screen: until it is linked, the session
-token in this app's storage is the only key to that person's history. Delete the
-app and it is gone. The app says so plainly rather than discovering it for them.
+fact when it goes wrong. The cost is that until an identity is linked, the
+session token in the app's storage is the only key to that person's history.
 
 ## The app does not grade answers
 
-`recordAttempt` sends which option was touched. That is all. The database's
+`recordAttempt` sends which option was touched, with the timing and replay
+counts the spacing ladder reads — never whether it was right. The database's
 insert trigger fills in who it was, whether it was right, and **which distractor
 role** caught them, and returns the graded row.
 
@@ -79,8 +78,9 @@ a failed request still shows the answer — it displays, it never writes.)
 judgement call somebody makes later under deadline.
 
 An ad between the narration and the options would not merely annoy — it would
-make the question harder in a way the real exam never does. Nothing renders yet;
-no ad SDK is wired up, and the free tier is meant to be genuinely complete.
+make the question harder in a way the real exam never does. No ad SDK is wired
+up (outside development the slot renders nothing), and the free tier is meant
+to be genuinely complete.
 
 ## No score
 
@@ -92,39 +92,48 @@ screen says why, in the app, rather than only here.
 ## Audio
 
 Items are published before their audio exists, so every audio control has a
-shape for `path === null`: it shows the text and says the recording is not ready.
-A listening item with no audio is still a usable reading item. When clips arrive,
+shape for `path === null`: it shows the text instead of a dead play button. A
+listening item with no audio is still a usable reading item. When clips arrive,
 `audio_path` fills in and the same components start playing them — no screen
 changes.
 
 Paths ride along with the practice queue (`next_items` returns them inline), so
-a set of five is one request rather than twenty-six.
+a set is one request rather than one per clip.
 
 ## Layout
 
 ```
 app/                expo-router screens
-  _layout.tsx       providers, the welcome gate, and the stack the tabs sit inside
+  _layout.tsx       providers, the welcome gate, the tester door, and the stack
+  +html.tsx         the web page the app lives in
   (tabs)/           the three places the app lives, under a bottom bar
     _layout.tsx     the bar itself
     index.tsx       home — one button, today's ring, and the app's one sentence
     progress.tsx    three sections like the real score report, each with the level
-                    being served in it; nine types under a fold
-    account.tsx     link Google, the three levels (shown, not chosen), the exam date
+                    being served in it; every type on a radar; recent traps and
+                    weak tags
+    account.tsx     the three levels (shown, not chosen), the exam date, the
+                    reading clock, the language, starting again
   practice.tsx      the session, one moment at a time: scene, listen, answer, reveal
   result.tsx        count, the trap that caught you most, the level if it moved
-  history.tsx       every answer, wrong ones first
+  history.tsx       the latest answers, wrong ones by default, each with a note
+  vocab.tsx         the words of the questions that caught you
+  words.tsx         every word of every question answered, with an example
 src/lib/
   i18n.tsx          the words on the furniture, ja/en; questions stay Japanese
   supabase.ts       the client (anon key is public by design — RLS is the guard)
   auth.tsx          email sign-in, the tester check, token refresh on resume
   db.ts             every query the app makes, in one file
+  practice.ts       the practice screen's state, as one pure reducer
+  pace.ts           how long a reading question gets, and why
   levels.ts         the three section levels: order, names, and what moved
   roles.ts          distractor role → Japanese label + 失礼度メーター values
+  generated.ts      the role and tag lists, written by `python -m bjt.client_constants`
   types.ts          the shapes the database returns
   session.ts        the practice → result handoff
 src/ui/             theme, shared components, icons, the meter, the radar, the face
-  welcome.tsx       the first-launch explanation, and the only sign-in prompt
+  welcome.tsx       the first-launch explanation
+  gate.tsx          the sign-in screen and the "not open yet" screen
   keys.ts           answering with 1–4 and Enter, on the one platform with a keyboard
 ```
 
@@ -132,10 +141,10 @@ On the web this is a drill somebody does at a desk between two other tabs, so
 `keys.ts` lets the whole set be answered from the keyboard: `1`–`4` or `a`–`d`
 to choose, Enter or space to go on. Any key it does not use keeps its normal
 behaviour, so Tab still moves focus. On a phone it compiles to nothing, and the
-one line that advertises it only renders where there is a keyboard to press.
+hints that advertise it only render where there is a keyboard to press.
 
-Practice, its result, and the review screen are pushed *over* the tab bar rather
-than living in it. A set of five is a thing you finish, and a tab bar under a
+Practice, its result, and the review screens are pushed *over* the tab bar
+rather than living in it. A set is a thing you finish, and a tab bar under a
 listening item is an invitation to leave halfway — which loses the set.
 
 Three screens show a level and none of them lets anybody set one. Home prints a
@@ -158,8 +167,8 @@ The app is a static export: `expo export -p web` renders one HTML file per
 route into `dist/`, and everything else is Supabase's job. Nothing runs at the
 edge, which is why `wrangler.jsonc` has an `assets` block and no `main`.
 
-Cloudflare's current flow is **Workers**, not the legacy Pages one. Dashboard →
-**Workers & Pages → Create → Import a repository**, pick this repo, then:
+It deploys as a **Worker** with static assets. Dashboard → **Workers & Pages →
+Create → Import a repository**, pick this repo, then:
 
 | Setting | Value |
 |---|---|
@@ -172,8 +181,8 @@ Build-time environment variables: `EXPO_PUBLIC_SUPABASE_URL`,
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `NODE_VERSION=22`. The first two are baked
 into the bundle — that is what `EXPO_PUBLIC_` means, and it is safe, because the
 anon key only reaches what row-level security allows — which, while the app is
-in testing, is nothing until a listed Google account signs in. **The
-service_role key must never be set here.**
+in testing, is nothing until a listed account signs in. **The service_role key
+must never be set here.**
 
 `build:web` is `expo export` plus one copy: Expo writes the not-found page as
 `+not-found.html`, and `not_found_handling: "404-page"` looks for `404.html`.

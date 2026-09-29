@@ -7,12 +7,9 @@ way. `run_batch` is a shelf of them: the patience, the reason one draft's
 rejection hands the next, the dedupe, and the whole-batch checks the bundle
 must pass before it is written.
 
-Both lived in `bjt/cli.py` until 2026-09-27, between the argument parsing and
-the printing, and the tests had to reach into the command-line module to test
-the pipeline. Here they are public names, and the commands that drive them
-(`bjt gen`, `batch`, `nightly`, `smoke`, `practice`) are thin again. Nothing
-changed in the move: the prompts, the order of the checks and every line they
-print are what they were.
+They live here rather than in `bjt/cli.py` so the tests can reach the pipeline
+without the command-line module, and the commands that drive them (`bjt gen`,
+`batch`, `nightly`, `smoke`, `practice`) stay thin.
 """
 from __future__ import annotations
 
@@ -38,8 +35,8 @@ def generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_c
     The order is cheapest-first, and that is the point. The offline vocab check
     costs nothing. The proofreader is one small call. The answerability gate is
     six large ones, and it only runs on an item the first two did not already
-    condemn — so a generation that came out broken costs a Haiku call instead of
-    six Opus calls, and the gate's budget is spent on items that might survive it.
+    condemn — so a generation that came out broken costs one small call instead
+    of six large ones, and the gate's budget is spent on items that might survive it.
     The difficulty probe comes last, a few small calls, and only for an item that
     is going to ship: measuring the difficulty of a discarded item buys nothing.
     """
@@ -90,9 +87,9 @@ def generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_c
     # The difficulty prior travels with the item from here: the bundle carries
     # it, `bjt publish` writes it, and the practice queue uses it as the prior
     # for an item nobody has answered yet. It is the probe's rate when the probe
-    # ran, and the gate's full-view rate otherwise — the older, coarser number,
-    # which is still an honest one. See supabase/migrations/20260916000500 — it
-    # is a property of the question and is never shown to anybody.
+    # ran, and the gate's full-view rate otherwise — a coarser number, but still
+    # an honest one. It is a property of the question and is never shown to
+    # anybody (supabase/migrations/20260916000500).
     if dres.measured:
         item["model_p_correct"] = dres.rate
     elif full is not None:
@@ -136,9 +133,8 @@ def _gate_detail(cold, full, verdict, vres, sres=None, dres=None) -> str:
     bits.append(f"verdict={verdict}")
     if vres.enforced and vres.violations:
         bits.append(f"above-band kanji: {' '.join(vres.violations)}")
-    # A fault's note, or the reason no check ran. A whole night of
-    # "sanity=skipped" with the reason kept to itself is a night nobody can
-    # diagnose from the log, which is where the log was read.
+    # A fault's note, or the reason no check ran. A night of "sanity=skipped"
+    # with the reason kept to itself cannot be diagnosed from the log.
     if sres is not None and (not sres.ok or not sres.checked) and sres.notes:
         bits.append(f"({sres.notes[:200]})")
     return "  ".join(bits)
@@ -154,9 +150,9 @@ def _spent_cells(store, item_type: str) -> set:
     local SQLite database is consulted as well because it holds cells spent on
     items generated but not yet bundled, which exist only on this machine.
 
-    Reading only the database was the bug: it is gitignored, so on a new
-    checkout every cell looked free and the next batch re-spent cells the
-    library had already used.
+    The database alone is not enough: it is gitignored, so on a new checkout
+    every cell would look free and the next batch would re-spend cells the
+    library has already used.
     """
     return store.used_cell_ids(item_type) | batchmod.spent_cell_ids(item_type)
 
@@ -204,7 +200,7 @@ def run_batch(
 ) -> tuple["pathlib.Path | None", int]:
     """Generate, gate and bundle one batch. Returns (bundle path, items kept).
 
-    Split out of `cmd_batch` so the nightly run can write several batches in one
+    A function of its own so the nightly run can write several batches in one
     process against one open store — reopening it per shelf would re-read the
     spent-cell ledger each time and, worse, would let two shelves in the same run
     spend the same cell.
@@ -219,17 +215,14 @@ def run_batch(
     strikes = 0
     idx = 0
     # What review said about the last draft for this shelf, told to the next
-    # one. A shelf's second and third drafts used to be written blind, and
-    # they failed the same way as the first (2026-09-19: three leaky
-    # 状況把握 drafts in a row, one shelf, nothing written).
+    # one: a draft written blind fails the same way as the one before it.
     #
-    # And told about the SAME cell: a draft the gate refused was a fine
+    # And told about the SAME cell: a draft the gate refused is usually a fine
     # situation with options that gave it away, so the next draft is that
-    # situation again with the reviewer's reason in hand. Moving to a new
-    # cell on every discard — as the loop did until 2026-09-19 — threw the
-    # reason at a different situation, and the fresh draft failed the same
-    # way. Only a keep or a near-duplicate (the situation itself collides)
-    # moves the shelf on to its next cell.
+    # situation again with the reviewer's reason in hand. Moving to a new cell
+    # on every discard would throw the reason at a different situation. Only a
+    # keep or a near-duplicate (the situation itself collides) moves the shelf
+    # on to its next cell.
     feedback: "str | None" = None
     while len(kept_items) < n and attempts < budget:
         if strikes >= config.SLOT_PATIENCE:

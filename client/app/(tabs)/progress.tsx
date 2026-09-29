@@ -12,9 +12,8 @@
  * Two windows on one screen, deliberately. The bars and the radar are the
  * record, all-time. The two cards under them — the traps, the weak tags — are
  * what the queue is about to do something about, and the queue weighs the
- * last 30 days, so those two rank on the same window. Before this they were
- * all-time too, and a person could be told they were weak somewhere the queue
- * had long since stopped aiming at.
+ * last 30 days, so those two rank on the same window — otherwise a person
+ * could be told they are weak somewhere the queue has stopped aiming at.
  *
  * A section's level is printed only once the database has placed it. Before
  * that the app is serving a neutral starting level, and a "J2" beside a section
@@ -125,8 +124,7 @@ export default function Progress() {
           setAdFree(ad);
           setLevels(lv);
         } catch (e) {
-          // Without this the screen sat on its spinner for ever when the record
-          // failed to load, which looks exactly like an app that has hung.
+          // A spinner that never ends looks exactly like an app that has hung.
           if (!cancelled) setError(errorText(e));
         }
       })();
@@ -184,8 +182,8 @@ export default function Progress() {
 
   // Same window rule for the traps: the last 30 days, or all-time when nothing
   // is recent. Ranked by the share of the times a trap was on offer that it
-  // caught them — a bare count put the traps that are in every question on
-  // top whether or not they were the problem. The clock is no option's trap
+  // caught them — a bare count would put the traps that are in every question
+  // on top whether or not they are the problem. The clock is no option's trap
   // and has no share; it gets its own line.
   const trapsRecent = traps.some((t) => t.recent_times > 0);
   const trapRows = traps.map((tr) => ({

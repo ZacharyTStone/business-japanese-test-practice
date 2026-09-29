@@ -6,10 +6,11 @@
  * Nothing here is written for the list. The words, readings and meanings are
  * the `vocab_notes` each item shipped with, and the sentence is a line of a
  * question — a turn of its conversation, its stem, its document, its correct
- * answer — found by looking for the word. A fill-in-the-blank stem is completed with the correct
- * option, never a wrong one: a distractor is wrong Japanese on purpose, and an
- * example sentence built from one would teach exactly the mistake it exists to
- * catch. A word with no line to point at simply has no sentence.
+ * answer — found by looking for the word. A fill-in-the-blank stem is completed
+ * with the correct option, never a wrong one: a distractor is wrong Japanese on
+ * purpose, and an example sentence built from one would teach exactly the
+ * mistake it exists to catch. A word with no line to point at simply has no
+ * sentence.
  *
  * Furigana comes from the same notes. There is no dictionary in the app, so a
  * sentence's words are annotated only where the bank has a reading for them —

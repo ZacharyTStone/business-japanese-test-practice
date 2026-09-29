@@ -8,13 +8,9 @@
  * choose a level, a type, or a mode, and in this app there is nowhere they
  * could: this button is the only way to a question.
  *
- * Under it, nothing. There used to be a card here narrating what the app had
- * noticed and what it was doing about it — the level rule, the tag it judged
- * weak, how many answers until it would have an opinion. None of it was
- * anything to act on: the queue already puts those items first, and a person
- * who came to answer five questions does not need the machinery described to
- * them on the way past. The statistics live on 記録; the start screen explains
- * the plan once. Home starts the set.
+ * Under it, nothing. What the app has noticed is nothing to act on — the queue
+ * already acts on it — so it is not narrated here. The statistics live on 記録;
+ * the start screen explains the plan once. Home starts the set.
  */
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -81,8 +77,7 @@ export default function Home() {
           setLevels(lv);
           setDue(load?.due_now ?? 0);
         } catch (e) {
-          // Without this the screen sat on its spinner for ever when the record
-          // failed to load, which looks exactly like an app that has hung.
+          // A spinner that never ends looks exactly like an app that has hung.
           if (!cancelled) setError(errorText(e));
         } finally {
           if (!cancelled) setLoading(false);
@@ -144,11 +139,10 @@ export default function Home() {
   const bonus = day?.unlimited ? goal : (day?.left_today ?? 0);
   const countdown = countdownLine(daysUntil(profile?.exam_date), lang);
 
-  // Only sections the database has placed get named. A new account has none,
-  // so this line is simply absent rather than announcing a level nobody has
-  // earned — and it fills in section by section as the evidence arrives.
-  // One number while the placed sections agree; the three the moment they
-  // diverge, because by then the split IS the news.
+  // Only sections the database has placed get named, so a new account has no
+  // line here rather than a level nobody has earned. One number while the
+  // placed sections agree; each of them the moment they diverge, because by
+  // then the split IS the news.
   const placed = placedLevels(levels);
   const levelLine =
     placed.length === 0
@@ -174,12 +168,10 @@ export default function Home() {
         }
       />
 
-      {/* Two cards, not one card with a full ring in it. A day's work that is
-          finished is a different thing from a day's work in progress, and a
-          counter reading 5 / 5 beside a circle filled to the brim is the app
-          still asking to be read as a target when there is nothing left to
-          aim at. Done says done, and the extra set is offered quietly, which
-          is the weight it deserves: it is a bonus, not the job. */}
+      {/* Two cards, not one card with a full ring in it: a counter at its goal
+          beside a filled circle still reads as a target when there is nothing
+          left to aim at. Done says done, and the extra set is offered quietly,
+          because it is a bonus, not the job. */}
       {blocked ? (
         <FadeIn>
           <DayDone answered={answered} streak={streak} countdown={countdown ?? undefined} />

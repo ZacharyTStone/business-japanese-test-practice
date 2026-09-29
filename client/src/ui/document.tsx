@@ -20,7 +20,7 @@
  * a learner who has read fifty of these in the app should not be surprised by
  * the shape of the fifty-first on the day. So the app's own visual language
  * stops at the edge of the sheet: inside it is ink on paper, or a mail client,
- * and nothing is coloured purple. The owner asked for this (2026-09-17).
+ * and nothing is coloured purple.
  *
  * Tables are the hard part on a phone. A business quotation has four columns and
  * a phone has none to spare, so below a threshold each row is drawn as a stack

@@ -62,9 +62,9 @@ def _committed_items():
 
 def test_every_committed_item_is_still_a_cell_of_its_table():
     """The tables only ever grow. `item_id` hashes (type, cell), so a cell that
-    stopped existing — a setting renamed, a relation dropped, a channel changed
-    under it — orphans the item that spent it: `importbatch` can no longer
-    rebuild it, and a later item written for the renamed cell would be a second
+    stops existing — a setting renamed, a relation dropped, a channel changed
+    under it — orphans the item that spent it: `importbatch` cannot rebuild
+    it, and a later item written for the renamed cell would be a second
     copy of a question the bank already has. Additions are free; this is what
     says the rest were additions."""
     problems = []
@@ -101,9 +101,9 @@ UCHI_SOTO_TYPES = ("hatsugen_choukai", "hyougen", "bamen_haaku")
 
 @pytest.mark.parametrize("item_type", UCHI_SOTO_TYPES)
 def test_a_batch_can_aim_at_uchi_soto(item_type):
-    """Until 2026-09-27 ウチ/ソト existed only as a distractor role
-    (`wrong_uchi_soto`), so no batch could be asked to be about it. Now it is a
-    relation with cells of its own, at every level."""
+    """ウチ/ソト is a relation with cells of its own at every level, not only a
+    distractor role (`wrong_uchi_soto`), so a batch can be asked to be about
+    it."""
     table = seedtable.load(item_type)
     for level in table.levels:
         assert any(c.relation == "uchi_to_soto" for c in table.cells(level)), level
@@ -221,13 +221,13 @@ def test_every_scene_any_table_asks_for_has_a_label(item_type):
         assert table.scene_labels.get(scene), f"{item_type}: {scene} has no label"
 
 
-# ----- the situations the exam tests (2026-09-27) ----------------------------
+# ----- the situations the exam tests -----------------------------------------
 #
 # Negotiation, the meeting, instructions, consulting, introductions,
-# appointments and condolences were missing from the tables, so no batch could
-# be written about them however it was prompted. They are functions where the
-# type is about what somebody says, and settings where it is about what
-# somebody understands.
+# appointments and condolences must be in the tables: a situation no table
+# offers cannot be written about however a batch is prompted. They are
+# functions where the type is about what somebody says, and settings where it
+# is about what somebody understands.
 
 SPOKEN_ACTS = ("negotiate_price", "negotiate_terms", "state_opinion", "object_politely",
                "chair_meeting", "instruct", "consult", "introduce_other",
@@ -252,7 +252,8 @@ def test_every_missing_speech_act_now_has_cells(item_type, function):
 def test_the_comprehension_types_gain_situations_not_questions(item_type, settings):
     """Their function axis is what the question asks — who decided, what
     changed, what comes next — and those questions already fit a negotiation or
-    a regular meeting. What they lacked was the situation to ask them about."""
+    a regular meeting. What the table supplies is the situation to ask them
+    about."""
     table = seedtable.load(item_type)
     for setting in settings:
         for level in table.levels:

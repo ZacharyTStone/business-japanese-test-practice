@@ -10,9 +10,8 @@ hard judgements. They are proofreading, and paying Opus six times to trip over
 one is the wrong shape of spend.
 
 So this runs first, once, on a small model, and the expensive gate only ever
-sees items that got past it. A broken item now costs one Haiku call instead of
-six Opus ones, and the ones that would have wasted the gate's budget are gone
-before it starts.
+sees items that got past it. A broken item costs one Haiku call instead of six
+Opus ones, and is gone before the gate starts.
 
 **What it is allowed to fail an item for.** Only faults that are faults at any
 difficulty. An item is *supposed* to be hard: a cheap model disagreeing about
@@ -25,13 +24,12 @@ no writer would produce, options that do not answer the question asked. Anything
 that needs expertise to adjudicate is the gate's job, and stays there.
 
 **Unnatural is a fault even in a distractor.** A distractor is wrong on
-purpose, and for a long time that exempted it from being read at all. But it
-has to be wrong the way people are wrong: a stack of keigo nobody says tells
-the learner which option is the silly one and teaches nothing else. The rules
-`unnatural_japanese` and `situation_incoherent` are that lesson, from a review
-that withdrew 39 of 146 questions on 2026-09-26 (batches/withdrawn.txt). Their
-mechanical half — the patterns no reader is needed for — runs offline and for
-free in `naturalness.faults`.
+purpose, but that does not exempt it from being read: it has to be wrong the
+way people are wrong, and a stack of keigo nobody says tells the learner which
+option is the silly one and teaches nothing else. The rules
+`unnatural_japanese` and `situation_incoherent` check that. Their mechanical
+half — the patterns no reader is needed for — runs offline and for free in
+`naturalness.faults`.
 """
 from __future__ import annotations
 
@@ -66,11 +64,9 @@ RULES: dict[str, str] = {
         "and NOT a distractor that is deliberately impolite or wrongly pitched — "
         "those are the point of the item"
     ),
-    # The two below are what a review of the whole bank found on 2026-09-26 and
-    # the four above did not ask about: 39 of 146 questions were withdrawn
-    # (batches/withdrawn.txt), almost all answerable and correctly keyed, and
-    # almost all unnatural. The exemption in `broken_japanese` for deliberately
-    # wrong distractors is where most of them had been hiding.
+    # The two below ask what the four above do not: an item can be answerable
+    # and correctly keyed and still unnatural, and the exemption in
+    # `broken_japanese` for deliberately wrong distractors would let it through.
     "unnatural_japanese": (
         "a line — in the stimulus, the correct option OR a distractor — that no native "
         "speaker would actually say or write, even though each word is real: an "

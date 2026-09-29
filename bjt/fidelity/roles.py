@@ -122,10 +122,8 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
     "set_phrase_misfit": "a real greeting or idiom dropped into a grammatical slot",
     "wrong_honorific_direction": "尊敬語 and 謙譲語 swapped relative to the speaker",
     "wrong_uchi_soto": "ウチ/ソト handled backwards — e.g. honorifics on one's own boss to a client",
-    # Was "二重敬語 or otherwise over-polite to the point of being wrong", and a
-    # model read that as licence to invent: させていただかせていただく and its
-    # relatives were the single commonest reason questions were withdrawn on
-    # 2026-09-26 (batches/withdrawn.txt).
+    # Spelled out because a model reads "二重敬語 or otherwise over-polite" as
+    # licence to invent: させていただかせていただく and its relatives.
     "over_polite_misfit": (
         "too formal for this relationship or moment, in wording people really use "
         "elsewhere (a written formula said aloud, client-grade keigo to a peer), or ONE "
@@ -144,9 +142,8 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
     "correct_keigo_wrong_speech_act": "correct honorific verb, but the wrong illocutionary act",
     "wrong_participant": "a person who is present in the situation, but not the one asked about",
     "different_action": "the same people and objects, but visibly doing something else",
-    # Still a sentence about the person the question names. Three 画像把握
-    # items answered 「立っている人は何をしていますか」 with an option about the
-    # seated person, which is not an answer at all (withdrawn 2026-09-26).
+    # Still a sentence about the person the question names: an option about the
+    # seated person does not answer 「立っている人は何をしていますか」 at all.
     "wrong_participants": (
         "the right action, but done by or to the wrong person — or by the wrong number "
         "of people — said about the person the question names (「立っている人は書類を"

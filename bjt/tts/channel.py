@@ -13,8 +13,7 @@ that sounds like a studio recording is an easier question than the exam asks.
 
 Everything here is pure Python over 16-bit PCM WAV. No numpy, no ffmpeg, no
 `audioop` — the first two are dependencies a laptop job does not need, and the
-third was deprecated in 3.11 and removed in 3.13, which is not a thing to build
-the audio pipeline on.
+third is gone from the standard library as of Python 3.13.
 """
 from __future__ import annotations
 

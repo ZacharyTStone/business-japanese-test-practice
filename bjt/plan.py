@@ -21,8 +21,8 @@ exam**. That is the whole algorithm:
 ask the same number of every type: 場面把握 and 状況把握 are five-question types
 where the other seven are ten (`schemas.EXAM_QUESTIONS`). Levelling all thirty
 shelves flat therefore builds a bank in the wrong shape — deepest, in
-proportional terms, in exactly the two types a learner meets least often. The
-rule is otherwise unchanged, and with equal shares it *is* the old rule.
+proportional terms, in exactly the two types a learner meets least often. With
+equal shares the two rules are the same.
 
 It has three properties worth the plainness. It is *deterministic*: the same
 library produces the same work order, so a run is reviewable before it is made.
@@ -67,29 +67,27 @@ DEFAULT_FLOOR = 12
 DEFAULT_PER_SLOT = 2
 
 #: Most items one run may write at all. Three a night is well under a dollar on
-#: Sonnet. It was eight (2026-09-18) until the owner said the app is used far
-#: less than that fills (2026-09-24): a question nobody reaches is money spent
-#: on nothing, and the bank still grows by twenty a week. The night's real
-#: throttle is the review gate: nothing is written while an earlier night waits
-#: unmerged.
+#: Sonnet and is sized to how little the app is used: a question nobody reaches
+#: is money spent on nothing, and the bank still grows by twenty a week. The
+#: night's real throttle is the review gate: nothing is written while an earlier
+#: night waits unmerged.
 DEFAULT_BUDGET = 3
 
 #: How many of the night's items go to the reading shelves (語彙・文法, 表現読解,
-#: 総合読解) before the emptiest-first rule sees the rest. The owner asked for
-#: reading items every night (2026-09-19): they need no audio and no picture,
-#: so they are the cheapest item to ship and the one kind a night should never
-#: come back without. One of three is the floor, not the ceiling: the main rule
-#: can still hand the other two to reading shelves when they are the furthest
-#: behind. The floor takes the emptiest reading shelves first, exactly as the
-#: main rule does, and yields whatever it cannot place back to the main rule.
+#: 総合読解) before the emptiest-first rule sees the rest. Reading items need no
+#: audio and no picture, so they are the cheapest item to ship and the one kind
+#: a night should never come back without. One of three is the floor, not the
+#: ceiling: the main rule can still hand the other two to reading shelves when
+#: they are the furthest behind. The floor takes the emptiest reading shelves
+#: first, exactly as the main rule does, and yields whatever it cannot place
+#: back to the main rule.
 DEFAULT_READING_MIN = 1
 
 #: Most items a night may write of a type that should stay uncommon. 画像把握
 #: is one: each item needs a picture of its own, drawn and reviewed at a cost
-#: no shared-bank item has, and the owner asked for it to be a rare question
-#: rather than a common one (2026-09-19). Without this, three empty shelves of
-#: a new type are the emptiest in the bank and would take every night for a
-#: week.
+#: no shared-bank item has, and it is meant to be a rare question rather than a
+#: common one. Without this, three empty shelves of a new type are the emptiest
+#: in the bank and would take every night for a week.
 NIGHT_TYPE_CAPS: dict[str, int] = {"gazou_haaku": 1}
 
 
@@ -158,7 +156,7 @@ def _published_counts() -> dict[tuple[str, str], int]:
     The bundles are the ledger rather than the local SQLite database, for the
     same reason `batch.spent_cell_ids` uses them: the database is gitignored, so
     on a fresh clone — which is what CI is, every time — it reports an empty
-    library while 88 items sit in the tree.
+    library while the whole bank sits in the tree.
 
     A withdrawn item (`batches/withdrawn.txt`) is not on the shelf: it is no
     longer served, so the shelf it came from is that much emptier and the
@@ -235,13 +233,13 @@ def work_order(
         """How full this shelf is, measured against the exam rather than against
         the other shelves.
 
-        "Emptiest first" used to mean the smallest `have`, which levels all
-        thirty shelves to the same depth — and the exam does not ask the same
-        number of every type. 場面把握 and 状況把握 are five-question types where
-        the rest are ten, so a bank levelled flat over-supplies exactly the two
-        types a learner meets least. Dividing by the share turns "emptiest" into
-        "furthest behind its share", which levels the bank into the shape of the
-        exam and is the same greedy rule otherwise.
+        Taking the smallest `have` would level all thirty shelves to the same
+        depth — and the exam does not ask the same number of every type.
+        場面把握 and 状況把握 are five-question types where the rest are ten, so
+        a bank levelled flat over-supplies exactly the two types a learner meets
+        least. Dividing by the share turns "emptiest" into "furthest behind its
+        share", which levels the bank into the shape of the exam and is the same
+        greedy rule otherwise.
         """
         have = s.have + assigned.get((s.item_type, s.level), 0)
         return have / schemas.EXAM_QUESTIONS.get(s.item_type, 10)

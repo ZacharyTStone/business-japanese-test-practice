@@ -1,5 +1,5 @@
 """The naturalness rules: the offline lint, the prompt every generator is given,
-and the proofreader's new questions.
+and the proofreader's naturalness questions.
 
 Every pattern here is tested against a line taken from a question that was
 withdrawn for it (batches/withdrawn.txt), so a pattern that stops catching the

@@ -43,9 +43,9 @@ const NUMBERS = ["1", "2", "3", "4"];
 
 export default function History() {
   const router = useRouter();
-  // 記録 pushes this screen, but the result screen replaces itself with it, and
-  // a replaced screen has nothing underneath to go back to. Every way out of
-  // here goes through this, so none of them can be a dead end.
+  // The result screen replaces itself with this one, which leaves nothing
+  // underneath to go back to. Every way out goes through this, so none of
+  // them is a dead end.
   const leave = () =>
     router.canGoBack() ? router.back() : router.replace("/progress");
   const { lang, t } = useLang();
@@ -168,11 +168,10 @@ export default function History() {
         // twice in full.
         const heard = Boolean(ready?.narration_path);
         return (
-          // Only the head opens and closes the entry. The whole card used to
-          // be the button, which was fine while it held four options; with a
-          // document in it, a tap to select a figure or scroll a table folded
-          // the question away mid-read.
-          <View key={entry.attempt_id} style={[styles.entry, !entry.is_correct && styles.entryWrong]}>
+          // Only the head opens and closes the entry: with a document in the
+          // card, a tap to select a figure or scroll a table would otherwise
+          // fold the question away mid-read.
+          <View key={entry.attempt_id} style={styles.entry}>
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ expanded }}
@@ -368,7 +367,6 @@ const styles = StyleSheet.create({
     gap: space.sm,
     ...shadow.card,
   },
-  entryWrong: { backgroundColor: colors.surface },
   entryHead: { flexDirection: "row", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
   option: {
     flexDirection: "row",

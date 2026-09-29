@@ -10,7 +10,7 @@ treatment on top of one of them.
 
 Nothing here touches a bundle, the database or a bucket. It writes into
 `media/audition/` and an `index.html` next to the files, which is the whole
-deliverable: open it, listen, then pin the winner with `BJT_TTS_PROVIDER`.
+deliverable: open it and listen. The library's provider is `providers.DEFAULT`.
 """
 from __future__ import annotations
 

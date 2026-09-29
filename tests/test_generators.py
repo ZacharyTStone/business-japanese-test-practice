@@ -1,6 +1,7 @@
 """Generator loop: validation, retry-on-invalid, shuffle, finalize. The model
 call is faked."""
 import copy
+import dataclasses
 
 import pytest
 
@@ -55,9 +56,10 @@ def test_raises_after_max_attempts(monkeypatch, goi_cell):
         get_generator("goi_bunpou").generate(cell=goi_cell, max_attempts=2)
 
 
-def test_rejects_bad_level():
-    with pytest.raises(ValueError):
-        get_generator("goi_bunpou").generate("J9")
+def test_rejects_bad_level(goi_cell):
+    bad = dataclasses.replace(goi_cell, level="J9")
+    with pytest.raises(ValueError, match="invalid level"):
+        get_generator("goi_bunpou").generate(cell=bad)
 
 
 @pytest.mark.parametrize("item_type", sorted(GENERATORS))
@@ -109,9 +111,8 @@ def test_finalize_shuffle_is_deterministic_with_seed():
 def test_blank_document_block_is_pruned_not_retried(monkeypatch):
     """The model's output does not carry item_type (the schema has no such
     field); the generator stamps it. The pruning of blank headings and callouts
-    looks a document up by type, so it must run after the stamp — before it
-    did, every blank callout cost the full three attempts and produced nothing,
-    which is where most of the 2026-09-18 bill went."""
+    looks a document up by type, so it must run after the stamp; otherwise
+    every blank callout costs the full three attempts and produces nothing."""
     cell = seedtable.load("joukyou_haaku").cells("J2")[0]
     calls = {"n": 0}
 
@@ -134,9 +135,9 @@ def test_blank_document_block_is_pruned_not_retried(monkeypatch):
 
 def test_a_fifth_option_is_trimmed_not_regenerated(monkeypatch, goi_cell):
     """The schema cannot say maxItems, so a spare distractor is the one shape
-    fault the model can still produce. It used to cost three generations for
-    a shelf that then wrote nothing; now the spare is dropped and the draft
-    goes on to the checks."""
+    fault the model can still produce. Regenerating for it can cost three
+    generations for a shelf that then writes nothing, so the spare is dropped
+    and the draft goes on to the checks."""
     from bjt.generators.base import repair_surplus_options
     calls = {"n": 0}
 

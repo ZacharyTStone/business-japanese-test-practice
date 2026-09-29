@@ -10,7 +10,7 @@
  * seconds that question would be allowed in the exam and stops when they are
  * gone (see `src/lib/pace.ts` for where the number comes from).
  *
- * Three decisions worth stating, because all three were the other way first:
+ * Three decisions worth stating:
  *
  * **It counts against a deadline, not against ticks.** A phone that sleeps, a
  * browser tab in the background, a slow render — every one of them drops

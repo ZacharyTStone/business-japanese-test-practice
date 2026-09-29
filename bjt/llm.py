@@ -1,15 +1,16 @@
 """Thin wrapper over the Anthropic Messages API.
 
-Five call shapes are used across the tool:
+Six call shapes are used across the tool:
   * generate_structured  — the generators, constrained to an item JSON schema
   * sanity_check         — the proofreader (one flag per rule, on a small model)
   * answer_choice        — the answerability gate / calibration (pick 1 of N)
   * judge_synthetic      — the discriminator loop (real vs synthetic + why)
+  * answer_from_image    — the 画像把握 picture gate (pick 1 of N from a picture)
   * review_scene_image   — the scene art gate (one flag per rule in the brief)
 
-All five use structured output (`output_config.format`) so we never parse free
-text. The SDK is imported lazily so the offline commands (selftest, demo) run
-with neither the package nor an API key present.
+All of them use structured output (`output_config.format`) so we never parse
+free text. The SDK is imported lazily so the offline commands (selftest,
+checkbatch) run with neither the package nor an API key present.
 """
 from __future__ import annotations
 
@@ -31,9 +32,8 @@ class LLMBillingError(LLMError):
     """The account cannot pay for the call. Nothing else will succeed either.
 
     A run that meets this should stop, not carry on through forty more slots
-    of the same refusal — the first real night did exactly that, and the log
-    was pages of one error. Raised as its own class so the callers that
-    tolerate a failed call (one shelf, one probe) can let this one through.
+    of the same refusal. Raised as its own class so the callers that tolerate
+    a failed call (one shelf, one probe) can let this one through.
     """
 
 
@@ -49,11 +49,11 @@ class LLMSpendLimitError(LLMBillingError):
 
 # ----- the spend ledger --------------------------------------------------
 #
-# Dollars per million tokens, by model family, as the price list has them
-# (2026-09). Cache writes cost a quarter more than plain input and cache
-# reads a tenth of it. A model not in the table is priced as the dearest one
-# there — the ledger exists to stop a run, and a guess that is too low is the
-# one kind of wrong it must not be.
+# Dollars per million tokens, by model family, as the price list has them.
+# Cache writes cost a quarter more than plain input and cache reads a tenth
+# of it. A model not in the table is priced as the dearest one there — the
+# ledger exists to stop a run, and a guess that is too low is the one kind of
+# wrong it must not be.
 PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
     "claude-opus": (5.0, 25.0),
     "claude-sonnet": (2.0, 10.0),
@@ -192,15 +192,13 @@ def request_params(
     The thinking and effort controls are a property of the model family, not of
     the call. Opus and Sonnet take adaptive thinking and an effort level; Haiku
     4.5 takes neither — it wants a fixed thinking budget, and sending it the
-    adaptive form or an effort level is a 400. The first real night lost every
-    proofread and every difficulty probe to exactly that: the cheap model was
-    asked in the expensive model's dialect, refused every call, and both steps
-    reported themselves as not having run. The calls Haiku makes here are
-    small judgements with a small ceiling, and they do not need thinking at
-    all, so for Haiku the two keys are simply left out.
+    adaptive form or an effort level is a 400 on every call, which the
+    proofreader and the difficulty probe would report as not having run. The
+    calls Haiku makes here are small judgements with a small ceiling, and they
+    do not need thinking at all, so for Haiku the two keys are simply left out.
     """
     # Two ceilings no caller can lift: output per call, and how hard the
-    # model may think. They cap the cost of one call the way the ledger below
+    # model may think. They cap the cost of one call the way the spend ledger
     # caps the cost of a run.
     max_tokens = min(max_tokens, config.MAX_TOKENS_CEILING)
     effort = clamp_effort(effort)

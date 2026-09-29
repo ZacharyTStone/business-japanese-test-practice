@@ -3,8 +3,8 @@
  *
  * The app is one codebase for three platforms, and on the web it is a drill
  * somebody does at a desk between two other tabs. Reaching for the mouse four
- * times a question is the difference between a set of five taking two minutes
- * and taking five, and a drill that is slower than it needs to be is a drill
+ * times a question is the difference between a set taking two minutes and
+ * taking five, and a drill that is slower than it needs to be is a drill
  * people stop doing. On a phone there is no keyboard and this compiles to
  * nothing.
  *
@@ -52,7 +52,7 @@ export function useKeys(handler: (key: string) => boolean | void, enabled = true
  * Which option a key press means, or -1.
  *
  * Both rows, because people reach for whichever is nearer: the digits printed
- * on the options themselves, and the letters the options used to carry.
+ * on the options themselves, and a–d.
  */
 export function optionForKey(key: string, count: number): number {
   const k = key.toLowerCase();

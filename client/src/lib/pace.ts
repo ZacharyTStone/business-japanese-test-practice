@@ -4,9 +4,9 @@
  * The exam paces its three parts in two different ways. 第1部 聴解 and 第2部
  * 聴読解 advance with the audio: the candidate makes no pacing decision and
  * cannot go back. 第3部 読解 is the opposite — **30 questions in a 30-minute
- * block, freely navigable** — so pacing is a skill, and it is the one skill this
- * app was not practising. Somebody who reads well and slowly meets the last six
- * questions with two minutes left and loses marks they had the Japanese for.
+ * block, freely navigable** — so pacing is a skill, and one worth practising.
+ * Somebody who reads well and slowly meets the last six questions with two
+ * minutes left and loses marks they had the Japanese for.
  *
  * 30 questions in 30 minutes is 60 seconds each, and that is the only clean
  * pacing figure the exam publishes. But a flat 60 would be wrong for all three

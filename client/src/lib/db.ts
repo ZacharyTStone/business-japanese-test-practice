@@ -42,7 +42,7 @@ import type {
  *  items that caught you before, the unseen ones aimed at your weakest ground,
  *  one from the level above. There is no level, type or mode to pass, because
  *  there is no screen where anybody chooses one. */
-export async function fetchQueue(limit = 5): Promise<QueuedItem[]> {
+export async function fetchQueue(limit: number): Promise<QueuedItem[]> {
   const { data, error } = await supabase.rpc("next_items", { p_limit: limit });
   if (error) throw error;
   return (data ?? []) as QueuedItem[];
@@ -72,8 +72,8 @@ export async function finishSession(sessionId: string): Promise<void> {
  *
  * Note what is NOT sent: user_id, is_correct, the role, the time. The insert
  * trigger fills them in, and `select` returns the graded row — so the value this
- * resolves to is the database's verdict, not ours. Since 2026-09-27 the database
- * refuses those columns outright rather than overwriting them.
+ * resolves to is the database's verdict, not ours. The database refuses those
+ * columns outright if a client sends them.
  *
  * What IS sent, beyond the answer, is how it was given, because the ladder and
  * the level both care: `thinkMs` (from the end of the audio, or from the question
@@ -129,7 +129,7 @@ export async function fetchProfile(): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, target_level, daily_goal, exam_date, is_anonymous, linked_at, timed_reading"
+      "id, display_name, target_level, daily_goal, exam_date, timed_reading"
     )
     .maybeSingle();
   if (error) throw error;
@@ -256,9 +256,6 @@ export async function vetoItem(itemId: string, note = ""): Promise<void> {
   if (error) throw error;
 }
 
-/** The radar. All nine types come back, including untouched ones — "not tried
- *  yet" is the most useful thing this can say early on, and a chart that hides
- *  the gaps is worse than no chart. */
 /** What a reset removed, for the line the screen shows afterwards. */
 type ResetCounts = {
   attempts: number;
@@ -278,8 +275,8 @@ type ResetCounts = {
  * user from the session, so there is no way to spell "delete the ones I got
  * wrong" with it — it is all of one person's history or none of it.
  *
- * Settings, the purchase and any reported questions are left alone; they were
- * never progress. See the migration for the whole list.
+ * Settings, the purchase and any reported questions are left alone; they are
+ * not progress. See the migration for the whole list.
  */
 export async function resetProgress(): Promise<ResetCounts> {
   const { data, error } = await supabase.rpc("reset_my_progress");
@@ -287,6 +284,9 @@ export async function resetProgress(): Promise<ResetCounts> {
   return data as ResetCounts;
 }
 
+/** The radar. All nine types come back, including untouched ones — "not tried
+ *  yet" is the most useful thing this can say early on, and a chart that hides
+ *  the gaps is worse than no chart. */
 export async function fetchTypeStats(): Promise<TypeStat[]> {
   const { data, error } = await supabase
     .from("v_my_type_stats")
@@ -389,8 +389,8 @@ export function clipUrl(audioPath: string | null): string | null {
  * `OPTION_LABELS` and `NARRATOR_VOICE` in bjt/tts/plan.py, which is where the
  * clips come from; a test holds the two files equal.
  */
-// Numbers rather than letters: 「ビー」/「ディー」 were misheard for each other,
-// and 「デー」 sounded like "day". See OPTION_LABELS in bjt/tts/plan.py.
+// Numbers rather than letters: 「ビー」/「ディー」 are easily misheard for each
+// other, and 「デー」 sounds like "day". See OPTION_LABELS in bjt/tts/plan.py.
 const OPTION_LABELS = ["いち", "に", "さん", "よん"];
 const NARRATOR_VOICE = "narrator_f";
 
@@ -703,10 +703,9 @@ export async function fetchWordList(): Promise<WordEntry[]> {
 /**
  * The learner's own notes on questions, by item — 復習ノート.
  *
- * The table has been in the schema since the first migration, because an
- * answer is worth little if you cannot come back to the one that caught you,
- * and until 2026-09-27 nothing wrote it. A note is the learner's sentence about
- * why they fell for it, which is the part of a review that does the learning.
+ * An answer is worth little if you cannot come back to the one that caught you.
+ * A note is the learner's sentence about why they fell for it, which is the
+ * part of a review that does the learning.
  */
 export async function fetchNotes(itemIds: string[]): Promise<Record<string, string>> {
   if (itemIds.length === 0) return {};

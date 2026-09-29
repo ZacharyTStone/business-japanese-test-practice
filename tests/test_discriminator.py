@@ -50,13 +50,15 @@ def test_requires_both_sides():
 
 def test_misaligned_label_count_scored_on_prefix(monkeypatch):
     def short_judge(rendered, model=None):
-        return {"labels": ["synthetic"], "reasons": []}
+        first = "synthetic" if "GEN" in rendered[0] else "official"
+        return {"labels": [first], "reasons": []}
     monkeypatch.setattr(discriminator.llm, "judge_synthetic", short_judge)
     res = discriminator.run_discriminator(
         "goi_bunpou", _make_items("GEN", 2), _make_items("OFF", 2), seed=1
     )
-    # Only one label returned; rate is scored over that single aligned item.
-    assert res.discrimination_rate in (0.0, 1.0)
+    # One right label: scored over the aligned prefix it is 1.0; counting the
+    # three unlabelled items as wrong would make it 0.25.
+    assert res.discrimination_rate == 1.0
 
 
 # ----- the judge sees the whole stimulus ---------------------------------
@@ -76,8 +78,8 @@ def _document_item(prefix, with_document=True):
 
 
 def test_the_rendering_carries_the_document():
-    """Until 2026-09-22 it did not, and the four types whose stimulus is mostly
-    a 資料 were judged on the stem and the options alone."""
+    """Without it, the four types whose stimulus is mostly a 資料 would be
+    judged on the stem and the options alone."""
     rendered = textutil.render_for_discriminator(_document_item("GEN"))
     assert "--- 資料 ---" in rendered
     assert "会議室 予約状況" in rendered

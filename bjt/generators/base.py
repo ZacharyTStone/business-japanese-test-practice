@@ -28,7 +28,7 @@ from ..fidelity import naturalness, roles
 #: the person the item turns on is neither of the two people talking — it is the
 #: one being talked about — and a model shown only the arrow writes an ordinary
 #: 社外 item in which nobody from the speaker's own side is mentioned at all.
-#: The relation exists so a batch can aim at that on purpose (2026-09-27).
+#: The relation exists so a batch can aim at that on purpose.
 RELATION_NOTES: dict[str, str] = {
     "uchi_to_soto": (
         "関係 is ウチ/ソト: the speaker is addressing someone outside the company — a "
@@ -98,11 +98,10 @@ class Generator:
             "label.\n" + "\n".join(lines) + "\n\n"
             # The answerability gate's cold side shows a strong reader the four
             # options with the stem withheld and discards the item if the key
-            # can be picked anyway. On the first real night every draft of the
-            # three stem-less types failed it: the distractors were wrong on
-            # their own — a malformed conjugation, a phrase nobody says — so the
-            # key was the one option that read well. Saying so here is the
-            # cheapest fix there is, and it is exactly what the gate tests.
+            # can be picked anyway. A distractor that is wrong on its own — a
+            # malformed conjugation, a phrase nobody says — leaves the key as
+            # the one option that reads well. Saying so here is the cheapest
+            # fix there is, and it is exactly what the gate tests.
             "The four options, read on their own with the situation hidden, must "
             "look equally plausible: every distractor must be a real, well-formed "
             "expression a native speaker would use in SOME other business situation, "
@@ -194,10 +193,9 @@ class Generator:
             self.task_spec,
             self._role_spec(),
             # Right after the roles, because most of it is about how a
-            # distractor may be wrong. The principle in the role spec did not
-            # hold on its own: the over-polite distractors in the bank were
-            # invented keigo stacks almost without exception, and 39 questions
-            # were withdrawn on 2026-09-26 (batches/withdrawn.txt).
+            # distractor may be wrong. The principle in the role spec does not
+            # hold on its own: asked for an over-polite distractor, a model
+            # invents a keigo stack.
             naturalness.PROMPT,
             f"Target level: {level}. Calibrate difficulty to this descriptor:\n"
             f"{levels.descriptor(level)}",
@@ -294,10 +292,8 @@ class Generator:
             # The model's output does not name its own type — the schema has
             # no item_type field — and everything below that looks a document
             # up by type (documents_of, and through it the pruning) reads
-            # item["item_type"]. Stamp it first. Until it was stamped here the
-            # pruning below found no document, every blank callout cost the
-            # full three attempts, and a night's run spent most of its bill
-            # on document types that produced nothing (2026-09-18).
+            # item["item_type"]. Stamp it first, or the pruning below finds no
+            # document and every blank callout costs the full three attempts.
             item["item_type"] = self.item_type
             # A blank heading or callout is a model tic, not a fault in the
             # item; drop it rather than spend an attempt asking for it back.
@@ -345,14 +341,13 @@ def repair_surplus_options(item: dict) -> list[str]:
     """Trim a draft with more than four options down to four, in place.
 
     A fifth option is the one schema fault the structured-output schema cannot
-    forbid (the API's JSON-schema subset has no `maxItems`), and it was costing
-    a whole generation per occurrence — three of them, on 2026-09-19, for a
-    shelf that then wrote nothing. The surplus is always a spare distractor:
-    keep the correct option and the first three distractors with distinct
-    roles, drop the rest, and let the ordinary validation and the gate judge
-    what is left. Returns the texts dropped, for the log. A draft with fewer
-    than four options, or with no single correct one, is left alone for the
-    validator to reject as before.
+    forbid (the API's JSON-schema subset has no `maxItems`), and regenerating
+    for it costs a whole generation per occurrence. The surplus is always a
+    spare distractor: keep the correct option and the first three distractors
+    with distinct roles, drop the rest, and let the ordinary validation and the
+    gate judge what is left. Returns the texts dropped, for the log. A draft
+    with fewer than four options, or with no single correct one, is left alone
+    for the validator to reject.
     """
     options = item.get("options")
     if not isinstance(options, list) or len(options) <= 4:
