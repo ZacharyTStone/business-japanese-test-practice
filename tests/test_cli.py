@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from bjt import cli, fixtures, pipeline, schemas
+from bjt import cli, config, fixtures, pipeline, schemas
 from bjt.fidelity import roles
 
 
@@ -130,6 +130,24 @@ def test_tester_max_goal_sizes_one_accounts_day(capsys):
     assert cli.main(["tester", "z@example.com", "--max-goal", "32767"]) == 0
     assert cli.main(["tester", "z@example.com", "--max-goal", "32768"]) == 2
     assert cli.main(["tester", "z@example.com", "--max-goal", "0"]) == 2
+
+
+def test_the_deploy_workflow_never_prints_a_testers_address():
+    """Actions logs are public in this repository, and a step's `env:` block
+    is printed at the top of its log. The address and note are read from the
+    event payload inside the script and masked before anything can echo them."""
+    text = (config.ROOT / ".github/workflows/deploy-db.yml").read_text(encoding="utf-8")
+    start = text.index("- name: let a tester in")
+    step = text[start:text.index("- name:", start + 1)]
+    assert "env:" not in step
+    run = step[step.index("run: |"):]
+    assert "${{" not in run, "an expression is expanded into the logged script"
+    assert run.index("::add-mask::$EMAIL") < run.index("bjt tester") < run.index("psql")
+    assert "strip().lower()" in run, "the form bjt tester writes into the SQL is masked too"
+    assert "::add-mask::$NOTE" in run
+    # Named once, in the `if:` (which is not logged); read nowhere else.
+    assert text.count("github.event.inputs.tester_email") == 1
+    assert "github.event.inputs.tester_note" not in text
 
 
 def test_tester_remove_and_bad_input(capsys):

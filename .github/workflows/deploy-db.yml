@@ -24,7 +24,8 @@
 #                Includes scenes.sql once the nightly job has drawn artwork.
 #   a tester     optional: the email address typed into the run form,
 #                added to public.testers with `bjt tester`. The app admits
-#                nobody who is not in that table.
+#                nobody who is not in that table. The address is masked in
+#                the log, which is public.
 #   the audio    optional: every clip the published bank names that the
 #                database does not yet point at is synthesised, put in the
 #                `audio` bucket, and pointed at. A clip already live is never
@@ -158,12 +159,20 @@ jobs:
             echo "::endgroup::"
           done
 
+      # This repository's Actions logs are public, and a step's `env:` values
+      # are printed at the top of its log. So the address and the note are read
+      # from the event payload inside the script and masked before anything
+      # can echo them — including an error from `bjt tester` or psql. The SQL
+      # carries the address as `bjt tester` normalises it, so that form is
+      # masked too.
       - name: let a tester in
         if: steps.db.outputs.go == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.tester_email != ''
-        env:
-          EMAIL: ${{ github.event.inputs.tester_email }}
-          NOTE: ${{ github.event.inputs.tester_note }}
         run: |
+          EMAIL=$(jq -r '.inputs.tester_email // ""' "$GITHUB_EVENT_PATH")
+          NOTE=$(jq -r '.inputs.tester_note // ""' "$GITHUB_EVENT_PATH")
+          echo "::add-mask::$EMAIL"
+          echo "::add-mask::$(python -c 'import sys; print(sys.argv[1].strip().lower())' "$EMAIL")"
+          if [ -n "$NOTE" ]; then echo "::add-mask::$NOTE"; fi
           python -m bjt tester "$EMAIL" --note "$NOTE" > tester.sql
           psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f tester.sql
 
