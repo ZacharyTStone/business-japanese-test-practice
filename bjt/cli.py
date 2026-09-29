@@ -846,9 +846,8 @@ def cmd_nightly(args) -> int:
     there is no fast path for being a robot.
 
     Nothing here publishes to a database. It writes bundles and their SQL into
-    the tree, and a person reads the diff. That is the roadmap's rule, and it is
-    the only reason a job that writes exam content unattended is a safe thing to
-    have."""
+    the tree, and a person reads the diff. That review is the only reason a job
+    that writes exam content unattended is a safe thing to have."""
     budget, per_slot = clamp_night(args.budget, args.per_slot)
     state = plan.survey()
     order = plan.work_order(state, budget=budget, per_slot=per_slot,
@@ -1578,9 +1577,9 @@ def build_parser() -> argparse.ArgumentParser:
     sy = sub.add_parser("synth", help="synthesise a bundle's audio and write the SQL for it")
     sy.add_argument("path", help="path to a checked bundle .json")
     sy.add_argument("--provider", default="auto",
-                    help="TTS backend: auto (BJT_TTS_PROVIDER, else whichever of gemini, "
-                         "openai, google has credentials, else silent), or one of those "
-                         "by name; silent is an offline placeholder")
+                    help="TTS backend: auto (BJT_TTS_PROVIDER, else the library's voice "
+                         "when its key is set, else silent), or a provider by name; "
+                         "silent is an offline placeholder")
     sy.add_argument("--have", metavar="FILE",
                     help="clip ids already live (one per line): skipped entirely. "
                          "The deploy workflow reads them out of the database")

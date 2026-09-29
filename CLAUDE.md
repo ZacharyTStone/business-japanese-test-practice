@@ -46,7 +46,7 @@ accident is not.
   `nightly.yml`, both pinned at or below 0.5 by `tests/test_ceilings.py`). A
   manual run can ask for the difficulty probe (`bjt probe --all`) instead. The
   nightly job opens a pull request and never publishes: that branch is the
-  roadmap's review gate and the one exception to main-only. Merging it is the
+  review gate and the one exception to main-only. Merging it is the
   decision to ship — once `checks` is green on `main`, the **deploy database**
   workflow runs by itself and publishes the items and their audio together.
 - **A run's ceilings are checked before the call, not after.** `bjt/llm.py`

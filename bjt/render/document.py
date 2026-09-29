@@ -13,7 +13,7 @@ content supplies only the original business writing that goes in it.
 A document is a template id, a version, some metadata (the From/To/Subject of an
 email, the date and attendees of a set of minutes) and an ordered list of
 content blocks. Blocks are deliberately few — nine of them cover every template
-in the roadmap — because every block type is a thing the renderer, the phone
+in `templates.py` — because every block type is a thing the renderer, the phone
 layout, and the accessibility pass all have to handle.
 """
 from __future__ import annotations

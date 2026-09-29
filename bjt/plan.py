@@ -39,8 +39,8 @@ Two caps keep a night's work reviewable by a person:
     write thirty items of one type, which is one big risk instead of four small
     ones, and a diff nobody finishes.
 
-What this module deliberately does NOT do is look at learners. The roadmap is
-explicit that targeting an individual with a generation run is the wrong shape —
+What this module deliberately does NOT do is look at learners. Targeting an
+individual with a generation run is the wrong shape —
 it costs money per person, it leaks a profile into a prompt, and it cannot be
 reviewed before it is served. Weakness targeting happens in the *queue*, over a
 bank that is already published, which is where it is free and reversible. This
