@@ -155,8 +155,9 @@ GATE_TRIALS = int(_env("BJT_GATE_TRIALS", "3"))
 # all a prior needs to do. The proofreader's model is the natural pick — the
 # cheapest in the family, already in use. The probe runs after the gate and
 # only on items the gate kept, so it costs DIFFICULTY_TRIALS small calls per
-# shipped item and nothing per discarded one.
-DIFFICULTY_MODEL = _env("BJT_DIFFICULTY_MODEL", SANITY_MODEL)
+# shipped item and nothing per discarded one. Set but empty means unset: the
+# nightly workflow passes a repository variable that may not exist.
+DIFFICULTY_MODEL = _env("BJT_DIFFICULTY_MODEL", "").strip() or SANITY_MODEL
 DIFFICULTY_TRIALS = int(_env("BJT_DIFFICULTY_TRIALS", "5"))
 
 # A prototype, off unless asked for: BJT_DIFFICULTY_MODEL=jev-latest makes the

@@ -61,6 +61,13 @@
 #                      and see what is already there. The service-role key is
 #                      the one that bypasses row-level security: it lives here
 #                      and in nobody's .env, and never in client/.
+#   TYPESAFE_API_KEY   Jev, the prototype difficulty instrument (bjt/jev.py).
+#                      With it a manual run can compare Jev with the probe's
+#                      own model ("compare_jev"), which writes nothing. Jev
+#                      becomes the probe only when the repository variable
+#                      BJT_DIFFICULTY_MODEL is set to jev-latest (Settings →
+#                      Secrets and variables → Actions → Variables); unset, the
+#                      probe stays on the proofreader's model.
 #
 # The scene step is the one place in this file a machine's judgement ships
 # something without a person reading it first. The owner asked for that
@@ -107,6 +114,11 @@ on:
         default: false
       probe:
         description: "Instead of writing items, measure the difficulty of the live questions that have none (bjt probe --all): same ceilings, a pull request as usual, no pictures"
+        type: boolean
+        required: false
+        default: false
+      compare_jev:
+        description: "Instead of writing items, measure a sample of live questions with the probe's model and with Jev side by side (bjt probe --compare jev-latest): writes nothing, opens no pull request"
         type: boolean
         required: false
         default: false
@@ -158,6 +170,11 @@ jobs:
       # their own ledger, and the image model's own bill is held down by
       # BJT_NIGHT_MAX_PICTURES and the lifetime allowance, not by this.
       BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '0.5' }}
+      # Which model measures difficulty, for tonight's items and a probe run
+      # alike, so the bank carries one kind of rate. A repository variable, so
+      # switching to Jev is a setting changed after reading a comparison run,
+      # not a code change; unset (empty here), config.py's default applies.
+      BJT_DIFFICULTY_MODEL: ${{ vars.BJT_DIFFICULTY_MODEL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -197,6 +214,7 @@ jobs:
           HAVE_DB: ${{ secrets.SUPABASE_DB_URL != '' }}
           HAVE_IMAGES: ${{ secrets.OPENAI_API_KEY != '' }}
           HAVE_STORAGE: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+          HAVE_TYPESAFE: ${{ secrets.TYPESAFE_API_KEY != '' }}
         run: |
           echo "db=$HAVE_DB" >> "$GITHUB_OUTPUT"
           echo "storage=$HAVE_STORAGE" >> "$GITHUB_OUTPUT"
@@ -215,7 +233,14 @@ jobs:
           # Only a manual run has inputs, so a scheduled night is never a probe.
           probe=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.probe }}" = "true" ]; then probe=true; fi
+          # Or it may compare the probe's model with Jev, which writes nothing
+          # at all: no items, no rates, no pictures, no pull request. It wins
+          # over "probe" when both are ticked, being the one that changes less.
+          compare=false
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.compare_jev }}" = "true" ]; then compare=true; probe=false; fi
           if [ "$probe" = "true" ]; then
+            echo "art=false" >> "$GITHUB_OUTPUT"
+          elif [ "$compare" = "true" ]; then
             echo "art=false" >> "$GITHUB_OUTPUT"
           elif [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
             echo "art=true" >> "$GITHUB_OUTPUT"
@@ -244,7 +269,23 @@ jobs:
           echo "seeds=$HAVE_SEEDS" >> "$GITHUB_OUTPUT"
           # go: the key is here, so something may be spent and a pull request
           # may follow. write / probe: which of the two that something is.
-          if [ "$HAVE_API_KEY" = "true" ]; then
+          # compare: spends, and leaves nothing to commit, so never `go`.
+          if [ "$compare" = "true" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "write=false" >> "$GITHUB_OUTPUT"
+            echo "probe=false" >> "$GITHUB_OUTPUT"
+            if [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_TYPESAFE" = "true" ]; then
+              echo "compare=true" >> "$GITHUB_OUTPUT"
+            else
+              {
+                echo
+                echo '### Nothing compared'
+                echo
+                echo "Comparing with Jev needs \`ANTHROPIC_API_KEY\` (present: $HAVE_API_KEY)"
+                echo "and \`TYPESAFE_API_KEY\` (present: $HAVE_TYPESAFE)."
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          elif [ "$HAVE_API_KEY" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
             if [ "$probe" = "true" ]; then
               echo "write=false" >> "$GITHUB_OUTPUT"
@@ -272,7 +313,7 @@ jobs:
       # queue knows how hard it is. One statement, as the service role, out of
       # hours — never on the path of somebody waiting for five questions.
       - name: install psql
-        if: steps.keys.outputs.db == 'true'
+        if: steps.keys.outputs.db == 'true' && github.event.inputs.compare_jev != 'true'
         # The runner image ships one; the ten-second apt round trip is only for
         # the day it stops doing so.
         run: |
@@ -282,7 +323,7 @@ jobs:
           }
 
       - name: recount how hard each item is
-        if: steps.keys.outputs.db == 'true'
+        if: steps.keys.outputs.db == 'true' && github.event.inputs.compare_jev != 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
@@ -323,6 +364,7 @@ jobs:
         if: steps.keys.outputs.write == 'true' && github.event.inputs.dry_run != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --summary summary.md
 
       # The manual alternative to the step above: the difficulty prior the
@@ -336,7 +378,25 @@ jobs:
         if: steps.keys.outputs.probe == 'true' && github.event.inputs.dry_run != 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: python -m bjt probe --all --summary summary.md
+
+      # The evidence for switching the probe to Jev: the default model and Jev
+      # on the same sample of live questions, a type at a time, under the same
+      # ceilings. No bundle, no SQL, no pull request; the table is this run's
+      # summary. The baseline is pinned to the default whatever the variable
+      # says, so the comparison means the same thing after a switch.
+      - name: compare the difficulty probe with Jev
+        if: steps.keys.outputs.compare == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          BJT_DIFFICULTY_MODEL: ""
+        run: |
+          status=0
+          python -m bjt probe --all --compare jev-latest --summary compare.md || status=$?
+          if [ -f compare.md ]; then cat compare.md >> "$GITHUB_STEP_SUMMARY"; fi
+          exit $status
 
       # Whatever happens after this point — a push refused, a pull request
       # not permitted, the job killed by its own clock — the items that were
