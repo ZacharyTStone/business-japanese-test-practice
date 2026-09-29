@@ -6,10 +6,11 @@
  * Nothing here is written for the list. The words, readings and meanings are
  * the `vocab_notes` each item shipped with, and the sentence is a line of a
  * question — a turn of its conversation, its stem, its document, its correct
- * answer — found by looking for the word. A fill-in-the-blank stem is completed with the correct
- * option, never a wrong one: a distractor is wrong Japanese on purpose, and an
- * example sentence built from one would teach exactly the mistake it exists to
- * catch. A word with no line to point at simply has no sentence.
+ * answer — found by looking for the word. A fill-in-the-blank stem is completed
+ * with the correct option, never a wrong one: a distractor is wrong Japanese on
+ * purpose, and an example sentence built from one would teach exactly the
+ * mistake it exists to catch. A word with no line to point at simply has no
+ * sentence.
  *
  * Furigana comes from the same notes. There is no dictionary in the app, so a
  * sentence's words are annotated only where the bank has a reading for them —
@@ -49,12 +50,12 @@ export type RubySegment = { text: string; ruby?: string };
 const KANJI = /[㐀-鿿豈-﫿々〆ヵヶ]/;
 const BLANK = /[＿_]{2,}|（\s*）|\(\s*\)/;
 
-export function hasKanji(s: string): boolean {
+function hasKanji(s: string): boolean {
   return KANJI.test(s);
 }
 
 /** Katakana folded to hiragana, for comparing a term with its reading and for search. */
-export function toHiragana(s: string): string {
+function toHiragana(s: string): string {
   return s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 }
 
@@ -270,7 +271,7 @@ export function buildWordList(items: WordSourceItem[]): WordEntry[] {
   return out.sort((a, b) => fold(a.reading || a.term).localeCompare(fold(b.reading || b.term), "ja"));
 }
 
-export type WordFilter = { query: string; level: Level | null; section: Section | null };
+type WordFilter = { query: string; level: Level | null; section: Section | null };
 
 export function filterWords(words: WordEntry[], f: WordFilter): WordEntry[] {
   const q = fold(f.query.trim());

@@ -26,8 +26,7 @@ def _source_of(path):
 #: The bundles a person wrote by hand, which are the only ones with a source
 #: file to rebuild from. The nightly job writes its bundles directly — there is
 #: no hand-edited original behind them — so the round-trip test below has
-#: nothing to compare those against, and asserting over them was asserting that
-#: a file which was never meant to exist exists.
+#: nothing to compare those against.
 HAND_WRITTEN = [p for p in COMMITTED if _source_of(p).exists()]
 
 
@@ -127,7 +126,7 @@ def test_every_committed_batch_draws_its_scenes_from_the_bank(path):
     bundle = batch.load(path)
     bank = set(seedtable.load(bundle["item_type"]).scene_bank)
     if not bank:
-        pytest.skip(f"{bundle['item_type']} has no scene bank — its items are read")
+        pytest.skip(f"{bundle['item_type']} has no scene bank")
     scenes = [it["scene_id"] for it in bundle["items"] if it.get("scene_id")]
     assert scenes, "a type with a scene bank should set scene_id on its items"
     assert set(scenes) <= bank, f"not in the bank: {sorted(set(scenes) - bank)}"
@@ -155,8 +154,8 @@ def test_the_library_reuses_its_scenes():
 # ----- the library as a whole ---------------------------------------------
 #
 # check_bundle looks at one bundle and cannot see the others. Three invariants
-# only exist across the shipped library, and all three became breakable the
-# moment a second batch was committed.
+# only exist across the shipped library, and all three can break as soon as
+# there is more than one batch.
 
 def _library():
     """(bundle filename, item) for every committed item, withdrawn or not.
@@ -401,10 +400,10 @@ def test_importbatch_marks_the_cells_used(tmp_path, monkeypatch):
 
 # ----- the spent-cell ledger ---------------------------------------------
 #
-# The ledger used to live only in the gitignored SQLite database, so a fresh
-# clone believed every cell was free and the next batch re-spent cells the
-# committed library had already used. `item_id` hashes (item type, cell), so the
-# duplicate would have replaced the original on publish.
+# The ledger is the committed bundles, not the gitignored SQLite database, so a
+# fresh clone does not believe every cell is free and re-spend cells the library
+# has already used. `item_id` hashes (item type, cell), so the duplicate would
+# replace the original on publish.
 
 def test_spent_cells_are_readable_without_the_local_database():
     """Every cell in a committed bundle counts as spent, from the repo alone."""
@@ -458,9 +457,9 @@ def test_a_damaged_bundle_does_not_take_the_ledger_down(tmp_path, monkeypatch):
 
 def test_a_small_batch_that_always_answers_a_is_caught(bundle):
     """The share rule needs eight items before a 45% lean means anything, so a
-    batch of six with every answer in the same place used to pass. "The answer
-    is always A" is the most exploitable pattern there is, and a new item type's
-    first batch is exactly the size that slipped through."""
+    batch of six with every answer in the same place needs its own rule. "The
+    answer is always A" is the most exploitable pattern there is, and a new
+    item type's first batch is exactly that size."""
     bundle["items"] = bundle["items"][:6]
     for item in bundle["items"]:
         options = item["options"]
@@ -505,8 +504,8 @@ def test_three_positions_is_enough_for_a_small_batch(bundle):
 def test_a_document_item_re_validates_after_bundling():
     """The bundle normalises documents to a list; the validator checks the
     type's own field, which is singular for three of the four. Left
-    untranslated, every committed document item failed its own re-validation
-    with "missing field: document" while being perfectly well formed."""
+    untranslated, every document item would fail its own re-validation with
+    "missing field: document" while being perfectly well formed."""
     from bjt import fixtures
 
     for item_type in ("joukyou_haaku", "shiryou_choudokkai", "sougou_dokkai",
@@ -533,11 +532,10 @@ def test_no_type_lets_you_pass_it_by_option_length(extreme):
     """"Pick the longest option" must not beat guessing, per TYPE.
 
     check_bundle has this test too, but per bundle — and a bundle is two to six
-    items, so a habit that runs through a whole type is invisible to it. 総合読解
-    reached 7 of 10 that way: the correct answer was the fully-specified one and
-    the distractors were terse, so the type could be passed at 70% without
-    reading a word of Japanese. The sweep here is over the library because the
-    library is the thing a learner meets.
+    items, so a habit that runs through a whole type is invisible to it. A
+    fully-specified correct answer among terse distractors, item after item,
+    lets a learner pass the type without reading a word of Japanese. The sweep
+    here is over the library because the library is the thing a learner meets.
     """
     by_type = {}
     gone = withdrawn.ids()
@@ -568,8 +566,8 @@ def _chart_bundle():
 
 
 def test_a_bundle_with_a_chart_ships():
-    """Nothing committed carries a chart yet; the first one must pass the same
-    checks as everything else, the numeral rule and the length band included."""
+    """A chart must pass the same checks as everything else, the numeral rule
+    and the length band included."""
     report = batch.check_bundle(_chart_bundle())
     assert report.ok, [(c.name, c.detail) for c in report.failed]
     assert report.warned == [], [(c.name, c.detail) for c in report.warned]

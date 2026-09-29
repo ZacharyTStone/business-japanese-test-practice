@@ -22,8 +22,8 @@
 #
 # **Why a pull request, in a repository whose rule is "work on main".** That rule
 # is about people writing code with no gate in front of them. This is a machine
-# writing exam content, and the roadmap is explicit that it must be drafts only,
-# with a reviewer publishing (docs/content-media-and-auth-roadmap.md). A branch
+# writing exam content, which must be drafts only, with a reviewer publishing
+# them. A branch
 # that exists to be read before it lands is the gate, not a way around one.
 # Nothing here touches the database: it writes bundles and the SQL for them, and
 # applying that SQL stays a deliberate act somebody takes.

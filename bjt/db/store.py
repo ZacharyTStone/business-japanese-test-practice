@@ -1,8 +1,8 @@
 """SQLite persistence.
 
-Everything the brief asks to keep lives here from day one: generated items, my
-answers, and every fidelity metric — so per-item-type accuracy history is
-available later and generation can weight toward weak areas.
+Everything the brief asks to keep: generated items, answers, and every fidelity
+metric, so per-item-type accuracy history is available and generation can
+weight toward weak areas.
 
 Single-user, local, synchronous. sqlite3 is stdlib, so no dependency.
 """
@@ -82,9 +82,9 @@ CREATE TABLE IF NOT EXISTS calibration_runs (
 """
 
 
-#: Columns added after the first release. SQLite has no "ADD COLUMN IF NOT
-#: EXISTS", so we diff against PRAGMA table_info and add what is missing — a
-#: database from before 発言聴解 existed keeps working.
+#: Columns added to an existing table. SQLite has no "ADD COLUMN IF NOT
+#: EXISTS", so we diff against PRAGMA table_info and add what is missing, and an
+#: older local database keeps working.
 _MIGRATIONS = [
     ("items", "seed_cell_id", "TEXT"),
     ("items", "extra_json", "TEXT"),

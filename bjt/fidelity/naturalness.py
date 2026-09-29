@@ -1,13 +1,12 @@
 """Japanese nobody says, caught without a model — and the prompt that asks for
 the other kind.
 
-A review of the whole bank on 2026-09-26 withdrew 39 of its 146 questions
-(`batches/withdrawn.txt`). Almost none of them were wrong in the sense the
-gates look for. They were unnatural: a line a native speaker would never
-produce, in an item that was otherwise answerable, un-leaky and correctly keyed.
-The commonest single cause was the over-polite distractor. Asked for an option
-that is wrong "by being too polite", a model does not reach for the wording a
-real person over-uses — it invents a stack nobody says
+The gates catch an item that is ambiguous, leaky or mis-keyed. They do not
+catch one that is unnatural: a line a native speaker would never produce, in an
+item that is otherwise answerable, un-leaky and correctly keyed. The commonest
+single cause is the over-polite distractor. Asked for an option that is wrong
+"by being too polite", a model does not reach for the wording a real person
+over-uses — it invents a stack nobody says
 (「お借りさせていただかせていただいてもよろしいでしょうか」), and a learner who
 hears one learns only that the silly option is the wrong one.
 
@@ -33,12 +32,11 @@ from .. import schemas
 from ..render import document
 from ..tts import plan as tts_plan
 
-#: Keigo no speaker produces. Every pattern here was found in a committed
-#: over-polite distractor and is the reason that item was withdrawn: させていただく
-#: stacked on itself, できかねる given a させていただく, 申す given one, and the
-#: humble いただく made honorific. Real over-politeness sounds like
-#: 「おっしゃられる」 or 「お召し上がりになられる」 — one common 二重敬語 — and
-#: none of these patterns touches it.
+#: Keigo no speaker produces. Every pattern here is taken from a real
+#: over-polite distractor: させていただく stacked on itself, できかねる given a
+#: させていただく, 申す given one, and the humble いただく made honorific. Real
+#: over-politeness sounds like 「おっしゃられる」 or 「お召し上がりになられる」 — one
+#: common 二重敬語 — and none of these patterns touches it.
 INVENTED_KEIGO = re.compile(
     r"いただかせていただ"   # お借りさせていただかせていただく
     r"|させていただかせ"    # the same stack, caught from its other end

@@ -304,18 +304,15 @@ def test_the_openai_request_carries_the_direction_and_asks_for_wav(monkeypatch):
     assert sent["body"]["input"] == "だいたい案です"
     assert providers.HOUSE_STYLE in sent["body"]["instructions"]
     assert sent["headers"]["Authorization"] == "Bearer k"
-    # No rate multiplier. A `speed` of 1.1 shipped on 2026-09-19 and came back
-    # out the same day: it is a time-stretch of finished audio rather than a
-    # person speaking faster, and the owner heard it. Pace is asked for in the
-    # house style, in words, or not at all.
+    # No rate multiplier: `speed` is a time-stretch of finished audio rather
+    # than a person speaking faster, and it can be heard. Pace is asked for in
+    # the house style, in words, or not at all.
     assert "speed" not in sent["body"]
 
 
 def test_the_direction_asks_for_a_plain_delivery_not_a_performance():
-    """The regression this guards is audible, and its cause was a wish list.
-
-    Asking an instructable model for reductions and a rhythm that varies gets a
-    performance: swallowed syllables, and a theatrical beat before the phrase
+    """Asking an instructable model for reductions and a rhythm that varies gets
+    a performance: swallowed syllables, and a theatrical beat before the phrase
     the question turns on — which is a hint as well as a distraction. The
     direction asks for ordinary business pace and stops.
     """
@@ -649,12 +646,10 @@ def test_naming_a_clip_for_re_making_overrides_a_copy_on_this_machine(tmp_path):
 
 
 def test_the_clips_named_for_re_making_are_the_ones_the_bad_settings_made():
-    """The committed list is the 24 clips of the 2026-09-19 pace regression.
-
-    A list of ids is only reviewable if something checks it still refers to
-    clips the library actually asks for. Every id here must appear in a
-    committed bundle's manifest — otherwise the file is naming nothing and the
-    re-make would silently do nothing.
+    """A list of ids is only reviewable if something checks it still refers to
+    clips the library actually asks for. Every id in the committed list must
+    appear in a committed bundle's manifest — otherwise the file is naming
+    nothing and the re-make would silently do nothing.
     """
     import glob
     import json as jsonmod

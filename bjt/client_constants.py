@@ -2,11 +2,9 @@
 
 Some facts live in Python and are needed in the app: every distractor role a
 question can carry (`bjt/fidelity/roles.py`), and the Japanese name of every
-seed-table tag (`seedtable/*.json`). Copying them by hand is how the app came to
-show 17 of the 34 roles as "この場面に合わない", and a progress screen full of
-tag ids like `phone_absence`.
-
-So they are generated instead:
+seed-table tag (`seedtable/*.json`). Copied by hand, a role the app does not
+know falls through to a generic "この場面に合わない", and a tag shows on the
+progress screen as its id (`phone_absence`). So they are generated:
 
     python -m bjt.client_constants          # rewrite client/src/lib/generated.ts
     python -m bjt.client_constants --check  # exit 1 if it is out of date

@@ -6,9 +6,8 @@ what comes off an office printer. Japanese business documents set their dates,
 times, quantities and money in Arabic digits; kanji numerals belong to vertical
 prose and to the *names* of things (第一会議室, 第三回, 一覧). A 資料 that spells
 its numbers out reads as a textbook exercise rather than as paper somebody was
-handed, which is the one thing this library is trying not to be. Every document
-in the bank was written that way until 2026-09-22 — 41 of them, not one Arabic
-digit between them — because nothing said otherwise and nothing checked.
+handed, which is the one thing this library is trying not to be. A model left
+to itself spells them out.
 
 So the rule lives here once and is used three times: `document_schema()` quotes
 it to the generator, `to_arabic` applies it to a document on its way into a
@@ -43,7 +42,7 @@ stem, the options and the dialogue; nothing synthesises a document (`TYPE_AUDIO`
 has no entry that could). Rewriting a number the narrator reads would change
 that clip's text, and a live clip is never re-made. A document is also the only
 part of an item that is printed *to look like something*, so it is the only
-place the problem was.
+place the problem arises.
 """
 from __future__ import annotations
 
@@ -288,9 +287,9 @@ def mixed_notation(text: str) -> list[str]:
     `to_arabic_text` only moves a number a counter follows, which is what keeps
     it off 一覧 and 第一会議室. The price is that it cannot see a number nothing
     follows: 「1万8000円×十二の21万6000円」 and 「三百から二百を引いて100部」 both
-    survived it, and both are worse than either notation alone — the learner is
-    converting between two systems inside one sentence, beside a table that
-    uses only one of them.
+    pass through untouched, and both are worse than either notation alone —
+    the learner is converting between two systems inside one sentence, beside a
+    table that uses only one of them.
 
     Catching those by widening the converter would mean rewriting every numeral
     kanji whatever follows it, and 「二、三日」 and 「一覧」 are why that is not

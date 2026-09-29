@@ -68,8 +68,8 @@ def test_a_block_missing_its_content_is_rejected():
 
 
 def test_blank_text_blocks_are_pruned_and_the_rest_validates():
-    """The first real night lost a shelf to 'block 3 (callout) is missing
-    text' three attempts running. A blank heading says nothing; drop it."""
+    """A blank heading or callout says nothing, so it is dropped rather than
+    failing the draft as 'missing text' on every attempt."""
     doc = _email(blocks=[
         {"type": "heading", "text": "  "},
         {"type": "paragraph", "text": "本文です。"},

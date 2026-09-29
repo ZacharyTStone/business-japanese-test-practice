@@ -282,12 +282,8 @@ EXAM_QUESTIONS: dict[str, int] = {
     "sougou_dokkai": 10,
 }
 
-#: Types whose stimulus is a picture of their own: an item is not served until
-#: its picture is drawn and approved (public.item_types.needs_picture).
-PICTURE_TYPES: tuple[str, ...] = ("gazou_haaku",)
-
 #: The reading types: no audio, no picture, the cheapest item there is to
-#: ship, and the ones the owner asked to see written every night (2026-09-19).
+#: ship, and the ones written on every night's run.
 READING_TYPES: tuple[str, ...] = tuple(t for t, sec in SECTIONS.items() if sec == "dokkai")
 
 #: Which extra fields hold documents, per item type. Used by validation, by the
@@ -431,10 +427,8 @@ def validate_item(item_type: str, item: dict) -> list[str]:
 
 
 #: A conversation with two turns is not a conversation, and one with twelve is a
-#: memory test rather than a listening test. Both ends are enforced.
-# What the model is told (the dialogue schema's description above) and what is
-# accepted are the same bounds. The validator used to allow ten while the model
-# was asked for eight; the longest committed conversation is six turns.
+#: memory test rather than a listening test. Both ends are enforced, and they
+#: are the bounds the model is told (the dialogue schema's description above).
 DIALOGUE_MIN_TURNS, DIALOGUE_MAX_TURNS = 3, 8
 
 #: At most this many documents per item. Two is already a lot to hold on a

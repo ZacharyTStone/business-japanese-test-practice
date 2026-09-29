@@ -1,9 +1,8 @@
 """The shape of one Messages request, per model family.
 
 No API call is made: `request_params` is the pure function `_structured` hands
-to the SDK, and the point of testing it is the first real night, when every
-proofread and every difficulty probe failed because the cheap model was asked
-in the expensive model's dialect.
+to the SDK. A cheap model asked in the expensive model's dialect refuses the
+request, and every proofread and every difficulty probe fails with it.
 """
 from bjt import llm
 

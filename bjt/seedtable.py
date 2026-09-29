@@ -8,9 +8,10 @@ handed one cell per item. A run of ten items is ten different cells by
 construction, not by luck.
 
 The table is our own design, not licensed material, so unlike ``seeds/`` it is
-committed. Each cell also carries the reusable scene ids for its setting: images
-are drawn from a small shared bank (one picture per item is not affordable and
-not necessary), so the setting decides which bank entries are legal.
+committed. Each cell also carries the reusable scene ids for its setting: the
+listening types share a small bank of pictures, so the setting decides which
+bank entries are legal. 画像把握 is the exception — its picture is the
+question, so each of its items has one of its own (bjt/scenes.py).
 
 A cell is valid when all three constraints hold:
   * the relation is one the setting can plausibly contain (``setting_relations``)
@@ -94,8 +95,7 @@ class SeedTable:
                     continue
                 # A function may name the settings it makes sense in (a
                 # whiteboard is not at the reception counter). Absent, any
-                # setting whose channel fits — which is how the older tables
-                # are written.
+                # setting whose channel fits.
                 if f.get("settings") and s_id not in f["settings"]:
                     continue
                 for r_id in f.get("relations", []):
@@ -130,18 +130,6 @@ class SeedTable:
             for sc in s.get("scenes", []):
                 if sc not in seen:
                     seen.append(sc)
-        return seen
-
-    @property
-    def template_bank(self) -> list[str]:
-        """Every document template this table can ask for. The reading types'
-        counterpart of `scene_bank`: the set a batch's documents must come
-        from, known before any document is written."""
-        seen: list[str] = []
-        for s in self._settings.values():
-            for t in s.get("templates", []):
-                if t not in seen:
-                    seen.append(t)
         return seen
 
     @property

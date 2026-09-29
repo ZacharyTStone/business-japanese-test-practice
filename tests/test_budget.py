@@ -1,7 +1,7 @@
 """The guards that keep a bad night from being an expensive one.
 
-Three of them, each a rule the first real night broke: a shelf that discards
-three drafts in a row is abandoned rather than paid for three more times; an
+Three of them: a shelf that discards three drafts in a row is abandoned
+rather than paid for three more times; an
 account that cannot pay ends the run rather than failing every remaining
 shelf the same way; and the generator's prompt is sent in the shape that
 caches, at the effort the bill can afford.
@@ -137,8 +137,8 @@ def test_the_defaults_are_the_cheaper_ones():
 
 
 def test_a_discard_is_explained_to_the_next_draft(store, monkeypatch, quiet, tmp_path):
-    """The second draft for a shelf is told why the first was rejected. It
-    used to be written blind, and it failed the same way."""
+    """The second draft for a shelf is told why the first was rejected, so it
+    is not written blind and does not fail the same way."""
     prompts = []
 
     def fake(system, user, schema, model=None):

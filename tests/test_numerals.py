@@ -264,12 +264,6 @@ def test_a_type_with_no_document_is_out_of_scope():
     assert item["options"][0]["text"] == "十時から"
 
 
-def test_spoken_options_are_never_rewritten():
-    item = _item("bamen_haaku", document=None)
-    del item["document"]
-    assert batch.normalise_numerals(item) == 0
-
-
 def test_normalising_twice_moves_nothing_the_second_time():
     item = _item("joukyou_haaku")
     assert batch.normalise_numerals(item) > 0
@@ -295,5 +289,5 @@ def test_every_committed_bundle_reads_like_print(path):
 def test_no_committed_document_spells_a_number_out(path):
     bundle = json.loads(path.read_text(encoding="utf-8"))
     for item in bundle.get("items") or []:
-        for doc in schemas.documents_of(batch._as_generator_shape(item)):
+        for doc in schemas.documents_of(batch.as_generator_shape(item)):
             assert numerals.document_faults(doc) == [], f"{item['id']}: {doc.get('title')}"

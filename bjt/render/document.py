@@ -13,7 +13,7 @@ content supplies only the original business writing that goes in it.
 A document is a template id, a version, some metadata (the From/To/Subject of an
 email, the date and attendees of a set of minutes) and an ordered list of
 content blocks. Blocks are deliberately few — nine of them cover every template
-in the roadmap — because every block type is a thing the renderer, the phone
+in `templates.py` — because every block type is a thing the renderer, the phone
 layout, and the accessibility pass all have to handle.
 """
 from __future__ import annotations
@@ -26,10 +26,10 @@ from . import chart
 #:
 #: Kept small on purpose. A block type is not free: each one has to render, wrap
 #: at phone width, survive large text, and mean something to a screen reader.
-#: `chart` is the one that earned its place late (2026-09-27): 資料聴読解 asks
-#: for a figure read off a graph as well as off a table, and a table is not a
-#: graph — the skill is reading a trend off bars. It is drawn from numbers and
-#: written out as text for every model that reads the document (see chart.py).
+#: `chart` earns its place because 資料聴読解 asks for a figure read off a graph
+#: as well as off a table, and a table is not a graph — the skill is reading a
+#: trend off bars. It is drawn from numbers and written out as text for every
+#: model that reads the document (see chart.py).
 BLOCK_TYPES = [
     "heading",        # a section heading inside the document
     "paragraph",      # one run of prose
@@ -245,12 +245,11 @@ def prune_empty_blocks(doc: Any) -> int:
     """Drop text blocks the model left blank. Returns how many were dropped.
 
     The generator sends a heading, a callout or a paragraph with no text often
-    enough that it cost a whole shelf on the first real night: three attempts,
-    each rejected for "block 3 (callout) is missing text", and the retry prompt
-    did not cure it. A blank heading carries no information, so removing it
-    loses none; a document that was nothing but blanks still fails validation,
-    as it should. Blocks of every other type are left for the validator, which
-    knows what a table without rows means.
+    enough, and a retry prompt cures it rarely enough, that rejecting the draft
+    for it would cost whole shelves. A blank heading carries no information, so
+    removing it loses none; a document that was nothing but blanks still fails
+    validation, as it should. Blocks of every other type are left for the
+    validator, which knows what a table without rows means.
     """
     if not isinstance(doc, dict) or not isinstance(doc.get("blocks"), list):
         return 0

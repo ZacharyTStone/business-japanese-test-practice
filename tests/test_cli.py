@@ -125,7 +125,7 @@ def test_tester_max_goal_sizes_one_accounts_day(capsys):
     assert cli.main(["tester", "z@example.com", "--max-goal", "500"]) == 0
     assert "'z@example.com', '', false, false, 500)" in capsys.readouterr().out
 
-    # The only bound left is the smallint the column is declared as, so the CLI
+    # The only bound is the smallint the column is declared as, so the CLI
     # refuses only SQL the database itself would reject.
     assert cli.main(["tester", "z@example.com", "--max-goal", "32767"]) == 0
     assert cli.main(["tester", "z@example.com", "--max-goal", "32768"]) == 2

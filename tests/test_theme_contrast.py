@@ -1,11 +1,9 @@
 """The app's colour tokens, held to a contrast ratio a person can read.
 
 The hero on 今日 and on the result screen puts three lines on a violet fill: the
-countdown, the headline, and the streak. Two of those are 13px, and they were
-`#DBD5FF` on `#6C5CE7` — 3.46:1, well under the 4.5:1 that small text needs, and
-reported from a phone as simply unreadable. Nothing caught it, because the colour
-that was wrong looked deliberate: it is called `onAccentMuted`, and muted is what
-it was for.
+countdown, the headline, and the streak. Two of those are 13px, which needs
+4.5:1. A colour too faint for that is easy to miss in review, because it looks
+deliberate: it is called `onAccentMuted`, and muted is what it is for.
 
 So the arithmetic is a check rather than a note in a review. It reads the tokens
 out of `client/src/ui/theme.ts` — the same file the app imports, so a value that
@@ -14,8 +12,7 @@ drifts drifts here too — and asserts the pairings the app actually draws.
 What this cannot see is *which* fill a screen chooses: that rule ("an accent fill
 that carries text is `accentDeep` or darker") is stated at the top of theme.ts
 and kept by a reader. What it can see is that the fills declared for text, and
-the text colours declared for them, are legible together — which is the half that
-was wrong.
+the text colours declared for them, are legible together.
 
 One pairing is deliberately not asserted here: `badge`, whose five tints are
 2.6:1 to 4.2:1 against their own backgrounds. They are fine as `IconBadge`, where
@@ -82,13 +79,11 @@ def test_text_on_an_accent_fill_is_readable(text, fill):
 def test_the_hero_card_carries_its_own_fill():
     """The contrast above is only true if the violet is actually there.
 
-    The hero draws a gradient over itself with an SVG paint server, and for a
-    while that was the *only* thing painting it: `gradientCard` set no
-    background at all. A browser that declines to paint the paint server — the
-    frame before it rasterises, a composited layer it does not repaint — left
-    `onAccent` white and `onAccentMuted` pale violet on the page's own
-    near-white, which is a hero nobody can read. Reported from a phone and
-    reproduced by deleting the `<svg>` from the built page (2026-09-20).
+    The hero draws a gradient over itself with an SVG paint server. A browser
+    that declines to paint the paint server — the frame before it rasterises, a
+    composited layer it does not repaint — would leave `onAccent` white and
+    `onAccentMuted` pale violet on the page's own near-white, which is a hero
+    nobody can read.
 
     So the fill is a property of the card, and the check is that it is one of
     the fills the test above approves rather than any violet at all.
@@ -116,13 +111,11 @@ def test_a_state_that_lasts_is_drawn_rather_than_dimmed():
     """A control that cannot be pressed, or an option no longer in play, is
     drawn as one: a flat fill, a grey label, no shadow.
 
-    Fading it to a fraction was doing three things at once, and getting two of
-    them wrong. It made every colour underneath lie about its own contrast, so
-    the ratios this file checks stopped describing the screen. It made two
-    different states — off, and not-yet-loaded — look identical. And on a card
-    whose fill was itself only half there it left text on nothing at all. The
-    owner asked for state to be a change of UI rather than a change of opacity
-    (2026-09-20).
+    Fading it to a fraction gets three things wrong at once. It makes every
+    colour underneath lie about its own contrast, so the ratios this file checks
+    stop describing the screen. It makes two different states — off, and
+    not-yet-loaded — look identical. And on a card whose fill is itself only
+    half there it leaves text on nothing at all.
     """
     offences = []
     for path in sorted((pathlib.Path(__file__).resolve().parents[1] / "client").rglob("*.tsx")):

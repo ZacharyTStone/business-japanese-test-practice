@@ -1,334 +1,123 @@
 # Blockers
 
-Work that is finished up to the point where it needs something this repository
-cannot provide: an API key, a vendor account, a dashboard, or a person to listen
-to something and say whether it sounds right.
-
-Each entry says what exists, what the next step is, and exactly what unblocks it.
-None of them is waiting on code.
+What stands between this repository and an app open to more than its testers.
+Each entry needs something the repository cannot supply for itself — licensed
+material, an account, a dashboard setting, or a person — and says where it
+stands and what the next step is. Work that needs only code is not listed; the
+offline checks are in the [README](README.md#quick-start).
 
 ---
 
-## 1. The fidelity mechanisms have never run against a model
+## 1. Most of the bank has not been through the gate, or measured
 
-**What exists.** The answerability gate, the discriminator loop and `calibrate`
-are all implemented and unit-tested with the model call faked. `bjt quality`
-prints the report. `bjt selftest` validates all nine item types offline.
+**Where it stands.** Most live questions were written by hand and imported with
+`bjt importbatch`, which checks their shape and the batch rules but skips the
+proofreader and the answerability gate. None has a regate verdict yet (there is
+no `batches/regated.txt`), and almost none carries a difficulty signal, so the
+queue's difficulty pitch sorts nothing for them (`bjt plan` prints the count).
 
-**What is blocked.** Every one of them needs `ANTHROPIC_API_KEY`, and the
-discriminator and `calibrate` additionally need `seeds/official/<type>.json` —
-real official sample items, which are licensed material and deliberately not in
-this repository. `bjt quality` currently reports empty sections for mechanisms
-2, 3 and 5 and is telling the truth.
-
-**What unblocks it.** An API key in `.env`, and `cp -r seeds.example seeds`
-followed by replacing the placeholders with real content. Then:
+**Next step.** With `ANTHROPIC_API_KEY` set:
 
 ```bash
-bjt batch --type hatsugen_choukai --level J2 -n 10   # exercises the gate
-bjt discriminate --type hatsugen_choukai
-bjt calibrate --type hatsugen_choukai
-bjt quality
-```
-
-**Why it matters more than it looks.** These are the only mechanisms that can
-tell us the generated items are actually close to the exam. Until they run, the
-claim rests on the hand-written reference batches, which were written by the
-same judgement that would be grading them.
-
-**Two catch-up passes are ready and waiting on the same key** (2026-09-27):
-
-```bash
-bjt probe --all --dry-run    # 105 live items with no difficulty: 525 calls to the small model
-bjt probe --all              # the practice queue's difficulty term sorts nothing until this runs
-bjt regate --all --dry-run   # 107 live items never proofread or gated: at most 749 calls
-bjt regate --all             # verdicts into batches/regated.txt; add --withdraw to propose failures
+bjt regate --all --dry-run   # what would be checked, and how many calls
+bjt regate --all             # verdicts into batches/regated.txt; --withdraw proposes failures
+bjt probe --all              # or the nightly workflow's manual "probe" input
 ```
 
 Each stops at the run ceilings and resumes where it stopped, so the whole bank
-is two or three runs of each; the nightly workflow's manual "probe" input runs
-the first into a pull request. `bjt calibrate --attempts-csv` compares your
-official-sample accuracy with your first attempts in the app; it needs the
-official items in `seeds/official/` and an export the owner runs in the
-Supabase SQL editor (the query is in `bjt calibrate --help`).
+is a few runs of each. Read the proposed withdrawals before merging them.
 
----
+## 2. Comparing with the official samples needs licensed material
 
-## 2. The bank has a voice and no key to speak with
+**Where it stands.** The discriminator loop and `bjt calibrate` are implemented
+and unit-tested with the model faked, but both need `seeds/official/<type>.json`
+— real official sample items, which are licensed and deliberately not in this
+repository. Without a licensed `seeds/` the nightly job takes its few-shot
+examples from the reference batches, and with no kanji tiers the vocabulary gate
+is permissive. These are the only mechanisms that can say the generated items
+are close to the exam, rather than close to the judgement that wrote the
+reference batches.
 
-**What exists.** `bjt synth` runs end to end: it plans clips from a checked
-bundle, synthesises the missing ones, applies the channel treatment, measures
-durations, writes the files, uploads them (`--upload`) and emits the SQL that
-points `audio_clips` at them. **The voice is OpenAI** — the owner chose it
-(2026-09-18) and `bjt/tts/providers.py` records the decision as the default —
-an instructable speech model given one house direction: native Tokyo office
-Japanese at a working pace, keigo said fluently rather than read off a list,
-no acting, no announcer voice. Seven roles are cast to seven of its voices. A
-pronunciation dictionary covers the business readings a model gets wrong in
-ways that would teach a learner something false. The **deploy database**
-workflow synthesises whatever the published bank still lacks, uploads it and
-points the rows at it, and never touches a clip that is already live. The app
-plays the narration, the conversation, and — for 発言聴解 — the four
-utterances themselves, shown as letters until the answer is in, as on the exam.
-Gemini and Google Cloud adapters remain for comparison only.
+**Next step.** `cp -r seeds.example seeds`, replace the placeholders with the
+real material (and give the nightly job the same as the `SEEDS_TAR_B64` secret),
+then:
 
-**What is blocked.** One key, and one listen.
+```bash
+bjt discriminate --type hatsugen_choukai
+bjt calibrate --type hatsugen_choukai --attempts-csv attempts.csv   # the export SQL is in --help
+bjt quality
+```
 
-**What unblocks it.**
+## 3. Twenty-four clips have the wrong delivery
 
-1. `OPENAI_API_KEY` in `.env` — the same key that draws the scene artwork.
-2. Five minutes with headphones, before the library is synthesised:
+**Where it stands.** `batches/remake-20260919-pace.txt` names 24 live clips
+recorded with a delivery that has since been reverted. A live clip is never
+re-made unless it is named, so they do not sound like the rest of the library.
+The file goes once they are re-made; while it is in the tree, the job is
+outstanding.
 
-   ```bash
-   bjt audition --voices    # the cast, plus every voice saying one line
-   open media/audition/index.html
-   ```
+**Next step.** Run **deploy database** by hand with `remake_list` set to that
+file, check the run summary, then delete the file.
 
-   Judge names, dates, numbers, the dictionary readings (代替・早急), whether
-   the keigo sounds like a person or a reading, and the telephone row. If a
-   role sounds accented, recast it in `OpenAIProvider.VOICE_IDS` now — a live
-   clip is never re-made, so a recast later is a library that sounds different
-   from one item to the next.
-3. `OPENAI_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as
-   repository secrets, then run **deploy database**: the run summary reports
-   how many clips are live.
+## 4. Sign-in is email and password, for listed testers only
 
-Until then `--provider silent` exercises the whole pipeline with valid, silent
-clips. They are pathed `silent/` so they can never be mistaken for real ones,
-and `--upload` refuses them, because a learner would hear nothing where the app
-now shows the text.
+**Where it stands.** The app opens only to an address in `public.testers`, and
+sign-up itself is refused for any other. The client has no Google sign-in and
+no anonymous path; the schema supports an anonymous-first sign-in that links an
+identity later, but nothing uses it yet.
 
----
+**Next step, when the app opens.** One migration that drops the tester check
+from the row-level policies and the sign-up trigger, with the anonymous-first
+client path in front of the door. For Google: an OAuth client in Google Cloud
+Console with the redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`,
+its id and secret in Supabase → Authentication → Providers → Google, the
+`bizjadrill` scheme allowed under URL Configuration, and a button beside the
+email form that calls `signInWithOAuth({ provider: "google" })`.
 
-## 3. No scene artwork exists
+After any change to sign-in, on the deployed URL:
 
-**What exists.** `bjt scenes` surveys the sixteen-scene bank across all nine
-types and prints it most-wanted first. `bjt scenes --generate` draws whichever
-scenes have no picture: an image model drafts from the brief, a judge model
-looks at each draft and checks it against the brief's rules one by one (readable
-text, a logo, a likeness, a picture that gives the scenario away, malformed
-anatomy, the wrong setting), and only a draft that breaks none is kept under
-the scene's name. Rejected drafts are kept in `media/scenes/rejected/` with the
-reason. `--upload` puts approved files in the `scenes` bucket and `--sql`
-points the database at them; the nightly job runs all of it and, because it
-lists the bucket first, draws each scene once and then finds nothing to do.
-
-**What is blocked.** Two keys. Nothing else: the review that used to need a
-person is done by the judge model, on the owner's instruction (2026-09-17).
-
-**What unblocks it.** Set these as repository secrets (Settings → Secrets and
-variables → Actions), and the next nightly run draws the bank:
-
-| Secret | What it is |
-|---|---|
-| `OPENAI_API_KEY` | the image model |
-| `ANTHROPIC_API_KEY` | the reviewer (the same key entry 1 needs) |
-| `SUPABASE_URL` | the project URL, so approved files reach the `scenes` bucket |
-| `SUPABASE_SERVICE_ROLE_KEY` | the key that may write to that bucket. Never in `client/`, never in a commit. |
-| `SUPABASE_DB_URL` | already listed under entry 8; with it the job also applies `batches/scenes.sql` |
-
-With only the first two, the job draws and reviews, and leaves the pictures in
-the run's `scene-artwork` artifact for somebody to upload. The same command
-runs on a laptop with the same names in `.env`. `bjt scenes --generate
-<scene_id> --force` redraws one you do not like.
-
-**The review gate, which is the part that will be tempting to skip.** It is now
-a model rather than a person, and the rules are the same: no readable text, no
-logo, no recognisable likeness, and nothing that fixes the situation more
-tightly than the setting does. That last one is not an aesthetic preference:
-the bank is shared, so a picture specific enough to give the scenario away
-would make the listening optional. Every rejection is kept with its reason so
-the gate can be audited afterwards, and a scene that fails every attempt ships
-without a picture, which the app allows.
-
----
-
-## 4. Sign-in has been tested by one person on one project
-
-**What exists.** The app opens only to an email address on the tester list.
-The client shows an email-and-password screen (sign in, or create an
-account), then asks one RPC (`is_tester()`) whether the email is allowed; the
-database enforces the same check in every row-level policy, so the client is
-not what keeps anybody out. Since 2026-09-21 the list also decides who may
-have an account in the first place: a `before insert` trigger on `auth.users`
-refuses a sign-up from the auth service for an address the list does not
-already name, so an empty list means the project accepts nobody at all.
-Google sign-in is not wired up: it needs an OAuth client in Google Cloud
-Console and a consent screen, which is more than a one-person test needs.
-When it comes back it is a second button on the same screen, and the tester
-list matches on the same email.
-
-**What is blocked.** Only the dashboard settings below, and a deployed URL to
-sign in from.
-
-**What unblocks it.**
-
-1. In Supabase → Authentication → Sign In / Providers → **Email**: enabled
-   (it is by default). Turn **Confirm email** off while testing, or every new
-   account waits on a confirmation link, and the built-in mailer only sends to
-   the project's own team members.
-2. Leave anonymous sign-ins **off**; the client no longer uses them.
-3. In Supabase → Authentication → URL Configuration, set the Site URL to
-   where the app is served.
-4. Set only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in
-   the Cloudflare build variables. **Never a service-role key.**
-5. Put the email on the tester list **first**: the **deploy database**
-   workflow's `tester_email` field, or `bjt tester you@example.com` applied
-   with psql. This is now the step that has to come before the account, not
-   after it -- sign-up itself is refused for an address the list does not name.
-
-Then the acceptance checks, which are the point:
-
-- Fresh browser: the sign-in screen, and nothing behind it without signing in.
-- Try to create an account with an email that is **not** on the list: sign-up
-  itself fails, and no `auth.users` row and no profile are left behind.
-- Add that same address to the list, then create the account: it works. Take
-  it off the list again and the "not open yet" screen names it, because the
-  policies are a separate lock from the trigger -- the network tab shows every
-  query returning nothing.
-- Sign in with the listed email: one profile is created; answering items
-  writes attempts and moves the weakness metrics.
-- Refresh, and open on a second device: the same history is there.
-- Sign out: the sign-in screen again, and no data readable.
+- A fresh browser shows the sign-in screen, and nothing behind it.
+- An unlisted address cannot create an account, and leaves no `auth.users` or
+  profile row behind.
+- A listed account taken off the list sees the "not open yet" screen, and every
+  query returns nothing.
+- A listed account's history is the same after a refresh and on a second device.
+- Signing out returns to the sign-in screen, with nothing readable.
 - A wrong password and a missing build variable each fail in a way the app
   explains.
 
-**Google, when wanted.** Create an OAuth client in Google Cloud Console with
-the redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`, paste
-its id and secret into Supabase → Authentication → Providers → Google, allow
-the `bizjadrill` scheme under URL Configuration, and add a button that calls
-`signInWithOAuth({ provider: "google" })` beside the email form.
+## 5. No store builds
+
+**Where it stands.** The web build deploys to Cloudflare Workers as static
+assets. `app.json` carries bundle identifiers without "BJT" in them (a
+registered trademark: it may describe the exam format in prose, never name the
+product). iOS and Android builds have never been made; there is no `eas.json`.
+
+**Next step.** Apple Developer and Google Play accounts, then an EAS build per
+platform. Before either submission, work that is not blocked and not done: a
+privacy policy (the app collects an email address and answers), a store
+description that describes the exam format without using the trademark as a
+name, screenshots, and a line on the start screen (`client/src/ui/welcome.tsx`)
+telling listeners that the voices are synthesised, which OpenAI's usage
+policies ask of an app that plays its speech to people.
+
+## 6. Nightly pull requests need a repository setting
+
+**Where it stands.** The nightly job writes its items and pushes them on a
+branch (`content/nightly-<date>-<run>`). Opening the pull request needs
+Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to
+create and approve pull requests"; when it is off, the run summary says so and
+links the branch.
+
+**Next step.** Tick the setting if a run summary reports it, and read each
+night's pull request item by item before merging it — merging deploys.
 
 ---
 
-## 5. No production Supabase project
+## Not a blocker: ads
 
-**What exists.** Every migration, every RLS policy, the selection RPC, the
-storage buckets, the entitlement functions and the tester gate — all of it
-proved against a throwaway Postgres by `supabase/test/run.sh`, including the
-assertion that one user cannot read another's history, that a client cannot
-grant itself the paid unlock, and that nobody off the tester list reads a row.
-
-**What is blocked.** Applying it to a real project, and publishing the
-committed items into it.
-
-**What unblocks it.** A Supabase project and its `SUPABASE_DB_URL` secret.
-Then **deploy database** runs by itself after every green `checks` run on
-`main`, and from the Actions tab whenever you like: it applies the migrations
-with the Supabase CLI, publishes every `batches/*.sql`, makes and uploads the
-audio the bank still lacks (entry 2), and — by hand only — adds the email
-typed into the form to the tester list. Every step is idempotent, so a merged
-nightly pull request is live a few minutes later with nothing to press. No
-laptop needed. The same three commands by hand:
-
-```bash
-supabase db push --db-url "$SUPABASE_DB_URL"
-for f in batches/*.sql; do psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"; done
-python -m bjt tester you@gmail.com | psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f -
-```
-
----
-
-## 6. Nothing has been submitted to a store
-
-**What exists.** The web build deploys to Cloudflare Workers as a static export.
-`app.json` carries the bundle identifiers, which deliberately do not contain
-"BJT" — it is a registered trademark, and it may describe the exam format in
-prose but not appear in a product name, slug or identifier.
-
-**What is blocked.** iOS and Android builds have never been made, let alone
-submitted.
-
-**What unblocks it.** Apple Developer and Google Play accounts, then an EAS build
-per platform. Before either submission there is work that is not blocked and has
-not been done: a privacy policy (the app collects answers and, optionally, a
-Google identity), a store description that describes the exam format without
-using the trademark as a name, and screenshots.
-
----
-
-## 7. No ad SDK, and that is on purpose
-
-`AdSlot` renders only in development. Its placement type has exactly two members,
-so putting an ad on the practice screen is a type error rather than a judgement
-somebody makes later under deadline.
-
-This is not blocked so much as **not yet wanted**. The free tier is meant to be
-genuinely complete, and the ad-free unlock now has a working grant path
-(`bjt grant`, `grant_entitlement`) for support grants and testing. Wiring a real
-SDK is a decision about the product, not a missing dependency — and it needs an
+`AdSlot` renders only in development, and its placement type has exactly two
+members, so an ad on the practice screen is a type error. The free tier is meant
+to be complete, and the ad-free unlock already has a grant path (`bjt grant`,
+`grant_entitlement`). Wiring a real ad SDK is a product decision, and needs an
 ad network account when it is taken.
-
----
-
-## 8. The nightly job runs half of itself
-
-**What exists.** `.github/workflows/nightly.yml`, and the two commands behind it.
-`bjt plan` surveys the library shelf by shelf — nine problem types × three levels
-— and prints the work order that would fill the emptiest ones first; `bjt nightly`
-executes it, running every item through the same per-item gate and the same
-whole-batch checks as a hand-run batch, writing bundles and their SQL, and
-leaving a pull request for somebody to read. The survey half runs on every run:
-it needs no key, no network and no project, and it is the thing that says out
-loud that sixteen of the twenty-seven shelves are empty.
-
-**Back on, very cheap (2026-09-27).** The schedule was off from 2026-09-25 —
-the app was used too little to pay for a night of questions — and the owner
-turned it back on asking that it stay very cheap: every night at 03:00 JST,
-three items at most, reading first, and never more than fifty cents
-(`BJT_RUN_BUDGET_USD` in `nightly.yml`, pinned at or below 0.5 by a test). A
-night that needs its retries stops short and ships what it has.
-
-**What is blocked.** The writing half needs one secret:
-
-- `ANTHROPIC_API_KEY` — same blocker as entry 1.
-
-A second is optional. `SEEDS_TAR_B64` is the licensed few-shot and vocabulary
-material that lives in the gitignored `seeds/`, as `tar czf - seeds | base64
--w0`. Without it the job builds `seeds/` from the reference batches
-(`bjt seeds --bootstrap`): the bank's own hand-written, owner-reviewed items
-become the few-shot examples, and the run summary and the pull request say so.
-That is weaker than official material and stronger than nothing. Only a real
-`seeds/` carries official items, kanji tiers and level descriptors; the
-bootstrap never invents them.
-
-A third secret is optional and unlocks the other half of the night:
-
-- `SUPABASE_DB_URL` — one statement, `select public.refresh_item_stats()`, which
-  recounts how often each item is answered correctly across all learners. That is
-  what the practice queue reads to pitch a set at a difficulty that teaches.
-  Without it the queue falls back to the estimate that shipped with the item —
-  the difficulty probe's pass rate, or the answerability gate's own when the
-  probe did not run — which is what a freshly published item has anyway.
-
-**What unblocks it.** Setting those secrets on the repository. Then check the
-first run's pull request item by item before merging it — the whole design
-assumes a person does, and the budget is small so that a person can.
-
-**One setting, still off (2026-09-19).** The job pushes its branch and then
-fails to open the pull request: "GitHub Actions is not permitted to create or
-approve pull requests". Settings → Actions → General → Workflow permissions →
-tick "Allow GitHub Actions to create and approve pull requests". Until then
-each night's branch (`content/nightly-<date>-<run>`) sits unopened, with the
-link in the run summary; `content/nightly-20260919-7` is one such, with five
-items and `scenes.sql` on it.
-
----
-
-## What is not blocked
-
-Everything else. The four checks run offline with no key, no project and no
-network:
-
-```bash
-pytest
-supabase/test/run.sh
-cd client && npm run typecheck
-python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json
-```
-
-CI runs all four on every push. A third workflow, **deploy database**, is run by
-hand from the Actions tab and is the whole deployment story — see entry 5. A
-second workflow, `nightly`, surveys the bank
-every night with the same offline tools — see entry 8 for the half of it that is
-waiting on a key.

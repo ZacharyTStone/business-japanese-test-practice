@@ -174,15 +174,15 @@ export default function Result() {
             </View>
           ))}
           {correct < total ? (
-            // The promise the daily set keeps: a miss comes back after a night,
-            // not immediately and not never. See next_items, bucket 0.
+            // The promise the daily set keeps: a trap that caught them comes back
+            // after a night, in a new question. See next_items, bucket 0.
             <Text style={[type.small, { marginTop: space.xs }]}>{t("retry_promise")}</Text>
           ) : null}
         </Card>
       </FadeIn>
 
       {/* The one place an ad is allowed, along with the list screens. Never
-          during listening practice. */}
+          during practice. */}
       <AdSlot placement="session_result" enabled={!adFree} />
 
       <FadeIn delay={step()} style={{ gap: space.md }}>

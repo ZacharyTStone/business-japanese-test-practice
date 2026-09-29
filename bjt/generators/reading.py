@@ -35,8 +35,7 @@ _BOTH_SOURCES = (
 #: When a graph earns its place in the 資料, and what it may not do. Told only
 #: to the two 聴読解 types that may draw one, and only for a cell that offers a
 #: template able to carry one (`Template.charts`) — a cell that assigns an
-#: email is not invited to draw a chart the validator will refuse. The owner
-#: asked for graphs in the 資料 (2026-09-27).
+#: email is not invited to draw a chart the validator will refuse.
 _CHARTS = (
     "A `chart` block draws figures as a bar or a line graph, and on the real paper the "
     "資料 is often a graph. Use one when the question is about a comparison or a change — "

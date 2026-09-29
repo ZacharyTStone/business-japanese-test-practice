@@ -1,7 +1,7 @@
 """supabase/current.sql is the schema made readable, and it has to be current.
 
-`next_items()` has been rewritten by eight migrations; the snapshot is where its
-definition today can be read in one place (supabase/snapshot.py). A migration
+`next_items()` is redefined across many migrations; the snapshot is where its
+current definition can be read in one place (supabase/snapshot.py). A migration
 that lands without the snapshot being regenerated fails here.
 """
 import importlib.util

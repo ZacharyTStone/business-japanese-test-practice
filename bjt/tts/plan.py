@@ -40,12 +40,10 @@ NARRATOR_VOICE = "narrator_f"
 #: than to anybody in the scene — which, with the content-hashed clip id, is
 #: what makes these four files for the whole library rather than four per item.
 #:
-#: **Numbers, not letters.** Letters were tried twice and failed twice. The four
-#: English letters differ only in their onset, so 「ビー」 and 「ディー」 were
-#: misheard for each other (2026-09-20); 「デー」 fixed that and sounded like
-#: "day" rather than the letter (2026-09-24). いち / に / さん / よん share no
-#: sound with each other, and they are what the exam's answer sheet prints. The
-#: owner chose them (2026-09-24).
+#: **Numbers, not letters.** Spoken English letters differ only in their onset:
+#: 「ビー」 and 「ディー」 are misheard for each other, and 「デー」 sounds like
+#: "day" rather than the letter. いち / に / さん / よん share no sound with each
+#: other, and they are what the exam's answer sheet prints.
 #:
 #: The app names the same four strings (`OPTION_LABELS` in client/src/lib/db.ts),
 #: which is how it finds the clips; a test holds the two equal.
@@ -54,12 +52,12 @@ OPTION_LABELS = ("いち", "に", "さん", "よん")
 #: Relation → the voice of the person doing the speaking (the left side of the
 #: 関係 arrow). Fixed for the life of the library.
 #:
-#: A relation added later borrows a voice from the cast rather than bringing
-#: its own: the seven roles are the cast (`providers.VOICE_IDS`), a live clip is
-#: never re-made, and a new voice would be one more the learner has to tell
-#: apart. `uchi_to_soto` — talking to an outsider about one's own boss — is the
-#: same staff member facing the same outsider as `staff_to_client`, so it is
-#: that voice (2026-09-27).
+#: A new relation borrows a voice from the cast rather than bringing its own:
+#: the seven roles are the cast (`providers.VOICE_IDS`), a live clip is never
+#: re-made, and a new voice would be one more the learner has to tell apart.
+#: `uchi_to_soto` — talking to an outsider about one's own boss — is the same
+#: staff member facing the same outsider as `staff_to_client`, so it is that
+#: voice.
 RELATION_VOICES: dict[str, str] = {
     "subordinate_to_superior": "staff_junior_m",
     "junior_to_senior": "staff_junior_f",

@@ -232,6 +232,8 @@ def test_the_regate_dry_run_counts_the_calls_and_spends_nothing(capsys, monkeypa
     if todo:
         assert f"{todo} live question(s) in" in out
         assert f"at most {todo * (1 + 2 * config.GATE_TRIALS)} call(s)" in out
+    else:
+        assert "Every live question here has a verdict." in out
 
 
 def test_every_verdict_is_written_down_and_the_failures_are_proposed(bank, reviewers, capsys):

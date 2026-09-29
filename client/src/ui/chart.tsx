@@ -5,7 +5,7 @@
  * it together with what is heard: which month fell, which branch overtook
  * which, whether a figure cleared its target once the speaker has said what to
  * leave out. Reading a trend off bars is its own skill, and a table is not a
- * graph. The owner asked for graphs in the 資料 (2026-09-27).
+ * graph.
  *
  * Like every block it is data, never a picture: the pipeline ships categories
  * and numbers (enforced by bjt/render/chart.py before anything is published)

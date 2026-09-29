@@ -2,23 +2,18 @@
  * Who the user is — and, while the app is in testing, whether they are allowed
  * in at all.
  *
- * The app used to sign everybody in anonymously before it showed anything, so
- * that nobody was stopped at a login wall to try five questions. That is the
- * right shape for a public app and the wrong one for an app that is not open
- * yet: the owner asked (2026-09-17) that only the people testing it can use it.
- * So now there is a wall: sign in with an email and a password, and the
- * database says whether that email is on the tester list. The database, not
- * this file — every row-level policy requires it, so a client that skipped this
- * check would simply see nothing. `isTester` here exists to say so politely.
+ * Only the people testing the app may use it, so there is a wall: sign in with
+ * an email and a password, and the database says whether that email is on the
+ * tester list. The database, not this file — every row-level policy requires
+ * it, so a client that skipped this check would simply see nothing. `isTester`
+ * here exists to say so politely.
  *
- * Email and password rather than Google, for now, because it needs nothing
- * outside Supabase — no OAuth client, no consent screen — and the people
- * testing are the owner. Google can come back as a second button later; the
- * tester list matches on the email either way.
+ * Email and password rather than Google, because it needs nothing outside
+ * Supabase — no OAuth client, no consent screen. The tester list matches on the
+ * email either way, so Google can be a second button.
  *
- * Opening the app later means putting the anonymous sign-in back in front of
- * this wall, and the linking path that came with it. The schema still supports
- * both; nothing about a user id changes.
+ * Opening the app means putting an anonymous sign-in in front of this wall. The
+ * schema supports it; nothing about a user id changes.
  */
 import type { Session } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
@@ -41,10 +36,10 @@ type AuthState = {
    *  sent a confirmation email first ("Confirm email" left on in the project). */
   signUp: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
-  /** Re-run the session read and the tester check. `error` is set once and
-   *  never cleared on its own — a cold-start hiccup used to strand the app on
-   *  a message with nothing to press, or, worse, read as "not a tester" (see
-   *  the effect below). This is the way back. */
+  /** Re-run the session read and the tester check. `error` is never cleared on
+   *  its own, so this is the way back from a cold-start hiccup. A failed check
+   *  sets `error` and leaves `isTester` alone, so it never reads as "not a
+   *  tester". */
   retry: () => void;
 };
 

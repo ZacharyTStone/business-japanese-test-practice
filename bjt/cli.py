@@ -1,21 +1,4 @@
-"""Command-line interface.
-
-Commands
-    init          create the database and print seed-setup instructions
-    selftest      offline check of validation + DB (no API key needed)
-    seedtable     inspect the 場面×関係×機能×レベル table and how much of it is spent
-    batch         generate a batch offline into a shippable JSON bundle
-    plan          which shelf of the bank is emptiest, and tonight's work order
-    nightly       run that work order: generate, gate, check, write the SQL
-    checkbatch    run every offline quality check over an existing bundle
-    publish       turn a checked bundle into idempotent SQL for the database
-    gen           generate one item, gate it, store it, print it
-    practice      answer a run of items interactively (--demo needs no key)
-    quality       print the fidelity report (all six mechanisms)
-    discriminate  run the discriminator loop and report the discrimination rate
-    calibrate     sit the official sample items and compare accuracy to generated
-    probe         measure difficulty for live items that shipped without it
-    regate        put committed items through the proofreader and the gate
+"""Command-line interface. `bjt --help` lists every command.
 
 The commands are thin on purpose. What they drive lives in the modules they
 call: one draft's checks and a shelf's loop in `bjt/pipeline.py`, the passes
@@ -26,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import textwrap
@@ -36,6 +20,7 @@ from . import (
     calibration,
     config,
     fixtures,
+    jev,
     levels,
     pipeline,
     plan,
@@ -49,7 +34,7 @@ from . import (
 from . import llm as llmmod
 from .llm import LLMBillingError, LLMError
 from .db import Store
-from .fidelity import discriminator, roles, vocab
+from .fidelity import difficulty, discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
 
 
@@ -144,11 +129,10 @@ def cmd_selftest(args) -> int:
     print(f"  role validator rejects missing correct option: {'OK' if caught else 'FAIL'}")
     ok &= caught
 
-    # 4. Round-trip through the DB (in-memory).
-    import tempfile, os
-    tmp = tempfile.mktemp(suffix=".db")
-    try:
-        store = Store(__import__("pathlib").Path(tmp))
+    # 4. Round-trip through the DB (a throwaway file).
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        store = Store(pathlib.Path(tmpdir) / "selftest.db")
         iid = store.insert_item("goi_bunpou", "J2", fixtures.FIXTURES["goi_bunpou"],
                                 "fixture", gate_verdict="skipped")
         store.record_response(iid, schemas.correct_index(fixtures.FIXTURES["goi_bunpou"]["options"]), True)
@@ -157,9 +141,6 @@ def cmd_selftest(args) -> int:
         print(f"  DB insert + response + accuracy round-trip: {'OK' if db_ok else 'FAIL'}")
         ok &= db_ok
         store.close()
-    finally:
-        if os.path.exists(tmp):
-            os.remove(tmp)
 
     print(f"\nSelf-test {'PASSED' if ok else 'FAILED'}.")
     return 0 if ok else 1
@@ -478,7 +459,7 @@ def cmd_calibrate(args) -> int:
     attempts in the app, from `--attempts-csv` (the export SQL is
     `calibration.ATTEMPTS_EXPORT_SQL`, printed by `bjt calibrate --help`), or
     what `bjt practice` recorded here when no file is given. See
-    bjt/calibration.py for why both used to flatter the bank.
+    bjt/calibration.py for how both can flatter the bank.
     """
     from .generators.base import load_seed_json
 
@@ -643,9 +624,8 @@ def cmd_probe(args) -> int:
     or failing that by the answerability gate — so an item that reached the
     bank any other way has none. `bjt importbatch` is that other way: it stores
     with `gate_verdict="skipped"` and measures nothing, which is right for an
-    offline import and leaves a hole. On 2026-09-22 that hole was 142 of 146
-    items, and the ranking term they share falls back to a constant, so the
-    pitch was doing nothing at all across almost the whole library.
+    offline import and leaves a hole: for those items the ranking term falls
+    back to a constant, so the pitch does nothing at all across them.
 
     This is the catch-up pass: the same probe, the same weaker model and the
     same trial count, run over committed bundles (named, or `--all`) rather
@@ -665,6 +645,12 @@ def cmd_probe(args) -> int:
     except ValueError as e:
         print(e, file=sys.stderr)
         return 2
+    if args.compare:
+        return _probe_compare(args, paths)
+    if args.limit is not None:
+        print("--limit is for --compare; a probe measures every item without a rate.",
+              file=sys.stderr)
+        return 2
 
     shelves = backfill.survey_probe(paths)
     for shelf in shelves:
@@ -682,9 +668,9 @@ def cmd_probe(args) -> int:
             for it in shelf.todo:
                 print(f"  would measure {it['id']} ({it['item_type']} {it['level']})")
         print(f"\n{items} live item(s) in {len(work)} bundle(s) have no difficulty signal.")
-        calls = items * config.DIFFICULTY_TRIALS
-        print(f"That is {calls} call(s) to {config.DIFFICULTY_MODEL}, "
-              f"{config.DIFFICULTY_TRIALS} per item.")
+        per = difficulty.calls_per_item()
+        calls = items * per
+        print(f"That is {calls} call(s) to {config.DIFFICULTY_MODEL}, {per} per item.")
         print(backfill.runs_estimate(calls))
         return 0
     if not config.DIFFICULTY_ENABLED:
@@ -705,15 +691,61 @@ def cmd_probe(args) -> int:
     return 0
 
 
+def _probe_compare(args, paths) -> int:
+    """`bjt probe --compare MODEL`: the probe's model and MODEL on the same
+    sample of live items, side by side. Writes nothing — no bundle, no SQL —
+    so it is the evidence for choosing an instrument, never the change."""
+    candidate = args.compare
+    if candidate == config.DIFFICULTY_MODEL:
+        print(f"{candidate} is already the probe's model (BJT_DIFFICULTY_MODEL); "
+              "there is nothing to compare it with.", file=sys.stderr)
+        return 2
+    limit = args.limit if args.limit is not None else backfill.COMPARE_LIMIT
+    if limit < 1:
+        print("--limit must be at least 1.", file=sys.stderr)
+        return 2
+    todo = backfill.sample(paths, limit)
+    if not todo:
+        print("No live items to compare on.")
+        return 0
+    calls = len(todo) * (difficulty.calls_per_item() + difficulty.calls_per_item(candidate))
+    if args.dry_run:
+        for it in todo:
+            print(f"  would compare on {it['id']} ({it['item_type']} {it['level']})")
+        print(f"\n{len(todo)} live item(s): {calls} call(s) in all, "
+              f"{difficulty.calls_per_item()} per item to {config.DIFFICULTY_MODEL} and "
+              f"{difficulty.calls_per_item(candidate)} to {candidate}. Nothing is written.")
+        print(f"A run stops at {config.RUN_MAX_CALLS} calls, ${config.RUN_BUDGET_USD:.2f} or "
+              f"{config.RUN_MAX_MINUTES:g} minutes (BJT_RUN_*), and a comparison that stops "
+              "keeps what it measured but does not resume.")
+        return 0
+    if not config.DIFFICULTY_ENABLED:
+        print("The difficulty probe is switched off (BJT_DIFFICULTY=0); nothing measured.",
+              file=sys.stderr)
+        return 1
+    # Checked here rather than found out three items in, after the baseline's
+    # calls on them are already spent.
+    if jev.is_jev(candidate) and not os.environ.get("TYPESAFE_API_KEY"):
+        print(f"{candidate} needs TYPESAFE_API_KEY; nothing measured.", file=sys.stderr)
+        return 1
+
+    cmp = backfill.compare_bank(paths, candidate, limit=limit)
+    text = cmp.summary(llmmod.spend)
+    print()
+    print(text)
+    if args.summary:
+        pathlib.Path(args.summary).write_text(text + "\n", encoding="utf-8")
+    return 0 if cmp.rows else 1
+
+
 def cmd_regate(args) -> int:
     """Put committed questions through the proofreader and the gate they skipped.
 
-    142 of the first 146 committed questions came in through `bjt importbatch`,
-    which checks an item's shape and nothing else, and a review by hand on
-    2026-09-26 withdrew 39 of them. This asks every live question the two
-    things a fresh draft is asked before it ships — does a proofreader find a
-    fault, and does the gate find it answerable and not leaky — in the same
-    order and by the same rules (bjt/backfill.py).
+    Most of the bank came in through `bjt importbatch`, which checks an item's
+    shape and nothing else. This asks every live question the two things a
+    fresh draft is asked before it ships — does a proofreader find a fault, and
+    does the gate find it answerable and not leaky — in the same order and by
+    the same rules (bjt/backfill.py).
 
     Every verdict is written to batches/regated.txt as it is reached, so a run
     stopped by the ceilings in bjt/llm.py carries on where it stopped and a
@@ -814,9 +846,8 @@ def cmd_nightly(args) -> int:
     there is no fast path for being a robot.
 
     Nothing here publishes to a database. It writes bundles and their SQL into
-    the tree, and a person reads the diff. That is the roadmap's rule, and it is
-    the only reason a job that writes exam content unattended is a safe thing to
-    have."""
+    the tree, and a person reads the diff. That review is the only reason a job
+    that writes exam content unattended is a safe thing to have."""
     budget, per_slot = clamp_night(args.budget, args.per_slot)
     state = plan.survey()
     order = plan.work_order(state, budget=budget, per_slot=per_slot,
@@ -882,10 +913,10 @@ def cmd_nightly(args) -> int:
 def clamp_night(budget: int, per_slot: int) -> tuple[int, int]:
     """The night's size, no larger than config allows, whatever was asked.
 
-    The workflow's inputs are typed into a box, and "24" typed into that box
-    is how the expensive morning of 2026-09-18 began. A request above the
-    ceiling is honoured up to the ceiling and said so, not refused: the run
-    still happens, at a size somebody decided in code."""
+    The workflow's inputs are typed into a box, and what is typed there must
+    not decide what a night costs. A request above the ceiling is honoured up
+    to the ceiling and said so, not refused: the run still happens, at a size
+    somebody decided in code."""
     b = max(0, min(budget, config.NIGHT_MAX_BUDGET))
     p = max(0, min(per_slot, config.NIGHT_MAX_PER_SLOT))
     if (b, p) != (budget, per_slot):
@@ -1497,7 +1528,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("-n", type=int, default=10, help="how many items to keep")
     b.add_argument("--no-gate", action="store_true", help="skip the answerability gate")
     b.add_argument("--no-sanity", action="store_true", help="skip the cheap proofreading pass before the gate")
-    b.add_argument("--out", type=__import__("pathlib").Path, default=None, help="bundle path")
+    b.add_argument("--out", type=pathlib.Path, default=None, help="bundle path")
     b.add_argument("--force", action="store_true", help="write the bundle even if checks fail")
     b.set_defaults(func=cmd_batch)
 
@@ -1526,7 +1557,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     ib = sub.add_parser("importbatch", help="validate a hand-written source file into a bundle")
     ib.add_argument("path")
-    ib.add_argument("--out", type=__import__("pathlib").Path, default=None, help="bundle path")
+    ib.add_argument("--out", type=pathlib.Path, default=None, help="bundle path")
     ib.add_argument("--shuffle", action="store_true",
                     help="re-shuffle option order (leave off when the author set it deliberately)")
     ib.add_argument("--seed", type=int, default=None, help="make --shuffle reproducible")
@@ -1537,7 +1568,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     pb = sub.add_parser("publish", help="turn a bundle into idempotent SQL for the database")
     pb.add_argument("path")
-    pb.add_argument("--out", type=__import__("pathlib").Path, default=None,
+    pb.add_argument("--out", type=pathlib.Path, default=None,
                     help="where to write the SQL (default: alongside the bundle)")
     pb.add_argument("--force", action="store_true",
                     help="publish even if the bundle fails its own checks")
@@ -1546,9 +1577,9 @@ def build_parser() -> argparse.ArgumentParser:
     sy = sub.add_parser("synth", help="synthesise a bundle's audio and write the SQL for it")
     sy.add_argument("path", help="path to a checked bundle .json")
     sy.add_argument("--provider", default="auto",
-                    help="TTS backend: auto (BJT_TTS_PROVIDER, else whichever of gemini, "
-                         "openai, google has credentials, else silent), or one of those "
-                         "by name; silent is an offline placeholder")
+                    help="TTS backend: auto (BJT_TTS_PROVIDER, else the library's voice "
+                         "when its key is set, else silent), or a provider by name; "
+                         "silent is an offline placeholder")
     sy.add_argument("--have", metavar="FILE",
                     help="clip ids already live (one per line): skipped entirely. "
                          "The deploy workflow reads them out of the database")
@@ -1656,6 +1687,12 @@ def build_parser() -> argparse.ArgumentParser:
     prb.add_argument("--dry-run", action="store_true",
                      help="list what would be measured, count the calls, and spend nothing")
     prb.add_argument("--summary", default=None, help="write a markdown summary here")
+    prb.add_argument("--compare", default=None, metavar="MODEL",
+                     help="measure a sample of live items with MODEL beside the probe's model "
+                          "(e.g. jev-latest) and print both; writes nothing")
+    prb.add_argument("--limit", type=int, default=None, metavar="N",
+                     help=f"with --compare: how many items (default {backfill.COMPARE_LIMIT}), "
+                          "taken a type at a time")
     prb.set_defaults(func=cmd_probe)
 
     rg = sub.add_parser("regate", help="put committed questions through the proofreader and "

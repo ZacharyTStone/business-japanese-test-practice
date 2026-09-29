@@ -1,4 +1,4 @@
-# Cloudflare Pages reads this from the build output root.
+# Cloudflare reads this from the build output root.
 #
 # The JS bundle's filename contains its content hash, so it can be cached
 # forever; the HTML must not be, or a deploy leaves people on the old bundle.

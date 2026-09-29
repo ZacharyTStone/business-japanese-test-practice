@@ -3,10 +3,10 @@
  *
  * Fifteen answers in a day is the ceiling — or whatever number the database
  * reports for the one account that sizes its own day — and past it the
- * database serves nothing (see v_my_day and next_items). This screen is what that looks like
- * from the outside: not a card with a dimmer button under it, which still
- * reads as "more if you insist", but a friendly face and a sentence that
- * closes the day. Nothing here leads to a question, because there is none to
+ * database serves nothing (see v_my_day and next_items). This screen is what
+ * that looks like from the outside: not a card with a dimmer button under it,
+ * which still reads as "more if you insist", but a friendly face and a
+ * sentence that closes the day. Nothing here leads to a question, because there is none to
  * lead to. What it does say is when there will be: midnight in Japan, which
  * is when the streak counts a new day too.
  *
