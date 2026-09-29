@@ -9,7 +9,7 @@
  */
 import type { AnsweredItem, SectionLevel } from "./types";
 
-export type SessionSummary = {
+type SessionSummary = {
   answers: AnsweredItem[];
   startedAt: number;
   finishedAt: number;

@@ -77,7 +77,7 @@ function documentChars(doc: StimulusDocument): number {
  * A heard dialogue is deliberately not counted even when an item has one. This
  * number only ever prices a reading item, and in a reading item there is none.
  */
-export function readingLoad(item: QueuedItem): number {
+function readingLoad(item: QueuedItem): number {
   let n = (item.stem ?? "").length;
   for (const o of item.options ?? []) n += (o.text ?? "").length;
   for (const doc of item.documents ?? []) n += documentChars(doc);

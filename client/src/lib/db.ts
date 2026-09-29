@@ -260,7 +260,7 @@ export async function vetoItem(itemId: string, note = ""): Promise<void> {
  *  yet" is the most useful thing this can say early on, and a chart that hides
  *  the gaps is worse than no chart. */
 /** What a reset removed, for the line the screen shows afterwards. */
-export type ResetCounts = {
+type ResetCounts = {
   attempts: number;
   sessions: number;
   reviews: number;

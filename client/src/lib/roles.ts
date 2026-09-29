@@ -31,7 +31,7 @@
 import { type DistractorRole } from "./generated";
 import type { Lang } from "./i18n";
 
-export type RoleInfo = {
+type RoleInfo = {
   label: string;
   /** 0–3. How much damage this does to the relationship. */
   rudeness: number;

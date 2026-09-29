@@ -18,6 +18,9 @@ dist/
 .env
 .env.local
 
+# The Supabase CLI's scratch directory.
+supabase/.temp/
+
 # Generated media, before it is uploaded. Large, regenerable, and its home is
 # object storage — `bjt synth` and `bjt scenes` write here.
 media/

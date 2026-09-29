@@ -34,15 +34,15 @@ export const SECTION_NAME: Record<Section, Key> = {
 };
 
 /** The ladder, for telling up from down. */
-export const RANK: Record<Level, number> = { J3: 0, J2: 1, J1: 2 };
+const RANK: Record<Level, number> = { J3: 0, J2: 1, J1: 2 };
 
-export function sortLevels(levels: SectionLevel[]): SectionLevel[] {
+function sortLevels(levels: SectionLevel[]): SectionLevel[] {
   return [...levels].sort(
     (a, b) => SECTION_ORDER.indexOf(a.section) - SECTION_ORDER.indexOf(b.section)
   );
 }
 
-export function levelOf(levels: SectionLevel[], section: Section): Level | null {
+function levelOf(levels: SectionLevel[], section: Section): Level | null {
   return levels.find((l) => l.section === section)?.level ?? null;
 }
 
@@ -61,7 +61,7 @@ export function levelOf(levels: SectionLevel[], section: Section): Level | null 
  * answer in the section, stretch and below-level items included, and so could
  * name a level before the database had seen enough to move it.
  */
-export function isPlaced(levels: SectionLevel[], section: Section): boolean {
+function isPlaced(levels: SectionLevel[], section: Section): boolean {
   return levels.find((l) => l.section === section)?.placed ?? false;
 }
 

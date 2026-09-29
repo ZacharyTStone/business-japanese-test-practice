@@ -49,12 +49,12 @@ export type RubySegment = { text: string; ruby?: string };
 const KANJI = /[㐀-鿿豈-﫿々〆ヵヶ]/;
 const BLANK = /[＿_]{2,}|（\s*）|\(\s*\)/;
 
-export function hasKanji(s: string): boolean {
+function hasKanji(s: string): boolean {
   return KANJI.test(s);
 }
 
 /** Katakana folded to hiragana, for comparing a term with its reading and for search. */
-export function toHiragana(s: string): string {
+function toHiragana(s: string): string {
   return s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 }
 
@@ -270,7 +270,7 @@ export function buildWordList(items: WordSourceItem[]): WordEntry[] {
   return out.sort((a, b) => fold(a.reading || a.term).localeCompare(fold(b.reading || b.term), "ja"));
 }
 
-export type WordFilter = { query: string; level: Level | null; section: Section | null };
+type WordFilter = { query: string; level: Level | null; section: Section | null };
 
 export function filterWords(words: WordEntry[], f: WordFilter): WordEntry[] {
   const q = fold(f.query.trim());

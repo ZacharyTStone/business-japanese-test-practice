@@ -51,7 +51,7 @@ function barColor(share: number): string {
 
 /** mm:ss, floored at zero. Seconds are rounded UP so the clock reads 1:00 for
  *  the whole first second rather than flicking to 0:59 immediately. */
-export function clockFace(remainingMs: number): string {
+function clockFace(remainingMs: number): string {
   const total = Math.max(0, Math.ceil(remainingMs / 1000));
   const m = Math.floor(total / 60);
   const s = total % 60;

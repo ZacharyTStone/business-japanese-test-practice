@@ -31,7 +31,7 @@ import { NO_ANSWER, type AnsweredItem, type QueuedItem } from "./types";
  * in a third of a second, so a press that early is the tail of the last one.
  * The clock's own timeout is never refused.
  */
-export const SETTLE_MS = 350;
+const SETTLE_MS = 350;
 
 export type Stage = "scene" | "listen" | "answer" | "reveal";
 

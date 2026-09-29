@@ -282,10 +282,6 @@ EXAM_QUESTIONS: dict[str, int] = {
     "sougou_dokkai": 10,
 }
 
-#: Types whose stimulus is a picture of their own: an item is not served until
-#: its picture is drawn and approved (public.item_types.needs_picture).
-PICTURE_TYPES: tuple[str, ...] = ("gazou_haaku",)
-
 #: The reading types: no audio, no picture, the cheapest item there is to
 #: ship, and the ones the owner asked to see written every night (2026-09-19).
 READING_TYPES: tuple[str, ...] = tuple(t for t, sec in SECTIONS.items() if sec == "dokkai")
