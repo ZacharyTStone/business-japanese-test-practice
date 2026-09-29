@@ -295,5 +295,5 @@ def test_every_committed_bundle_reads_like_print(path):
 def test_no_committed_document_spells_a_number_out(path):
     bundle = json.loads(path.read_text(encoding="utf-8"))
     for item in bundle.get("items") or []:
-        for doc in schemas.documents_of(batch._as_generator_shape(item)):
+        for doc in schemas.documents_of(batch.as_generator_shape(item)):
             assert numerals.document_faults(doc) == [], f"{item['id']}: {doc.get('title')}"

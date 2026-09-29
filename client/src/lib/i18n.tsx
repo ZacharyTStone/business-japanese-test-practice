@@ -390,7 +390,7 @@ export function tr(lang: Lang, key: Key, vars?: Record<string, string | number>)
 
 /** What the phone speaks. Japanese stays the default for a Japanese phone;
  *  everything else gets English until they say otherwise. */
-export function deviceLang(): Lang {
+function deviceLang(): Lang {
   try {
     const tag =
       (typeof navigator !== "undefined" && navigator.language) ||

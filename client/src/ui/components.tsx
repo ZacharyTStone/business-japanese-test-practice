@@ -631,7 +631,7 @@ export function NumberField({
  * Nothing renders yet — no ad SDK is wired up, and the free tier is meant to be
  * genuinely complete. This is the seam, kept honest by the type.
  */
-export type AdPlacement = "session_result" | "list_screen";
+type AdPlacement = "session_result" | "list_screen";
 
 export function AdSlot({ placement, enabled }: { placement: AdPlacement; enabled: boolean }) {
   if (!enabled || !__DEV__) return null;

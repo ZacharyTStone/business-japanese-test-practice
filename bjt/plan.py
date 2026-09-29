@@ -119,10 +119,6 @@ class Shelf:
     def thin(self) -> bool:
         return self.have < self.target
 
-    @property
-    def exhausted(self) -> bool:
-        return self.cells_left == 0
-
 
 @dataclass(frozen=True)
 class WorkItem:

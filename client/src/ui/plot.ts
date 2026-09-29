@@ -46,7 +46,7 @@ export type Mark =
   | { kind: "polygon"; points: string; fill: Paint; stroke: Paint }
   | { kind: "text"; x: number; y: number; text: string; size: number; anchor: "start" | "middle" | "end"; fill: Paint };
 
-export type Plot = { width: number; height: number; marks: Mark[]; orientation: "columns" | "rows" };
+type Plot = { width: number; height: number; marks: Mark[]; orientation: "columns" | "rows" };
 
 /** How each series is told apart: fill for a bar; dash and marker for a line. */
 export const SERIES_STYLE: { fill: Paint; dash?: string; marker: "circle" | "square" | "triangle" }[] = [
@@ -96,7 +96,7 @@ export function readChart(block: DocBlock): ChartData | null {
 
 /** A figure as print sets it: thousands separated, at most two decimals, no
  *  trailing zeros. The same string the models are shown. */
-export function formatValue(value: number | null): string {
+function formatValue(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "—";
   const [whole, fraction = ""] = Math.abs(value).toFixed(2).split(".");
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -106,7 +106,7 @@ export function formatValue(value: number | null): string {
 }
 
 /** Gridline values: round numbers, zero among them, spanning every figure. */
-export function niceTicks(values: number[], target = 5): number[] {
+function niceTicks(values: number[], target = 5): number[] {
   let lo = Math.min(0, ...values);
   let hi = Math.max(0, ...values);
   if (lo === hi) hi = lo + 1;
@@ -136,7 +136,7 @@ export function chartSummary(chart: ChartData, words: { kind: string; unit: stri
 
 /** A guess at how wide a label sets: a full em for kanji and kana, a little
  *  over half of one for a digit or a Latin letter. */
-export function textWidth(text: string, size: number): number {
+function textWidth(text: string, size: number): number {
   let em = 0;
   for (const ch of text) em += (ch.codePointAt(0) ?? 0) < 0x2e80 ? 0.58 : 1;
   return em * size;

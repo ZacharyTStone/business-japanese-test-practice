@@ -133,18 +133,6 @@ class SeedTable:
         return seen
 
     @property
-    def template_bank(self) -> list[str]:
-        """Every document template this table can ask for. The reading types'
-        counterpart of `scene_bank`: the set a batch's documents must come
-        from, known before any document is written."""
-        seen: list[str] = []
-        for s in self._settings.values():
-            for t in s.get("templates", []):
-                if t not in seen:
-                    seen.append(t)
-        return seen
-
-    @property
     def scene_labels(self) -> dict:
         """scene id → what the picture shows. Lives in the table rather than
         being inferred from the settings that use it: a scene like

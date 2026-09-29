@@ -17,7 +17,7 @@ import { tr, type Lang } from "../lib/i18n";
 import { roleInfo } from "../lib/roles";
 import { colors } from "./theme";
 
-export type Mood = "happy" | "puzzled" | "uneasy" | "upset" | "shocked";
+type Mood = "happy" | "puzzled" | "uneasy" | "upset" | "shocked";
 
 export function moodFor(role: string | null | undefined, isCorrect: boolean): Mood {
   if (isCorrect) return "happy";

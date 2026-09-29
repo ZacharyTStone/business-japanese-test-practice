@@ -676,12 +676,6 @@ def as_generator_shape(bundle_item: dict) -> dict:
     return it
 
 
-#: The name `as_generator_shape` had while it was private, which did not stop
-#: the probe, the lint and a handful of tests from calling it. Kept so a caller
-#: that has not moved yet keeps working; delete it once nothing says it.
-_as_generator_shape = as_generator_shape
-
-
 def _worst_pair_score(items: list[dict]) -> float:
     worst = 0.0
     sigs = [dedupe.item_signature(it) for it in items]

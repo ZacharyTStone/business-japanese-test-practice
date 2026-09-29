@@ -39,8 +39,3 @@ def goi_cell():
     rather than a stub — a stub would let the assignment drift out of sync with
     the committed table without anything noticing."""
     return seedtable.load("goi_bunpou").cells("J2")[0]
-
-
-@pytest.fixture
-def hyougen_cell():
-    return seedtable.load("hyougen").cells("J2")[0]
