@@ -27,12 +27,19 @@ Two rules the caller relies on:
     reports `measured=False` and no rate. The caller then falls back to the
     gate's rate exactly as before. A fabricated number would be worse than the
     old bad one, because the queue would trust it.
+
+A prototype second instrument: when `config.DIFFICULTY_MODEL` is a Jev model
+(bjt/jev.py) the probe is one call, and the rate is the probability Jev puts on
+the key rather than a count of trials. That is a different number from a pass
+rate — a confidence, not a frequency — so a bank should carry one or the other,
+not a mixture; `bjt probe --compare` sets them side by side before either is
+chosen.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .. import config, textutil
+from .. import config, jev, llm, textutil
 from ..schemas import correct_index
 from . import answerability
 from .answerability import Trial
@@ -77,6 +84,9 @@ def measure(item: dict, *, model: str | None = None) -> DifficultyResult:
     answer = correct_index(item["options"])
     full_q, _cold_q = answerability.questions(item)
 
+    if jev.is_jev(model):
+        return _by_probability(full_q, options, answer, model)
+
     trials = answerability.run_trials(full_q, options, answer, SIDE,
                                       model=model, trials=config.DIFFICULTY_TRIALS)
     unanswered = [t for t in trials if t.chosen is None]
@@ -88,3 +98,30 @@ def measure(item: dict, *, model: str | None = None) -> DifficultyResult:
         )
     rate = sum(t.correct for t in trials) / len(trials)
     return DifficultyResult(rate=rate, model=model, measured=True, trials=trials)
+
+
+def calls_per_item(model: str | None = None) -> int:
+    """What measuring one item costs in calls, for a dry run's arithmetic."""
+    return 1 if jev.is_jev(model or config.DIFFICULTY_MODEL) else config.DIFFICULTY_TRIALS
+
+
+def _by_probability(question: str, options: list[str], answer: int, model: str) -> DifficultyResult:
+    """One call to a model that answers with a distribution; the key's share
+    of it is the rate. The one trial recorded is its most likely option, so
+    the local quality report (which counts right answers) still reads it.
+    A failed call is unmeasured, exactly as a failed trial is above."""
+    try:
+        probs = jev.choice_probabilities(question, options, model=model)
+    except llm.LLMError as e:
+        return DifficultyResult(
+            model=model, measured=False,
+            trials=[Trial(side=SIDE, trial=0, chosen=None, correct=False)],
+            notes=f"difficulty probe did not run: {e}",
+        )
+    chosen = max(range(len(probs)), key=probs.__getitem__)
+    spread = " ".join(f"{p:.2f}" for p in probs)
+    return DifficultyResult(
+        rate=probs[answer], model=model, measured=True,
+        trials=[Trial(side=SIDE, trial=0, chosen=chosen, correct=chosen == answer,
+                      reason=f"p = {spread}")],
+    )

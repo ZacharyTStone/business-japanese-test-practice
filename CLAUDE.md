@@ -183,8 +183,11 @@ accident is not.
 - **`items.model_p_correct` is a property of the question, never of a person.**
   It is how often a model answered the item correctly at generation time: the
   difficulty probe (a weaker model, `BJT_DIFFICULTY_MODEL`) when it ran, else
-  the answerability gate. It is not an ability estimate, nothing about anybody
-  is derived from it, and it is never displayed.
+  the answerability gate. With `BJT_DIFFICULTY_MODEL=jev-…` (a prototype,
+  opt-in, `bjt/jev.py`) it is instead the probability Jev puts on the key in
+  one call — a different number, so the bank carries one kind, not a mixture,
+  and `bjt probe --compare` is read before switching. It is not an ability
+  estimate, nothing about anybody is derived from it, and it is never displayed.
 - **`attempts` has no update or delete policy.** An answer already given is
   history. The one statement in the schema that removes one is
   `reset_my_progress()`, and it is shaped so that it cannot be anything else:

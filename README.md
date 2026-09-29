@@ -224,7 +224,7 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt grant <user-id>` | SQL granting or revoking the ad-free unlock, as the service role. |
 | `bjt tester <email>` | SQL letting one email address use the app while it is in testing; `--remove` takes them off. |
 | `bjt calibrate --type T [--attempts-csv FILE]` | Your right/answered on the official samples (a skip is not wrong) beside your first attempts in the app. The read-only export SQL is in `--help`. |
-| `bjt probe <bundle.json>… \| --all [--dry-run]` | Measure the difficulty prior for live items that shipped without one. Each bundle and its SQL are written as soon as it is done, so a run stopped by the `BJT_RUN_*` ceilings resumes next time. The nightly workflow's manual "probe" input runs `--all` into a pull request. |
+| `bjt probe <bundle.json>… \| --all [--dry-run]` | Measure the difficulty prior for live items that shipped without one. Each bundle and its SQL are written as soon as it is done, so a run stopped by the `BJT_RUN_*` ceilings resumes next time. The nightly workflow's manual "probe" input runs `--all` into a pull request. `--compare MODEL [--limit N]` measures a sample with the probe's model and MODEL side by side and writes nothing. |
 | `bjt regate <bundle.json>… \| --all [--dry-run] [--withdraw]` | Put committed live questions through the proofreader and the gate they skipped on import. Verdicts go into `batches/regated.txt` (mark a failure `overruled` to keep it); `--withdraw` appends failures to `batches/withdrawn.txt` with a closed-set reason and rewrites the affected SQL. |
 | `python -m bjt.client_constants` | Rewrite `client/src/lib/generated.ts`: the distractor roles the app must describe and the Japanese name of every tag. A test fails when it is stale. |
 | `python supabase/snapshot.py` | Rewrite `supabase/current.sql`: the latest definition of every function, view and trigger, read out of the migrations. A test fails when it is stale. |
@@ -336,6 +336,13 @@ can see in `bjt quality`.
    sits the same full view `BJT_DIFFICULTY_TRIALS` times, and its pass rate is
    what ships as `model_p_correct`. A probe that could not run leaves the item on
    the gate's rate rather than on a made-up one. `BJT_DIFFICULTY=0` turns it off.
+
+   A prototype second instrument is opt-in: `BJT_DIFFICULTY_MODEL=jev-latest`
+   (with `TYPESAFE_API_KEY`) makes the probe one call to TypeSafe AI's Jev, which
+   returns a probability for every option, and the probability on the key is the
+   rate (`bjt/jev.py`). That is a confidence rather than a pass rate, so a bank
+   should carry one kind or the other; `bjt probe --compare jev-latest` sets the
+   two side by side on a sample and writes nothing.
 
 3. **Discriminator loop** (`bjt/fidelity/discriminator.py`). Mix official sample
    items with generated ones and ask a judge to label each. Above-chance
