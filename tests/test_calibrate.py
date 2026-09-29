@@ -1,10 +1,9 @@
 """`bjt calibrate`: a skip is not a wrong answer, and the bank's side is the app.
 
-Until 2026-09-27 the official score divided by every official item, skipped
-ones included, and the bank's score was whatever `bjt practice` had written to
-the local database. Both flattered the bank. These tests sit a fixture paper
-with a skip in it, read a fixture export of the app's first attempts, and hold
-the two numbers apart.
+Dividing the official score by every item, skipped ones included, or taking
+the bank's score from whatever `bjt practice` wrote to the local database would
+both flatter the bank. These tests sit a fixture paper with a skip in it, read
+a fixture export of the app's first attempts, and hold the two numbers apart.
 """
 import json
 

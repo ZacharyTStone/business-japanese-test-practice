@@ -6,8 +6,8 @@ reason. The generators read few-shot examples from it, and the few-shot
 examples are most of what keeps a generated item close to the exam.
 
 But the repository already holds examples in exactly that shape: the reference
-batches in `batches/`, every item of which was composed by hand, reviewed by
-the owner, and passed the same checks generated items must pass. They are
+batches in `batches/`, every item of which was composed by hand, reviewed,
+and passed the same checks generated items must pass. They are
 original work, not licensed text. When there is no licensed seed material —
 no laptop with the files, no secret carrying them — this module builds a
 `seeds/` from those batches instead, so the nightly job can write items whose

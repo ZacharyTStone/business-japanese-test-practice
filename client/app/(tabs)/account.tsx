@@ -76,9 +76,8 @@ export default function Account() {
     fetchProfile()
       .then(setProfile)
       .catch((e) => setProfileError(errorText(e)));
-    // Not fatal if it fails: with no levels every section reads 「—」, which is
-    // a worse answer rather than a broken screen — and a safe one, since 「—」
-    // is exactly what an unplaced section says anyway.
+    // Not fatal: with no levels every section reads 「—」, which is what an
+    // unplaced section says anyway.
     fetchSectionLevels()
       .then(setLevels)
       .catch(() => setLevels([]));
@@ -252,9 +251,7 @@ export default function Account() {
           so: `goal_max` is null for everybody else and this card is not drawn
           at all. It is on the same side of the line as the reading clock —
           how you practise, not what you are served — and `next_items()` takes
-          a size and decides the rest from the record exactly as before. What
-          keeps it honest is that the bound is the database's: the field offers
-          what v_my_day reported, and the write is checked again on arrival. */}
+          a size and decides the rest from the record. */}
       {day?.goal_max != null ? (
         <View style={{ gap: space.md }}>
           <SectionLabel>{t("acc_setsize")}</SectionLabel>

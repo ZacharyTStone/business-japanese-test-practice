@@ -5,8 +5,8 @@ A prototype, used only when `BJT_DIFFICULTY_MODEL` names it (`jev-latest`).
 Jev writes no text. It is given a state and a question whose answers we name,
 and it returns a probability for every answer. That is exactly the difficulty
 probe's question — which of these four is right? — with a better-shaped reply:
-the probe today asks a small model five times and counts, so its rate can only
-be 0, 0.2 … 1.0, while one Jev call gives the probability it puts on the key.
+the probe otherwise asks a small model five times and counts, so its rate can
+only be 0, 0.2 … 1.0, while one Jev call gives the probability it puts on the key.
 
 It is kept to the probe on purpose. The gate, the proofreader, the dedupe check
 and the discriminator each owe the next draft a sentence saying why, and Jev
@@ -15,7 +15,7 @@ to be fast. And like every model here it runs in the batch job and never while
 somebody is practising.
 
 **Unverified against the service.** The request and the reply below are
-TypeSafe's published examples (2026-09), not something this module has seen
+TypeSafe's published examples, not something this module has seen
 come back from a live call:
 
     POST {config.JEV_URL}   Authorization: Bearer $TYPESAFE_API_KEY

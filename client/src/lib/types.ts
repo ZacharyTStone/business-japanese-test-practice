@@ -189,9 +189,6 @@ export type Profile = {
   daily_goal: number;
   /** YYYY-MM-DD, or null while they have not said. Drives the countdown. */
   exam_date: string | null;
-  /** True until a real identity is linked. Drives the "keep your progress" nudge. */
-  is_anonymous: boolean;
-  linked_at: string | null;
   /** Whether the reading questions are timed at exam pace. The one thing in the
    *  app a learner chooses, and it is about how they practise rather than about
    *  which questions they are served — `next_items()` has never heard of it. */

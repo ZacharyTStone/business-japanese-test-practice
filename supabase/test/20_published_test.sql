@@ -98,10 +98,9 @@ begin
     perform test.check(q.options -> 0 ? 'audio_path',
                        'the option audio paths ride along, so five items are one request');
 
-    -- And what is true only of some. These used to be asserted on whatever
-    -- item came back first, which worked while the library was one listening
-    -- type and started failing the moment it was nine: a 語彙・文法 stem is one
-    -- short sentence and has no narration at all, by design.
+    -- And what is true only of some, each asserted on an item of a type it is
+    -- true of: a 語彙・文法 stem is one short sentence and has no narration at
+    -- all, by design.
     select * into q from public.next_items(50) where item_type = 'hatsugen_choukai' limit 1;
     perform test.check(length(q.stem) > 20, 'a narrated stem is long enough to set up a situation');
     perform test.check(q.narration_clip_id is not null,
@@ -160,10 +159,9 @@ begin
     -- A real set: whatever the queue serves at this user's level, across
     -- however many types have content there.
     --
-    -- Three right and two wrong, and this time actually deterministically. It
-    -- used to flip a coin per item, which meant roughly one run in thirty-two
-    -- answered all five correctly, left no trap on the record, and failed the
-    -- last assertion in this file for no reason anybody could reproduce.
+    -- Three right and two wrong, deterministically: the last assertion in this
+    -- block needs a trap on the record, and a coin flip per item would answer
+    -- all five correctly about one run in thirty-two.
     n := 0;
     for r in select id, correct_index from public.next_items(5) loop
         n := n + 1;
@@ -179,10 +177,9 @@ begin
     perform test.check(
         (select count(*) from public.attempts where session_id = sess) = 5,
         'all five belong to the session');
-    -- Across types, not within one. The published pool used to be a single
-    -- item type, so a set of five was five 発言聴解 items and the radar had one
-    -- row to check. It is nine types now, a set is drawn from all of them, and
-    -- an assertion pinned to one type was asserting the library had not grown.
+    -- Across types, not within one: a set is drawn from every type with
+    -- content at this level, and an assertion pinned to one type would be
+    -- asserting the library had not grown.
     perform test.check(
         (select coalesce(sum(answered), 0) from public.v_my_type_stats) = 5,
         'the radar picks them up immediately, whichever types they came from');
@@ -255,12 +252,11 @@ declare
     n int;
 begin
     raise notice 'a picture item waits for its picture';
-    -- Counted, not hardcoded. This block used to assert "four items, four
-    -- scenes, none of them drawn", which was true on the day 画像把握 shipped and
-    -- false the moment the scene job drew its first picture — and would have
-    -- gone stale again on the next batch and the next drawing. What the type
-    -- actually promises is a property, and the property is what is asserted
-    -- here: one picture per item, and nothing served before its picture exists.
+    -- Counted, not hardcoded: how many 画像把握 items there are, and how many
+    -- of their pictures are drawn, changes with every batch and every run of
+    -- the scene job. What the type promises is a property, and the property is
+    -- what is asserted here: one picture per item, and nothing served before
+    -- its picture exists.
     select count(*) into n from public.items where item_type = 'gazou_haaku' and is_published;
     perform test.check(n > 0, 'the 画像把握 batch is published');
     perform test.check(

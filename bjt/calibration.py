@@ -3,21 +3,20 @@
 The honesty check the README describes. There is no IRT calibration for a
 generated item, so the only evidence that the bank is pitched like the exam is
 one person answering both: a learner who scores much higher on the bank than
-on the official samples is looking at prompts that have drifted soft. It is
-two numbers, and until 2026-09-27 both were wrong in a way that flattered the
-bank:
+on the official samples is looking at prompts that have drifted soft. Both
+numbers are easy to get wrong in a way that flatters the bank:
 
-* **The official side counted a skip as a wrong answer.** It divided the right
-  answers by every official item, the ones left unanswered ('s') and the ones
-  never shown (more than four options) included, so skipping half the paper
-  capped the official score at half and made the bank look that much easier
-  than the exam. An accuracy is right over answered, and how much of the paper
-  was answered — answered over total — is reported beside it, never folded in.
-* **The bank's side was the terminal, not the app.** It read the local SQLite
-  `responses` table, which only `bjt practice` writes; the owner practises in
-  the app, whose record is `public.attempts` in Supabase. That record comes in
-  as a CSV exported with `ATTEMPTS_EXPORT_SQL` (`--attempts-csv`). The SQLite
-  table is still read when no file is given, for somebody who practised here.
+* **A skip is not a wrong answer.** An accuracy is right over answered: the
+  official items left unanswered ('s') and those never shown (more than four
+  options) are not in it, or skipping half the paper would cap the official
+  score at half and make the bank look that much easier than the exam. How
+  much was answered — answered over total — is reported beside it, never
+  folded in.
+* **The bank's side is the app, not the terminal.** The local SQLite
+  `responses` table holds only what `bjt practice` writes; the app's record is
+  `public.attempts` in Supabase, which comes in as a CSV exported with
+  `ATTEMPTS_EXPORT_SQL` (`--attempts-csv`). The SQLite table is read when no
+  file is given, for somebody who practised here.
 """
 from __future__ import annotations
 
@@ -34,7 +33,7 @@ from typing import Optional
 #:   was on screen, which is the only answer comparable with an official item
 #:   sat once. A second attempt is a memory test.
 #: * **One account**: calibration compares one person with themself.
-#:   Everybody's answers would compare the owner's official score with the
+#:   Everybody's answers would compare one person's official score with the
 #:   testers' ability.
 #: * **The live bank**: a withdrawn question left for being broken, and its
 #:   answers say nothing about how the bank is pitched now.

@@ -31,10 +31,10 @@ from .fidelity import dedupe, naturalness, roles
 from .render import document, numerals
 from .tts import plan as tts_plan
 
-#: 2 — audio clip ids are filed by role (`narration` / `options` / `dialogue`)
-#: rather than by position, and items may carry `documents` and `dialogue`.
-#: Version 1 bundles are not read anywhere: the source files are the authority,
-#: so a format change means re-running `importbatch`, not a compatibility path.
+#: The bundle format: audio clip ids filed by role (`narration` / `options` /
+#: `dialogue`), and items that may carry `documents` and `dialogue`. Older
+#: bundles are not read anywhere: the source files are the authority, so a
+#: format change means re-running `importbatch`, not a compatibility path.
 BUNDLE_VERSION = 2
 
 #: A listening stem is heard once. Shorter than this and it cannot have set up a
@@ -50,8 +50,8 @@ STEM_MAX_CHARS = 140
 #: 使いよう／使いづくめ」 — so a set of fifteen-character options has drifted into
 #: 表現読解 whatever else is right about it. A 総合読解 passage is described by the
 #: level guide as two to three minutes of reading, which is four hundred to nine
-#: hundred characters; ours have been running under three hundred, which makes
-#: the type a comprehension question rather than the sustained read it is.
+#: hundred characters; under three hundred, the type becomes a comprehension
+#: question rather than the sustained read it is.
 #:
 #: `stem` is measured on OUR stem field, which is not always the exam's question:
 #: for the narrated types it carries the whole narration, so those bands are
@@ -176,10 +176,10 @@ def to_bundle_item(item: dict) -> dict:
         "explanation_ja": item.get("explanation_ja", ""),
         "explanation_en": item.get("explanation_en", ""),
         "vocab_notes": item.get("vocab_notes", []),
-        # Clip ids by role rather than by position. The old shape assumed
-        # "narration first, options after", which is true of exactly one of the
-        # nine types: a dialogue type would have had its turns filed as options,
-        # and a reading type has no clips at all to take a first element from.
+        # Clip ids by role rather than by position. "Narration first, options
+        # after" is not true of most types: a dialogue type would have its turns
+        # filed as options, and a reading type has no clips at all to take a
+        # first element from.
         "audio": {
             "narration": narration[0].clip_id if narration else None,
             "options": [c.clip_id for c in by_kind.get("option", [])],
@@ -221,11 +221,11 @@ def to_bundle_item(item: dict) -> dict:
     # The difficulty prior: how often the difficulty model (a deliberately weak
     # one, bjt/fidelity/difficulty.py) answered this item correctly with the
     # full stimulus — or, when that probe did not run, how often the
-    # answerability gate's strong model did, which is the older and coarser
-    # number. Absent for hand-written batches, which are the one path that
-    # skips both — and absent is the honest value there, not 1.0. The practice
-    # queue reads it as the difficulty prior for an item nobody has met yet,
-    # and replaces it with the measured rate as soon as the shared bank has one.
+    # answerability gate's strong model did, which is a coarser number. Absent
+    # for hand-written batches, which are the one path that skips both — and
+    # absent is the honest value there, not 1.0. The practice queue reads it as
+    # the difficulty prior for an item nobody has met yet, and replaces it with
+    # the measured rate as soon as the shared bank has one.
     if item.get("model_p_correct") is not None:
         out["model_p_correct"] = item["model_p_correct"]
     return out
@@ -281,8 +281,8 @@ def spent_cell_ids(item_type: str) -> set[str]:
     """Seed cells already spent by the bundles in this repository.
 
     The local SQLite database also knows this, but it is gitignored: a fresh
-    clone reports nothing spent even with forty items committed, and the next
-    `bjt batch` on that machine quietly re-spends cells the library already
+    clone reports nothing spent however many items are committed, and the next
+    `bjt batch` on that machine would quietly re-spend cells the library already
     used. Since `item_id` is a hash of (item type, cell), the second item would
     REPLACE the first on publish — the library would shrink without saying so.
 
@@ -326,7 +326,7 @@ class Check:
     #: `note` is weaker than `warn` on purpose. A warning says the bundle has
     #: something wrong with it; a note says it differs from the exam in a way
     #: worth knowing about but does not make the item defective. The one thing
-    #: that reports notes today is the length band, and the distinction matters
+    #: that reports notes is the length band, and the distinction matters
     #: there: a 総合読解 item with a 200-character passage is a perfectly good
     #: question that is nothing like the 400-to-900-character passage the exam
     #: sets, and calling that a fault would mean either shipping nothing or
@@ -421,9 +421,9 @@ def check_bundle(
             counts[ci] += 1
     worst_share = max(counts) / n
     positions_used = sum(1 for c in counts if c)
-    # Two rules, because one of them was blind to exactly the batch a new item
-    # type starts as. The share rule needs eight items before a 45% lean means
-    # anything; a batch of six with every answer at A sailed past it, and
+    # Two rules, because the share rule is blind to exactly the batch a new
+    # item type starts as: it needs eight items before a 45% lean means
+    # anything, so a batch of six with every answer at A would pass it, and
     # "the answer is always A" is the most exploitable pattern there is.
     if n >= 8 and worst_share > 0.45:
         add("answer position spread", "warn",
@@ -452,8 +452,7 @@ def check_bundle(
     #    item has exactly three distractors, so a one-item bundle cannot show
     #    more than three distinct roles however varied its prompt is, and the
     #    nightly job writes one-item bundles all the time. Warning about that
-    #    was warning about arithmetic: four such bundles sat red in CI saying
-    #    "only 3/4 roles used" about items that had used every slot they had.
+    #    would be warning about arithmetic.
     enum = roles.DISTRACTOR_ROLES.get(item_type, [])
     used_roles = {o["role"] for it in items for o in it["options"] if o["role"] != roles.CORRECT}
     unused = [r for r in enum if r not in used_roles]
@@ -559,8 +558,8 @@ def check_bundle(
     #     rules (bjt/fidelity/naturalness.py): invented keigo stacks, a
     #     placeholder where a name belongs, brackets in something heard, a
     #     narration that says the answer. A failure, like the numerals, because
-    #     each pattern is unambiguous and each was found in a question a
-    #     learner had been served. A withdrawn item is not held to it — it is
+    #     each pattern is unambiguous and each is taken from a real question a
+    #     learner was served. A withdrawn item is not held to it — it is
     #     no longer served, and is kept only as the record of why — which also
     #     makes the ledger compulsory: a committed item with one of these tells
     #     either leaves the bank or fails CI.
@@ -595,11 +594,9 @@ def check_bundle(
 
     # 13. Shared utterances are supposed to collapse into one file, so the
     #    manifest should be smaller than the clips the items ask for between
-    #    them. The old form of this check assumed five clips per item —
-    #    narration plus four spoken options — which is true of exactly one of
-    #    the nine types. A dialogue item plans more than five and made the
-    #    check report a manifest larger than its own stated maximum; a reading
-    #    item plans none.
+    #    them. The count is what each item plans rather than a flat five
+    #    (narration plus four spoken options): a dialogue item plans more than
+    #    five, and a reading item plans none.
     clips = bundle.get("audio_manifest", [])
     planned = sum(
         len(tts_plan.plan_item(as_generator_shape(it), it["id"])) for it in items
@@ -649,8 +646,9 @@ def as_generator_shape(bundle_item: dict) -> dict:
     the bundle normalises them to a list under `documents`, because everything
     downstream would rather deal with one shape — but the validator checks the
     type's own field, singular for the three types that have exactly one. Left
-    untranslated, every committed document item failed its own re-validation
-    with "missing field: document" while being perfectly well formed.
+    untranslated, every committed document item would fail its own
+    re-validation with "missing field: document" while being perfectly well
+    formed.
     """
     it = dict(bundle_item)
     it.pop("correct_index", None)

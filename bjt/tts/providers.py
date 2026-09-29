@@ -8,15 +8,13 @@ only cheap if switching is a flag. It is also the kind of decision that gets
 revisited — a provider that reads 御社 correctly today may not after its next
 model update, and the pronunciation dictionary below is where such a fix goes.
 
-Three real adapters, all of them the current generation of "instructable"
-speech models rather than the concatenative voices that made TTS sound like a
-station announcement:
+Three real adapters, all "instructable" speech models rather than
+concatenative voices that sound like a station announcement:
 
   openai   OpenAI's speech API. One API key — the same one the scene artwork
-           already uses. Takes a free-text direction, so the voice can be told
-           to sound like a receptionist rather than tuned per clip. **This is
-           the library's voice**: the owner chose it (2026-09-18), and
-           `DEFAULT` below is that decision.
+           uses. Takes a free-text direction, so the voice can be told to
+           sound like a receptionist rather than tuned per clip. **This is
+           the library's voice**; `DEFAULT` below records that decision.
   gemini   Google's Gemini speech model, over the Gemini API. One API key.
            Kept as a comparison for `bjt audition`; not what ships.
   google   Google Cloud Text-to-Speech with its studio-grade Japanese voices.
@@ -67,24 +65,23 @@ HOUSE_STYLE = (
     "text exactly as written and say nothing else."
 )
 
-# Two things that sound like improvements here and are not. Both were tried on
-# 2026-09-19 and taken out the same day, because the owner heard the result and
-# said it had stopped sounding like a Japanese person:
+# Two things that sound like improvements here and are not; each makes the
+# voice stop sounding like a Japanese person:
 #
-#   * a rate multiplier on the request (`speed`, 1.1). It rescales audio that
-#     has already been spoken; it does not make the speaker speak differently.
+#   * a rate multiplier on the request (`speed`). It rescales audio that has
+#     already been spoken; it does not make the speaker speak differently.
 #     Pace is a property of a delivery, and the only honest lever we have on a
 #     delivery is the wording above.
 #   * asking for connected speech, "the small natural reductions of everyday
-#     Japanese", and a rhythm that varies — "a quick run through the routine
+#     Japanese", or a rhythm that varies — "a quick run through the routine
 #     parts, a beat before the point". A model that takes directions performs a
 #     direction like that rather than absorbing it, and the performance is both
 #     less natural than the plain reading and a hint: a beat before the phrase
 #     the question turns on tells the learner where to listen.
 #
 # So the house style asks for ordinary business pace and stops. If the clips
-# ever do need to be quicker, change that sentence and listen (`bjt audition`)
-# before a library is made from it — do not reach for a multiplier.
+# need to be quicker, change that sentence and listen (`bjt audition`) before a
+# library is made from it — do not reach for a multiplier.
 
 #: How each cast voice should be delivered, on top of the house style. These are
 #: performance notes, not identities — the identity is the provider's voice id,
@@ -249,11 +246,11 @@ class OpenAIProvider:
 class GeminiProvider:
     """Google's Gemini speech model, over the Gemini API.
 
-    The lightest of the three to set up — one API key from AI Studio — and a
-    model of the same family as the generator, which matters for the thing this
-    app tests: it reads keigo as language rather than as a string of readings,
-    so 伺います and 参ります come out as a person would say them, not as a
-    dictionary would. Directions are natural language, prefixed to the line.
+    The lightest of the three to set up — one API key from AI Studio. It reads
+    keigo as language rather than as a string of readings, which matters for
+    the thing this app tests: 伺います and 参ります come out as a person would
+    say them, not as a dictionary would. Directions are natural language,
+    prefixed to the line.
 
     The response is raw 16-bit PCM (24 kHz mono, per its MIME type) rather than
     a container, so it is wrapped into WAV here.
@@ -407,8 +404,7 @@ CREDENTIALS: dict[str, tuple[str, ...]] = {
 #: The library's voice. A decision, recorded in code rather than in anybody's
 #: environment, because the cast is fixed for the life of the library and a
 #: clip once live is never re-made: the provider must not follow whichever key
-#: happens to be set on the machine running the job. The owner chose OpenAI
-#: (2026-09-18).
+#: happens to be set on the machine running the job.
 DEFAULT = "openai"
 
 #: An override, for trying another provider on a laptop. Not for the workflow.

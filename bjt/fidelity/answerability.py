@@ -33,11 +33,10 @@ What is withheld depends on the type, and the choice is the type's own claim:
     English brief the picture is drawn from stands in for it on the full side.
     The picture itself is judged when it is drawn (bjt/scene_art.py).
 
-Until 2026-09-19 the full view was the stem alone for every type, so for a
-document or dialogue type the judge never saw the document or the dialogue:
-items answerable from the narration alone were kept, and items that genuinely
-needed the page were discarded as ambiguous — the exact opposite of the
-requirement, at the price of a night's generations.
+The full view carries the whole stimulus. Shown the stem alone, the judge of a
+document or dialogue type would keep items answerable from the narration alone
+and discard as ambiguous the items that genuinely need the page — the exact
+opposite of the requirement.
 """
 from __future__ import annotations
 
@@ -243,9 +242,8 @@ def leak_description(item_type: str, result: "GateResult | None" = None) -> str:
     """What a leaky verdict means for this type, in one sentence for the
     generator's next attempt (bjt/pipeline.py feeds it back) — with the judge's own
     words for how it found the answer, when the result is given. "The
-    distractors gave it away" was not enough on 2026-09-19: three drafts in a
-    row failed the same way on four shelves. "Option 2 was the only one in
-    humble form" is something a writer can act on.
+    distractors gave it away" leaves the next draft failing the same way;
+    "Option 2 was the only one in humble form" is something a writer can act on.
     """
     if item_type in _WITHHELD:
         what = (f"a reviewer picked the correct option without {_WITHHELD[item_type]}, "
@@ -271,11 +269,9 @@ def run_gate(item: dict) -> GateResult:
 
     Cold first because it is the side that discards. A leaky item is out
     whatever the full view says, so asking the full question of it is three
-    strong-model calls that cannot change the verdict — and on the first real
-    night the gate discarded eighteen items in a row as leaky, every one of
-    them after paying for the full view too. Cold-first halves the cost of a
-    discard and leaves a kept item exactly as it was: both sides run, both
-    rates recorded. A leaky item carries no full rate, not a fake one.
+    strong-model calls that cannot change the verdict. Cold-first halves the
+    cost of a discard and leaves a kept item exactly as it was: both sides run,
+    both rates recorded. A leaky item carries no full rate, not a fake one.
     """
     options = textutil.option_texts(item)
     answer = correct_index(item["options"])

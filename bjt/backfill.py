@@ -2,17 +2,17 @@
 
 `bjt importbatch` checks the shape of a hand-written item and stops there: no
 proofreader, no answerability gate, no difficulty probe. That is right for
-the reference batch it was built for, and it is how 142 of the first 146
-committed items arrived, so most of the bank a learner meets has passed the
-offline checks and nothing else. This module catches up on what that path
-skipped, over the committed bundles rather than over a draft.
+the reference batch it was built for, but it is also how most of the bank
+arrived, so most of what a learner meets has passed the offline checks and
+nothing else. This module catches up on what that path skipped, over the
+committed bundles rather than over a draft.
 
 `probe_bank` is the difficulty prior. `items.model_p_correct` is the only term
 in `next_items()` that tells two items of one type and level apart, and it is
-written at generation time or never; on 2026-09-27, 105 of the 107 live items
-had none, so the difficulty pitch sorted nothing across almost the whole bank.
-The same probe, the same weaker model and the same trials as a fresh draft
-gets (bjt/fidelity/difficulty.py), on every live item without a rate.
+written at generation time or never, so without this pass the difficulty pitch
+sorts nothing across every imported item. The same probe, the same weaker
+model and the same trials as a fresh draft gets (bjt/fidelity/difficulty.py),
+on every live item without a rate.
 
 `compare_bank` is the probe's model beside another one, on a sample of the
 bank, writing nothing: the evidence for changing the instrument (Jev, a
@@ -20,14 +20,12 @@ prototype, bjt/jev.py) before any rate it measured reaches a bundle.
 
 `regate_bank` is the review. The proofreader (bjt/fidelity/sanity.py) and then,
 if it found nothing, the answerability gate (bjt/fidelity/answerability.py):
-the order and the rules a fresh draft meets in `pipeline.generate_and_gate`.
-A review of the whole bank by hand withdrew 39 of 146 questions on 2026-09-26,
-almost all of them imported; this is the same question asked by the machines
-that ask it of every new draft. Every verdict goes into `batches/regated.txt`
-the moment it is reached, and a question that fails is *proposed* for
-`batches/withdrawn.txt` — written there only with `--withdraw`, in that
-ledger's own format and closed set of reasons, and even then only as a diff
-somebody reads before the merge that ships it.
+the order and the rules a fresh draft meets in `pipeline.generate_and_gate`,
+asked of questions that shipped without meeting them. Every verdict goes into
+`batches/regated.txt` the moment it is reached, and a question that fails is
+*proposed* for `batches/withdrawn.txt` — written there only with `--withdraw`,
+in that ledger's own format and closed set of reasons, and even then only as a
+diff somebody reads before the merge that ships it.
 
 **Built to be stopped.** A bank is bigger than one run's ceilings
 (`BJT_RUN_BUDGET_USD`, `_MAX_CALLS`, `_MAX_MINUTES` in bjt/llm.py), and the
@@ -376,8 +374,8 @@ SANITY_REASONS: dict[str, str] = {
     "answer_impossible": "wrong_answer",       # the marked answer cannot be right
     "second_answer_defensible": "ambiguous",   # another option is as right
     # The 解説 or the story does not hang together, or the options do not answer
-    # the question: a question that cannot be understood as it stands. The
-    # owner filed the same faults under `unclear` in the review of 2026-09-26.
+    # the question: a question that cannot be understood as it stands. A person
+    # reviewing the bank files the same faults under `unclear`.
     "explanation_mismatch": "unclear",
     "situation_incoherent": "unclear",
     "options_not_parallel": "unclear",

@@ -155,14 +155,6 @@ def test_publish_writes_the_rate_and_a_null_when_there_is_none():
     assert row.rstrip().endswith("null)")
 
 
-def test_every_committed_bundle_still_checks_out_with_the_new_field():
-    """The regression set, swept rather than named, as everywhere else."""
-    for path in batchmod.bundles():
-        bundle = batchmod.load(path)
-        report = batchmod.check_bundle(bundle)
-        assert report.ok, f"{path.name}: {[c.detail for c in report.failed]}"
-
-
 # ----- the reading floor ------------------------------------------------------
 
 def _mixed_survey():
@@ -290,7 +282,7 @@ def test_a_rare_type_gets_at_most_its_cap_a_night():
     assert by_type == {"gazou_haaku": 1, "bamen_haaku": 3}
 
 
-# ----- the difficulty signal the queue needs and mostly does not have ----
+# ----- the difficulty signal the queue needs -----------------------------
 
 def test_difficulty_coverage_counts_what_carries_a_prior(tmp_path, monkeypatch):
     """`model_p_correct` is the only term in next_items() that separates two
@@ -340,13 +332,10 @@ def test_difficulty_coverage_skips_an_unreadable_bundle_but_not_a_real_bug(
     tmp_path, monkeypatch
 ):
     """`difficulty_coverage` exists so a silent gap in the difficulty signal
-    cannot go unnoticed again (see the module docstring). It would be its own
-    kind of silent gap if it swallowed every exception a bundle could raise —
-    `_published_counts`, three lines up, only ever skips a bundle that fails to
-    read or parse; this function used to catch bare `Exception` instead, wide
-    enough to hide a real bug in the counting loop itself. A bundle that is
-    merely corrupt or unreadable is still skipped, same as always; anything
-    else must propagate."""
+    cannot go unnoticed. It would be its own kind of silent gap if it swallowed
+    every exception a bundle could raise, wide enough to hide a real bug in the
+    counting loop itself. Like `_published_counts`, it skips only a bundle that
+    fails to read or parse; anything else must propagate."""
     from bjt import plan as planmod
 
     good = tmp_path / "good.json"

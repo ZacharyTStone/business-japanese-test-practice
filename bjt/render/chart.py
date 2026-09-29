@@ -4,8 +4,7 @@
 asks about it together with what is heard — which month fell, which branch
 overtook which, whether a figure cleared its target once the speaker has said
 what to leave out. Reading a trend off bars is a different skill from finding a
-cell in a table, and until 2026-09-27 the library could not ask for it: a
-document had tables and no graphs. The owner asked for this (2026-09-27).
+cell in a table, and a document with only tables cannot ask for it.
 
 A chart is data like every other block, never a picture. An image model cannot
 put 4月 under the right bar any more reliably than it can spell 御中, and a

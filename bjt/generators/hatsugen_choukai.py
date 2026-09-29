@@ -5,10 +5,9 @@ utterances and picks the one that fits. Nothing is on the page: the stem is
 spoken once, so it has to carry the whole situation — who is speaking, to whom,
 and what they are trying to do — in two or three sentences.
 
-This is the type the whole pipeline is being proved on first, because it
-exercises every hard part at once: 敬語 direction, ウチ/ソト, phone protocol, a
-reused scene image, and TTS. Everything downstream (images, audio, the app's
-review notes) is shaped by what this type needs.
+It exercises every hard part at once — 敬語 direction, ウチ/ソト, phone
+protocol, a reused scene image, and TTS — so everything downstream (images,
+audio, the app's review notes) is shaped by what this type needs.
 
 Its variety comes from the seed table, never from the prompt — see
 ``bjt/seedtable.py`` and ``requires_cell``.

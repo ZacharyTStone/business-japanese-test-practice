@@ -1,21 +1,18 @@
 /**
  * The three places the app lives, on a bar that is always there.
  *
- * Three and not four: there used to be a 選ぶ tab, where a person picked a
- * problem type or sat a mock. It is gone on purpose. The app's whole claim is
- * that it decides what you practise next from what you have answered, and a
- * picker beside that claim is an invitation to overrule the one thing the app is
- * for — usually in favour of whatever feels comfortable, which is the opposite
- * of what raises a score.
+ * There is no tab for picking a problem type or sitting a mock. The app decides
+ * what you practise next from what you have answered, and a picker beside that
+ * is an invitation to overrule the one thing the app is for — usually in favour
+ * of whatever feels comfortable, which is the opposite of what raises a score.
  *
  * 解いた問題 is not a tab either: it is somewhere a learner goes *from* 記録, on
- * the way to one particular question, so it sits under 記録 rather than taking a
- * third of the bar.
+ * the way to one particular question, so it sits under 記録.
  *
  * Practice and its result are deliberately **not** tabs. They are pushed on top
- * of this bar and cover it, because a set of five is a thing you finish: a tab
- * bar under a listening item is an invitation to leave halfway, and leaving
- * halfway loses the set.
+ * of this bar and cover it, because a set is a thing you finish: a tab bar under
+ * a listening item is an invitation to leave halfway, and leaving halfway loses
+ * the set.
  */
 import { Tabs } from "expo-router/js-tabs";
 import React from "react";
@@ -40,11 +37,9 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         // Always stacked, at every width. Left to itself the bar puts the label
-        // *beside* the icon once the viewport is wide enough — which is what a
-        // desktop browser gets — and in that arrangement the label's top margin,
-        // there to space it under the icon, drops it a couple of pixels below
-        // the icon's centre line. Same bar on a phone and on a laptop, and the
-        // one spacing rule is right in both.
+        // *beside* the icon on a wide viewport, where the label's top margin
+        // (there to space it under the icon) drops it below the icon's centre
+        // line.
         tabBarLabelPosition: "below-icon",
         tabBarStyle: {
           backgroundColor: colors.surface,

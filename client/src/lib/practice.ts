@@ -1,20 +1,14 @@
 /**
  * The practice screen's state, as one reducer.
  *
- * It used to be nine `useState`s and five refs guarding them, and every one of
- * those refs was a bug report. State set in a press handler is not visible
- * until the next render, so two presses landing in one tick both read the old
- * value and both went through: two attempts written for one question, and a
- * counter that went 1 / 5 to 3 / 5, stepping over a question without asking
- * it. A veto pressed while a 発言聴解 was playing left the next question in
- * "listen", which a reading question has no way out of. The playlist finishing
- * after an answer asked for the answer stage and un-revealed the verdict.
- *
- * A reducer sees its actions one after another, each against the state the last
- * one left, so a second press in the same tick finds the question already
- * answered and changes nothing — by construction rather than by a ref somebody
- * remembered to set. And the transitions are a pure function, which is what
- * `practice.test.ts` checks: every one of the bugs above is a test there.
+ * State set in a press handler is not visible until the next render, so two
+ * presses landing in one tick would both read the old value and both go
+ * through: two attempts written for one question, or a question stepped over
+ * without being asked. A reducer sees its actions one after another, each
+ * against the state the last one left, so a second press in the same tick
+ * finds the question already answered and changes nothing — by construction
+ * rather than by a ref somebody remembered to set. And the transitions are a
+ * pure function, which is what `practice.test.ts` checks.
  *
  * Network calls stay in the screen. An answer is `pending` here from the press
  * until the database's verdict arrives as `graded`; the screen posts it from an
@@ -26,9 +20,9 @@ import { NO_ANSWER, type AnsweredItem, type QueuedItem } from "./types";
 /**
  * How soon after a question appears a press on one of its options is taken as
  * an answer. A double tap on "next" advances once — but its second tap lands on
- * whatever the next question put under the finger, and answered it: a browser
- * run caught exactly that (2026-09-27). Nobody reads a question and answers it
- * in a third of a second, so a press that early is the tail of the last one.
+ * whatever the next question put under the finger. Nobody reads a question and
+ * answers it in a third of a second, so a press that early is the tail of the
+ * last one.
  * The clock's own timeout is never refused.
  */
 const SETTLE_MS = 350;

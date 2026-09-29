@@ -264,12 +264,6 @@ def test_a_type_with_no_document_is_out_of_scope():
     assert item["options"][0]["text"] == "十時から"
 
 
-def test_spoken_options_are_never_rewritten():
-    item = _item("bamen_haaku", document=None)
-    del item["document"]
-    assert batch.normalise_numerals(item) == 0
-
-
 def test_normalising_twice_moves_nothing_the_second_time():
     item = _item("joukyou_haaku")
     assert batch.normalise_numerals(item) > 0

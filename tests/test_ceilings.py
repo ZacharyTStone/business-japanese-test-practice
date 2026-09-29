@@ -1,12 +1,9 @@
 """The ceilings: what stops a broken night from being an expensive one.
 
-Each one is independent of the others on purpose. The morning of 2026-09-18
-two manual runs spent twenty-six dollars in three hours, most of it on a bug
-that made every document draft cost three attempts, and then lost what they
-had written. A dollar ceiling measured from real usage, a call ceiling that
-needs no price table, a cap on output and effort per call, a cap on the
-night's size, and a bill in every summary — a bug in any one of them is
-caught by the rest.
+Each one is independent of the others on purpose: a dollar ceiling measured
+from real usage, a call ceiling that needs no price table, a cap on output and
+effort per call, a cap on the night's size, and a bill in every summary — a
+bug in any one of them is caught by the rest.
 """
 import pathlib
 import re
@@ -266,20 +263,20 @@ def test_the_workflow_keeps_its_guards():
     assert "git rebase" in pr_block and "git fetch origin" in pr_block, "tonight's commit sits on today's main"
 
     # What a night may spend is bounded by the ceilings above and nothing
-    # else: no check on other branches decides whether it runs. The owner
-    # asked for that (2026-09-19) after a leftover branch held a night back.
+    # else: no check on other branches decides whether it runs, so a leftover
+    # branch cannot hold a night back.
     unlocked = text.index("name: which of tonight's work is unlocked")
     unlocked_block = text[unlocked:text.index("- name:", unlocked + 1)]
     assert "content/nightly-*" not in unlocked_block
 
 
 def test_the_nights_run_on_a_schedule_and_stay_cheap():
-    """The owner turned the nights back on (2026-09-27) on one condition: that
-    they stay very cheap. A scheduled night is one nobody is watching, so both
-    prices it can run at are held here — the env fallback, which is what a
-    schedule pays because a schedule has no inputs, and the `max_usd` default,
-    which is what a manual run pays when nobody types a number. An edit that
-    makes the nights dear again has to change this test to do it."""
+    """The nights run on a schedule, and they stay very cheap. A scheduled
+    night is one nobody is watching, so both prices it can run at are held
+    here — the env fallback, which is what a schedule pays because a schedule
+    has no inputs, and the `max_usd` default, which is what a manual run pays
+    when nobody types a number. An edit that makes the nights dear has to
+    change this test to do it."""
     text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
 
     on = text[text.index("\non:\n"):text.index("\nconcurrency:")]
@@ -323,12 +320,9 @@ def test_the_probe_is_a_manual_run_that_does_nothing_else():
 
 
 def test_the_workflow_agrees_with_plan_on_a_nights_size():
-    """CLAUDE.md states the size of a night as "`plan.DEFAULT_BUDGET` /
-    `_PER_SLOT`, and the nightly workflow's own defaults, which must agree" —
-    but nothing before this test compared the two. `plan.py` and
-    `nightly.yml` each hold their own copy of the same three numbers (as a
-    Python default and as a YAML `workflow_dispatch` default plus its `||`
-    env fallback), and bumping one side alone changed no test and no runtime
+    """`plan.py` and `nightly.yml` each hold their own copy of the same three
+    numbers (as a Python default and as a YAML `workflow_dispatch` default
+    plus its `||` env fallback). Bumping one side alone raises no runtime
     error: it would just make a scheduled or default-input run write a
     different night than `bjt plan` reports."""
     text = (ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")

@@ -14,15 +14,12 @@ import { colors, space, type } from "../src/ui/theme";
 import { WelcomeScreen, useWelcome } from "../src/ui/welcome";
 
 /**
- * The way out of 解いた問題.
+ * The way out of the screens that belong under 記録.
  *
- * It needs one of its own because the screen is reached two ways and only one
- * of them leaves anything underneath: 記録 pushes it, but the result screen
- * *replaces* itself with it, and a replaced screen has no history to go back
- * through. On the web that meant a header with no back arrow and no browser
- * entry to press either — a room with the door painted on. So the control is
- * always drawn, and when there is nothing behind it, it goes to 記録, which is
- * where the screen belongs.
+ * 記録 pushes them, but the result screen *replaces* itself with 解いた問題,
+ * and a replaced screen has no history to go back through — no back arrow, and
+ * on the web no browser entry either. So the control is always drawn, and when
+ * there is nothing behind it, it goes to 記録.
  */
 function BackToRecord() {
   const router = useRouter();
@@ -73,10 +70,9 @@ function Navigator() {
   if (isConfigured) {
     if (auth.loading) return <Loading />;
     if (!auth.session) return <SignInScreen />;
-    // An RPC that failed to answer is not an RPC that said no: falling
-    // through to ClosedScreen here used to tell a tester who hit a network
-    // blip that their account was not approved. Only a confirmed `false`
-    // means that; a stuck `null` with an error means try again.
+    // An RPC that failed to answer is not an RPC that said no. Only a
+    // confirmed `false` means the account is not approved; a `null` with an
+    // error means try again.
     if (auth.isTester === null && auth.error) {
       return (
         <ScreenMessage>

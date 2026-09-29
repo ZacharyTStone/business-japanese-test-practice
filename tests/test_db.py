@@ -71,4 +71,6 @@ def test_discriminator_run_roundtrip(store):
 
 def test_calibration_run_roundtrip(store):
     rid = store.insert_calibration_run("hyougen", 0.7, 0.9, 10, 20)
-    assert isinstance(rid, int)
+    row = store.conn.execute("SELECT * FROM calibration_runs WHERE id = ?", (rid,)).fetchone()
+    assert row["item_type"] == "hyougen"
+    assert (row["official_accuracy"], row["generated_accuracy"]) == (0.7, 0.9)

@@ -142,7 +142,7 @@ TEMPLATES: dict[str, Template] = {
     # the question is about a trend or a comparison rather than a cell. Its
     # header is a schedule's — the period the figures cover and who compiled
     # them — because that is what a handout of figures carries, and the app
-    # draws it on the same sheet. The owner asked for this (2026-09-27).
+    # draws it on the same sheet.
     "figures": Template(
         id="figures",
         ja="集計資料",

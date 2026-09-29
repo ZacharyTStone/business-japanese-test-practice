@@ -81,10 +81,10 @@ insert into public.item_options (item_id, position, text, role, why) values
 
 commit;
 
--- Two users. A starts anonymous and links Google below, as the app once let
--- people do; B is already linked. Both are on the tester list, because while
--- the app is in testing nobody else can read anything at all — and the
--- isolation tests below are about what one *tester* can see of another.
+-- Two users. A starts anonymous and links an identity below; B is already
+-- linked. Both are on the tester list, because while the app is in testing
+-- nobody else can read anything at all — and the isolation tests below are
+-- about what one *tester* can see of another.
 insert into auth.users (id, email, is_anonymous) values
     ('11111111-1111-1111-1111-111111111111', null, true),
     ('22222222-2222-2222-2222-222222222222', 'b@example.com', false);
@@ -688,9 +688,9 @@ delete from auth.users where email = 'invited@example.com';
 -- ---------------------------------------------------------------------------
 -- Documents, dialogue, and the scene image path.
 --
--- Six of the nine item types carry a stimulus that is not a string. All three
--- of the things that carry it were added at once and all three are read by the
--- app through next_items, so all three are asserted here rather than trusted.
+-- Most item types carry a stimulus that is not a string. All three of the
+-- things that carry it are read by the app through next_items, so all three
+-- are asserted here rather than trusted.
 
 do $$
 declare
@@ -800,8 +800,8 @@ end
 $$;
 
 -- ---------------------------------------------------------------------------
--- Entitlements: the table finally has a writer, and it had better be the only
--- one. Every assertion below is about who CANNOT call it.
+-- Entitlements: the table has one writer, and it had better be the only one.
+-- What matters below is who CANNOT call it.
 
 do $$
 declare
@@ -863,14 +863,14 @@ $$;
 
 -- --- level, per section ----------------------------------------------------
 
--- Last, because it writes well over a hundred answers and every count above
--- would move. The fixtures from the top were deleted along the way, so it brings
--- its own: a dozen 聴解 items, a dozen 読解 items and ten 聴読解 items. A dozen
--- rather than one, because adjust_level() counts each item once per learner —
--- the first attempt and never a repeat — so a window of ten needs ten different
--- questions. And two sections rather than one, which is the whole point: they
--- have to move independently or a strong reader is still being drowned in
--- listening.
+-- After the counting tests, because it writes well over a hundred answers and
+-- every count above would move. The fixtures from the top were deleted along
+-- the way, so it brings its own: a dozen 聴解 items, a dozen 読解 items and ten
+-- 聴読解 items. A dozen rather than one, because adjust_level() counts each
+-- item once per learner — the first attempt and never a repeat — so a window of
+-- ten needs ten different questions. And two sections rather than one, which
+-- is the whole point: they have to move independently or a strong reader is
+-- still being drowned in listening.
 --
 -- Plus five 聴解 questions at J1 and five 読解 questions at J3, because nobody
 -- is moved into a level with fewer than five questions left to meet: a window
@@ -1069,8 +1069,8 @@ delete from public.bundles where id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv
 --
 -- Two mechanisms in one section because they meet in next_items: the ladder
 -- decides WHEN an item comes back, and the bank's counts decide which of the
--- unseen ones is worth meeting at all. Both are new surfaces that the wrong
--- party could read or write, so most of what follows is about who cannot.
+-- unseen ones is worth meeting at all. Both are surfaces the wrong party
+-- could read or write, so most of what follows is about who cannot.
 --
 -- Its own user and its own items, deleted at the end. 20_published_test.sql
 -- draws from the same J2 pool, and a fixture left behind would turn up in its
@@ -1246,8 +1246,7 @@ end
 $$;
 
 -- A due lesson is re-tested by a question the learner has never met that sets
--- the same trap — never by the same question while a new one exists. The owner
--- asked for this (2026-09-27).
+-- the same trap — never by the same question while a new one exists.
 do $$
 declare
     q record;
@@ -1437,9 +1436,8 @@ end
 $$;
 
 -- Run it again from scratch a few times. The ranking carries a tie-break random
--- and the whole point of rebalancing its weight was that it must not be able to
--- outvote the pitch; an assertion that passes four times in a row is how that
--- claim stays true rather than merely intended.
+-- and it must not be able to outvote the pitch; an assertion that passes eight
+-- times in a row is how that claim stays true rather than merely intended.
 do $$
 declare
     i integer;
@@ -1476,7 +1474,7 @@ delete from auth.users where id in ('55555555-5555-5555-5555-555555555555',
 -- ---------------------------------------------------------------------------
 -- The queue keeps its promises.
 --
--- Four corrections to next_items(), each asserted on the order it actually
+-- Four promises of next_items(), each asserted on the order it actually
 -- serves rather than on the comment that describes it: an unseen item always
 -- precedes one answered today, a trap that is in every item says nothing, an
 -- item with no difficulty is not an item at the perfect difficulty, and the
@@ -1571,7 +1569,7 @@ begin
     -- other item. Its rarity is 0, the term is 0, and the item sits at 0.65
     -- against a pitch of 0.80, so it loses to itm_q_z, which carries no trap
     -- that ever caught them and sits at 0.78. Under a flat count the five
-    -- catches were worth 0.30 and itm_q_x would have come first.
+    -- catches would be worth 0.30 and itm_q_x would come first.
     perform test.check(pos_z < pos_x,
         'a trap in every item pulls nothing forward: rarity ln(7/7) is 0');
     -- wrong_uchi_soto is in two items of seven, rarity ln(3.5) ≈ 1.25: one
@@ -1580,9 +1578,9 @@ begin
         'a trap in two items of seven pulls forward: one catch outranks a pitch of 0.02');
 
     raise notice 'no difficulty is not perfect difficulty';
-    -- itm_q_n has no measured rate and no gate prior. It used to be scored AT
-    -- the target and beat itm_q_z; now it pays 0.05, between at-target and
-    -- clearly off, so it sits behind itm_q_z (0.01) and ahead of itm_q_x (0.075).
+    -- itm_q_n has no measured rate and no gate prior. It is not scored AT the
+    -- target: it pays 0.05, between at-target and clearly off, so it sits
+    -- behind itm_q_z (0.01) and ahead of itm_q_x (0.075).
     perform test.check(pos_z < pos_n,
         'an item with no opinion on its difficulty loses to one measured near the pitch');
     perform test.check(pos_n < pos_x,
@@ -1623,8 +1621,8 @@ delete from auth.users where id = '99999999-9999-9999-9999-999999999999';
 -- never seen, and one kept for a forty-day-old answer at the end. Fourteen and
 -- not more because the day allows fifteen answers, and the ordering test wants
 -- the whole window inside what is left after two of them. The dated answers
--- are inserted as the test's own role: a client can no longer name
--- answered_at, which is asserted further down.
+-- are inserted as the test's own role: a client cannot name answered_at,
+-- which is asserted further down.
 begin;
 insert into auth.users (id, email, is_anonymous) values
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'h@example.com', false);
@@ -1773,10 +1771,10 @@ begin
 end
 $$;
 
--- Longest ago first, and a minute is enough to decide it. The tie-break noise
--- in this band was once random()/1e6 against epoch/1e12 — worth eleven days of
--- `last_at` — so "longest ago" was a coin toss between two questions answered a
--- minute apart. Eight draws of a coin toss do not all come up the same way.
+-- Longest ago first, and a minute is enough to decide it: the tie-break noise
+-- in this band must be worth less than a minute of `last_at`, or "longest ago"
+-- is a coin toss between two questions answered a minute apart. Eight draws of
+-- a coin toss do not all come up the same way.
 do $$
 declare
     j integer;
@@ -1822,9 +1820,9 @@ end
 $$;
 
 -- The fifteen is a ceiling on the account, not a number the client agrees to.
--- The check constraint on profiles.daily_goal is a hard bound (a hundred);
--- what stops a tester PATCHing their way to a hundred-question day is the
--- trigger, which asks whose row this is.
+-- The check constraint on profiles.daily_goal says only that a day is at least
+-- one question; what stops a tester PATCHing their way to a forty-question day
+-- is the trigger, which asks whose row this is.
 do $$
 declare
     ok boolean;
@@ -1886,8 +1884,8 @@ $$;
 
 -- One number on the tester row, and it is both the largest set this account
 -- may ask for and the door its day shuts at — the same two things the fifteen
--- has always been. `unlimited` goes back off, so what is being watched here is
--- the number alone.
+-- is for everybody else. `unlimited` goes back off, so what is being watched
+-- here is the number alone.
 begin;
 set local role service_role;
 update public.testers set unlimited = false, max_daily_goal = 40
@@ -2059,13 +2057,13 @@ delete from auth.users where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 -- ---------------------------------------------------------------------------
 -- A level the bank has barely stocked, and a level judged on one listen.
 --
--- Most shelves of the bank hold fewer than the ten or twenty first attempts a
--- level move used to need, so a learner who reached one could never leave it.
--- The window is now never larger than what the level has left to ask, never
--- judged on fewer than five, and nobody is moved into a level with fewer than
--- five questions left for them. Answers given after a replay, or with the
--- spoken options read, are not the exam's conditions and count for neither
--- direction. The owner asked for both (2026-09-27).
+-- Most shelves of the bank hold fewer than ten or twenty questions, and a
+-- window that asked for more could never fill: a learner who reached one could
+-- never leave it. So the window is never larger than what the level has left
+-- to ask, never judged on fewer than five, and nobody is moved into a level
+-- with fewer than five questions left for them. Answers given after a replay,
+-- or with the spoken options read, are not the exam's conditions and count for
+-- neither direction.
 
 begin;
 insert into auth.users (id, email, is_anonymous) values
@@ -2106,10 +2104,10 @@ declare
     i integer;
 begin
     raise notice 'a level the bank has barely stocked';
-    -- Six 読解 questions at J2, all right. The window would have been ten and
-    -- could never have filled; it is six, and six of six is a promotion — to
-    -- a level with two questions in it, which would be a level nobody could
-    -- ever be judged at again. So the section stays, placed.
+    -- Six 読解 questions at J2, all right. A window of ten could never fill
+    -- here; it is six, and six of six is a promotion — to a level with two
+    -- questions in it, which would be a level nobody could ever be judged at
+    -- again. So the section stays, placed.
     for i in 1..6 loop
         insert into public.attempts (item_id, chosen_index, think_ms) values ('itm_th2_' || i, 0, 4000);
     end loop;
@@ -2175,12 +2173,11 @@ delete from auth.users where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 -- ---------------------------------------------------------------------------
 -- The exam date.
 --
--- A date the learner typed in on the account screen, and until now only a
--- countdown. Two things now follow from it: a lesson whose next rung would
--- land in the last two days before the exam, or after it, is brought forward
--- so it is re-tested before the day it counts; and in the last two weeks the
--- set follows the exam's section mix strictly rather than leaning toward it.
--- The owner asked for both (2026-09-27).
+-- A date the learner types in on the account screen. Two things follow from
+-- it: a lesson whose next rung would land in the last two days before the
+-- exam, or after it, is brought forward so it is re-tested before the day it
+-- counts; and in the last two weeks the set follows the exam's section mix
+-- strictly rather than leaning toward it.
 
 begin;
 insert into auth.users (id, email, is_anonymous) values

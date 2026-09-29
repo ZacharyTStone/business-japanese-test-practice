@@ -2,9 +2,9 @@
  * The practice screen. Everything else in the app exists to get someone here.
  *
  * It takes no arguments. There is one kind of practice run — the set the
- * database built from this learner's record — because every parameter this
- * screen used to accept (a mode, a problem type, a level) was a way for somebody
- * to overrule the only thing the app is for.
+ * database built from this learner's record — because any parameter (a mode, a
+ * problem type, a level) would be a way to overrule the only thing the app is
+ * for.
  *
  * One question is four moments, met in order, and the screen shows one at a
  * time:
@@ -13,11 +13,11 @@
  *             document if there is one. Nothing to answer yet.
  *   listen  — the audio plays, once, by itself. Nothing readable about the
  *             answers is on screen: the first listen is a listen, not a skim.
- *             When the options are spoken (発言聴解) they are on screen from
+ *             When the options are spoken (第1部 聴解) they are on screen from
  *             here as numbers with a play button, and can be pressed — a
- *             learner who knows the answer at the second turn should not have
- *             to wait for the fourth. Options that are text wait for the
- *             answer stage. The owner asked for this (2026-09-18).
+ *             learner who knows the answer at the second option should not
+ *             have to wait for the fourth. Options that are text wait for the
+ *             answer stage.
  *   answer  — the four options, and a button to hear it again.
  *   reveal  — the other person's face, one sentence about what happened, and
  *             the explanation folded under it for those who want it.
@@ -29,9 +29,9 @@
  *
  * Three decisions worth stating:
  *
- * **The whole set is fetched up front.** Five items in one request, then no
- * network until the first answer. Someone practising on the Yamanote line should
- * not lose their set in a tunnel.
+ * **The whole set is fetched up front.** One request, then no network until the
+ * first answer. Someone practising on the Yamanote line should not lose their
+ * set in a tunnel.
  *
  * **Correctness comes back from the insert.** The item carries `correct_index`,
  * so the screen could grade locally and feel a few hundred milliseconds faster —
@@ -149,11 +149,10 @@ function spokenOptionUrls(item: QueuedItem): string[] | null {
 }
 
 /** Every clip of an item, in the order it is heard: the conversation, then the
- *  question, then — for 発言聴解 — the four things one might say, each behind
- *  the number that names it. Turns without a clip yet are skipped, not waited
- *  for, and so are the numbers: they are four clips for the whole library
- *  (fetchOptionLabels), so before they are synthesised this is exactly the
- *  run it always was. */
+ *  question, then — where the options are spoken — the four options, each
+ *  behind the number that names it. Turns without a clip yet are skipped, not
+ *  waited for, and so are the numbers, which are four clips for the whole
+ *  library (fetchOptionLabels). */
 function playlistFor(item: QueuedItem, labels: string[] | null): string[] {
   const turns = (item.dialogue ?? [])
     .map((t) => clipUrl(t.audio_path))
@@ -181,8 +180,7 @@ export default function Practice() {
   const { lang, t } = useLang();
   const { session, loading: authLoading, error: authError } = useAuth();
   // A direct load of /practice — a deep link, a refresh — has nothing behind
-  // it to go back to; history.tsx hit the same thing first. "Back" from here
-  // always has to land somewhere.
+  // it to go back to, and "back" from here always has to land somewhere.
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
   // The set and everything about the question on screen: one reducer, whose
@@ -206,15 +204,13 @@ export default function Practice() {
   const [pace, setPace] = useState<Record<string, TypePace>>({});
   const [timed, setTimed] = useState(false);
   /** 「いち」「に」「さん」「よん」, or null until all four are synthesised.
-   *  Furniture too: an item whose options are spoken is still practisable with
-   *  nothing but the options, which is how it worked before they existed. */
+   *  Furniture too: without them the spoken options play unnumbered. */
   const [labels, setLabels] = useState<string[] | null>(null);
 
   const startedAt = useRef(Date.now());
   const levelsBefore = useRef<SectionLevel[]>([]);
-  // Answering a question near the bottom of a long item used to change nothing
-  // a phone could see: the option turned green under the thumb and the verdict
-  // appeared below the fold. This puts it on screen.
+  // Brings the verdict on screen: on a long item it would otherwise appear
+  // below the fold of a phone, under the option that was just pressed.
   const scroller = useRef<ScrollView>(null);
   // Which question has already been scrolled to its verdict, by id. onLayout
   // fires again when the explanation is unfolded, and without this the screen
@@ -573,10 +569,8 @@ export default function Practice() {
       ) : (
         <FadeIn key={`${item.id}-question`}>
           <Card style={{ gap: space.md }}>
-            {/* The same picture at the same size as on the scene card. It used
-                to shrink to a strip once the audio started, which cropped the
-                drawing to a band of ceiling; the owner asked for it whole
-                (2026-09-18). */}
+            {/* The same picture at the same size as on the scene card: a strip
+                would crop the drawing to a band of ceiling. */}
             {sceneImage ? <SceneImage uri={sceneImage} /> : null}
 
             {/* The stimulus, in the order it is met: what you read, then what you
@@ -944,10 +938,10 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   optionHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  optionAside: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
   // A pointer over an option that can still be chosen: the card lifts and its
   // edge takes the soft accent, which is "this one, if you press" without
   // the full border that means "this one, pressed".
-  optionAside: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
   optionHover: { borderColor: colors.accentSoft, ...shadow.cardRaised },
   optionPending: { borderColor: colors.accent },
   optionCorrect: { borderColor: colors.correct, backgroundColor: colors.correctSoft },

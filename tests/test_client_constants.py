@@ -3,8 +3,7 @@
 `client/src/lib/generated.ts` is written by `python -m bjt.client_constants`
 from the distractor-role enums and the seed tables. A role or a tag added on
 the Python side and not regenerated would reach the app as a generic sentence
-or a raw id, which is exactly how 17 of the 34 roles came to be shown as
-「この場面に合わない」 — so a stale file fails here.
+such as 「この場面に合わない」 or a raw id, so a stale file fails here.
 """
 import pathlib
 import re
@@ -48,7 +47,7 @@ def test_the_reading_clock_and_the_ladder_agree_on_its_longest_allowance():
     """pace.ts clamps a reading question's clock at MAX_SCALE times its type's
     budget; the ladder calls a right answer slow past pace_max_scale() times
     the same budget. If the two drift, an answer given inside the clock could
-    be held as slow, which is the bug the migration of 2026-09-27 fixed."""
+    be held as slow."""
     pace = (ROOT / "client" / "src" / "lib" / "pace.ts").read_text(encoding="utf-8")
     ts = re.search(r"const MAX_SCALE = ([0-9.]+);", pace)
     assert ts, "pace.ts no longer declares MAX_SCALE as expected"

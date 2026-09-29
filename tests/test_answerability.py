@@ -121,9 +121,9 @@ def _doc_item(item_type):
 
 @pytest.mark.parametrize("item_type", ["joukyou_haaku", "shiryou_choudokkai", "sougou_dokkai"])
 def test_the_full_view_carries_the_document(item_type):
-    """The judge used to be shown the narration alone: an item whose answer
-    needed the page was 'ambiguous' and one whose audio was decorative was
-    'kept'. Both halves now reach the full view."""
+    """Shown the narration alone, the judge would call an item whose answer
+    needs the page 'ambiguous' and keep one whose audio is decorative. Both
+    halves reach the full view."""
     from bjt.render import document
     item = _doc_item(item_type)
     full, cold = answerability.questions(item)
@@ -224,5 +224,5 @@ def test_the_judges_reason_is_kept_and_fed_back(monkeypatch, goi_item):
     text = answerability.leak_description("goi_bunpou", res)
     assert "the only polite one" in text and text.count("the only polite one") == 1
     assert "stem hidden" in text
-    # No result, or no cold reasons: the plain sentence, as before.
+    # No result, or no cold reasons: the plain sentence.
     assert "own words" not in answerability.leak_description("goi_bunpou")

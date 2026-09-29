@@ -2,11 +2,11 @@
  * The three levels, and the handful of things every screen asks about them.
  *
  * The app serves a level per exam section — 聴解, 聴読解, 読解 — because almost
- * nobody is the same at all three, and one number for the whole learner was
- * wrong twice for most people: too easy where they were strong, too hard where
- * they were not. Four screens now want to say something about that, and they
- * should all say it the same way, so the ordering and the comparison live here
- * rather than being reinvented per screen.
+ * nobody is the same at all three, and one number for the whole learner is
+ * wrong twice for most people: too easy where they are strong, too hard where
+ * they are not. Several screens say something about that, and they should all
+ * say it the same way, so the ordering and the comparison live here rather
+ * than being reinvented per screen.
  *
  * Nothing here decides anything. The levels are moved by `adjust_level()` in the
  * database, on the evidence of the answers, and whether a level has enough
@@ -57,9 +57,8 @@ function levelOf(levels: SectionLevel[], section: Section): Level | null {
  * The database decides. `v_my_levels.placed` is true once `adjust_level()` has
  * moved the section, or once it has the answers it would judge a first move on
  * — first attempts, at the section's current level, since the last change.
- * This used to be a count of ten answers kept here, but that counted every
- * answer in the section, stretch and below-level items included, and so could
- * name a level before the database had seen enough to move it.
+ * A count kept here would include stretch and below-level answers, and so
+ * could name a level before the database had seen enough to move it.
  */
 function isPlaced(levels: SectionLevel[], section: Section): boolean {
   return levels.find((l) => l.section === section)?.placed ?? false;

@@ -94,10 +94,9 @@ export function Button({
 }) {
   // A button that cannot be pressed is drawn as one, rather than as a faded
   // copy of a button that can: the fill goes flat, the label goes grey, the
-  // shadow goes. Fading it left every colour on the card lying about its own
-  // contrast — and, on a screen where something else is also faded, made the
-  // two indistinguishable. The owner asked for state to be drawn rather than
-  // dimmed (2026-09-20).
+  // shadow goes. Fading it would leave every colour on the card lying about its
+  // own contrast — and, on a screen where something else is also faded, make
+  // the two indistinguishable.
   const labelColor = disabled
     ? colors.muted
     : tone === "primary"
@@ -270,10 +269,9 @@ export function ProgressRing({
   label: string;
   caption?: string;
   labelColor?: string;
-  /** The caption is the quiet half of the ring, and it used to be the label at
-   *  85% opacity — a second way of saying "muted" that no contrast check could
-   *  see through. It is the same token as every other quiet line on an accent
-   *  fill now, so it moves when that one does. */
+  /** The caption is the quiet half of the ring: the same token as every other
+   *  quiet line on an accent fill, rather than the label faded, so a contrast
+   *  check can see it and it moves when that one does. */
   captionColor?: string;
   /** What the ring means in words. Without it a screen reader reads "3 / 5" and
    *  "today" as two loose fragments with a circle between them. */
@@ -450,10 +448,9 @@ export function Chip({
 /**
  * A date somebody actually picks.
  *
- * It replaced three chips — "in 1 month", "in 3 months", "in 6 months" — which
- * were never anybody's exam date. The exam is on a published day; rounding it
- * to a month makes the countdown that hangs off it wrong by up to a fortnight,
- * which is the difference between two more weekends of revision and none.
+ * The exam is on a published day; rounding it to a month would make the
+ * countdown that hangs off it wrong by up to a fortnight, which is the
+ * difference between two more weekends of revision and none.
  *
  * On the web this is the browser's own date control, because that is the best
  * picker already on the device and it costs nothing to use. Everywhere else it
@@ -650,12 +647,10 @@ const styles = StyleSheet.create({
     // The fill is the card's own, and the gradient above it is decoration.
     // This card carries two weights of text in colours picked for a violet
     // ground (see theme.ts: "an accent fill that carries text is accentDeep
-    // or darker"), and until this line the only thing keeping that rule was
-    // an SVG paint server. A browser that drops it — the frame before it
-    // rasterises, a composited layer it declines to repaint — left white text
-    // and pale violet text on the page's own near-white, which is a hero
-    // nobody can read; reported from a phone (2026-09-20). `accentDeep` is
-    // the gradient's own light end, so nothing changes when it does paint.
+    // or darker"), and a browser may drop the SVG paint server — the frame
+    // before it rasterises, a composited layer it declines to repaint —
+    // which would leave that text on the page's own near-white. `accentDeep`
+    // is the gradient's own light end, so nothing changes when it does paint.
     backgroundColor: colors.accentDeep,
     ...shadow.hero,
   },
