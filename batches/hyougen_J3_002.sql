@@ -1,0 +1,55 @@
+-- hyougen_J3_002: 1 × hyougen (J3)
+-- generated 2026-09-29T21:46:25+00:00 by claude-sonnet-5
+-- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+
+begin;
+
+insert into public.bundles (id, item_type, level, generator_model, generated_at)
+values ('hyougen_J3_002', 'hyougen', 'J3', 'claude-sonnet-5', '2026-09-29T21:46:25+00:00')
+on conflict (id) do update set
+       item_type = excluded.item_type,
+       level = excluded.level,
+       generator_model = excluded.generator_model,
+       generated_at = excluded.generated_at;
+
+insert into public.items (id, bundle_id, item_type, level, seed_cell_id, setting, relation, function, channel, scene_id, speaker_role, listener_role, topic, stem, correct_index, explanation_ja, explanation_en, vocab_notes, documents, dialogue, narration_clip_id, model_p_correct)
+values ('e495e40444', 'hyougen_J3_002', 'hyougen', 'J3', 'phone_call+junior_to_senior+confirm@J3', 'phone_call', 'junior_to_senior', 'confirm', 'phone', null, null, null, '同行訪問の集合場所を確認する電話', '後輩が先輩に電話をかけ、明日一緒に取引先を訪問する件で、集合時間と場所が合っているか確認します。最も適切な表現はどれですか。', 3, '後輩から先輩への確認は、決まっている予定を「よろしいでしょうか」の形で相手に問い返すのが適切。「伺います」は謙譲語として正しいが、自分の予定を報告しているだけで確認の働きをしていない。「明日って〜いい？」は先輩への電話としてくだけすぎている。「お伺いになります」は謙譲語の「伺う」に尊敬語の形を足しており、自分の行為を敬う誤った向きになっている。', 'A junior confirming a schedule with a senior on the phone should phrase it as a question (よろしいでしょうか), not as a plain report, casual speech, or a self-directed honorific error.', '[{"term": "伺う", "reading": "うかがう", "meaning": "to visit/ask (humble form)"}, {"term": "集合", "reading": "しゅうごう", "meaning": "gathering/meeting up"}]'::jsonb, '[]'::jsonb, '[]'::jsonb, null, 0.0)
+on conflict (id) do update set
+       bundle_id = excluded.bundle_id,
+       item_type = excluded.item_type,
+       level = excluded.level,
+       seed_cell_id = excluded.seed_cell_id,
+       setting = excluded.setting,
+       relation = excluded.relation,
+       function = excluded.function,
+       channel = excluded.channel,
+       scene_id = excluded.scene_id,
+       speaker_role = excluded.speaker_role,
+       listener_role = excluded.listener_role,
+       topic = excluded.topic,
+       stem = excluded.stem,
+       correct_index = excluded.correct_index,
+       explanation_ja = excluded.explanation_ja,
+       explanation_en = excluded.explanation_en,
+       vocab_notes = excluded.vocab_notes,
+       documents = excluded.documents,
+       dialogue = excluded.dialogue,
+       narration_clip_id = excluded.narration_clip_id,
+       model_p_correct = excluded.model_p_correct;
+
+-- Options are replaced wholesale rather than upserted: a corrected item can
+-- have fewer options or a different order, and a stale row left behind would
+-- be a fifth answer nobody meant to publish.
+delete from public.item_options where item_id in ('e495e40444');
+insert into public.item_options (item_id, position, text, role, why, clip_id)
+values ('e495e40444', 0, '明日は私が10時に本社ロビーへお伺いになります。', 'wrong_honorific_direction', '「お伺いになる」は謙譲語の「伺う」に尊敬語の形を重ねており、自分の行為に敬意を向ける誤りになっている。', null),
+       ('e495e40444', 1, '明日って10時に本社ロビーでいい？', 'register_too_casual', '内容は確認だが、先輩への電話としては話し言葉が崩れすぎており丁寧さに欠ける。', null),
+       ('e495e40444', 2, '明日は10時に本社ロビーに伺います。', 'correct_keigo_wrong_speech_act', '謙譲語は正しいが、自分の予定を述べているだけで、時間や場所が合っているかを尋ねる形になっていない。', null),
+       ('e495e40444', 3, '明日のご訪問ですが、集合は10時に本社ロビーでよろしいでしょうか。', 'correct', '「よろしいでしょうか」で相手の確認を求める形になっており、先輩への電話での確認として丁寧さも適切。', null)
+on conflict (item_id, position) do update set
+       text = excluded.text,
+       role = excluded.role,
+       why = excluded.why,
+       clip_id = excluded.clip_id;
+
+commit;
