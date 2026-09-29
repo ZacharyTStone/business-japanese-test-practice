@@ -532,10 +532,12 @@ export function DateField({
  * The same shape as DateField and for the same reason: on the web this is the
  * browser's own number control, because it is the best one already on the
  * device, and everywhere else a plain numeric field. The value is handed up
- * only once it is a whole number inside the bounds, so a half-typed "4" on the
- * way to "40" never reaches the profile — and a field left empty or out of
- * range falls back to the last good value when it loses focus rather than
- * saving something nobody meant.
+ * only when editing ends — the field loses focus, or Enter is pressed — and
+ * only if it is a whole number inside the bounds. Saving on every keystroke
+ * would store each step on the way — typing "15" saves 1 and then 15, and two
+ * writes can land in either order — and some browsers step a focused number
+ * box with the mouse wheel. A field left empty or out of range falls back to
+ * the last good value instead of saving something nobody meant.
  *
  * There is exactly one of these in the app, on the account screen, and only
  * for an account the database says may size its own day. It is not a difficulty
@@ -565,15 +567,11 @@ export function NumberField({
     return n >= min && n <= max ? n : null;
   }
 
-  function commit(next: string) {
-    setText(next);
-    const n = parse(next);
-    if (n !== null && n !== value) onChange(n);
-  }
-
-  /** Nothing usable in the box when the cursor leaves: put back what is saved. */
+  /** Editing is over: save a usable number, or put back what is saved. */
   function settle() {
-    if (parse(text) === null) setText(String(value));
+    const n = parse(text);
+    if (n === null) setText(String(value));
+    else if (n !== value) onChange(n);
   }
 
   if (Platform.OS === "web") {
@@ -585,8 +583,14 @@ export function NumberField({
         max={max}
         step={1}
         aria-label={accessibilityLabel}
-        onChange={(e) => commit(e.target.value)}
+        onChange={(e) => setText(e.target.value)}
         onBlur={settle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        // Some browsers step a focused number box with the wheel; let it
+        // scroll the page instead.
+        onWheel={(e) => e.currentTarget.blur()}
         style={{
           fontFamily: "inherit",
           fontSize: 16,
@@ -605,8 +609,9 @@ export function NumberField({
   return (
     <TextInput
       value={text}
-      onChangeText={commit}
+      onChangeText={setText}
       onBlur={settle}
+      onSubmitEditing={settle}
       accessibilityLabel={accessibilityLabel}
       inputMode="numeric"
       keyboardType="number-pad"
