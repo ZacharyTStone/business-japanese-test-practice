@@ -45,6 +45,9 @@ const S = {
     "次の問題は、日本時間の0時（あなたの時刻で{time}）から出ます",
     "New questions from midnight in Japan ({time} your time)",
   ],
+  // A screen that threw while drawing (ui/crash.tsx).
+  crash_title: ["この画面を表示できませんでした", "This screen couldn't be shown"],
+  crash_again: ["もう一度表示する", "Show it again"],
   loading: ["読み込み中…", "Loading…"],
   tab_home: ["ホーム", "Home"],
   tab_progress: ["記録", "Progress"],

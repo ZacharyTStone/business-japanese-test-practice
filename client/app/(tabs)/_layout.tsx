@@ -19,6 +19,7 @@ import React from "react";
 import type { ColorValue } from "react-native";
 
 import { useLang } from "../../src/lib/i18n";
+import { ScreenCrash } from "../../src/ui/crash";
 import { Icon, type IconName } from "../../src/ui/icons";
 import { useTabBarHeight } from "../../src/ui/tabbar";
 import { colors, shadow, space } from "../../src/ui/theme";
@@ -28,6 +29,10 @@ function tabIcon(name: IconName) {
     <Icon name={name} color={color as string} size={24} strokeWidth={focused ? 2.2 : 1.8} />
   );
 }
+
+/** A tab that throws while drawing is caught here, under the stack, so the
+ *  way home still has a navigator to go through (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
 
 export default function TabsLayout() {
   const { t } = useLang();

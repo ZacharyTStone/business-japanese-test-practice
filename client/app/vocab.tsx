@@ -29,7 +29,11 @@ import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supa
 import type { TermSentence, VocabEntry } from "../src/lib/types";
 import { MiniPlay } from "../src/ui/audio";
 import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { ScreenCrash } from "../src/ui/crash";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
+
+/** A throw while drawing stays on this screen (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
 
 export default function Vocab() {
   // The list runs to the bottom of the screen, where the home indicator is.

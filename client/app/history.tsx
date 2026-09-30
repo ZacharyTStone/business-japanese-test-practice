@@ -38,10 +38,14 @@ import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supa
 import type { HistoryEntry, ReviewDetail } from "../src/lib/types";
 import { MiniPlay, Transcript } from "../src/ui/audio";
 import { Button, Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { ScreenCrash } from "../src/ui/crash";
 import { DocumentView } from "../src/ui/document";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
 const NUMBERS = ["1", "2", "3", "4"];
+
+/** A throw while drawing stays on this screen (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
 
 export default function History() {
   // The list runs to the bottom of the screen, where the home indicator is.

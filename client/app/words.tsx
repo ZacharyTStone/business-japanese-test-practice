@@ -23,6 +23,7 @@ import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supa
 import type { Level, Section } from "../src/lib/types";
 import { annotate, filterWords, furigana, type WordEntry } from "../src/lib/words";
 import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { ScreenCrash } from "../src/ui/crash";
 import { RubyText } from "../src/ui/ruby";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
@@ -30,6 +31,9 @@ const LEVELS: Level[] = ["J1", "J2", "J3"];
 /** Drawn at a time. Furigana lays a sentence out a character to a cell, and a
  *  few hundred of those at once is a slow first paint on a phone. */
 const PAGE = 40;
+
+/** A throw while drawing stays on this screen (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
 
 export default function Words() {
   // The list runs to the bottom of the screen, where the home indicator is.

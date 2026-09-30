@@ -9,6 +9,7 @@ import { errorKind, friendlyError } from "../src/lib/errors";
 import { LangProvider, useLang } from "../src/lib/i18n";
 import { isConfigured } from "../src/lib/supabase";
 import { Loading, Notice, ScreenMessage } from "../src/ui/components";
+import { RootCrash } from "../src/ui/crash";
 import { ClosedScreen, SignInScreen } from "../src/ui/gate";
 import { Icon } from "../src/ui/icons";
 import { colors, space, type } from "../src/ui/theme";
@@ -57,6 +58,10 @@ function CantConnect({ failure, onRetry }: { failure: unknown; onRetry: () => vo
     </ScreenMessage>
   );
 }
+
+/** The last resort: a throw the navigator itself did not survive (ui/crash.tsx).
+ *  Screens under it export their own, so most failures never reach this one. */
+export const ErrorBoundary = RootCrash;
 
 export default function RootLayout() {
   return (
