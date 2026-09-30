@@ -2747,6 +2747,9 @@ do $$ begin perform test.become('f2222222-2222-2222-2222-222222222222'); end $$;
 set role authenticated;
 
 do $$
+declare
+    ok     boolean := false;
+    v_hint text;
 begin
     perform test.check(
         not exists (select 1 from public.items where id = 'itm_v1'),
@@ -2755,6 +2758,34 @@ begin
     perform test.check(
         exists (select 1 from public.items where id = 'itm_v2'),
         'while the rest of the bank is untouched');
+
+    -- Nor answer it. grade_attempt() reads the key as the definer, past the
+    -- select policy, so it has to ask about is_published itself: a set fetched
+    -- a moment before the veto still names the question.
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_v1', 0);
+    exception when others then
+        get stacked diagnostics v_hint = pg_exception_hint;
+        ok := v_hint = 'item_unavailable';
+    end;
+    perform test.check(ok,
+        'an answer to a vetoed question is refused, with a hint the app can read');
+    perform test.check(not exists (select 1 from public.attempts where item_id = 'itm_v1'),
+        'and nothing is recorded against it');
+
+    ok := false;
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_nowhere', 0);
+    exception when others then
+        get stacked diagnostics v_hint = pg_exception_hint;
+        ok := v_hint = 'item_unavailable';
+    end;
+    perform test.check(ok, 'and so is an answer to a question that never existed');
+
+    insert into public.attempts (item_id, chosen_index) values ('itm_v2', 0);
+    perform test.check(
+        (select is_correct from public.attempts where item_id = 'itm_v2'),
+        'while the question beside it takes its answer as ever');
 end
 $$;
 

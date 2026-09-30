@@ -273,7 +273,7 @@ comment on function public.daily_max is
     'so the app and the queue read the same number.';
 
 
--- ==== function grade_attempt — 20260930000300_the_door_is_on_the_answer.sql
+-- ==== function grade_attempt — 20260930000400_a_withdrawn_question_takes_no_answers.sql
 
 create or replace function public.grade_attempt()
 returns trigger
@@ -314,15 +314,18 @@ begin
         end if;
     end if;
 
-    -- The item still has to exist, and its answer key is still read here and
-    -- not taken from the client — a timeout is graded, not merely accepted.
+    -- The item still has to exist, and still be in the bank: a question that
+    -- was withdrawn or vetoed takes no new answers. Its answer key is read here
+    -- and not taken from the client — a timeout is graded, not merely accepted.
     select i.correct_index, i.item_type, i.function
       into v_correct_index, v_type, v_function
       from public.items i
-     where i.id = new.item_id;
+     where i.id = new.item_id
+       and i.is_published;
 
     if v_correct_index is null then
-        raise exception 'no such item %', new.item_id;
+        raise exception 'no such item %', new.item_id
+            using hint = 'item_unavailable';
     end if;
 
     if new.chosen_index = -1 then
@@ -375,7 +378,8 @@ comment on function public.grade_attempt is
     'the question clock ran out: wrong, with the role timed_out. A stands_for that '
     'the queue could not have served is cleared. An answer that would take today '
     'past my_daily_max() is refused (hint daily_limit_reached), unless the '
-    'tester''s ceiling is lifted.';
+    'tester''s ceiling is lifted, and so is an answer to a question that is not '
+    'published (hint item_unavailable).';
 
 
 -- ==== function grant_entitlement — 20260915000400_entitlement_grants.sql
