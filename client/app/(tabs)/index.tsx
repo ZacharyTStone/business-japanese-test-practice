@@ -45,7 +45,7 @@ import { Icon } from "../../src/ui/icons";
 import { useFreshToday } from "../../src/ui/fresh";
 import { FadeIn } from "../../src/ui/motion";
 import { useTabClearance } from "../../src/ui/tabbar";
-import { colors, shadow, space, tabular, type } from "../../src/ui/theme";
+import { colors, shadow, space, tabular } from "../../src/ui/theme";
 
 /** Behind the setup notice when no project is configured (ui/screen.tsx). */
 export default function HomeScreen() {

@@ -36,7 +36,7 @@ import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
 import type { HistoryEntry, ReviewDetail } from "../src/lib/types";
 import { MiniPlay, Transcript } from "../src/ui/audio";
-import { Button, Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
+import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
 import { ScreenGate } from "../src/ui/screen";
 import { ScreenCrash } from "../src/ui/crash";
 import { DocumentView } from "../src/ui/document";
