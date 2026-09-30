@@ -85,7 +85,7 @@ def test_tester_unlimited_lifts_the_ceiling_and_is_off_by_default(capsys):
     out = capsys.readouterr().out
     assert "insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)" in out
     assert "'z@example.com', '', false" in out
-    assert "unlimited = excluded.unlimited" in out
+    assert "unlimited = excluded.unlimited" not in out, "an unnamed flag is left alone"
 
     assert cli.main(["tester", "z@example.com", "--unlimited"]) == 0
     out = capsys.readouterr().out

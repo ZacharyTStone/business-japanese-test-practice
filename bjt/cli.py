@@ -1447,9 +1447,21 @@ def cmd_tester(args) -> int:
             print(f"a day is at least 1 question and at most 32767, not {args.max_goal}",
                   file=sys.stderr)
             return 2
+        if args.max_goal is not None and args.no_max_goal:
+            print("--max-goal and --no-max-goal say opposite things", file=sys.stderr)
+            return 2
         unlimited = "true" if args.unlimited else "false"
         may_veto = "true" if args.veto else "false"
         max_goal = "null" if args.max_goal is None else str(args.max_goal)
+        # What an existing row takes from this statement: only what the
+        # command names. The deploy workflow re-adds testers with a note and
+        # no flags, and that must not take the owner's veto or day away.
+        named = [column for column, said in (
+            ("note", args.note is not None),
+            ("unlimited", args.unlimited is not None),
+            ("may_veto", args.veto is not None),
+            ("max_daily_goal", args.max_goal is not None or args.no_max_goal),
+        ) if said]
         extras = [t for t, on in (("no daily ceiling", args.unlimited),
                                   ("the veto button", args.veto),
                                   (f"a day of up to {args.max_goal} questions",
@@ -1465,16 +1477,18 @@ def cmd_tester(args) -> int:
             print("-- row stays null, which is the ten-a-day, fifteen-at-most everyone has.")
             print("-- Ask for more than the bank can serve and the queue serves what it has.")
         print("-- Runs as the service role; a client cannot touch this table.")
-        print("-- Idempotent: re-running updates the note, the flags and the number,")
-        print("-- and nothing else.")
+        print("-- Idempotent. On a row that exists it changes only what this command")
+        print("-- names; a flag it does not name keeps the value it has.")
         print()
         print("insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)")
         print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, "
               f"{unlimited}, {may_veto}, {max_goal})")
-        print("on conflict (email) do update set note = excluded.note,")
-        print("                                  unlimited = excluded.unlimited,")
-        print("                                  may_veto = excluded.may_veto,")
-        print("                                  max_daily_goal = excluded.max_daily_goal;")
+        if named:
+            print("on conflict (email) do update set "
+                  + ",\n                                  ".join(
+                      f"{column} = excluded.{column}" for column in named) + ";")
+        else:
+            print("on conflict (email) do nothing;")
     return 0
 
 
@@ -1666,17 +1680,23 @@ def build_parser() -> argparse.ArgumentParser:
     te = sub.add_parser("tester", help="SQL adding or removing somebody on the tester list")
     te.add_argument("email", help="the email address they sign in with")
     te.add_argument("--note", help="who this is — shows up in the row")
-    te.add_argument("--unlimited", action="store_true",
-                    help="lift the daily ceiling for this account (a tester exercising the app)")
-    te.add_argument("--veto", action="store_true",
+    te.add_argument("--unlimited", action=argparse.BooleanOptionalAction, default=None,
+                    help="lift the daily ceiling for this account (a tester exercising the "
+                         "app); --no-unlimited puts it back. Unnamed, an existing row keeps "
+                         "what it has")
+    te.add_argument("--veto", action=argparse.BooleanOptionalAction, default=None,
                     help="let this account unpublish a question from inside the app "
-                         "(one press, for everybody — the owner's row, not a tester's)")
+                         "(one press, for everybody — the owner's row, not a tester's); "
+                         "--no-veto takes it away. Unnamed, an existing row keeps what it has")
     te.add_argument("--max-goal", type=int, metavar="N",
                     help="let this account choose its own daily set size, up to N "
                          "questions; its day then ends at N instead of at fifteen. "
                          "As large as you like — the queue serves what the bank has "
-                         "in the level window. Omit to leave the standard "
-                         "ten-a-day, fifteen-at-most in place")
+                         "in the level window. Omit to leave an existing row's "
+                         "number as it is (a new row gets the standard ten-a-day, "
+                         "fifteen-at-most)")
+    te.add_argument("--no-max-goal", action="store_true",
+                    help="put this account back on the standard day (max_daily_goal null)")
     te.add_argument("--remove", action="store_true", help="take them off the list instead")
     te.set_defaults(func=cmd_tester)
 
