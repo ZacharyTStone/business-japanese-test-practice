@@ -2,29 +2,47 @@
 #
 # Work lands directly on `main` with no gate in front of it, so this workflow is
 # the only thing between a mistake and the tree everyone reads. That is why it
-# runs on push as well as on pull requests: a check that only guards PRs guards
-# nothing in a repo where nobody opens one.
+# runs on every push to `main` as well as on pull requests: a check that only
+# guards PRs guards nothing in a repo where nobody opens one. It is also what
+# the **deploy database** workflow waits for: a green run on a push to `main`
+# is what ships.
+#
+# A push to any other branch is not checked on its own. A branch that is going
+# anywhere gets a pull request, and the pull request is checked; checking the
+# push as well ran every job twice for the same commit.
 #
 # Every job here is offline. No API key, no Supabase project, no network calls.
 name: checks
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
+# Read the repository, nothing else. No job here writes anything anywhere.
+permissions:
+  contents: read
+
+# One run at a time per branch or pull request, and a newer push cancels the
+# run it supersedes: its verdict is about a commit nobody will deploy. On `main`
+# that also keeps runs finishing in push order, so the deploys they trigger do
+# too. Keyed on the event as well, so a run started by hand never cancels a
+# push's run and the deploy that would have followed it.
 concurrency:
-  group: checks-${{ github.ref }}
+  group: checks-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   pipeline:
     name: pytest — the item pipeline
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
           cache: pip
@@ -37,13 +55,21 @@ jobs:
       - name: ruff check
         if: ${{ !cancelled() }}
         run: ruff check .
+      # Types, for the pipeline. Runs whatever the steps above said, for the
+      # same reason.
+      - name: mypy
+        if: ${{ !cancelled() }}
+        run: mypy bjt
 
   bundles:
     name: checkbatch — every committed bundle
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
           cache: pip
@@ -66,6 +92,7 @@ jobs:
   schema:
     name: supabase — schema, RLS, publish
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
@@ -83,8 +110,10 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: postgres
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
       - name: install psql
@@ -93,20 +122,30 @@ jobs:
       - run: supabase/test/run.sh
 
   app:
-    name: typecheck and unit tests — the Expo app
+    name: typecheck, lint and unit tests — the Expo app
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: client
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      # The linter client/package.json names. Runs whatever the typecheck
+      # said, so one push reports both.
+      - name: npm run lint
+        if: ${{ !cancelled() }}
+        run: npm run lint
       # The pure parts of the app — the practice reducer, the reading clock,
       # the exam date, the levels, the role table — in Node, no device.
-      - run: npm test
+      - name: npm test
+        if: ${{ !cancelled() }}
+        run: npm test
