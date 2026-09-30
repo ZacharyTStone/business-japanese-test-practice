@@ -27,122 +27,50 @@
  * as text — content ships before media, and a listening item with no clip is
  * still a usable reading item.
  *
+ * This file is the arrangement; the parts live beside it. The state is one
+ * reducer, and which stage shows what is `questionView` — both pure and tested
+ * in src/lib/practice.ts. Loading the set, posting an answer and ending the set
+ * are hooks under src/ui/practice/, and so are the cards the screen is made of.
+ *
  * Three decisions worth stating:
  *
- * **The whole set is fetched up front.** One request, then no network until the
- * first answer. Someone practising on the Yamanote line should not lose their
- * set in a tunnel.
+ * **The whole set is fetched up front** (usePracticeLoad). Someone practising
+ * on the Yamanote line should not lose their set in a tunnel.
  *
- * **Correctness comes back from the insert.** The item carries `correct_index`,
- * so the screen could grade locally and feel a few hundred milliseconds faster —
- * but then the app's opinion and the database's could drift apart, and the
- * database's is the one the weakness profile is built on. The round trip is the
- * price of those two never disagreeing. When it cannot be made, the card shows
- * the phone's reading of the key marked unsent, and the insert itself — never a
- * grade — waits in the outbox (src/lib/outbox.ts) until it can be.
+ * **Correctness comes back from the insert** (usePostAnswer), and an answer
+ * that cannot be sent waits in the outbox rather than being graded here.
  *
  * **No ads here, ever.** Not in a break, not between the narration and the
  * options. See AdSlot: the placement type has no member for this screen.
  */
-import { clearPreloadedSource, preload } from "expo-audio";
 import { useRouter, type ErrorBoundaryProps } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  AppState,
-  Image,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  Vibration,
-  View,
-} from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { flushAnswers, flushAnswersWithin, sendAnswer, type AttemptArgs, type FlushResult, type SendOutcome } from "../src/lib/answers";
 import { useAuth } from "../src/lib/auth";
-import {
-  clipUrl,
-  fetchDay,
-  fetchOptionLabels,
-  fetchPace,
-  fetchProfile,
-  fetchQueue,
-  fetchSectionLevels,
-  finishSession,
-  mayVeto,
-  sceneUrl,
-  startSession,
-} from "../src/lib/db";
+import { clipUrl, sceneUrl } from "../src/lib/db";
 import { friendlyError } from "../src/lib/errors";
-import { setSize } from "../src/lib/day";
-import { examIsNear } from "../src/lib/exam";
-import { useLang, type Key } from "../src/lib/i18n";
-import { CHANNEL_KEY, NUMBERS } from "../src/lib/labels";
-import { budgetSeconds, type TypePace } from "../src/lib/pace";
+import { useLang } from "../src/lib/i18n";
+import { budgetSeconds } from "../src/lib/pace";
 import { playlistFor, spokenOptionUrls } from "../src/lib/playlist";
-import {
-  initialPractice,
-  practiceReducer,
-  settleAnswers,
-  questionView,
-  thinkTime,
-  type Stage,
-} from "../src/lib/practice";
-import { roleInfo, verdictFor } from "../src/lib/roles";
-import { setSummary } from "../src/lib/session";
+import { initialPractice, practiceReducer, questionView, type Stage } from "../src/lib/practice";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
-import { NO_ANSWER, type QueuedItem, type SectionLevel } from "../src/lib/types";
-import { AutoPlaylist, DialoguePlayer, MiniPlay, Transcript } from "../src/ui/audio";
-import { QuestionClock } from "../src/ui/clock";
-import { Button, Card, Loading, Notice, ProgressBar, Tag } from "../src/ui/components";
+import { NO_ANSWER } from "../src/lib/types";
+import { Button, Loading, Notice } from "../src/ui/components";
 import { DayDone } from "../src/ui/done";
-import { DocumentView } from "../src/ui/document";
-import { Face, moodFor, moodLabel } from "../src/ui/face";
-import { HAS_KEYBOARD, optionForKey, useKeys } from "../src/ui/keys";
-import { RudenessMeter } from "../src/ui/meters";
+import { optionForKey, useKeys } from "../src/ui/keys";
 import { FadeIn, useReducedMotion } from "../src/ui/motion";
-import { ReportQuestion } from "../src/ui/report";
-import { VetoQuestion } from "../src/ui/veto";
-import { colors, MIN_TOUCH, page, radius, shadow, space, tabular, type } from "../src/ui/theme";
-
-/** How the words travel, as a picture. It is the one part of the scene that
- *  changes the right answer without being in the sentence — on the phone you
- *  name yourself and your company, face to face you do not — so it is worth
- *  being the thing the eye finds first in the strip. */
-const CHANNEL_EMOJI: Record<string, string> = {
-  in_person: "🤝",
-  phone: "📞",
-  video: "💻",
-  written: "✉️",
-};
-
-/** What to tell the learner to do. The act is the same everywhere, but the
- *  instruction is not: "最も適切な言い方" makes no sense for a reading item. */
-const PROMPT_KEY: Record<string, Key> = {
-  hatsugen_choukai: "prompt_hatsugen_choukai",
-  gazou_haaku: "prompt_gazou_haaku",
-  hyougen: "prompt_hyougen",
-  goi_bunpou: "prompt_goi_bunpou",
-  bamen_haaku: "prompt_bamen_haaku",
-  sougou_choukai: "prompt_sougou_choukai",
-  joukyou_haaku: "prompt_joukyou_haaku",
-  shiryou_choudokkai: "prompt_shiryou_choudokkai",
-  sougou_choudokkai: "prompt_sougou_choudokkai",
-  sougou_dokkai: "prompt_sougou_dokkai",
-};
-
-/** A tap you can feel. Pattern durations are ignored on iOS, which is fine —
- *  the point is that something happened, not how long it lasted. */
-function buzz(pattern: number | number[]) {
-  try {
-    Vibration.vibrate(pattern);
-  } catch {
-    // Web without vibration support, or a simulator. Silence is correct.
-  }
-}
+import { OptionList } from "../src/ui/practice/OptionList";
+import { ProgressHeader } from "../src/ui/practice/ProgressHeader";
+import { SceneCard, SceneStrip } from "../src/ui/practice/SceneCard";
+import { StimulusCard } from "../src/ui/practice/StimulusCard";
+import { shared } from "../src/ui/practice/styles";
+import { useFinishSet } from "../src/ui/practice/useFinishSet";
+import { usePostAnswer } from "../src/ui/practice/usePostAnswer";
+import { usePracticeLoad } from "../src/ui/practice/usePracticeLoad";
+import { VerdictPanel } from "../src/ui/practice/VerdictPanel";
+import { page, space, type } from "../src/ui/theme";
 
 /**
  * What this screen shows instead of itself when it throws while drawing.
@@ -158,14 +86,14 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   const { t } = useLang();
   const said = friendlyError(error, t);
   return (
-    <ScrollView contentContainerStyle={[styles.page, page]}>
+    <ScrollView contentContainerStyle={[shared.page, page]}>
       <Notice
         title={t("practice_broke")}
         body={said.message}
         tone="warn"
         action={{ label: t("retry"), onPress: () => void retry() }}
       />
-      {said.detail ? <Text style={[type.mono, styles.hint]}>{said.detail}</Text> : null}
+      {said.detail ? <Text style={[type.mono, shared.hint]}>{said.detail}</Text> : null}
       <Button label={t("to_home")} tone="secondary" onPress={() => router.replace("/")} />
     </ScrollView>
   );
@@ -173,11 +101,12 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 export default function Practice() {
   const router = useRouter();
-  const { lang, t } = useLang();
+  const { t } = useLang();
   // The navigator admits nobody to this screen until the session has loaded
   // and the database has said they are a tester, so there is no loading or
   // refused state to draw here.
   const { session } = useAuth();
+  const userId = session?.user?.id ?? null;
   // A direct load of /practice — a deep link, a refresh — has nothing behind
   // it to go back to, and "back" from here always has to land somewhere.
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
@@ -187,337 +116,35 @@ export default function Practice() {
   // is only what the screen needs besides — what was loaded alongside the set,
   // and the furniture of drawing it.
   const [state, dispatch] = useReducer(practiceReducer, Date.now(), initialPractice);
-  const [loaded, setLoaded] = useState(false);
-  // Asked once per screen. False for every tester but the owner, and the
-  // server re-checks it, so this only decides whether a button is drawn.
-  const [canVeto, setCanVeto] = useState(false);
-  /** The practice session this set's answers are filed under: a grouping
-   *  label, started with the set so that the first answer already carries it,
-   *  and only when there is a set to file. Null when it could not be made — a
-   *  set without a label is still a set (see startSession). */
-  const sessionReady = useRef<Promise<string | null> | null>(null);
-  /** Whether the session has been closed, and how many answers it holds, for
-   *  closing it when the screen is left part-way through a set. */
-  const sessionClosed = useRef(false);
-  const answeredCount = useRef(0);
-  answeredCount.current = state.answers.length;
-  /** Why the set could not be loaded, as thrown; drawn through friendlyError. */
-  const [error, setError] = useState<unknown>(null);
-  /** Bumped by "try again", which is what runs the load a second time. */
-  const [attempt, setAttempt] = useState(0);
-  /** Today's count when the day's ceiling has been reached; null otherwise. */
-  const [blocked, setBlocked] = useState<number | null>(null);
-  /** What the exam affords each self-paced type, and whether this learner wants
-   *  it counted. Both are furniture: if either fails to load the set is
-   *  practised without a clock rather than not at all. */
-  const [pace, setPace] = useState<Record<string, TypePace>>({});
-  const [timed, setTimed] = useState(false);
-  /** 「いち」「に」「さん」「よん」, or null until all four are synthesised.
-   *  Furniture too: without them the spoken options play unnumbered. */
-  const [labels, setLabels] = useState<string[] | null>(null);
-  /** An answer the database answered with an error — not a lost connection,
-   *  which the outbox deals with by itself. Kept with the insert, so the card
-   *  can offer to send exactly that again. */
-  const [sendError, setSendError] = useState<{
-    itemId: string;
-    args: AttemptArgs;
-    message: string;
-    detail: string;
-    busy: boolean;
-  } | null>(null);
-  const userId = session?.user?.id ?? null;
+  const load = usePracticeLoad(userId, dispatch);
   /** The question whose audio would not play, if the one on screen is it: its
    *  words go on the page, as they do for an item with no clips yet. */
   const [audioFailedFor, setAudioFailedFor] = useState<string | null>(null);
-  /** Today's count as the day stood when the set was built, for the day's done
-   *  screen if the database closes the day part-way through. */
-  const answeredAtLoad = useRef(0);
+  const { sendError, resend } = usePostAnswer({
+    state,
+    dispatch,
+    userId,
+    pace: load.pace,
+    labels: load.labels,
+    audioFailedFor,
+    sessionReady: load.sessionReady,
+  });
+  useFinishSet({ state, userId, sessionReady: load.sessionReady, levelsBefore: load.levelsBefore });
 
-  /** Every clip the set will play, fetched as soon as the set is known, and let
-   *  go when the screen is. */
-  const warmed = useRef<string[]>([]);
-
-  /**
-   * The set's sound and pictures, fetched while the first question is read.
-   *
-   * Each clip is its own player, made when the one before it ends, so a clip
-   * that is only fetched then leaves a gap between two turns of a conversation
-   * as long as the connection is slow — and on a train, a gap that never ends.
-   * The whole set was fetched up front so that a tunnel does not lose it; this
-   * is the same promise kept for what it plays and shows.
-   */
-  function warm(queue: QueuedItem[], spokenLabels: string[] | null) {
-    const urls = new Set<string>();
-    for (const it of queue) {
-      for (const url of playlistFor(it, spokenLabels, clipUrl)) urls.add(url);
-      const scene = sceneUrl(it.scene_image_path);
-      if (scene) Image.prefetch(scene).catch(() => false);
-    }
-    for (const url of urls) {
-      try {
-        void Promise.resolve(preload(url)).catch(() => undefined);
-        warmed.current.push(url);
-      } catch {
-        // No preloading here: the clip is fetched when it plays, as before.
-      }
-    }
-  }
-
-  const startedAt = useRef(Date.now());
-  const levelsBefore = useRef<SectionLevel[]>([]);
   // Brings the verdict on screen: on a long item it would otherwise appear
   // below the fold of a phone, under the option that was just pressed.
   const scroller = useRef<ScrollView>(null);
-  // Which question has already been scrolled to its verdict, by id. onLayout
-  // fires again when the explanation is unfolded, and without this the screen
-  // would snap back to the top just as somebody started reading it.
-  const scrolledFor = useRef<string | null>(null);
   /** How tall the sticky counter is, so a scroll to the verdict clears it. */
   const headerHeight = useRef(0);
-  /** Around the Next button under the verdict, to put the keyboard's focus
-   *  there on the web. */
-  const nextWrap = useRef<View>(null);
   const reduced = useReducedMotion();
   // The last button sits above the home indicator, not under it.
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    if (!isConfigured || !session?.user) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        // Anything a previous set could not send goes first, so the day's count
-        // read next already includes it.
-        await flushAnswers(session.user.id);
-        const [day, levels, profile, paces, spokenLabels] = await Promise.all([
-          fetchDay(),
-          fetchSectionLevels(),
-          // The clock is furniture. A set that cannot be timed is still a set,
-          // so neither of these is allowed to fail the screen. Nor are the
-          // spoken numbers, which are the same four clips for every item.
-          fetchProfile().catch(() => null),
-          fetchPace().catch(() => ({}) as Record<string, TypePace>),
-          fetchOptionLabels().catch(() => null),
-        ]);
-        // Read before the first answer, so the result screen can name the
-        // section whose level moved rather than just that something did.
-        levelsBefore.current = levels;
-        setPace(paces);
-        // In the last two weeks before the exam date the reading clock runs
-        // whatever the setting says: that is when exam pace is the thing left
-        // to practise. The account screen says so beside the switch.
-        setTimed((profile?.timed_reading ?? false) || examIsNear(profile?.exam_date));
-        setLabels(spokenLabels);
-        // What the day has left of its set, or the bonus set (lib/day.ts). Zero
-        // means the day is over, and the database would serve nothing anyway —
-        // the screen below says so.
-        const remaining = setSize(day);
-        answeredAtLoad.current = day.answered_today;
-        setBlocked(remaining <= 0 ? day.answered_today : null);
-        const queue = remaining > 0 ? await fetchQueue(remaining) : [];
-        if (cancelled) return;
-        // Started now rather than after the set is on screen, so an answer
-        // given at once still has it to carry; the answer waits for it. None
-        // for a set with nothing in it — there is nothing to group.
-        if (queue.length > 0) {
-          sessionReady.current = startSession(session.user.id).catch(() => null);
-        }
-        dispatch({ type: "loaded", items: queue, now: Date.now() });
-        setLoaded(true);
-        warm(queue, spokenLabels);
-        mayVeto().then(setCanVeto).catch(() => setCanVeto(false));
-      } catch (e) {
-        if (!cancelled) setError(e ?? new Error("load failed"));
-      }
-    })();
-    return () => {
-      cancelled = true;
-      for (const url of warmed.current) {
-        try {
-          void Promise.resolve(clearPreloadedSource(url)).catch(() => undefined);
-        } catch {
-          // Nothing held for it.
-        }
-      }
-      warmed.current = [];
-    };
-  }, [session?.user?.id, attempt]);
-
-  /** An outbox flush, told to the reducer: an answer that waited and has now
-   *  landed takes the database's verdict, one it refused is no longer counted. */
-  function applyFlush(result: FlushResult) {
-    for (const s of result.saved) dispatch({ type: "synced", itemId: s.itemId, verdict: s.graded });
-    for (const d of result.dropped) dispatch({ type: "dropped", itemId: d.itemId });
-  }
-
-  /** Close the session, once, if it holds anything. */
-  function closeSession() {
-    if (sessionClosed.current || answeredCount.current === 0) return;
-    sessionClosed.current = true;
-    void sessionReady.current?.then((id) => (id ? finishSession(id) : undefined)).catch(() => undefined);
-  }
-
-  // Left part-way through — the back button, a tab closed — is still a sitting
-  // that happened, and it ends when the screen does.
-  useEffect(() => () => closeSession(), []);
-
-  // The connection is likelier to be back when the app is: send what waited.
-  // On the web the browser also says so outright.
-  useEffect(() => {
-    if (!userId) return;
-    const retry = () => void flushAnswers(userId).then(applyFlush);
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") retry();
-    });
-    const web = Platform.OS === "web" && typeof window !== "undefined" ? window : null;
-    web?.addEventListener("online", retry);
-    return () => {
-      sub.remove();
-      web?.removeEventListener("online", retry);
-    };
-  }, [userId]);
-
-  /**
-   * What became of an answer, on the screen. The database's verdict when it
-   * landed. When it did not, the phone reads the answer key for the card —
-   * drawn, marked unsent, and never written anywhere — and the insert itself
-   * waits in the outbox (a lost connection) or behind a button (an error).
-   * The database's two refusals change the set instead of the card.
-   */
-  function settle(outcome: SendOutcome, it: QueuedItem, args: AttemptArgs) {
-    const ranOut = args.chosenIndex === NO_ANSWER;
-    const local = () => {
-      const option = it.options.find((o) => o.position === args.chosenIndex);
-      return {
-        isCorrect: !ranOut && args.chosenIndex === it.correct_index,
-        chosenRole: ranOut ? "timed_out" : (option?.role ?? ""),
-        saved: false,
-      };
-    };
-    switch (outcome.kind) {
-      case "saved":
-        dispatch({ type: "graded", verdict: { ...outcome.graded, saved: true } });
-        buzz(outcome.graded.isCorrect ? [0, 18, 60, 18] : 40);
-        return;
-      case "queued":
-        dispatch({ type: "graded", verdict: local() });
-        return;
-      case "failed": {
-        dispatch({ type: "graded", verdict: local() });
-        const said = friendlyError(outcome.error, t);
-        setSendError({ itemId: it.id, args, ...said, busy: false });
-        return;
-      }
-      case "day_over":
-        dispatch({ type: "dayOver" });
-        return;
-      case "unavailable":
-        dispatch({ type: "unavailable", now: Date.now() });
-        return;
-    }
-  }
-
-  // An answer, posted once. The reducer accepts one `choose` per question, so
-  // however many presses arrived there is one pending answer, and this runs
-  // once for it. The database grades it; see `settle` for when it cannot.
-  useEffect(() => {
-    const pending = state.pending;
-    if (!pending || !userId) return;
-    const it = state.items[pending.index];
-    if (!it) return;
-    const ranOut = pending.position === NO_ANSWER;
-    // A longer single buzz for the clock: it is the one verdict that arrives
-    // without anybody having pressed anything, so it announces itself.
-    buzz(ranOut ? 60 : 12);
-    const args: AttemptArgs = {
-      itemId: it.id,
-      chosenIndex: pending.position,
-      sessionId: null,
-      elapsedMs: pending.at - state.shownAt,
-      thinkMs: thinkTime(state, pending, {
-        selfPaced: Boolean(pace[it.item_type]),
-        // Audio that would not play left the item to be read, with no audio to
-        // time from: the same as an item with no clips.
-        listenable: playlistFor(it, labels, clipUrl).length > 0 && audioFailedFor !== it.id,
-      }),
-      replays: state.replays,
-      peeked: state.peeked,
-      standsFor: it.stands_for ?? null,
-    };
-    (async () => {
-      const sessionId = (await sessionReady.current) ?? null;
-      // What waited goes first, in the order it was given.
-      applyFlush(await flushAnswers(userId));
-      const sent = { ...args, sessionId };
-      settle(await sendAnswer(userId, sent), it, sent);
-    })();
-  }, [state.pending]);
-
-  /** "Send again", after an error the database gave rather than a lost line. */
-  async function resend() {
-    if (!sendError || sendError.busy || !userId) return;
-    const { itemId, args } = sendError;
-    setSendError({ ...sendError, busy: true });
-    applyFlush(await flushAnswers(userId));
-    const outcome = await sendAnswer(userId, args);
-    switch (outcome.kind) {
-      case "saved":
-        dispatch({ type: "synced", itemId, verdict: outcome.graded });
-        setSendError(null);
-        return;
-      case "queued":
-        setSendError(null);
-        return;
-      case "failed":
-        setSendError({ itemId, args, ...friendlyError(outcome.error, t), busy: false });
-        return;
-      case "day_over":
-        dispatch({ type: "dropped", itemId });
-        dispatch({ type: "dayOver" });
-        setSendError(null);
-        return;
-      case "unavailable":
-        dispatch({ type: "dropped", itemId });
-        setSendError(null);
-        return;
-    }
-  }
-
-  // The end of the set: the result screen, or home when a veto left nothing.
-  // The day's done screen, when the database closed the day before anything
-  // was answered, is drawn below rather than navigated to.
-  useEffect(() => {
-    if (!state.done || state.done === "day") return;
-    if (state.done === "home") {
-      router.replace("/");
-      return;
-    }
-    closeSession();
-    const finishedAt = Date.now();
-    (async () => {
-      // One more try for anything still waiting, so the result lists what the
-      // database has — but not a long one: a connection that is not back in a
-      // few seconds is not worth holding the result for, and the outbox keeps
-      // what it has either way.
-      const flushed = userId ? await flushAnswersWithin(userId, 3000) : null;
-      setSummary({
-        answers: flushed ? settleAnswers(state.answers, flushed) : state.answers,
-        startedAt: startedAt.current,
-        finishedAt,
-        levelsBefore: levelsBefore.current,
-      });
-      router.replace("/result");
-    })();
-  }, [state.done]);
-
-  const index = state.index;
-  const items = state.items;
+  const { index, items, chosen, graded, showDetails, optionsAsText } = state;
   const item = items[index];
-  const { chosen, graded, showDetails, optionsAsText } = state;
-  // A new question starts at the top: the
-  // verdict scrolled the last one down to its explanation, and the next
-  // question opening there would open on its options with its scene above the
-  // fold.
+  // A new question starts at the top: the verdict scrolled the last one down to
+  // its explanation, and the next question opening there would open on its
+  // options with its scene above the fold.
   useEffect(() => {
     scroller.current?.scrollTo({ y: 0, animated: false });
   }, [item?.id]);
@@ -532,56 +159,50 @@ export default function Practice() {
     () => (item ? [...item.options].sort((a, b) => a.position - b.position) : []),
     [item]
   );
-  const playlist = useMemo(() => (item ? playlistFor(item, labels, clipUrl) : []), [item, labels]);
+  const playlist = useMemo(() => (item ? playlistFor(item, load.labels, clipUrl) : []), [item, load.labels]);
   const spokenOptions = useMemo(() => (item ? spokenOptionUrls(item, clipUrl) : null), [item]);
 
   if (!isConfigured) {
     return (
-      <View style={[styles.page, page]}>
+      <View style={[shared.page, page]}>
         <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </View>
     );
   }
-  if (error) {
+  if (load.error) {
     // Said so a learner can act on it — offline, or signed out — with the
     // technical text underneath for whoever has to find the bug, and a way to
     // try again that is not "go home and press start".
-    const said = friendlyError(error, t);
+    const said = friendlyError(load.error, t);
     return (
-      <View style={[styles.page, page]}>
+      <View style={[shared.page, page]}>
         <Notice
           title={t("q_load_err")}
           body={said.message}
           tone="warn"
-          action={{
-            label: t("retry"),
-            onPress: () => {
-              setError(null);
-              setAttempt((n) => n + 1);
-            },
-          }}
+          action={{ label: t("retry"), onPress: load.retry }}
         />
-        {said.detail ? <Text style={[type.mono, styles.hint]}>{said.detail}</Text> : null}
+        {said.detail ? <Text style={[type.mono, shared.hint]}>{said.detail}</Text> : null}
         <Button label={t("back")} tone="secondary" onPress={leave} />
       </View>
     );
   }
-  if (!loaded && blocked === null) return <Loading label={t("preparing")} />;
+  if (!load.loaded && load.blocked === null) return <Loading label={t("preparing")} />;
 
-  if (blocked !== null || state.done === "day") {
+  if (load.blocked !== null || state.done === "day") {
     // The door, from this side: a deep link or a stale tab past the ceiling —
     // or the database closing the day under a set that had not started.
     return (
-      <View style={[styles.page, page]}>
-        <DayDone answered={blocked ?? answeredAtLoad.current} streak={0} onHome={() => router.replace("/")} />
+      <View style={[shared.page, page]}>
+        <DayDone answered={load.blocked ?? load.answeredAtLoad} streak={0} onHome={() => router.replace("/")} />
       </View>
     );
   }
-  // On the way out: the effect above is navigating.
+  // On the way out: useFinishSet is navigating.
   if (state.done) return <Loading />;
   if (items.length === 0) {
     return (
-      <View style={[styles.page, page]}>
+      <View style={[shared.page, page]}>
         <Notice
           title={t("no_q_title")}
           body={t("no_q_body")}
@@ -594,11 +215,6 @@ export default function Practice() {
   if (!item) return <Loading />;
 
   const sceneImage = sceneUrl(item.scene_image_path);
-  // How long this question gets, from the exam's budget for its type and the
-  // amount there is to read in this particular one. Zero means no clock — see
-  // budgetSeconds — and the learner's switch is the only part of it that is
-  // about the learner rather than about the question.
-  const clockSeconds = timed ? budgetSeconds(item, pace) : 0;
   const narrationUrl = clipUrl(item.narration_path);
   const audioFailed = audioFailedFor === item.id;
   // Which stage shows what, from the state and the item's media: pure, and
@@ -610,7 +226,12 @@ export default function Practice() {
     spokenOptions: spokenOptions !== null,
     audioFailed,
   });
-  const { stage, listenable, stemAsText, dialogueAsText, revealed, optionTextHidden, optionsShown, role } = view;
+  const { stage, revealed } = view;
+  // How long this question gets, from the exam's budget for its type and the
+  // amount there is to read in this particular one. Zero means no clock — see
+  // budgetSeconds — and the learner's switch is the only part of it that is
+  // about the learner rather than about the question.
+  const clockSeconds = load.timed ? budgetSeconds(item, load.pace) : 0;
   const go = (next: Stage) => dispatch({ type: "stage", stage: next, now: Date.now() });
 
   /**
@@ -641,66 +262,23 @@ export default function Practice() {
   function next() {
     dispatch({ type: "next", now: Date.now() });
   }
-  const nextLabel = index + 1 >= items.length ? t("btn_result") : t("btn_next");
-
-  const correctOption = options[item.correct_index];
-  // The clock took it. Not a wrong answer about the Japanese, so the screen says
-  // something different and the 失礼度メーター stays out of it: nobody was
-  // offended, because nobody said anything.
-  const ranOut = role === "timed_out";
-  const mood = graded ? moodFor(role, graded.isCorrect) : "happy";
-  // Whether there is a listener's face to show. A misread table, a picture
-  // looked at wrongly, a question the clock took: nobody heard anything, so
-  // nobody is puzzled or pleased, and a face would be a sentence about
-  // manners where the mistake was about reading.
-  const faceShown = view.kind === "right" || view.kind === "manner";
-  const explanation = lang === "en" && item.explanation_en ? item.explanation_en : item.explanation_ja;
-  // The one line under the verdict. For a right answer it is why that option
-  // fits — and the per-option `why` is written in Japanese only, so in English
-  // the item's own gloss is the sentence that exists. Wrong answers get the
-  // listener's reaction instead, which is already translated — or, where there
-  // is no listener to react, the name of the mistake.
-  const verdictSub = graded
-    ? graded.isCorrect
-      ? lang === "en" && item.explanation_en
-        ? item.explanation_en
-        : correctOption?.why
-      : ranOut
-        ? t("time_up_sub")
-        : faceShown
-          ? moodLabel(mood, lang)
-          : roleInfo(role, lang).label
-    : "";
-
-  // The verdict as one sentence to be spoken: what happened, the line under
-  // it, which one was right, and whether it is in the record yet.
-  const verdictSpoken = graded
-    ? [
-        graded.isCorrect ? t("correct_title") : ranOut ? t("time_up") : verdictFor(role, item.listener_role, lang),
-        verdictSub,
-        graded.isCorrect ? "" : t("correct_is", { n: NUMBERS[item.correct_index] ?? "" }),
-        graded.saved ? "" : t("unsent_short"),
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : "";
 
   /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
   function onKey(key: string): boolean | void {
-    if (!revealed && optionsShown && !view.locked) {
+    if (!revealed && view.optionsShown && !view.locked) {
       const pick = optionForKey(key, options.length);
       if (pick >= 0) {
-        void choose(pick);
+        choose(pick);
         return;
       }
     }
     if (key === "Enter" || key === " ") {
       if (revealed) {
-        void next();
+        next();
         return;
       }
       if (stage === "scene") {
-        go(listenable ? "listen" : "answer");
+        go(view.afterScene);
         return;
       }
     }
@@ -715,357 +293,109 @@ export default function Practice() {
         // The column is capped and centred on a wide window: a line of Japanese
         // past about 720 points is too long to read, and an answer card that
         // wide is not something a pointer finds.
-        contentContainerStyle={[styles.page, page, { paddingBottom: space.xxl + insets.bottom }]}
+        contentContainerStyle={[shared.page, page, { paddingBottom: space.xxl + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         // The counter and the clock stay at the top while a long passage
         // scrolls under them: a clock that has scrolled away is not pacing
         // anybody.
         stickyHeaderIndices={[0]}
       >
-      <View
-        style={styles.header}
-        onLayout={(e) => {
-          headerHeight.current = e.nativeEvent.layout.height;
-        }}
-      >
-      <View
-        style={styles.progressRow}
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel={t("q_of_n", { i: index + 1, n: items.length })}
-      >
-        <Text style={[type.small, tabular]}>
-          {index + 1} / {items.length}
-        </Text>
-        <ProgressBar
-          value={(index + (revealed ? 1 : 0)) / items.length}
-          height={6}
-          style={{ flex: 1 }}
-        />
-        {item.stands_for ? (
-          <Tag tone="violet">{t("retest_tag")}</Tag>
-        ) : item.times_seen > 0 ? (
-          <Tag tone="amber">{t("again_tag")}</Tag>
-        ) : null}
-      </View>
-
-      {/* The clock, on the reading questions only, directly under the counter:
-          both of them answer "where am I", and both stay in view while the
-          passage scrolls. It keeps running until the answer is in and then
-          freezes at what was left, which is the number worth seeing on the way
-          to the next question. */}
-      {clockSeconds > 0 ? (
-        <QuestionClock
-          // A new question is a new clock, not the last one's leftovers.
-          key={item.id}
-          seconds={clockSeconds}
-          running={view.clockRunning}
-          runKey={item.id}
-          onExpire={() => void choose(NO_ANSWER)}
-        />
-      ) : null}
-      </View>
-
-      <SceneStrip item={item} big={stage === "scene"} />
-
-      {/* Each stage of a question arrives rather than snaps: the scene card,
-          then the question card in its place. The key is what makes the
-          second one arrive too — same component, new content. */}
-      {stage === "scene" ? (
-        <FadeIn key={`${item.id}-scene`}>
-          <Card style={{ gap: space.lg }}>
-            {sceneImage ? <SceneImage uri={sceneImage} /> : null}
-            {item.documents?.map((doc, i) => (
-              <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
-            ))}
-            <Text style={[type.small, styles.hint]}>
-              {listenable ? t("scene_hint_listen") : t("scene_hint_read")}
-            </Text>
-            <Button
-              label={listenable ? t("btn_listen") : t("btn_to_q")}
-              icon={listenable ? "headphones" : "chevron"}
-              onPress={() => go(listenable ? "listen" : "answer")}
-            />
-          </Card>
-        </FadeIn>
-      ) : (
-        <FadeIn key={`${item.id}-question`}>
-          <Card style={{ gap: space.md }}>
-            {/* The same picture at the same size as on the scene card: a strip
-                would crop the drawing to a band of ceiling. */}
-            {sceneImage ? <SceneImage uri={sceneImage} /> : null}
-
-            {/* The stimulus, in the order it is met: what you read, then what you
-                hear. A document comes first because the audio usually revises it —
-                hearing the change before reading the original teaches nothing. */}
-            {item.documents?.map((doc, i) => (
-              <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
-            ))}
-
-            {dialogueAsText ? <DialoguePlayer turns={item.dialogue} unplayable={audioFailed} /> : null}
-
-            {listenable ? (
-              <AutoPlaylist
-                key={item.id}
-                urls={playlist}
-                autoplay={stage === "listen"}
-                onFinished={() => go("answer")}
-                onFailed={() => setAudioFailedFor(item.id)}
-                onReplay={() => dispatch({ type: "replayed" })}
-              />
-            ) : null}
-
-            {stemAsText ? <Text style={type.body}>{item.stem}</Text> : null}
-          </Card>
-        </FadeIn>
-      )}
-
-      {/* What happens next, as the screen actually does it: printed options
-          wait for the audio to end, numbered ones can be pressed now. */}
-      {stage === "listen" ? (
-        <Text style={[type.small, styles.hint]}>
-          {optionTextHidden ? t("listen_hint_spoken") : t("listen_hint")}
-        </Text>
-      ) : null}
-
-      {optionsShown ? (
-        <>
-          {stage === "answer" ? (
-            <Text style={[type.small, styles.hint]}>
-              {t(PROMPT_KEY[item.item_type] ?? "prompt_default")}
-            </Text>
-          ) : null}
-
-          {/* A shortcut nobody is told about is a shortcut nobody uses. One
-              quiet line, only where there is a keyboard to press, and naming the
-              key that works at this moment rather than both. */}
-          {HAS_KEYBOARD && !revealed ? (
-            <Text style={[type.mono, styles.hint]}>{t("key_hint_answer")}</Text>
-          ) : null}
-
-          {spokenOptions !== null && stage === "answer" ? (
-            <Pressable
-              accessibilityRole="button"
-              // Reading the spoken options is help the exam does not give, and
-              // the reducer notes it (`peeked`) when it is turned on.
-              onPress={() => dispatch({ type: "toggleOptionsText" })}
-              style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
-            >
-              <Text style={[type.small, styles.toggle]}>
-                {optionsAsText ? t("hide_options_text") : t("show_options_text")}
-              </Text>
-            </Pressable>
-          ) : null}
-
-          <FadeIn key={`${item.id}-options`} style={{ gap: space.md }}>
-            {options.map((option, i) => (
-              <OptionCard
-                key={option.position}
-                index={i}
-                text={option.text}
-                textHidden={optionTextHidden}
-                spokenUrl={spokenOptions !== null && !revealed ? spokenOptions[i] : null}
-                revealed={revealed}
-                chosen={chosen === i}
-                answer={i === item.correct_index}
-                locked={view.locked}
-                onChoose={onChoose}
-                onPlay={onPlayOption}
-              />
-            ))}
-          </FadeIn>
-
-          {/* Before the answer, not after — the opposite of the report button
-              and for the same reason. A report is about a question you engaged
-              with; a veto is about one you have decided not to. */}
-          {canVeto && !revealed && chosen === null ? (
-            <VetoQuestion key={`${item.id}-veto`} itemId={item.id} onVetoed={vetoed} />
-          ) : null}
-        </>
-      ) : null}
-
-      {revealed && graded ? (
-        <FadeIn
-          key={`${item.id}-verdict`}
-          style={{ gap: space.lg }}
-          // Put the verdict at the top of the screen rather than wherever the
-          // option happened to be. onLayout fires with the y it lands at, which
-          // is the only number that is right on every item length.
-          onLayout={(e) => {
-            if (scrolledFor.current === item.id) return;
-            scrolledFor.current = item.id;
-            // Clear of the sticky counter, which would otherwise sit on top of
-            // the verdict's first line.
-            const y = e.nativeEvent.layout.y - headerHeight.current;
-            // Jumped rather than glided for somebody who has asked the OS for
-            // less motion.
-            scroller.current?.scrollTo({ y: Math.max(0, y - space.sm), animated: !reduced });
-            // Said, where the card's live region is not heard: iOS has none.
-            if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(verdictSpoken);
-            // On the web the keyboard's focus goes to Next, so Enter does what
-            // the hint says whatever was clicked to answer — and a screen
-            // reader lands on the way on. Not scrolled to: the verdict is.
-            if (Platform.OS === "web") {
-              const node = nextWrap.current as unknown as HTMLElement | null;
-              const button = node?.querySelector?.<HTMLElement>('[role="button"]');
-              button?.focus({ preventScroll: true });
-            }
+        <ProgressHeader
+          index={index}
+          total={items.length}
+          revealed={revealed}
+          retest={Boolean(item.stands_for)}
+          again={item.times_seen > 0}
+          clock={
+            clockSeconds > 0
+              ? { runKey: item.id, seconds: clockSeconds, running: view.clockRunning, onExpire: () => choose(NO_ANSWER) }
+              : null
+          }
+          onHeight={(h) => {
+            headerHeight.current = h;
           }}
-        >
-          <Card
-            // Said out loud the moment it appears: without this, answering with
-            // a screen reader on changes the colours and announces nothing. A
-            // live region is heard on Android and the web; iOS has none, and is
-            // told the same thing in words when the card lands (above).
-            accessibilityLiveRegion="polite"
-            style={{
-              gap: space.md,
-              backgroundColor: graded.isCorrect ? colors.correctSoft : colors.wrongSoft,
-            }}
-          >
-            <View style={styles.verdictRow}>
-              {faceShown ? <Face mood={mood} size={68} /> : null}
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[type.h2, graded.isCorrect && { color: colors.correct }]}>
-                  {graded.isCorrect
-                    ? t("correct_title")
-                    : ranOut
-                      ? t("time_up")
-                      : verdictFor(role, item.listener_role, lang)}
-                </Text>
-                <Text style={type.small}>{verdictSub}</Text>
-                {/* Which one it was, in so many words: the marked cards are
-                    above, scrolled out of sight by the move to this card. */}
-                {graded.isCorrect ? null : (
-                  <Text style={[type.small, { color: colors.correct, fontWeight: "700" }]}>
-                    {t("correct_is", { n: NUMBERS[item.correct_index] ?? "" })}
-                  </Text>
-                )}
-              </View>
-            </View>
-            {!graded.isCorrect && !ranOut ? <RudenessMeter role={role} showLabel={false} /> : null}
-            {/* Not yet in the record. Said on the card, because the verdict above
-                is the phone's reading of the key until the database has it. */}
-            {!graded.saved && sendError?.itemId === item.id ? (
-              <View style={{ gap: space.xs }}>
-                <Text style={[type.small, { color: colors.wrong, fontWeight: "700" }]}>{t("send_failed")}</Text>
-                <Text style={type.small}>{sendError.message}</Text>
-                {sendError.detail ? <Text style={type.mono}>{sendError.detail}</Text> : null}
-                <Button
-                  label={t("send_retry")}
-                  tone="secondary"
-                  disabled={sendError.busy}
-                  onPress={() => void resend()}
-                />
-              </View>
-            ) : !graded.saved ? (
-              <Text style={[type.small, { fontWeight: "700" }]}>{t("unsent_offline")}</Text>
-            ) : null}
-            {/* Why this question was here, said once it can no longer be a
-                hint: a 類題 re-tests a trap that caught them before. */}
-            {item.stands_for ? (
-              <Text style={type.small}>
-                {item.lesson_trap
-                  ? t("retest_note_trap", { trap: roleInfo(item.lesson_trap, lang).label })
-                  : t("retest_note")}
-              </Text>
-            ) : null}
-          </Card>
+        />
 
-          {/* The way on, right under the verdict: most answers need no more
-              than the verdict, and the explanation below can be long. The one
-              at the bottom is for whoever read all of it. */}
-          <View ref={nextWrap}>
-            <Button
-              label={nextLabel}
-              // The other half of the keyboard hint, where the key it names is
-              // the one that does something.
-              sub={HAS_KEYBOARD ? t("key_hint_next") : undefined}
-              icon="chevron"
-              onPress={next}
+        <SceneStrip item={item} big={stage === "scene"} />
+
+        {/* Each stage of a question arrives rather than snaps: the scene card,
+            then the question card in its place. The key is what makes the
+            second one arrive too — same component, new content. */}
+        {stage === "scene" ? (
+          <FadeIn key={`${item.id}-scene`}>
+            <SceneCard
+              item={item}
+              sceneImage={sceneImage}
+              listenable={view.listenable}
+              onGo={() => go(view.afterScene)}
             />
-          </View>
+          </FadeIn>
+        ) : (
+          <FadeIn key={`${item.id}-question`}>
+            <StimulusCard
+              item={item}
+              sceneImage={sceneImage}
+              playlist={playlist}
+              autoplay={stage === "listen"}
+              stemAsText={view.stemAsText}
+              dialogueAsText={view.dialogueAsText}
+              audioFailed={audioFailed}
+              onFinished={() => go("answer")}
+              onFailed={() => setAudioFailedFor(item.id)}
+              onReplay={() => dispatch({ type: "replayed" })}
+            />
+          </FadeIn>
+        )}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showDetails }}
-            onPress={() => dispatch({ type: "toggleDetails" })}
-            style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
-          >
-            <Text style={[type.small, styles.toggle]}>
-              {showDetails ? t("details_close") : t("details_open")}
-            </Text>
-          </Pressable>
+        {/* What happens next, as the screen actually does it: printed options
+            wait for the audio to end, numbered ones can be pressed now. */}
+        {stage === "listen" ? (
+          <Text style={[type.small, shared.hint]}>
+            {view.optionTextHidden ? t("listen_hint_spoken") : t("listen_hint")}
+          </Text>
+        ) : null}
 
-          {showDetails ? (
-            <Card style={{ gap: space.md }}>
-              {/* Skipped when the verdict line above already is it, which is the
-                  English case for a right answer. */}
-              {explanation === verdictSub ? null : <Text style={type.body}>{explanation}</Text>}
-              <View style={{ gap: space.sm }}>
-                {options.map((option, i) => {
-                  // The same two marks as the cards above and the review
-                  // screen, because this list is where a miss is read and the
-                  // cards are by now off the top of the screen.
-                  const isAnswer = i === item.correct_index;
-                  const isChosen = i === chosen && !isAnswer;
-                  return (
-                    <View key={option.position} style={styles.whyRow}>
-                      {/* A spoken option can be heard again beside its text: the
-                          right one is the sentence worth saying out loud. */}
-                      {spokenOptions ? (
-                        <MiniPlay
-                          url={spokenOptions[i]}
-                          label={t("play_option", { label: NUMBERS[i] })}
-                        />
-                      ) : null}
-                      <View style={[styles.why, { flex: 1 }]}>
-                        <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
-                          {NUMBERS[i]}　{option.text}
-                        </Text>
-                        {isAnswer || isChosen ? (
-                          <Text
-                            style={[
-                              type.small,
-                              { fontWeight: "700", color: isAnswer ? colors.correct : colors.wrong },
-                            ]}
-                          >
-                            {isAnswer ? t("mark_correct") : t("mark_chosen")}
-                          </Text>
-                        ) : null}
-                        <Text style={type.small}>{option.why}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-              {item.vocab_notes?.length ? (
-                <View style={{ gap: space.xs }}>
-                  {item.vocab_notes.map((note) => (
-                    <Text key={note.term} style={type.small}>
-                      {note.term}（{note.reading}）— {note.meaning}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-              {/* What was heard, a line at a time. Text-only narration is already
-                  on the card above, and a dialogue with no clips is already
-                  there as a script, so neither is repeated here. */}
-              <Transcript
-                turns={dialogueAsText ? [] : (item.dialogue ?? [])}
-                narration={stemAsText ? null : { text: item.stem, url: narrationUrl }}
-              />
-            </Card>
-          ) : null}
+        {view.optionsShown ? (
+          <OptionList
+            item={item}
+            options={options}
+            view={view}
+            spokenOptions={spokenOptions}
+            optionsAsText={optionsAsText}
+            chosen={chosen}
+            canVeto={load.canVeto}
+            onChoose={onChoose}
+            onPlay={onPlayOption}
+            onToggleText={() => dispatch({ type: "toggleOptionsText" })}
+            onVetoed={vetoed}
+          />
+        ) : null}
 
-          {/* Every question gets one, and it is the last thing above the button
-              to leave: a report is worth making at the moment the oddness is
-              still in view, and worth nobody's attention before then. */}
-          <ReportQuestion key={`${item.id}-report`} itemId={item.id} />
-
-          <Button label={nextLabel} icon="chevron" onPress={next} />
-        </FadeIn>
-      ) : null}
+        {revealed && graded ? (
+          <VerdictPanel
+            key={`${item.id}-verdict`}
+            item={item}
+            options={options}
+            graded={graded}
+            view={view}
+            chosen={chosen}
+            spokenOptions={spokenOptions}
+            narrationUrl={narrationUrl}
+            showDetails={showDetails}
+            sendError={sendError?.itemId === item.id ? sendError : null}
+            nextLabel={index + 1 >= items.length ? t("btn_result") : t("btn_next")}
+            onToggleDetails={() => dispatch({ type: "toggleDetails" })}
+            onResend={resend}
+            onNext={next}
+            onArrive={(y) => {
+              // Clear of the sticky counter, which would otherwise sit on top
+              // of the verdict's first line — and jumped rather than glided for
+              // somebody who has asked the OS for less motion.
+              const top = y - headerHeight.current - space.sm;
+              scroller.current?.scrollTo({ y: Math.max(0, top), animated: !reduced });
+            }}
+          />
+        ) : null}
       </ScrollView>
     </>
   );
@@ -1083,229 +413,3 @@ function Keys({ onKey }: { onKey: (key: string) => boolean | void }) {
   useKeys(onKey);
   return null;
 }
-
-/**
- * One of the four answers.
- *
- * Its own component, and memoised, for two reasons. The pointer over it is its
- * own state: held on the screen, every hover in and out redrew the documents
- * and the chart above. And a spoken option's play button sits *beside* the
- * answer rather than inside it — nested, a screen reader could not reach the
- * inner button at all, and "play 1" answered 1. Side by side they are two
- * controls, each saying what it does.
- */
-const OptionCard = React.memo(function OptionCard({
-  index,
-  text,
-  textHidden,
-  spokenUrl,
-  revealed,
-  chosen,
-  answer,
-  locked,
-  onChoose,
-  onPlay,
-}: {
-  index: number;
-  text: string;
-  /** A spoken option before the answer: the number, and no words. */
-  textHidden: boolean;
-  /** The option's clip, while it may be played before answering. */
-  spokenUrl: string | null;
-  revealed: boolean;
-  chosen: boolean;
-  answer: boolean;
-  /** An answer is in, or on its way. */
-  locked: boolean;
-  onChoose: (index: number) => void;
-  onPlay: () => void;
-}) {
-  const { t } = useLang();
-  /** Under a pointer, on a machine that has one. */
-  const [hovered, setHovered] = useState(false);
-  const label = NUMBERS[index];
-  const show = revealed && (chosen || answer);
-  const dim = revealed && !show;
-  const open = !revealed && !locked;
-  const card = (
-    <Pressable
-      accessibilityRole="button"
-      // One label for the whole option, so a screen reader says
-      // "1. 承知いたしました" rather than reading a lone number and then a
-      // sentence with nothing tying them together — and, once answered, says
-      // which one this was. A spoken option says that pressing it answers:
-      // the play button beside it is the one that plays.
-      accessibilityLabel={
-        (textHidden ? t("option_spoken", { label }) : `${label}. ${text}`) +
-        (show ? ` — ${answer ? t("mark_correct") : t("mark_chosen")}` : "")
-      }
-      accessibilityState={{ disabled: revealed || locked }}
-      disabled={revealed || locked}
-      onPress={() => onChoose(index)}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      style={({ pressed }) => [
-        styles.option,
-        spokenUrl !== null && { flex: 1 },
-        open && hovered && styles.optionHover,
-        pressed && !revealed && { opacity: 0.85 },
-        chosen && !revealed && styles.optionPending,
-        show && (answer ? styles.optionCorrect : styles.optionWrong),
-        // Set aside, not faded. After the answer these two are neither the
-        // choice nor the key, and they step back by going flat and grey —
-        // which leaves them legible, since "what were the other two?" is a
-        // question worth being able to answer.
-        dim && styles.optionAside,
-      ]}
-    >
-      <View style={styles.optionHeader}>
-        <View style={[styles.numberBadge, show && (answer ? styles.numberBadgeCorrect : styles.numberBadgeWrong)]}>
-          <Text style={[styles.number, show && { color: answer ? colors.correct : colors.wrong }]}>{label}</Text>
-        </View>
-        {show ? (
-          // A word as well as a colour: the marker has to survive being read
-          // by someone who cannot tell the green from the red.
-          <Text style={[type.small, { color: answer ? colors.correct : colors.wrong, fontWeight: "700" }]}>
-            {answer ? t("mark_correct") : t("mark_chosen")}
-          </Text>
-        ) : null}
-      </View>
-      {textHidden ? null : <Text style={[type.option, dim && { color: colors.muted }]}>{text}</Text>}
-    </Pressable>
-  );
-  if (spokenUrl === null) return card;
-  return (
-    <View style={styles.optionRow}>
-      <MiniPlay url={spokenUrl} label={t("play_option", { label })} onPlay={onPlay} />
-      {card}
-    </View>
-  );
-});
-
-/** Who you are, who you are talking to, and how. Big while entering the scene,
- *  a quiet row once the question is on screen. */
-function SceneStrip({ item, big }: { item: QueuedItem; big: boolean }) {
-  const { t } = useLang();
-  const parts: { k: string; v: string }[] = [];
-  if (item.speaker_role) parts.push({ k: t("you"), v: item.speaker_role });
-  if (item.listener_role) parts.push({ k: t("other"), v: item.listener_role });
-  if (item.channel) {
-    const key = CHANNEL_KEY[item.channel];
-    const emoji = CHANNEL_EMOJI[item.channel];
-    const name = key ? t(key) : item.channel;
-    parts.push({ k: "", v: emoji ? `${emoji} ${name}` : name });
-  }
-  if (!parts.length) return null;
-  return (
-    <View style={styles.strip}>
-      {parts.map((p) => (
-        <View key={p.k + p.v} style={[styles.stripPill, big && styles.stripPillBig]}>
-          {p.k ? <Text style={type.label}>{p.k}</Text> : null}
-          <Text style={big ? styles.stripValueBig : styles.stripValue}>{p.v}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function SceneImage({ uri }: { uri: string }) {
-  return (
-    // Not described to a screen reader on purpose. For most types the scene is
-    // one of sixteen shared drawings that cannot contain the answer, so a
-    // description would be of a stock illustration; for 画像把握 the picture IS
-    // the question, and a description would be the answer.
-    <Image
-      source={{ uri }}
-      style={styles.scene}
-      resizeMode="cover"
-      accessible={false}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    />
-  );
-}
-
-const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
-  // The counter and the clock, stuck to the top of the scroll. Its own
-  // background, out to the page's edges, so a passage scrolling under it does
-  // not show through.
-  header: {
-    backgroundColor: colors.bg,
-    marginHorizontal: -space.lg,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.sm,
-    marginVertical: -space.sm,
-    gap: space.sm,
-  },
-  progressRow: { flexDirection: "row", alignItems: "center", gap: space.md },
-  strip: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  stripPill: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    gap: 1,
-    // The channel pill carries no label above its value, so on its own it would
-    // sit its one line against the top of a row whose other pills are two lines
-    // tall. Centring holds the three of them on one line.
-    justifyContent: "center",
-    ...shadow.card,
-  },
-  stripPillBig: { paddingHorizontal: space.lg, paddingVertical: space.md },
-  stripValue: { fontSize: 14, fontWeight: "700", color: colors.text },
-  stripValueBig: { fontSize: 17, fontWeight: "700", color: colors.text, lineHeight: 24 },
-  // Full width on a phone; on a desktop no more than 480 wide, which is 320
-  // tall — a picture the size of the screen pushes the question below it.
-  scene: {
-    width: "100%",
-    maxWidth: 480,
-    alignSelf: "center",
-    aspectRatio: 3 / 2,
-    borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
-  },
-  option: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: "transparent",
-    borderRadius: radius.lg,
-    padding: space.lg,
-    gap: space.xs,
-    ...shadow.card,
-  },
-  optionHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  optionRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  optionAside: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-  // A pointer over an option that can still be chosen: the card lifts and its
-  // edge takes the soft accent, which is "this one, if you press" without
-  // the full border that means "this one, pressed".
-  optionHover: { borderColor: colors.accentSoft, ...shadow.cardRaised },
-  optionPending: { borderColor: colors.accent },
-  optionCorrect: { borderColor: colors.correct, backgroundColor: colors.correctSoft },
-  optionWrong: { borderColor: colors.wrong, backgroundColor: colors.wrongSoft },
-  // A floor, not a size: at a large text setting the numeral grows and the
-  // badge grows with it rather than cropping it.
-  numberBadge: {
-    minWidth: 26,
-    minHeight: 26,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.accentSoft,
-  },
-  numberBadgeCorrect: { backgroundColor: "rgba(14,159,110,0.16)" },
-  numberBadgeWrong: { backgroundColor: "rgba(217,58,75,0.16)" },
-  number: { fontSize: 13, fontWeight: "700", color: colors.accent },
-  verdictRow: { flexDirection: "row", alignItems: "center", gap: space.lg },
-  why: { gap: 2 },
-  whyRow: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
-  hint: { textAlign: "center" },
-  toggle: { textAlign: "center", textDecorationLine: "underline" },
-  // A line of text that is a button still has to be a thumb's height: the
-  // padding is the hit area, since hitSlop does nothing on the web.
-  link: { minHeight: MIN_TOUCH, justifyContent: "center" },
-});
