@@ -494,9 +494,9 @@ def regate_item(item: dict) -> Review:
                       + (f": {' '.join(sres.notes.split())[:240]}" if sres.notes else ""))
 
     gres = answerability.run_gate(item)
-    if not gres.trials or any(t.chosen is None for t in gres.trials):
-        # A trial that got no answer is scored as wrong, which on the cold side
-        # looks like a pass and on the full side like a failure. Neither is.
+    if gres.verdict == answerability.UNCHECKED or answerability.unanswered(gres.trials):
+        # A trial that got no answer would look like a pass on the cold side
+        # and like a failure on the full side. It is neither.
         return Review(None, note="the gate could not reach its model for every trial")
     cold = [t for t in gres.trials if t.side == "cold"]
     full = [t for t in gres.trials if t.side == "full"]

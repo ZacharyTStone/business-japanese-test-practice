@@ -57,10 +57,17 @@ def generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_c
     elif gate:
         gres = answerability.run_gate(item)
         cold, full, gate_verdict = gres.cold_success_rate, gres.full_success_rate, gres.verdict
+        if any(t.chosen is None for t in gres.trials):
+            # Whatever the verdict says: a gate with a trial its judge did not
+            # answer has not checked the item, and an unchecked item never ships.
+            cold = full = None
+            gate_verdict = answerability.UNCHECKED
     # A vocab violation (when enforced) is an independent discard reason — it can
     # fail an item the answerability gate passed or skipped.
     if vres.enforced and not vres.ok and not gate_verdict.startswith("discarded"):
         gate_verdict = "discarded:vocab"
+    # Only these two ship. An unchecked gate (its judge did not answer every
+    # trial) is neither: nothing was found wrong, and nothing was shown right.
     kept = gate_verdict in ("kept", "skipped")
 
     # The difficulty probe: a weaker model sits the full view a few times, and
@@ -102,7 +109,11 @@ def generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_c
 
 
 def rejection_reason(item_type: str, verdict: str, sres, vres, gres=None) -> "str | None":
-    """Why review rejected this draft, as one sentence for the next one."""
+    """Why review rejected this draft, as one sentence for the next one.
+
+    None for a draft that was kept, and for one the gate could not check: an
+    outage says nothing about the writing, and telling the next draft it
+    failed would send it off to fix a fault nobody found."""
     if verdict == "discarded:leaky":
         return answerability.leak_description(item_type, gres)
     if verdict == "discarded:ambiguous":

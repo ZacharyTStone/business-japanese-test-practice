@@ -71,10 +71,10 @@ def measure(item: dict, *, model: str | None = None) -> DifficultyResult:
     """Ask the difficulty model the gate's full-view question, several times.
 
     Every trial has to come back with an answer for the rate to count. A trial
-    the model did not answer is not a wrong answer — the gate scores it that
-    way because it is testing consistency, but here it would drag the rate down
-    and call the item harder than it is — so one failed trial leaves the item
-    unmeasured and the caller on the gate's rate.
+    the model did not answer is not a wrong answer — here it would drag the
+    rate down and call the item harder than it is, as in the gate it would
+    call a leaky item clean — so one failed trial leaves the item unmeasured
+    and the caller on the gate's rate.
     """
     if not config.DIFFICULTY_ENABLED:
         return DifficultyResult(measured=False, notes="difficulty probe disabled")

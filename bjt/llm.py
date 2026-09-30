@@ -40,6 +40,18 @@ class LLMBillingError(LLMError):
 _BILLING_SIGNS = ("credit balance", "insufficient_quota", "billing")
 
 
+class LLMTruncatedError(LLMError):
+    """The reply stopped at its token ceiling (or the model's context) before
+    it was finished. Paid for, and not an answer: a judge's reply cut off
+    mid-thought is a trial that got no answer, never a wrong one, and a draft
+    cut off mid-item is a generation that failed. Its own class so the log
+    says which, and so the ceiling that caused it can be looked at."""
+
+
+#: stop_reason values that mean the reply was cut off rather than finished.
+_TRUNCATED = ("max_tokens", "model_context_window_exceeded")
+
+
 class LLMSpendLimitError(LLMBillingError):
     """This process has spent what it was allowed to. Raised *before* the
     call that would go over, so the ceiling is never crossed by more than one
@@ -250,6 +262,10 @@ def _structured(
 
     if resp.stop_reason == "refusal":
         raise LLMError(f"model refused the request ({resp.stop_details})")
+    if resp.stop_reason in _TRUNCATED:
+        raise LLMTruncatedError(
+            f"reply cut off ({resp.stop_reason}) at a ceiling of "
+            f"{min(max_tokens, config.MAX_TOKENS_CEILING)} output tokens")
 
     text = next((b.text for b in resp.content if getattr(b, "type", None) == "text"), None)
     if not text:
