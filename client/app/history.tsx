@@ -34,10 +34,10 @@ import { useAuth } from "../src/lib/auth";
 import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { HistoryEntry, ReviewDetail } from "../src/lib/types";
 import { MiniPlay, Transcript } from "../src/ui/audio";
 import { Button, Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
+import { ScreenGate } from "../src/ui/screen";
 import { ScreenCrash } from "../src/ui/crash";
 import { DocumentView } from "../src/ui/document";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
@@ -47,7 +47,16 @@ const NUMBERS = ["1", "2", "3", "4"];
 /** A throw while drawing stays on this screen (ui/crash.tsx). */
 export const ErrorBoundary = ScreenCrash;
 
-export default function History() {
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function HistoryScreen() {
+  return (
+    <ScreenGate underHeader>
+      <History />
+    </ScreenGate>
+  );
+}
+
+function History() {
   // The list runs to the bottom of the screen, where the home indicator is.
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -70,7 +79,6 @@ export default function History() {
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isConfigured) return;
     let cancelled = false;
     setEntries(null);
     fetchHistory(50, onlyItem || undefined)
@@ -110,13 +118,6 @@ export default function History() {
       .catch(() => setDetails((d) => ({ ...d, [entry.item_id]: "error" })));
   }
 
-  if (!isConfigured) {
-    return (
-      <View style={styles.page}>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </View>
-    );
-  }
   if (error != null) {
     // The way back is the header's; this is the way forward.
     return (

@@ -30,7 +30,6 @@ import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/li
 import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
 import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
 import { settingSaver, type SettingSaver } from "../../src/lib/save";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
@@ -47,6 +46,7 @@ import {
   ScreenMessage,
   SectionLabel,
 } from "../../src/ui/components";
+import { ScreenGate } from "../../src/ui/screen";
 import { useTabClearance } from "../../src/ui/tabbar";
 import { colors, space, type } from "../../src/ui/theme";
 
@@ -60,18 +60,20 @@ type Savers = {
   timer: SettingSaver<boolean>;
 };
 
-export default function Account() {
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function AccountScreen() {
+  return (
+    <ScreenGate>
+      <Account />
+    </ScreenGate>
+  );
+}
+
+function Account() {
   const clearance = useTabClearance();
   const router = useRouter();
   const { lang, setLang, t } = useLang();
-  const {
-    email,
-    session,
-    signOut,
-    loading: authLoading,
-    error: authError,
-    retry: retryAuth,
-  } = useAuth();
+  const { email, session, signOut } = useAuth();
   // Read by the savers when they write, so they never hold on to a stale one.
   const userId = useRef<string | null>(null);
   userId.current = session?.user.id ?? null;
@@ -140,8 +142,7 @@ export default function Account() {
   // have moved a level, and this screen is where the three are printed.
   useFocusEffect(
     useCallback(() => {
-      if (!isConfigured) return;
-      let cancelled = false;
+        let cancelled = false;
       fetchProfile()
         .then((p) => {
           if (cancelled) return;
@@ -195,26 +196,6 @@ export default function Account() {
     setReloads((n) => n + 1);
   }
 
-  if (!isConfigured) {
-    return (
-      <ScreenMessage>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </ScreenMessage>
-    );
-  }
-  if (authLoading) return <Loading />;
-  if (authError) {
-    return (
-      <ScreenMessage>
-        <Notice
-          title={t("cant_connect")}
-          body={authError}
-          tone="warn"
-          action={{ label: t("retry"), onPress: retryAuth }}
-        />
-      </ScreenMessage>
-    );
-  }
   if (profileError != null) {
     return (
       <ScreenMessage>

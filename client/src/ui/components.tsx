@@ -463,10 +463,20 @@ export function ScreenHeader({
  * empty shelf. It exists so those branches keep the safe-area padding that the
  * scrolling version of the same screen gets from its header.
  */
-export function ScreenMessage({ children }: { children: React.ReactNode }) {
+export function ScreenMessage({
+  children,
+  underHeader = false,
+}: {
+  children: React.ReactNode;
+  /** On a stack screen the header already clears the status bar, so the
+   *  message starts a gutter below it rather than a status bar further down. */
+  underHeader?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.screenMessage, { paddingTop: insets.top + space.xl }]}>{children}</View>
+    <View style={[styles.screenMessage, { paddingTop: underHeader ? space.lg : insets.top + space.xl }]}>
+      {children}
+    </View>
   );
 }
 

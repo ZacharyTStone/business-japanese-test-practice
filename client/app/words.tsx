@@ -19,10 +19,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchWordList } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { SECTION_ORDER, SECTION_SHORT } from "../src/lib/levels";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { Level, Section } from "../src/lib/types";
 import { filterWords, furigana, makeAnnotator, type WordEntry } from "../src/lib/words";
 import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
+import { ScreenGate } from "../src/ui/screen";
 import { ScreenCrash } from "../src/ui/crash";
 import { RubyText } from "../src/ui/ruby";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
@@ -35,7 +35,16 @@ const PAGE = 40;
 /** A throw while drawing stays on this screen (ui/crash.tsx). */
 export const ErrorBoundary = ScreenCrash;
 
-export default function Words() {
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function WordsScreen() {
+  return (
+    <ScreenGate underHeader>
+      <Words />
+    </ScreenGate>
+  );
+}
+
+function Words() {
   // The list runs to the bottom of the screen, where the home indicator is.
   const insets = useSafeAreaInsets();
   const { t } = useLang();
@@ -49,7 +58,6 @@ export default function Words() {
   const [shown, setShown] = useState(PAGE);
 
   useEffect(() => {
-    if (!isConfigured) return;
     let cancelled = false;
     fetchWordList()
       .then((rows) => !cancelled && setWords(rows))
@@ -71,13 +79,6 @@ export default function Words() {
   // forty of them each time a character is typed.
   const annotate = useMemo(() => makeAnnotator(words ?? []), [words]);
 
-  if (!isConfigured) {
-    return (
-      <View style={styles.page}>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </View>
-    );
-  }
   if (error != null) {
     return (
       <View style={styles.page}>

@@ -26,17 +26,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchTermSentence, fetchVocab } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { TermSentence, VocabEntry } from "../src/lib/types";
 import { MiniPlay } from "../src/ui/audio";
 import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
+import { ScreenGate } from "../src/ui/screen";
 import { ScreenCrash } from "../src/ui/crash";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
 /** A throw while drawing stays on this screen (ui/crash.tsx). */
 export const ErrorBoundary = ScreenCrash;
 
-export default function Vocab() {
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function VocabScreen() {
+  return (
+    <ScreenGate underHeader>
+      <Vocab />
+    </ScreenGate>
+  );
+}
+
+function Vocab() {
   // The list runs to the bottom of the screen, where the home indicator is.
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -51,7 +60,6 @@ export default function Vocab() {
   const [sentences, setSentences] = useState<Record<string, TermSentence | null | "loading" | "error">>({});
 
   useEffect(() => {
-    if (!isConfigured) return;
     let cancelled = false;
     fetchVocab()
       .then((rows) => !cancelled && setEntries(rows))
@@ -73,13 +81,6 @@ export default function Vocab() {
       .catch(() => setSentences((s) => ({ ...s, [entry.term]: "error" })));
   }
 
-  if (!isConfigured) {
-    return (
-      <View style={styles.page}>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </View>
-    );
-  }
   if (error != null) {
     return (
       <View style={styles.page}>

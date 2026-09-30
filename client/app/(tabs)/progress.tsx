@@ -35,7 +35,6 @@ import { TAG_LABELS } from "../../src/lib/generated";
 import { useLang, type Key } from "../../src/lib/i18n";
 import { placedLevel } from "../../src/lib/levels";
 import { roleInfo } from "../../src/lib/roles";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { RoleTrap, Section, SectionLevel, TagStat, TypeStat } from "../../src/lib/types";
 import {
   AdSlot,
@@ -44,13 +43,13 @@ import {
   IconBadge,
   Loading,
   LoadFailed,
-  Notice,
   ProgressBar,
   ScreenHeader,
   ScreenMessage,
   SectionLabel,
   Tag,
 } from "../../src/ui/components";
+import { ScreenGate } from "../../src/ui/screen";
 import type { IconName } from "../../src/ui/icons";
 import { FadeIn } from "../../src/ui/motion";
 import { useTabClearance } from "../../src/ui/tabbar";
@@ -95,7 +94,16 @@ function tagLabel(axis: TagStat["axis"], tag: string, t: (key: Key) => string): 
   return TAG_LABELS[axis]?.[tag] ?? tag;
 }
 
-export default function Progress() {
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function ProgressScreen() {
+  return (
+    <ScreenGate>
+      <Progress />
+    </ScreenGate>
+  );
+}
+
+function Progress() {
   const clearance = useTabClearance();
   const router = useRouter();
   const { lang, t } = useLang();
@@ -109,8 +117,7 @@ export default function Progress() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isConfigured) return;
-      let cancelled = false;
+        let cancelled = false;
       (async () => {
         try {
           const [ty, tg, tr, ad, lv] = await Promise.all([
@@ -137,13 +144,6 @@ export default function Progress() {
     }, [reloads])
   );
 
-  if (!isConfigured) {
-    return (
-      <ScreenMessage>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </ScreenMessage>
-    );
-  }
   if (error != null) {
     return (
       <ScreenMessage>

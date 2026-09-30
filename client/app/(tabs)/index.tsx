@@ -16,7 +16,6 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { useAuth } from "../../src/lib/auth";
 import {
   fetchDay,
   fetchPace,
@@ -30,18 +29,17 @@ import { minutesFor, secondsPerQuestion } from "../../src/lib/estimate";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   GradientCard,
   Loading,
   LoadFailed,
-  Notice,
   ProgressRing,
   ScreenHeader,
   ScreenMessage,
 } from "../../src/ui/components";
+import { ScreenGate } from "../../src/ui/screen";
 import { DayDone } from "../../src/ui/done";
 import { Icon } from "../../src/ui/icons";
 import { useFreshToday } from "../../src/ui/fresh";
@@ -49,11 +47,19 @@ import { FadeIn } from "../../src/ui/motion";
 import { useTabClearance } from "../../src/ui/tabbar";
 import { colors, shadow, space, tabular, type } from "../../src/ui/theme";
 
-export default function Home() {
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function HomeScreen() {
+  return (
+    <ScreenGate>
+      <Home />
+    </ScreenGate>
+  );
+}
+
+function Home() {
   const clearance = useTabClearance();
   const router = useRouter();
   const { lang, t } = useLang();
-  const { loading: authLoading, error: authError, retry: retryAuth } = useAuth();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
@@ -75,7 +81,6 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!isConfigured || authLoading) return;
       let cancelled = false;
       (async () => {
         try {
@@ -111,7 +116,7 @@ export default function Home() {
       return () => {
         cancelled = true;
       };
-    }, [authLoading, reloads])
+    }, [reloads])
   );
 
   function retry() {
@@ -124,26 +129,7 @@ export default function Home() {
   // what is on screen left there until the new numbers arrive.
   useFreshToday(loadedAt, () => setReloads((n) => n + 1));
 
-  if (!isConfigured) {
-    return (
-      <ScreenMessage>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </ScreenMessage>
-    );
-  }
-  if (authLoading || loading) return <Loading label={t("loading")} />;
-  if (authError) {
-    return (
-      <ScreenMessage>
-        <Notice
-          title={t("cant_connect")}
-          body={authError}
-          tone="warn"
-          action={{ label: t("retry"), onPress: retryAuth }}
-        />
-      </ScreenMessage>
-    );
-  }
+  if (loading) return <Loading label={t("loading")} />;
   if (error != null) {
     return (
       <ScreenMessage>
