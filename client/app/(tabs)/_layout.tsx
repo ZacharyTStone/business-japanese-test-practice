@@ -34,6 +34,11 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // The page behind a tab is the app's own, as it is behind every stack
+        // screen (app/_layout.tsx). Left to the navigator it is its theme's
+        // grey, a shade off `bg`, which shows as a seam the moment a tab's
+        // content is shorter than the window.
+        sceneStyle: { backgroundColor: colors.bg },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
         // Always stacked, at every width. Left to itself the bar puts the label
