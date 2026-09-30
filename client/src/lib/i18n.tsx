@@ -375,6 +375,8 @@ const S = {
   unsent_short: ["未送信", "Not sent"],
   send_failed: ["答えを記録できませんでした", "Your answer wasn't recorded"],
   send_retry: ["もう一度送る", "Send again"],
+  // on the verdict card after a miss: the marked options are above, off screen.
+  correct_is: ["正解は {n}", "The answer was {n}"],
   // audio that would not play: the words go on the page instead.
   audio_failed: ["音声を再生できませんでした。文字で読んでください。", "The audio couldn't be played. The words are on the page instead."],
   dialogue_as_text: ["会話（文字で）", "Conversation (as text)"],

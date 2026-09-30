@@ -988,6 +988,13 @@ export default function Practice() {
                       : verdictFor(role, item.listener_role, lang)}
                 </Text>
                 <Text style={type.small}>{verdictSub}</Text>
+                {/* Which one it was, in so many words: the marked cards are
+                    above, scrolled out of sight by the move to this card. */}
+                {graded.isCorrect ? null : (
+                  <Text style={[type.small, { color: colors.correct, fontWeight: "700" }]}>
+                    {t("correct_is", { n: NUMBERS[item.correct_index] ?? "" })}
+                  </Text>
+                )}
               </View>
             </View>
             {!graded.isCorrect && !ranOut ? <RudenessMeter role={role} showLabel={false} /> : null}
@@ -1036,24 +1043,41 @@ export default function Practice() {
                   English case for a right answer. */}
               {explanation === verdictSub ? null : <Text style={type.body}>{explanation}</Text>}
               <View style={{ gap: space.sm }}>
-                {options.map((option, i) => (
-                  <View key={option.position} style={styles.whyRow}>
-                    {/* A spoken option can be heard again beside its text: the
-                        right one is the sentence worth saying out loud. */}
-                    {spokenOptions ? (
-                      <MiniPlay
-                        url={spokenOptions[i]}
-                        label={t("play_option", { label: NUMBERS[i] })}
-                      />
-                    ) : null}
-                    <View style={[styles.why, { flex: 1 }]}>
-                      <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
-                        {NUMBERS[i]}　{option.text}
-                      </Text>
-                      <Text style={type.small}>{option.why}</Text>
+                {options.map((option, i) => {
+                  // The same two marks as the cards above and the review
+                  // screen, because this list is where a miss is read and the
+                  // cards are by now off the top of the screen.
+                  const isAnswer = i === item.correct_index;
+                  const isChosen = i === chosen && !isAnswer;
+                  return (
+                    <View key={option.position} style={styles.whyRow}>
+                      {/* A spoken option can be heard again beside its text: the
+                          right one is the sentence worth saying out loud. */}
+                      {spokenOptions ? (
+                        <MiniPlay
+                          url={spokenOptions[i]}
+                          label={t("play_option", { label: NUMBERS[i] })}
+                        />
+                      ) : null}
+                      <View style={[styles.why, { flex: 1 }]}>
+                        <Text style={[type.small, { fontWeight: "700", color: colors.text }]}>
+                          {NUMBERS[i]}　{option.text}
+                        </Text>
+                        {isAnswer || isChosen ? (
+                          <Text
+                            style={[
+                              type.small,
+                              { fontWeight: "700", color: isAnswer ? colors.correct : colors.wrong },
+                            ]}
+                          >
+                            {isAnswer ? t("mark_correct") : t("mark_chosen")}
+                          </Text>
+                        ) : null}
+                        <Text style={type.small}>{option.why}</Text>
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
               {item.vocab_notes?.length ? (
                 <View style={{ gap: space.xs }}>
