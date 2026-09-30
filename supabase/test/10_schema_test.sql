@@ -1839,8 +1839,18 @@ begin
         (select count(distinct q.stands_for) from public.next_items(5) q) = 2
         and (select count(*) from public.next_items(5) q where q.times_seen > 0) = 0,
         'each re-tested by a question of its own, and not one of the five has been met before');
+    -- The second lesson takes the second-best question of the same ten: the
+    -- walk keeps only each lesson's best two (the set's share), and this is
+    -- the case where the second is the one it needs.
+    perform test.check(
+        (select count(distinct q.id) from public.next_items(5) q where q.stands_for is not null) = 2,
+        'two lessons on the same trap get two different questions, at the edge of what the walk keeps');
     perform test.check((select count(*) from public.next_items(50)) = 14,
         'and while the day is open a set of fifty is the whole window: fourteen items');
+    perform test.check(
+        (select 'jit=off' = any (proconfig) from pg_proc
+          where oid = 'public.next_items(integer)'::regprocedure),
+        'and the queue does not pay for a JIT compile on every call');
 
     -- Two answered today. Thirteen are then left, which is one more than the
     -- rest of the window — enough for the ordering test below to see every

@@ -705,7 +705,7 @@ as $$
 $$;
 
 
--- ==== function next_items — 20260930000300_the_door_is_on_the_answer.sql
+-- ==== function next_items — 20260930000700_the_retest_walk_stops_early.sql
 
 create or replace function public.next_items(p_limit integer default 5)
 returns table (
@@ -737,6 +737,7 @@ language sql
 stable
 security invoker
 set search_path = ''
+set jit = off
 as $$
     with recursive uid as (
         select (select auth.uid()) as id
@@ -892,46 +893,80 @@ as $$
                or exists (select 1 from public.scenes sc
                            where sc.id = i.scene_id and sc.image_path is not null))
     ),
-    -- A: the lessons that are due, misses first, then the most overdue.
+    -- A: the lessons that are due, misses first, then the most overdue. Only
+    -- the first two hundred: the walk below never goes further, so nothing
+    -- here is built for a lesson it could not reach.
     due_lessons as (
-        select l.item_id, l.trap, i.item_type, i.function,
-               row_number() over (order by l.missed desc, l.due_at, l.item_id) as priority
-        from lessons l
-        join public.items i on i.id = l.item_id
-        where l.is_due
-          and i.is_published
+        select d.*
+        from (
+            select l.item_id, l.trap, i.item_type, i.function,
+                   row_number() over (order by l.missed desc, l.due_at, l.item_id) as priority
+            from lessons l
+            join public.items i on i.id = l.item_id
+            where l.is_due
+              and i.is_published
+        ) d
+        where d.priority <= 200
     ),
-    -- ...and for each, every unseen question that re-tests it, best first. The
-    -- same rule grade_attempt() checks a `stands_for` against. Materialised,
-    -- because the assignment below reads it once per lesson.
+    -- A backlog is served two fifths of a set at a time.
+    due_cap as (
+        select greatest(1, ((select b.n from bounds b) * 2) / 5) as n
+    ),
+    -- Every role a published question offers as a wrong answer, once per
+    -- question: what a lesson's trap is looked up in, as one join rather than
+    -- a search per (lesson, question) pair.
+    wrong_roles as (
+        select distinct o.item_id, o.role
+        from public.item_options o
+        join public.items c on c.id = o.item_id
+        where c.is_published
+          and o.position <> c.correct_index
+    ),
+    -- ...and for each lesson, the unseen questions that re-test it, best
+    -- first. The same rule grade_attempt() checks a `stands_for` against: the
+    -- trap as a wrong answer, or for a lesson that never caught anybody, its
+    -- 機能. Only a lesson's best `due_cap` are kept. The walk below stops once
+    -- it has handed out `due_cap` questions, so when any lesson's turn comes,
+    -- fewer than `due_cap` are taken, and its best free question is always
+    -- among its first `due_cap`. Materialised, because the walk reads it once
+    -- per lesson.
     sibling_options as materialized (
-        select dl.item_id as lesson_id, p.id as sibling_id,
-               row_number() over (partition by dl.item_id
-                                  order by (p.level = p.at_level) desc, p.in_window desc,
-                                           p.weakness, p.id) as pick
-        from due_lessons dl
-        join pool p on p.item_type = dl.item_type and not p.is_seen
-        where case when dl.trap is not null then
-                       exists (select 1
-                                 from public.item_options o
-                                 join public.items c on c.id = o.item_id
-                                where o.item_id = p.id
-                                  and o.role = dl.trap
-                                  and o.position <> c.correct_index)
-                   else dl.function is null or p.function = dl.function
-              end
+        select r.lesson_id, r.sibling_id, r.pick
+        from (
+            select c.lesson_id, c.sibling_id,
+                   row_number() over (partition by c.lesson_id
+                                      order by (c.level = c.at_level) desc, c.in_window desc,
+                                               c.weakness, c.sibling_id) as pick
+            from (
+                select dl.item_id as lesson_id, p.id as sibling_id,
+                       p.level, p.at_level, p.in_window, p.weakness
+                from due_lessons dl
+                join pool p on p.item_type = dl.item_type and not p.is_seen
+                join wrong_roles wr on wr.item_id = p.id and wr.role = dl.trap
+                where dl.trap is not null
+                union all
+                select dl.item_id, p.id, p.level, p.at_level, p.in_window, p.weakness
+                from due_lessons dl
+                join pool p on p.item_type = dl.item_type and not p.is_seen
+                where dl.trap is null
+                  and (dl.function is null or p.function = dl.function)
+            ) c
+        ) r
+        where r.pick <= (select dc.n from due_cap dc)
     ),
     -- One question per lesson, handed out in lesson order: each lesson takes
     -- its best question that no earlier lesson has taken. Two misses on the
     -- same trap — the commonest case there is — are two different questions,
     -- not one question and a lesson left waiting. A lesson whose questions are
-    -- all taken, or which has none, is skipped and waits for a later set.
-    siblings (priority, lesson_id, trap, sibling_id, taken) as (
-        select 0::bigint, null::text, null::text, null::text, array[]::text[]
+    -- all taken, or which has none, is skipped and waits for a later set. The
+    -- walk stops as soon as the set's share of the backlog is handed out.
+    siblings (priority, lesson_id, trap, sibling_id, taken, served) as (
+        select 0::bigint, null::text, null::text, null::text, array[]::text[], 0
         union all
         select dl.priority, dl.item_id, dl.trap, nxt.sibling_id,
                case when nxt.sibling_id is null then sb.taken
-                    else sb.taken || nxt.sibling_id end
+                    else sb.taken || nxt.sibling_id end,
+               sb.served + case when nxt.sibling_id is null then 0 else 1 end
         from siblings sb
         join due_lessons dl on dl.priority = sb.priority + 1
         left join lateral (
@@ -942,9 +977,7 @@ as $$
              order by so.pick
              limit 1
         ) nxt on true
-        -- A backlog is served two fifths of a set at a time; there is no need
-        -- to walk more of it than a large set could ever take.
-        where dl.priority <= 200
+        where sb.served < (select dc.n from due_cap dc)
     ),
     due as (
         select sb.sibling_id as id, 0 as bucket, sb.priority::double precision as rank,
@@ -952,7 +985,7 @@ as $$
         from siblings sb
         where sb.sibling_id is not null
         order by sb.priority
-        limit greatest(1, ((select b.n from bounds b) * 2) / 5)
+        limit (select dc.n from due_cap dc)
     ),
     stretch as (
         select p.id, 2 as bucket, random() as rank,
