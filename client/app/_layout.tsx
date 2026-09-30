@@ -5,6 +5,7 @@ import { Pressable, Text } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../src/lib/auth";
+import { errorKind, friendlyError } from "../src/lib/errors";
 import { LangProvider, useLang } from "../src/lib/i18n";
 import { isConfigured } from "../src/lib/supabase";
 import { Loading, Notice, ScreenMessage } from "../src/ui/components";
@@ -39,6 +40,24 @@ function BackToRecord() {
   );
 }
 
+/** The door could not be opened for a reason that is not the learner's: the
+ *  sentence they can act on, the technical text in small print, and the retry. */
+function CantConnect({ failure, onRetry }: { failure: unknown; onRetry: () => void }) {
+  const { t } = useLang();
+  const { message, detail } = friendlyError(failure, t);
+  return (
+    <ScreenMessage>
+      <Notice
+        title={t("cant_connect")}
+        body={message}
+        detail={detail}
+        tone="warn"
+        action={{ label: t("retry"), onPress: onRetry }}
+      />
+    </ScreenMessage>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
@@ -69,21 +88,22 @@ function Navigator() {
   // stands aside for them.
   if (isConfigured) {
     if (auth.loading) return <Loading />;
+    // No session *because the server could not be reached* is not no session.
+    // Offline with an expired access token, supabase-js answers "no session"
+    // and keeps the refresh token for when the network is back — so the sign-in
+    // form here would ask for a password the device already has, and typing
+    // it would fail for the same reason. Say what is wrong and offer the retry.
+    // A refresh token the server has refused is different: that one does need
+    // the password again, so it falls through to the form.
+    if (!auth.session && auth.failure != null && errorKind(auth.failure) !== "session_expired") {
+      return <CantConnect failure={auth.failure} onRetry={auth.retry} />;
+    }
     if (!auth.session) return <SignInScreen />;
     // An RPC that failed to answer is not an RPC that said no. Only a
     // confirmed `false` means the account is not approved; a `null` with an
     // error means try again.
-    if (auth.isTester === null && auth.error) {
-      return (
-        <ScreenMessage>
-          <Notice
-            title={t("cant_connect")}
-            body={auth.error}
-            tone="warn"
-            action={{ label: t("retry"), onPress: auth.retry }}
-          />
-        </ScreenMessage>
-      );
+    if (auth.isTester === null && auth.failure != null) {
+      return <CantConnect failure={auth.failure} onRetry={auth.retry} />;
     }
     if (auth.isTester === null) return <Loading />;
     if (auth.isTester !== true) return <ClosedScreen />;

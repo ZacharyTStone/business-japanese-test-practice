@@ -26,6 +26,19 @@ describe("errorKind", () => {
       "session_expired"
     );
   });
+  it("tells a refresh token the server refused from one it could not reach", () => {
+    // The first needs the password again; the second only needs the network.
+    // The door (app/_layout.tsx) shows the sign-in form for one and a retry
+    // for the other on exactly this distinction.
+    const refused = {
+      name: "AuthApiError",
+      message: "Invalid Refresh Token: Refresh Token Not Found",
+      code: "refresh_token_not_found",
+      status: 400,
+    };
+    expect(errorKind(refused)).toBe("session_expired");
+    expect(errorKind({ name: "AuthRetryableFetchError", message: "Failed to fetch", status: 0 })).toBe("offline");
+  });
   it("recognises a wrong password", () => {
     expect(errorKind({ message: "Invalid login credentials", code: "invalid_credentials" })).toBe(
       "wrong_password"

@@ -190,11 +190,16 @@ export function Loading({ label }: { label?: string }) {
 export function Notice({
   title,
   body,
+  detail,
   tone = "info",
   action,
 }: {
   title: string;
   body: string;
+  /** The technical account of a failure, in small print under the sentence a
+   *  learner can act on: not for them, but for whoever they send a screenshot
+   *  to. Empty or absent draws nothing. */
+  detail?: string;
   tone?: "info" | "warn";
   action?: { label: string; onPress: () => void };
 }) {
@@ -207,7 +212,12 @@ export function Notice({
         </View>
         <Text style={[type.h2, { flex: 1 }]}>{title}</Text>
       </View>
-      <Text style={[type.small, { marginTop: space.sm }]}>{body}</Text>
+      {body ? <Text style={[type.small, { marginTop: space.sm }]}>{body}</Text> : null}
+      {detail ? (
+        <Text style={[type.mono, { marginTop: space.xs }]} selectable>
+          {detail}
+        </Text>
+      ) : null}
       {action ? (
         <View style={{ marginTop: space.lg }}>
           <Button label={action.label} tone="secondary" onPress={action.onPress} />

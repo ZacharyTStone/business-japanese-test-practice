@@ -19,6 +19,7 @@ import type { Session } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { AppState, Platform } from "react-native";
 
+import { errorText } from "./errors";
 import { isConfigured, supabase } from "./supabase";
 
 type AuthState = {
@@ -26,8 +27,13 @@ type AuthState = {
   /** True while we are still working out who this is. Screens wait on it. */
   loading: boolean;
   /** Set when the session or the tester check could not be read — offline, or
-   *  no project configured. */
+   *  no project configured. The technical text of `failure`, kept for the
+   *  screens that print it. */
   error: string | null;
+  /** The failure itself, for `errorKind` / `friendlyError`: whether it was the
+   *  network or the sign-in is what decides between "try again" and "sign in
+   *  again", and the message alone does not always say. */
+  failure: unknown;
   /** Whether the signed-in account is on the tester list. null until asked. */
   isTester: boolean | null;
   email: string | null;
@@ -48,7 +54,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<unknown>(null);
   const [isTester, setIsTester] = useState<boolean | null>(null);
   // Bumped by retry(): both effects below depend on it, so one call re-runs
   // the session read and the tester check together.
@@ -67,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       // Read, not merged with what the tester-check effect might set next:
       // a clean session read clears a stale error from a previous attempt.
-      setError(sessionError ? sessionError.message : null);
+      setFailure(sessionError ?? null);
       setSession(data.session);
       setLoading(false);
     })();
@@ -111,10 +117,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(({ data, error: rpcError }) => {
         if (cancelled) return;
         if (rpcError) {
-          setError(rpcError.message);
+          setFailure(rpcError);
           return;
         }
-        setError(null);
+        setFailure(null);
         setIsTester(data === true);
       });
     return () => {
@@ -127,7 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {
       session,
       loading,
-      error,
+      error: failure == null ? null : errorText(failure),
+      failure,
       isTester,
       email: user?.email ?? null,
 
@@ -155,12 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
 
       retry() {
-        setError(null);
+        setFailure(null);
         setLoading(true);
         setAttempt((n) => n + 1);
       },
     };
-  }, [session, loading, error, isTester]);
+  }, [session, loading, failure, isTester]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
