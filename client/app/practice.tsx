@@ -46,7 +46,7 @@
  */
 import { clearPreloadedSource, preload } from "expo-audio";
 import { useRouter, type ErrorBoundaryProps } from "expo-router";
-import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AppState, Image, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 
 import { flushAnswers, flushAnswersWithin, sendAnswer, type AttemptArgs, type FlushResult, type SendOutcome } from "../src/lib/answers";
@@ -226,8 +226,6 @@ export default function Practice() {
   // Asked once per screen. False for every tester but the owner, and the
   // server re-checks it, so this only decides whether a button is drawn.
   const [canVeto, setCanVeto] = useState(false);
-  /** The option under a pointer, on a machine that has one. */
-  const [hovered, setHovered] = useState<number | null>(null);
   /** The practice session this set's answers are filed under: a grouping
    *  label, started with the set so that the first answer already carries it,
    *  and only when there is a set to file. Null when it could not be made — a
@@ -550,14 +548,20 @@ export default function Practice() {
   const item = items[index];
   const { chosen, graded, showDetails, optionsAsText } = state;
   const busy = state.pending !== null;
-  // A new question starts with nothing under the pointer, and at the top: the
+  // A new question starts at the top: the
   // verdict scrolled the last one down to its explanation, and the next
   // question opening there would open on its options with its scene above the
   // fold.
   useEffect(() => {
-    setHovered(null);
     scroller.current?.scrollTo({ y: 0, animated: false });
   }, [item?.id]);
+  // The options' two handlers, the same functions for the life of the screen,
+  // so that an option card redraws when its own state changes and not on every
+  // tick of the audio player above it. `choose` itself is rebuilt each render
+  // — it closes over the stage — and is reached through the ref.
+  const chooseLatest = useRef<(position: number) => void>(() => undefined);
+  const onChoose = useCallback((position: number) => chooseLatest.current(position), []);
+  const onPlayOption = useCallback(() => dispatch({ type: "replayed" }), []);
   const options = useMemo(
     () => (item ? [...item.options].sort((a, b) => a.position - b.position) : []),
     [item]
@@ -661,6 +665,7 @@ export default function Practice() {
   function choose(position: number) {
     dispatch({ type: "choose", position, stage, now: Date.now() });
   }
+  chooseLatest.current = choose;
 
   /**
    * The question is out of the bank; take it out of this set too. No attempt
@@ -862,87 +867,21 @@ export default function Practice() {
           ) : null}
 
           <FadeIn key={`${item.id}-options`} style={{ gap: space.md }}>
-            {options.map((option, i) => {
-              const isChosen = chosen === i;
-              const isAnswer = i === item.correct_index;
-              const show = revealed && (isChosen || isAnswer);
-              const dim = revealed && !show;
-              const open = !revealed && !busy && chosen === null;
-              return (
-                <Pressable
-                  key={option.position}
-                  accessibilityRole="button"
-                  // One label for the whole option, so a screen reader says
-                  // "1. 承知いたしました" rather than reading a lone number and
-                  // then a sentence with nothing tying them together — and, once
-                  // answered, says which one this was.
-                  accessibilityLabel={
-                    (optionTextHidden
-                      ? t("option_spoken", { label: NUMBERS[i] })
-                      : `${NUMBERS[i]}. ${option.text}`) +
-                    (show ? ` — ${isAnswer ? t("mark_correct") : t("mark_chosen")}` : "")
-                  }
-                  accessibilityState={{ disabled: revealed || busy || chosen !== null }}
-                  disabled={revealed || busy || chosen !== null}
-                  onPress={() => choose(i)}
-                  onHoverIn={() => setHovered(i)}
-                  onHoverOut={() => setHovered((h) => (h === i ? null : h))}
-                  style={({ pressed }) => [
-                    styles.option,
-                    open && hovered === i && styles.optionHover,
-                    pressed && !revealed && { opacity: 0.85 },
-                    isChosen && !revealed && styles.optionPending,
-                    show && (isAnswer ? styles.optionCorrect : styles.optionWrong),
-                    // Set aside, not faded. After the answer these two are
-                    // neither the choice nor the key, and they step back by
-                    // going flat and grey — which leaves them legible, since
-                    // "what were the other two?" is a question worth being
-                    // able to answer.
-                    dim && styles.optionAside,
-                  ]}
-                >
-                  <View style={styles.optionHeader}>
-                    <View
-                      style={[
-                        styles.numberBadge,
-                        show && (isAnswer ? styles.numberBadgeCorrect : styles.numberBadgeWrong),
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.number,
-                          show && { color: isAnswer ? colors.correct : colors.wrong },
-                        ]}
-                      >
-                        {NUMBERS[i]}
-                      </Text>
-                    </View>
-                    {spokenOptions !== null && !revealed ? (
-                      <MiniPlay
-                        url={spokenOptions[i]}
-                        label={t("play_option", { label: NUMBERS[i] })}
-                        onPlay={() => dispatch({ type: "replayed" })}
-                      />
-                    ) : null}
-                    {show ? (
-                      // A word as well as a colour: the marker has to survive being
-                      // read by someone who cannot tell the green from the red.
-                      <Text
-                        style={[
-                          type.small,
-                          { color: isAnswer ? colors.correct : colors.wrong, fontWeight: "700" },
-                        ]}
-                      >
-                        {isAnswer ? t("mark_correct") : t("mark_chosen")}
-                      </Text>
-                    ) : null}
-                  </View>
-                  {optionTextHidden ? null : (
-                    <Text style={[type.option, dim && { color: colors.muted }]}>{option.text}</Text>
-                  )}
-                </Pressable>
-              );
-            })}
+            {options.map((option, i) => (
+              <OptionCard
+                key={option.position}
+                index={i}
+                text={option.text}
+                textHidden={optionTextHidden}
+                spokenUrl={spokenOptions !== null && !revealed ? spokenOptions[i] : null}
+                revealed={revealed}
+                chosen={chosen === i}
+                answer={i === item.correct_index}
+                locked={busy || chosen !== null}
+                onChoose={onChoose}
+                onPlay={onPlayOption}
+              />
+            ))}
           </FadeIn>
 
           {/* Before the answer, not after — the opposite of the report button
@@ -1130,6 +1069,104 @@ function Keys({ onKey }: { onKey: (key: string) => boolean | void }) {
   return null;
 }
 
+/**
+ * One of the four answers.
+ *
+ * Its own component, and memoised, for two reasons. The pointer over it is its
+ * own state: held on the screen, every hover in and out redrew the documents
+ * and the chart above. And a spoken option's play button sits *beside* the
+ * answer rather than inside it — nested, a screen reader could not reach the
+ * inner button at all, and "play 1" answered 1. Side by side they are two
+ * controls, each saying what it does.
+ */
+const OptionCard = React.memo(function OptionCard({
+  index,
+  text,
+  textHidden,
+  spokenUrl,
+  revealed,
+  chosen,
+  answer,
+  locked,
+  onChoose,
+  onPlay,
+}: {
+  index: number;
+  text: string;
+  /** A spoken option before the answer: the number, and no words. */
+  textHidden: boolean;
+  /** The option's clip, while it may be played before answering. */
+  spokenUrl: string | null;
+  revealed: boolean;
+  chosen: boolean;
+  answer: boolean;
+  /** An answer is in, or on its way. */
+  locked: boolean;
+  onChoose: (index: number) => void;
+  onPlay: () => void;
+}) {
+  const { t } = useLang();
+  /** Under a pointer, on a machine that has one. */
+  const [hovered, setHovered] = useState(false);
+  const label = NUMBERS[index];
+  const show = revealed && (chosen || answer);
+  const dim = revealed && !show;
+  const open = !revealed && !locked;
+  const card = (
+    <Pressable
+      accessibilityRole="button"
+      // One label for the whole option, so a screen reader says
+      // "1. 承知いたしました" rather than reading a lone number and then a
+      // sentence with nothing tying them together — and, once answered, says
+      // which one this was. A spoken option says that pressing it answers:
+      // the play button beside it is the one that plays.
+      accessibilityLabel={
+        (textHidden ? t("option_spoken", { label }) : `${label}. ${text}`) +
+        (show ? ` — ${answer ? t("mark_correct") : t("mark_chosen")}` : "")
+      }
+      accessibilityState={{ disabled: revealed || locked }}
+      disabled={revealed || locked}
+      onPress={() => onChoose(index)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      style={({ pressed }) => [
+        styles.option,
+        spokenUrl !== null && { flex: 1 },
+        open && hovered && styles.optionHover,
+        pressed && !revealed && { opacity: 0.85 },
+        chosen && !revealed && styles.optionPending,
+        show && (answer ? styles.optionCorrect : styles.optionWrong),
+        // Set aside, not faded. After the answer these two are neither the
+        // choice nor the key, and they step back by going flat and grey —
+        // which leaves them legible, since "what were the other two?" is a
+        // question worth being able to answer.
+        dim && styles.optionAside,
+      ]}
+    >
+      <View style={styles.optionHeader}>
+        <View style={[styles.numberBadge, show && (answer ? styles.numberBadgeCorrect : styles.numberBadgeWrong)]}>
+          <Text style={[styles.number, show && { color: answer ? colors.correct : colors.wrong }]}>{label}</Text>
+        </View>
+        {show ? (
+          // A word as well as a colour: the marker has to survive being read
+          // by someone who cannot tell the green from the red.
+          <Text style={[type.small, { color: answer ? colors.correct : colors.wrong, fontWeight: "700" }]}>
+            {answer ? t("mark_correct") : t("mark_chosen")}
+          </Text>
+        ) : null}
+      </View>
+      {textHidden ? null : <Text style={[type.option, dim && { color: colors.muted }]}>{text}</Text>}
+    </Pressable>
+  );
+  if (spokenUrl === null) return card;
+  return (
+    <View style={styles.optionRow}>
+      <MiniPlay url={spokenUrl} label={t("play_option", { label })} onPlay={onPlay} />
+      {card}
+    </View>
+  );
+});
+
 /** Who you are, who you are talking to, and how. Big while entering the scene,
  *  a quiet row once the question is on screen. */
 function SceneStrip({ item, big }: { item: QueuedItem; big: boolean }) {
@@ -1210,6 +1247,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   optionHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  optionRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
   optionAside: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
   // A pointer over an option that can still be chosen: the card lifts and its
   // edge takes the soft accent, which is "this one, if you press" without

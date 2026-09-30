@@ -337,7 +337,7 @@ const S = {
   listening: ["聞いています…", "Listening…"],
   skip: ["とばして選択肢へ", "Skip to the options"],
   play_option: ["{label}をもう一回聞く", "Play {label} again"],
-  option_spoken: ["{label}（音声）", "{label} (spoken)"],
+  option_spoken: ["{label}番で答える", "Answer {label}"],
   show_options_text: ["選択肢を文字で見る", "Show the options as text"],
   hide_options_text: ["選択肢の文字を隠す", "Hide the text"],
   // the script, line by line, once the answer is in

@@ -52,9 +52,11 @@ function releaseVoice(owner: object) {
 
 /**
  * A play button with nothing but an icon — for an option that is heard rather
- * than read. Sits inside the option's own Pressable; a press here plays, a press
- * anywhere else on the option answers, which is the same split as a number and
- * a speaker button on the exam room's answer sheet.
+ * than read, or a line of a script. Beside an option it sits next to the
+ * option's own button, never inside it: a press here plays and a press on the
+ * option answers, which is the same split as a number and a speaker button on
+ * the exam room's answer sheet — and a screen reader can only reach a button
+ * that is not inside another.
  */
 export function MiniPlay({
   url,
