@@ -675,12 +675,13 @@ comment on function public.my_goal_max is
     'this; the trigger on profiles re-checks it rather than trusting it.';
 
 
--- ==== function my_streak — 20260913000300_stats_and_selection.sql
+-- ==== function my_streak — 20260913000300_stats_and_selection.sql, altered by 20260914000100_lock_down_the_api_surface.sql
 
 create or replace function public.my_streak()
 returns integer
 language sql
 stable
+set search_path = ''
 as $$
     with days as (
         select distinct (answered_at at time zone 'Asia/Tokyo')::date as day
