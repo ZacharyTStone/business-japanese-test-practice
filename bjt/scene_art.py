@@ -34,7 +34,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Protocol
 
-from . import config, scenes
+from . import config, llm, scenes
 
 # ----- image providers ------------------------------------------------------
 
@@ -124,10 +124,17 @@ class OpenAIImageProvider:
             # the bucket's 2 MiB limit; see config.IMAGE_COMPRESSION.
             "output_compression": config.IMAGE_COMPRESSION,
         }
-        data = _json_request(
-            "POST", self.ENDPOINT, body,
-            headers={"Authorization": f"Bearer {self.api_key}"},
-        )
+        try:
+            data = _json_request(
+                "POST", self.ENDPOINT, body,
+                headers={"Authorization": f"Bearer {self.api_key}"},
+            )
+        except RuntimeError as exc:
+            # An account that cannot pay refuses every picture after this one
+            # the same way: the drawing stops rather than trying them all.
+            if any(sign in str(exc).lower() for sign in llm._BILLING_SIGNS):
+                raise llm.LLMBillingError(f"image request failed: {exc}") from exc
+            raise
         try:
             return base64.b64decode(data["data"][0]["b64_json"])
         except (KeyError, IndexError, TypeError) as exc:
@@ -195,21 +202,22 @@ def review_with_model(image: bytes, media_type: str, scene: scenes.Scene) -> Ver
     picture's answerability gate — the text gate cannot see it — and it is
     strict on purpose: the pictures must be clear and not generic, and a
     picture two readers describe differently is neither.
-    """
-    from . import config, llm
 
+    A reader that gave no answer — an outage, a refusal, a reply that is not
+    an index — is an error, raised, never a refusal of the picture: a refusal
+    goes into the bucket's lifetime ledger, and a picture refused for its
+    judge's outages would be given up on and its item never served.
+    """
     if scene.is_picture:
         flags = llm.review_scene_image(image, media_type, scenes.prompt_for(scene), PICTURE_RULES)
         broken = [PICTURE_RULES[rule] for rule in PICTURE_RULES if flags.get(rule)]
         if not broken and scene.options and scene.answer is not None:
             for _ in range(config.GATE_TRIALS):
+                res = llm.answer_from_image(image, media_type, scene.question, list(scene.options))
                 try:
-                    res = llm.answer_from_image(image, media_type, scene.question, list(scene.options))
                     chosen = int(res.get("choice", -1))
-                except llm.LLMBillingError:
-                    raise
-                except (llm.LLMError, ValueError, TypeError):
-                    chosen = -1
+                except (ValueError, TypeError, AttributeError) as exc:
+                    raise llm.LLMError(f"the picture's reader gave no answer: {res!r}") from exc
                 if chosen != scene.answer:
                     picked = scene.options[chosen] if 0 <= chosen < len(scene.options) else "nothing"
                     broken.append(f"a reader shown the picture chose {chosen} ({picked}) "
@@ -255,6 +263,9 @@ class Drawn:
 class DrawResult:
     drawn: list[Drawn]
     provider: str
+    #: Why the job ended before its list did: the run's ceiling, or an
+    #: account that cannot pay. None when every wanted scene was tried.
+    stopped: str | None = None
 
     @property
     def approved(self) -> list[Drawn]:
@@ -284,7 +295,23 @@ class DrawResult:
                 result = d.path if d.ok else (f"error: {d.error}" if d.error else "no draft passed")
             why = "; ".join(" / ".join(r) for r in d.rejected) or "—"
             lines.append(f"| {d.scene_id} | {result} | {d.attempts} ({d.prior}) | {why} |")
+        if self.stopped:
+            lines += ["", f"**Stopped before the end:** {self.stopped}. The scenes not "
+                          "listed were not tried; the next run draws them."]
         return "\n".join(lines)
+
+
+class DrawStopped(llm.LLMBillingError):
+    """The run's ceiling (or an empty account) ended the drawing part-way.
+
+    Raised by `draw` with what it had drawn by then (`result`), so the caller
+    can still upload the pictures already approved and paid for — and must
+    not draw another: the next draft would be an image bought over the
+    ceiling."""
+
+    def __init__(self, cause: llm.LLMBillingError, result: DrawResult):
+        super().__init__(str(cause))
+        self.result = result
 
 
 #: Told about each refused draft: (scene_id, lifetime attempt number, reasons).
@@ -315,6 +342,12 @@ def draw(
     (the bucket's ledger); a scene at or over `lifetime` is not drawn again,
     and says so. `on_reject` is called for every refused draft with its
     lifetime number, which is how the ledger grows.
+
+    The run's ceilings (bjt/llm.py `spend`, the ledger the whole job shares)
+    are checked before every image a real provider is asked for, as before
+    every model call. Reached — or an account that cannot pay, from the image
+    vendor or the judge — the drawing stops at once with `DrawStopped`; any
+    other failure is that scene's error and the job goes on to the next.
     """
     attempts = attempts or config.SCENE_ATTEMPTS
     lifetime = lifetime or config.SCENE_LIFETIME_ATTEMPTS
@@ -339,10 +372,19 @@ def draw(
         # one, whichever comes first.
         tonight = min(attempts, lifetime - before) if provider.real else attempts
         for n in range(1, tonight + 1):
-            record.attempts = n
             try:
+                if provider.real:
+                    # An image is bought here: the ceilings first, as before
+                    # any request, and the request on the count.
+                    llm.spend.begin_request()
+                record.attempts = n
                 image = provider.generate(prompt)
                 verdict = review(image, provider.media_type, scene)
+            except llm.LLMBillingError as exc:
+                record.error = f"stopped: {exc}"
+                drawn.append(record)
+                raise DrawStopped(exc, DrawResult(drawn=drawn, provider=provider.name,
+                                                  stopped=str(exc))) from exc
             except Exception as exc:  # a vendor error is a result, not a crash
                 record.error = str(exc)
                 break

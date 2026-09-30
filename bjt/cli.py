@@ -1269,15 +1269,21 @@ def cmd_scenes(args) -> int:
                 pathlib.Path(args.summary).write_text(
                     f"## Scene artwork ({provider.name})\n\n{note}\n", encoding="utf-8")
         else:
-            result = scene_art.draw(
-                wanted, provider=provider, review=scene_art.review_with_model,
-                media_dir=args.media_dir, attempts=args.attempts,
-                prior=prior, on_reject=on_reject,
-            )
+            try:
+                result = scene_art.draw(
+                    wanted, provider=provider, review=scene_art.review_with_model,
+                    media_dir=args.media_dir, attempts=args.attempts,
+                    prior=prior, on_reject=on_reject,
+                )
+            except scene_art.DrawStopped as stop:
+                # The ceiling: nothing more is drawn, and what was approved
+                # before it is still uploaded and pointed at below.
+                print(f"stopping the drawing: {stop}", file=sys.stderr)
+                result = stop.result
             print(result.summary())
             if args.summary:
                 pathlib.Path(args.summary).write_text(result.summary() + "\n", encoding="utf-8")
-            failed = bool(result.failed)
+            failed = bool(result.failed) or result.stopped is not None
             if not provider.real:
                 print("\n  placeholder provider: files are under media/scenes/placeholder/,")
                 print("  the survey does not count them, and nothing uploads them.")
