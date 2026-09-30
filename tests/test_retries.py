@@ -146,3 +146,25 @@ def test_a_jev_request_is_counted_before_it_is_sent(ledger, monkeypatch):
     with pytest.raises(llm.LLMError):
         jev.choice_probabilities("q", ["a", "b"], model="jev-latest")
     assert ledger.attempts == 1 and ledger.calls == 0
+
+
+# ----- what counts as a failed call ------------------------------------------
+
+def test_a_request_this_sdk_cannot_make_is_a_crash_not_an_outage(ledger, waits, monkeypatch):
+    """An SDK too old for output_config raises a TypeError on every call.
+    Wrapped as an LLMError it read as an outage, and every tolerant call site
+    (the proofreader, the probe) turned a broken run into a quiet one."""
+    _client(monkeypatch, [TypeError("Messages.create() got an unexpected keyword argument "
+                                    "'output_config'")])
+    with pytest.raises(TypeError):
+        llm.answer_choice("q", ["a"], model="claude-sonnet-5")
+    assert waits == []
+
+
+def test_no_credentials_is_a_failed_call(ledger, waits, monkeypatch):
+    """The SDK reports a missing key as a TypeError too; that one is an
+    outage, so a probe without a key reports unmeasured as documented."""
+    _client(monkeypatch, [TypeError('"Could not resolve authentication method. Expected one of '
+                                    'api_key, auth_token, or credentials to be set."')])
+    with pytest.raises(llm.LLMError):
+        llm.answer_choice("q", ["a"], model="claude-sonnet-5")

@@ -195,7 +195,7 @@ def _chart_svg(c: dict) -> str:
         return _CHART_TOP + (hi - v) / (hi - lo) * _CHART_PLOT_H
 
     marks: list[str] = []
-    for t, lab in zip(ticks, labels):
+    for t, lab in zip(ticks, labels, strict=True):
         # Zero is the baseline and is drawn darker; the rest are guides.
         opacity = "0.6" if t == 0 else "0.15"
         marks.append(f'<line x1="{_num(left)}" y1="{_num(y(t))}" x2="{_num(left + plot_w)}" '

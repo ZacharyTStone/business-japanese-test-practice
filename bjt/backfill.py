@@ -265,7 +265,7 @@ def spearman(a: list[float], b: list[float]) -> Optional[float]:
         return None
     ra, rb = _ranks(a), _ranks(b)
     ma, mb = sum(ra) / len(ra), sum(rb) / len(rb)
-    cov = sum((x - ma) * (y - mb) for x, y in zip(ra, rb))
+    cov = sum((x - ma) * (y - mb) for x, y in zip(ra, rb, strict=True))
     va = sum((x - ma) ** 2 for x in ra)
     vb = sum((y - mb) ** 2 for y in rb)
     if va == 0 or vb == 0:

@@ -9,6 +9,8 @@ import pathlib
 import re
 from types import SimpleNamespace
 
+import anthropic
+import httpx2
 import pytest
 
 from bjt import cli, config, llm, pipeline, plan
@@ -209,7 +211,8 @@ def test_the_generator_env_cannot_lift_the_effort_ceiling(monkeypatch):
             @staticmethod
             def create(**kw):
                 seen.update(kw)
-                raise RuntimeError("stop here")
+                raise anthropic.APIConnectionError(
+                    request=httpx2.Request("POST", "https://api.anthropic.com/v1/messages"))
 
     monkeypatch.setattr(llm, "_get_client", lambda: Client())
     monkeypatch.setattr("bjt.config.GEN_EFFORT", "max")     # as BJT_GEN_EFFORT=max would

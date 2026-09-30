@@ -179,7 +179,7 @@ def reviewers(bank, monkeypatch):
     third's options give it away, the fourth's key is disputed. Each
     proofreading bills one call. Returns what each was asked about."""
     cells = _cells(bank, SHELVES[0]) + _cells(bank, SHELVES[1])
-    plan = dict(zip(cells, ["kept", "unnatural", "leaky", "wrong"]))
+    plan = dict(zip(cells, ["kept", "unnatural", "leaky", "wrong"], strict=True))
     asked = {"sanity": [], "gate": []}
 
     def proofread(item, **k):

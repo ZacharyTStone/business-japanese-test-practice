@@ -233,7 +233,7 @@ def to_bundle_item(item: dict) -> dict:
 
 def build_bundle(item_type: str, level: str, items: list[dict], model: str) -> dict:
     bundle_items = [to_bundle_item(it) for it in items]
-    manifest = tts_plan.manifest([(bi["id"], raw) for bi, raw in zip(bundle_items, items)])
+    manifest = tts_plan.manifest([(bi["id"], raw) for bi, raw in zip(bundle_items, items, strict=True)])
     scenes = sorted({bi["scene_id"] for bi in bundle_items if bi.get("scene_id")})
     return {
         "bundle_version": BUNDLE_VERSION,

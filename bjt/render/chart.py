@@ -202,7 +202,7 @@ def text(block: dict) -> str:
     lines = [head]
     for s in c["series"]:
         pairs = " / ".join(f"{label} {format_value(v)}"
-                           for label, v in zip(c["categories"], s["values"]))
+                           for label, v in zip(c["categories"], s["values"], strict=True))
         lines.append(f"{s['name']}：{pairs}" if s["name"] else pairs)
     return "\n".join(lines)
 

@@ -338,6 +338,23 @@ def _status_of(exc: BaseException) -> Optional[int]:
     return code if isinstance(code, int) else None
 
 
+def _is_api_failure(exc: BaseException) -> bool:
+    """An error from the API or the SDK's transport: an outage, a refusal, a
+    status the server sent, a connection that failed — and no credentials,
+    which the SDK reports as a TypeError when it resolves them. These are the
+    failures a caller may tolerate. Anything else (a keyword this SDK does not
+    know, a bug of ours) is a crash, and is raised as itself: wrapped as an
+    `LLMError` it would read as an outage, and every tolerant call site would
+    turn a broken run into a quiet one."""
+    try:
+        import anthropic
+    except ImportError:  # pragma: no cover
+        return False
+    if isinstance(exc, anthropic.AnthropicError):
+        return True
+    return isinstance(exc, TypeError) and "authentication method" in str(exc)
+
+
 def _is_connection_error(exc: BaseException) -> bool:
     """No reply at all: the connection failed or the request timed out."""
     try:
@@ -466,6 +483,8 @@ def _structured(
             resp = client.messages.create(**params)
             break
         except Exception as e:  # surface API errors with context
+            if not _is_api_failure(e):
+                raise
             if _is_timeout(e):
                 # Sent, and perhaps finished and billed with nobody listening.
                 spend.add(model, _worst_case_usage(system, user, params["max_tokens"]))

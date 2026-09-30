@@ -38,7 +38,7 @@ def _bundle_id(path):
 
 def _item(stem, answer, others=("いいえ。", "はい。", "どうも。")):
     opts = [{"text": answer, "role": "correct", "why": "これが正解である理由。"}]
-    for text, role in zip(others, ["register_too_casual", "content_mismatch", "wrong_speech_act"]):
+    for text, role in zip(others, ["register_too_casual", "content_mismatch", "wrong_speech_act"], strict=True):
         opts.append({"text": text, "role": role, "why": "これが誤りである理由。"})
     return {"stem": stem, "options": opts, "topic": stem[:6]}
 

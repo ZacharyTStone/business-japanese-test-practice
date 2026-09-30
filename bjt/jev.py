@@ -79,7 +79,7 @@ def request_body(question: str, options: list[str], model: str) -> dict:
         "questions": {QUESTION: {
             "type": "choice",
             "instructions": INSTRUCTIONS,
-            "criteria": dict(zip(keys, options)),
+            "criteria": dict(zip(keys, options, strict=True)),
         }},
     }
 
