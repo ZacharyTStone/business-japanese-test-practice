@@ -1,0 +1,14 @@
+# Every action in .github/workflows/ is pinned to a commit, with its release
+# in a comment beside it, so that a tag moved upstream cannot change what runs
+# with this repository's secrets. A pin does not move by itself either: this
+# proposes the new commit, once a week, as a pull request the checks run on.
+# One pull request for all of them, since they are read together.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

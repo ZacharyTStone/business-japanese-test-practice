@@ -48,6 +48,16 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
     psql -v ON_ERROR_STOP=1 -q -d "$DB" -f "$f" >/dev/null
 done
 
+# The app's database types are generated from this schema, read here before any
+# test has added anything to it, and must match the committed file. Set
+# BJT_TYPEGEN_WRITE=1 to rewrite client/src/lib/database.types.ts instead.
+if [[ -n "${BJT_TYPEGEN_WRITE:-}" ]]; then
+    python3 "$ROOT/supabase/typegen.py" --db "$DB"
+else
+    echo "checking client/src/lib/database.types.ts against the schema"
+    python3 "$ROOT/supabase/typegen.py" --db "$DB" --check
+fi
+
 psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f "$HERE/10_schema_test.sql"
 
 # Then prove the publisher: apply every generated bundle SQL twice (idempotency

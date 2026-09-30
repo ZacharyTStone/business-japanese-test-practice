@@ -1,0 +1,22 @@
+-- Media is served, not listed.
+--
+-- Found in review (2026-09-30). 20260915000300 gave storage.objects a read
+-- policy, "media is readable", for anon and authenticated alike, on the reading
+-- that a client might one day list or fetch the two buckets through the API.
+-- Nothing does. The app builds each file's address with getPublicUrl(), which
+-- never touches storage.objects, and a public bucket serves its files at that
+-- address without asking row-level security anything. The pipeline lists the
+-- buckets (bjt/scene_art.py) with the service-role key, which bypasses RLS.
+--
+-- So the policy's only effect was the one nobody meant: anybody at all, signed
+-- in or not, could list every object in both buckets — every clip id, and the
+-- picture of every 画像把握 item, including the ones not yet served. That is
+-- the "anon holds nothing" rule broken in the one schema the tester door never
+-- covered. The files stay public-read at their addresses, which is the
+-- deliberate choice 20260915000300 explains; what goes is the index of them.
+--
+-- A test in supabase/test now holds the storage schema to the same rule as
+-- `public`: no policy there names anon, and any policy there requires
+-- is_tester().
+
+drop policy if exists "media is readable" on storage.objects;

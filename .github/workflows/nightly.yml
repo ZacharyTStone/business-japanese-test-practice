@@ -136,14 +136,22 @@ concurrency:
   group: nightly
   cancel-in-progress: false
 
+# Nothing by default. The one job below asks for what its last step needs:
+# pushing tonight's branch and opening the pull request.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   nightly:
     name: survey the bank, and fill it if the keys are there
+    # Whether a night runs is decided by `main` alone (CLAUDE.md): the schedule
+    # always runs on the default branch, and a manual run from any other
+    # branch would spend the keys on that branch's code and ceilings.
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     # A night is minutes, not hours. The morning of 2026-09-18 a single run
     # generated for two and a half hours. The process stops itself at
     # BJT_RUN_MAX_MINUTES (30) and keeps what it wrote; this clock, a little
@@ -166,8 +174,9 @@ jobs:
       # retries the night stops short and ships what it has, which is the trade
       # the owner chose. A scheduled run has no inputs, so this fallback is the
       # nightly price; the max_usd default above says the same for a manual run.
-      # The ceiling is per process: the scene step's review calls stop at it on
-      # their own ledger, and the image model's own bill is held down by
+      # The ceiling is for the night: the scene step's review calls continue
+      # the ledger the writing step started (BJT_SPEND_LEDGER, set in the
+      # first step below), and the image model's own bill is held down by
       # BJT_NIGHT_MAX_PICTURES and the lifetime allowance, not by this.
       BJT_RUN_BUDGET_USD: ${{ github.event.inputs.max_usd || '0.5' }}
       # Which model measures difficulty, for tonight's items and a probe run
@@ -176,12 +185,26 @@ jobs:
       # not a code change; unset (empty here), config.py's default applies.
       BJT_DIFFICULTY_MODEL: ${{ vars.BJT_DIFFICULTY_MODEL }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # No token left in .git/config for the steps that run generated code
+      # and model output. The one step that pushes is handed credentials of
+      # its own, at the end.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install -e ".[dev]"
+
+      # One ledger for the whole night. The run's ceilings (BJT_RUN_BUDGET_USD,
+      # the call count, the clock) are kept per process; with this file the
+      # scene step's review calls continue the budget and the clock that
+      # `bjt nightly` or `bjt probe` started, rather than starting a fresh fifty
+      # cents of their own. Set here rather than in the job's `env:`, where
+      # the runner's temporary directory is not yet known.
+      - name: one spending ledger for the night
+        run: echo "BJT_SPEND_LEDGER=$RUNNER_TEMP/bjt-spend.json" >> "$GITHUB_ENV"
 
       # ---------------------------------------------------------- the survey
 
@@ -196,7 +219,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --json > plan.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: work-order
           path: plan.json
@@ -404,7 +427,7 @@ jobs:
       # 2026-09-18, and lost items are the most expensive kind.
       - name: keep tonight's work whatever happens next
         if: always() && steps.keys.outputs.go == 'true' && github.event.inputs.dry_run != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: tonight-batches
           path: |
@@ -456,7 +479,7 @@ jobs:
           python -m bjt scenes --generate --provider openai ${{ steps.keys.outputs.only }} $upload --summary scenes.md || true
           cat scenes.md >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: steps.keys.outputs.art == 'true' && github.event.inputs.dry_run != 'true'
         with:
           name: scene-artwork
@@ -513,6 +536,9 @@ jobs:
           fi
           git config user.name  "bjt nightly"
           git config user.email "noreply@github.com"
+          # The checkout kept no credentials, so git gets them here, for the
+          # fetch and the push below, from GH_TOKEN through the gh CLI.
+          gh auth setup-git
           git checkout -b "$branch"
           git add batches
           git commit -m "$subject ($(date -u +%Y-%m-%d))" -m "$body"
