@@ -9,7 +9,7 @@
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { flushAnswers } from "../src/lib/answers";
@@ -32,7 +32,8 @@ import {
   SectionLabel,
 } from "../src/ui/components";
 import { FadeIn } from "../src/ui/motion";
-import { colors, page, space, tabular, type } from "../src/ui/theme";
+import { Icon } from "../src/ui/icons";
+import { colors, MIN_TOUCH, page, space, tabular, type } from "../src/ui/theme";
 
 export default function Result() {
   const router = useRouter();
@@ -181,29 +182,46 @@ export default function Result() {
 
       <FadeIn delay={step()} style={{ gap: space.sm }}>
         <SectionLabel>{t("breakdown")}</SectionLabel>
-        <Card style={{ gap: space.md }}>
-          {answers.map((a, i) => (
-            <View key={a.item.id} style={styles.row}>
-              <Text
-                style={[
-                  styles.rowMark,
-                  { color: a.isCorrect ? colors.correct : colors.wrong },
-                ]}
+        <Card style={{ gap: space.xs }}>
+          {answers.map((a, i) => {
+            // An answer that is not in the record yet has nothing on the review
+            // screen to open, so it is a line and not a link.
+            const saved = a.saved !== false;
+            const mark = a.isCorrect ? t("mark_correct") : t("mark_wrong");
+            return (
+              <Pressable
+                key={a.item.id}
+                accessibilityRole={saved ? "button" : undefined}
+                accessibilityLabel={`${i + 1}. ${a.item.topic} — ${mark}`}
+                disabled={!saved}
+                // The question itself, alone, with its explanation: a row that
+                // says × and goes nowhere is a list of things to feel bad about.
+                onPress={() => router.push({ pathname: "/history", params: { item: a.item.id } })}
+                style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
               >
-                {/* A clock rather than a cross for the ones time took: both are
-                    wrong, and only one of them is about the Japanese. */}
-                {a.isCorrect ? "○" : a.role === "timed_out" ? "⏱" : "×"}
-              </Text>
-              <Text style={[type.small, { flex: 1 }]}>
-                {i + 1}. {a.item.topic}
-              </Text>
-              {/* Not in the record yet: the mark beside it is the phone's own
-                  reading of the key until the database has it. */}
-              {a.saved === false ? (
-                <Text style={[type.small, { fontWeight: "700" }]}>{t("unsent_short")}</Text>
-              ) : null}
-            </View>
-          ))}
+                <Text
+                  style={[
+                    styles.rowMark,
+                    { color: a.isCorrect ? colors.correct : colors.wrong },
+                  ]}
+                >
+                  {/* A clock rather than a cross for the ones time took: both are
+                      wrong, and only one of them is about the Japanese. */}
+                  {a.isCorrect ? "○" : a.role === "timed_out" ? "⏱" : "×"}
+                </Text>
+                <Text style={[type.small, { flex: 1 }]}>
+                  {i + 1}. {a.item.topic}
+                </Text>
+                {/* Not in the record yet: the mark beside it is the phone's own
+                    reading of the key until the database has it. */}
+                {saved ? (
+                  <Icon name="chevron" size={16} color={colors.muted} strokeWidth={2} />
+                ) : (
+                  <Text style={[type.small, { fontWeight: "700" }]}>{t("unsent_short")}</Text>
+                )}
+              </Pressable>
+            );
+          })}
           {correct < total ? (
             // The promise the daily set keeps: a trap that caught them comes back
             // after a night, in a new question. See next_items, bucket 0.
@@ -242,6 +260,7 @@ const styles = StyleSheet.create({
   },
   heroSub: { color: colors.onAccentMuted, fontSize: 13, ...tabular },
   trapHead: { flexDirection: "row", alignItems: "center", gap: space.md },
-  row: { flexDirection: "row", gap: space.sm, alignItems: "flex-start" },
+  // A thumb's height each, since each one opens its question.
+  row: { flexDirection: "row", gap: space.sm, alignItems: "center", minHeight: MIN_TOUCH },
   rowMark: { width: 18, fontSize: 14, fontWeight: "700" },
 });
