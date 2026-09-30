@@ -21,7 +21,7 @@ import { useLang } from "../src/lib/i18n";
 import { SECTION_ORDER, SECTION_SHORT } from "../src/lib/levels";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { Level, Section } from "../src/lib/types";
-import { annotate, filterWords, furigana, type WordEntry } from "../src/lib/words";
+import { filterWords, furigana, makeAnnotator, type WordEntry } from "../src/lib/words";
 import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
 import { ScreenCrash } from "../src/ui/crash";
 import { RubyText } from "../src/ui/ruby";
@@ -66,6 +66,10 @@ export default function Words() {
     () => (words ? filterWords(words, { query, level, section }) : []),
     [words, query, level, section]
   );
+  // Prepared once per list, not once per entry per keystroke: every example
+  // sentence is read against every word the list holds, and a search redraws
+  // forty of them each time a character is typed.
+  const annotate = useMemo(() => makeAnnotator(words ?? []), [words]);
 
   if (!isConfigured) {
     return (
@@ -158,7 +162,7 @@ export default function Words() {
           <View style={styles.example}>
             <Text style={type.label}>{t("words_example")}</Text>
             {w.sentence ? (
-              <RubyText segments={annotate(w.sentence, words)} show={showFurigana} style={type.body} />
+              <RubyText segments={annotate(w.sentence)} show={showFurigana} style={type.body} />
             ) : (
               <Text style={type.small}>{t("words_no_example")}</Text>
             )}
