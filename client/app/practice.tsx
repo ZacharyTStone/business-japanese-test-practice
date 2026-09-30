@@ -84,7 +84,7 @@ import { RudenessMeter } from "../src/ui/meters";
 import { FadeIn } from "../src/ui/motion";
 import { ReportQuestion } from "../src/ui/report";
 import { VetoQuestion } from "../src/ui/veto";
-import { colors, page, radius, shadow, space, tabular, type } from "../src/ui/theme";
+import { colors, MIN_TOUCH, page, radius, shadow, space, tabular, type } from "../src/ui/theme";
 
 const NUMBERS = ["1", "2", "3", "4"];
 
@@ -853,7 +853,7 @@ export default function Practice() {
               // Reading the spoken options is help the exam does not give, and
               // the reducer notes it (`peeked`) when it is turned on.
               onPress={() => dispatch({ type: "toggleOptionsText" })}
-              style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
             >
               <Text style={[type.small, styles.toggle]}>
                 {optionsAsText ? t("hide_options_text") : t("show_options_text")}
@@ -1030,7 +1030,7 @@ export default function Practice() {
             accessibilityRole="button"
             accessibilityState={{ expanded: showDetails }}
             onPress={() => dispatch({ type: "toggleDetails" })}
-            style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+            style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
           >
             <Text style={[type.small, styles.toggle]}>
               {showDetails ? t("details_close") : t("details_open")}
@@ -1234,4 +1234,7 @@ const styles = StyleSheet.create({
   whyRow: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
   hint: { textAlign: "center" },
   toggle: { textAlign: "center", textDecorationLine: "underline" },
+  // A line of text that is a button still has to be a thumb's height: the
+  // padding is the hit area, since hitSlop does nothing on the web.
+  link: { minHeight: MIN_TOUCH, justifyContent: "center" },
 });

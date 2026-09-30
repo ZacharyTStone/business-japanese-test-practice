@@ -18,7 +18,7 @@ import { clipUrl } from "../lib/db";
 import { useLang } from "../lib/i18n";
 import type { DialogueTurn } from "../lib/types";
 import { Icon } from "./icons";
-import { colors, radius, space, type } from "./theme";
+import { colors, MIN_TOUCH, radius, space, type } from "./theme";
 
 /**
  * One voice at a time.
@@ -176,6 +176,8 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   toggle: { textDecorationLine: "underline" },
+  // A text link's hit area is its padding: hitSlop does nothing on the web.
+  link: { minHeight: MIN_TOUCH, justifyContent: "center" },
   listening: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.lg,
@@ -545,7 +547,9 @@ export function AutoPlaylist({
           queue.stop();
           report();
         }}
-        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+        // The only way out of a run that has stalled before the watch gives up
+        // on it, so it is a full thumb's height, not a line of small print.
+        style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
       >
         <Text style={[type.small, styles.toggle]}>{t("skip")}</Text>
       </Pressable>
