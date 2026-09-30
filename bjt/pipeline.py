@@ -8,7 +8,7 @@ rejection hands the next, the dedupe, and the whole-batch checks the bundle
 must pass before it is written. `run_night` is a work order of shelves, and
 where the run's ceiling ends one: after it has bundled what it kept.
 
-They live here rather than in `bjt/cli.py` so the tests can reach the pipeline
+They live here rather than in `bjt/cli/` so the tests can reach the pipeline
 without the command-line module, and the commands that drive them (`bjt gen`,
 `batch`, `nightly`, `smoke`, `practice`) stay thin.
 """
