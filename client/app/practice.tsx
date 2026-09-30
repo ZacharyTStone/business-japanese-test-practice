@@ -472,8 +472,14 @@ export default function Practice() {
   const item = items[index];
   const { chosen, graded, showDetails, optionsAsText } = state;
   const busy = state.pending !== null;
-  // A new question starts with nothing under the pointer.
-  useEffect(() => setHovered(null), [item?.id]);
+  // A new question starts with nothing under the pointer, and at the top: the
+  // verdict scrolled the last one down to its explanation, and the next
+  // question opening there would open on its options with its scene above the
+  // fold.
+  useEffect(() => {
+    setHovered(null);
+    scroller.current?.scrollTo({ y: 0, animated: false });
+  }, [item?.id]);
   const options = useMemo(
     () => (item ? [...item.options].sort((a, b) => a.position - b.position) : []),
     [item]
