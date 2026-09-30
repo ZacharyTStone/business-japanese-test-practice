@@ -197,7 +197,16 @@ export default function Practice() {
   const [canVeto, setCanVeto] = useState(false);
   /** The option under a pointer, on a machine that has one. */
   const [hovered, setHovered] = useState<number | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  /** The practice session this set's answers are filed under: a grouping
+   *  label, started with the set so that the first answer already carries it,
+   *  and only when there is a set to file. Null when it could not be made — a
+   *  set without a label is still a set (see startSession). */
+  const sessionReady = useRef<Promise<string | null> | null>(null);
+  /** Whether the session has been closed, and how many answers it holds, for
+   *  closing it when the screen is left part-way through a set. */
+  const sessionClosed = useRef(false);
+  const answeredCount = useRef(0);
+  answeredCount.current = state.answers.length;
   const [error, setError] = useState<string | null>(null);
   /** Today's count when the day's ceiling has been reached; null otherwise. */
   const [blocked, setBlocked] = useState<number | null>(null);
@@ -275,10 +284,15 @@ export default function Practice() {
         setBlocked(remaining <= 0 ? day.answered_today : null);
         const queue = remaining > 0 ? await fetchQueue(remaining) : [];
         if (cancelled) return;
+        // Started now rather than after the set is on screen, so an answer
+        // given at once still has it to carry; the answer waits for it. None
+        // for a set with nothing in it — there is nothing to group.
+        if (queue.length > 0) {
+          sessionReady.current = startSession(session.user.id).catch(() => null);
+        }
         dispatch({ type: "loaded", items: queue, now: Date.now() });
         setLoaded(true);
         mayVeto().then(setCanVeto).catch(() => setCanVeto(false));
-        setSessionId(await startSession(session.user.id));
       } catch (e) {
         if (!cancelled) setError(errorText(e));
       }
@@ -294,6 +308,17 @@ export default function Practice() {
     for (const s of result.saved) dispatch({ type: "synced", itemId: s.itemId, verdict: s.graded });
     for (const d of result.dropped) dispatch({ type: "dropped", itemId: d.itemId });
   }
+
+  /** Close the session, once, if it holds anything. */
+  function closeSession() {
+    if (sessionClosed.current || answeredCount.current === 0) return;
+    sessionClosed.current = true;
+    void sessionReady.current?.then((id) => (id ? finishSession(id) : undefined)).catch(() => undefined);
+  }
+
+  // Left part-way through — the back button, a tab closed — is still a sitting
+  // that happened, and it ends when the screen does.
+  useEffect(() => () => closeSession(), []);
 
   // The connection is likelier to be back when the app is: send what waited.
   // On the web the browser also says so outright.
@@ -366,7 +391,7 @@ export default function Practice() {
     const args: AttemptArgs = {
       itemId: it.id,
       chosenIndex: pending.position,
-      sessionId,
+      sessionId: null,
       elapsedMs: pending.at - state.shownAt,
       thinkMs: thinkTime(state, pending, {
         selfPaced: Boolean(pace[it.item_type]),
@@ -377,9 +402,11 @@ export default function Practice() {
       standsFor: it.stands_for ?? null,
     };
     (async () => {
+      const sessionId = (await sessionReady.current) ?? null;
       // What waited goes first, in the order it was given.
       applyFlush(await flushAnswers(userId));
-      settle(await sendAnswer(userId, args), it, args);
+      const sent = { ...args, sessionId };
+      settle(await sendAnswer(userId, sent), it, sent);
     })();
   }, [state.pending]);
 
@@ -422,7 +449,7 @@ export default function Practice() {
       router.replace("/");
       return;
     }
-    if (sessionId) void finishSession(sessionId);
+    closeSession();
     const finishedAt = Date.now();
     (async () => {
       // One more try for anything still waiting, so the result lists what the
