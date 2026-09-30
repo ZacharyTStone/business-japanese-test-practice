@@ -537,6 +537,8 @@ export default function Practice() {
           number worth seeing on the way to the next question. */}
       {clockSeconds > 0 ? (
         <QuestionClock
+          // A new question is a new clock, not the last one's leftovers.
+          key={item.id}
           seconds={clockSeconds}
           running={stage === "answer" && chosen === null && !busy}
           runKey={item.id}
