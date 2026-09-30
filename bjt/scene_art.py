@@ -470,12 +470,31 @@ class Bucket:
         body = ("\n".join(reasons) + "\n").encode("utf-8")
         self.upload(f"{self.LEDGER}{scene_id}-{n}.txt", body, "text/plain; charset=utf-8")
 
-    def upload(self, path: str, data: bytes, content_type: str) -> None:
-        """Put one file at `path`, replacing whatever is there."""
+    def upload(self, path: str, data: bytes, content_type: str, *, upsert: bool = True) -> None:
+        """Put one file at `path`. With `upsert` it replaces whatever is
+        there; without, a file already there is left alone and
+        `AlreadyExists` says so."""
         if not self.configured:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
-        headers = {**self._headers(), "Content-Type": content_type, "x-upsert": "true"}
-        _request("POST", f"{self.url}/storage/v1/object/{self.name}/{path}", data, headers)
+        headers = {**self._headers(), "Content-Type": content_type,
+                   "x-upsert": "true" if upsert else "false"}
+        try:
+            _request("POST", f"{self.url}/storage/v1/object/{self.name}/{path}", data, headers)
+        except RequestFailed as exc:
+            if not upsert and _is_duplicate(exc):
+                raise AlreadyExists(f"{path} is already in the `{self.name}` bucket") from exc
+            raise
+
+
+class AlreadyExists(RuntimeError):
+    """The bucket already holds a file at that path, and it was not replaced."""
+
+
+def _is_duplicate(exc: "RequestFailed") -> bool:
+    """Storage's answer to an upload without upsert onto a file that exists:
+    a 409, or (older servers) a 400 whose body says 409 / Duplicate."""
+    detail = exc.detail.lower()
+    return exc.status == 409 or "already exists" in detail or "duplicate" in detail
 
 
 _MEDIA_TYPES = {
@@ -493,6 +512,8 @@ class UploadResult:
     sent: list[str] = field(default_factory=list)
     #: (storage path, why) for every local file that did not get there.
     failed: list[tuple[str, str]] = field(default_factory=list)
+    #: Storage paths the bucket already held and this call left alone.
+    existing: list[str] = field(default_factory=list)
 
     @property
     def failed_paths(self) -> set[str]:
@@ -566,6 +587,15 @@ def without(survey: list[scenes.Scene], paths: set[str]) -> list[scenes.Scene]:
 # ----- HTTP, kept small on purpose -----------------------------------------
 
 
+class RequestFailed(RuntimeError):
+    """A request the server answered with an error status."""
+
+    def __init__(self, message: str, *, status: int, detail: str):
+        super().__init__(message)
+        self.status = status
+        self.detail = detail
+
+
 def _request(method: str, url: str, body: bytes | None, headers: dict[str, str]) -> bytes:
     req = urllib.request.Request(url, data=body, method=method, headers=headers)
     try:
@@ -573,7 +603,8 @@ def _request(method: str, url: str, body: bytes | None, headers: dict[str, str])
             return resp.read()
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")[:500]
-        raise RuntimeError(f"{method} {url} → HTTP {exc.code}: {detail}") from exc
+        raise RequestFailed(f"{method} {url} → HTTP {exc.code}: {detail}",
+                            status=exc.code, detail=detail) from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"{method} {url} failed: {exc.reason}") from exc
 

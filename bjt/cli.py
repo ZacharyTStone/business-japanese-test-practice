@@ -1082,6 +1082,14 @@ def cmd_synth(args) -> int:
             print("--upload with the silent provider would ship silence: a learner would "
                   "hear nothing where the app now shows the text. Refusing.", file=sys.stderr)
             return 2
+        if not args.have:
+            # Without the database's list of live clips, an empty media/ makes
+            # every clip look new: all of them re-synthesised, and each one's
+            # duration rewritten from a recording nobody hears.
+            print("--upload needs --have: the clip ids already live, one per line, read "
+                  "out of the database (an empty file on a fresh project). A live clip is "
+                  "never re-made.", file=sys.stderr)
+            return 2
         bucket = scene_art.Bucket(name="audio")
         if not bucket.configured:
             print("--upload needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment",
@@ -1125,8 +1133,16 @@ def cmd_synth(args) -> int:
               "OPENAI_API_KEY for\n  real voices; `bjt audition` compares them.")
 
     if bucket is not None and result.clips:
-        up = synth.upload_clips(result, bucket, args.media_dir)
+        up = synth.upload_clips(result, bucket, args.media_dir, remake=remake)
         print(f"uploaded {len(up.sent)} clip(s) to the `{bucket.name}` bucket")
+        if up.existing:
+            # Live all along, whatever --have said: left as they are, and out
+            # of the SQL, which would otherwise describe tonight's recording.
+            found = {pathlib.Path(p).stem for p in up.existing}
+            print(f"{len(found)} clip(s) were already in the bucket; left alone and "
+                  "counted as live")
+            result.drop(found)
+            result.live.extend(sorted(found))
         for clip_path, why in up.failed:
             print(f"not uploaded: {clip_path}: {why}", file=sys.stderr)
         if up.failed:
@@ -1571,7 +1587,8 @@ def build_parser() -> argparse.ArgumentParser:
                          "Named clips only — never a blanket re-make of the library")
     sy.add_argument("--upload", action="store_true",
                     help="put the clips in the `audio` bucket "
-                         "(needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)")
+                         "(needs --have, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY); never over "
+                         "a file already there but the ones --remake names")
     sy.add_argument("--out", help="where to write the SQL (default: alongside the bundle)")
     sy.add_argument("--media-dir", type=pathlib.Path,
                     help=f"where audio files go (default: {config.MEDIA_DIR})")

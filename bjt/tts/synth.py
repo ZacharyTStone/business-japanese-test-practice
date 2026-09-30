@@ -200,16 +200,23 @@ def read_have(path: Path) -> set[str]:
 
 
 def upload_clips(report: SynthReport, bucket: scene_art.Bucket,
-                 media_dir: Path | None = None) -> scene_art.UploadResult:
+                 media_dir: Path | None = None, *,
+                 remake: set[str] | None = None) -> scene_art.UploadResult:
     """Put every clip this run has a file for into the `audio` bucket.
 
-    Idempotent — the bucket upserts, and a clip's path is its content hash — and
-    one failure does not stop the rest, for the reason the scene uploader gives:
-    paying for the successful ones again on a retry. The caller drops the failed
-    ids from the report so the SQL describes the bucket, not this machine.
+    Never over a file that is already there, except a clip named in `remake`:
+    a clip's path is its content hash, so a file at that path is a live clip,
+    and a live clip is never re-made — whether or not the caller's `have`
+    list knew about it. Such a file is left alone and reported in `existing`,
+    and the caller counts it as live, so the SQL does not rewrite its
+    duration from a recording nobody will hear. One failure does not stop the
+    rest, for the reason the scene uploader gives: paying for the successful
+    ones again on a retry. The caller drops the failed ids from the report so
+    the SQL describes the bucket, not this machine.
     """
     root = Path(media_dir or config.MEDIA_DIR) / "audio"
     result = scene_art.UploadResult()
+    remake = remake or set()
     for clip in report.clips:
         local = root / clip.path
         if not local.is_file():
@@ -223,7 +230,11 @@ def upload_clips(report: SynthReport, bucket: scene_art.Bucket,
             ))
             continue
         try:
-            bucket.upload(clip.path, local.read_bytes(), "audio/wav")
+            bucket.upload(clip.path, local.read_bytes(), "audio/wav",
+                          upsert=clip.clip_id in remake)
+        except scene_art.AlreadyExists:
+            result.existing.append(clip.path)
+            continue
         except RuntimeError as exc:
             result.failed.append((clip.path, str(exc)))
             continue
