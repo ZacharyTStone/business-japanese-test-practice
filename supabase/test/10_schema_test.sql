@@ -84,13 +84,15 @@ commit;
 -- Two users. A starts anonymous and links an identity below; B is already
 -- linked. Both are on the tester list, because while the app is in testing
 -- nobody else can read anything at all — and the isolation tests below are
--- about what one *tester* can see of another.
+-- about what one *tester* can see of another. A's ceiling is lifted: the level
+-- tests below answer well over a day's fifteen as A, and the door is tested on
+-- its own further down.
 insert into auth.users (id, email, is_anonymous) values
     ('11111111-1111-1111-1111-111111111111', null, true),
     ('22222222-2222-2222-2222-222222222222', 'b@example.com', false);
-insert into public.testers (email, note) values
-    ('zach@example.com', 'test fixture: user A, once linked'),
-    ('b@example.com',    'test fixture: user B');
+insert into public.testers (email, note, unlimited) values
+    ('zach@example.com', 'test fixture: user A, once linked', true),
+    ('b@example.com',    'test fixture: user B',              false);
 
 -- ------------------------------------------------------------------- tests
 
@@ -1347,6 +1349,14 @@ begin
     select * into q from public.next_items(1);
     perform test.check(q.id = 'itm_known' and q.stands_for is null and q.times_seen = 1,
         'the due lesson, as itself, once there is nothing unseen to ask instead');
+
+    -- This tester's row is `unlimited`, and the door on the answer reads it the
+    -- way the door on the set does.
+    perform test.check(
+        (select count(*) from public.attempts
+          where answered_at >= ((now() at time zone 'Asia/Tokyo')::date::timestamp
+                                at time zone 'Asia/Tokyo')) > 15,
+        'a tester whose ceiling is lifted answers past fifteen in a day');
     reset role;
 end
 $$;
@@ -1847,8 +1857,10 @@ $$;
 
 do $$
 declare
-    d record;
-    i integer;
+    d      record;
+    i      integer;
+    ok     boolean;
+    v_hint text;
 begin
     raise notice 'at fifteen the door shuts';
     -- Twelve more answers, all repeats of one item: the cheapest way to spend
@@ -1862,6 +1874,18 @@ begin
     perform test.check((select count(*) from public.next_items(5)) = 1,
         'a set of five is served as a set of one');
 
+    -- Two answers in one statement, with room for one: the second is counted
+    -- against the first, and the statement is refused whole.
+    begin
+        insert into public.attempts (item_id, chosen_index)
+        values ('itm_c_t1', 0), ('itm_c_t1', 0);
+        ok := false;
+    exception when check_violation then
+        ok := true;
+    end;
+    perform test.check(ok and (select answered_today from public.v_my_day) = 14,
+        'two answers sent together with room for one are refused, and nothing is counted');
+
     insert into public.attempts (item_id, chosen_index) values ('itm_c_t1', 0);
     select * into d from public.v_my_day;
     perform test.check(d.answered_today = 15 and d.left_today = 0,
@@ -1872,6 +1896,20 @@ begin
     perform test.check(
         (select level from public.v_my_levels where section = 'dokkai') = 'J2',
         'thirteen repeats of one item moved nothing');
+
+    -- The door is on the answer too, not only on the set: a client posting
+    -- straight to the table, or a second device holding a set fetched before
+    -- the first one finished, is refused at sixteen.
+    ok := false;
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_c_u1', 0);
+    exception when check_violation then
+        get stacked diagnostics v_hint = pg_exception_hint;
+        ok := v_hint = 'daily_limit_reached';
+    end;
+    perform test.check(ok, 'a sixteenth answer is refused, with a hint the app can read');
+    perform test.check((select answered_today from public.v_my_day) = 15,
+        'and today still counts fifteen');
 end
 $$;
 

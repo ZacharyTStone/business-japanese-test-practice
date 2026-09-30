@@ -31,7 +31,7 @@ from public.attempts a
 group by 1;
 
 
--- ==== view v_my_day — 20260922000200_a_day_the_owner_sizes.sql
+-- ==== view v_my_day — 20260930000300_the_door_is_on_the_answer.sql
 
 create or replace view public.v_my_day
 with (security_invoker = on) as
@@ -39,8 +39,8 @@ with today as (
     select count(*)::int as answered
       from public.attempts a
      where a.user_id = (select auth.uid())
-       and (a.answered_at at time zone 'Asia/Tokyo')::date
-           = (now() at time zone 'Asia/Tokyo')::date
+       and a.answered_at >= ((now() at time zone 'Asia/Tokyo')::date::timestamp
+                             at time zone 'Asia/Tokyo')
 )
 select
     coalesce((select p.daily_goal from public.profiles p where p.id = (select auth.uid())), 10)
@@ -273,7 +273,7 @@ comment on function public.daily_max is
     'so the app and the queue read the same number.';
 
 
--- ==== function grade_attempt — 20260927000100_a_new_question_not_the_same_one.sql
+-- ==== function grade_attempt — 20260930000300_the_door_is_on_the_answer.sql
 
 create or replace function public.grade_attempt()
 returns trigger
@@ -286,10 +286,32 @@ declare
     v_correct_index smallint;
     v_type          text;
     v_function      text;
+    v_day_start     timestamptz :=
+        ((now() at time zone 'Asia/Tokyo')::date::timestamp at time zone 'Asia/Tokyo');
+    v_today         integer;
 begin
     new.user_id := (select auth.uid());
     if new.user_id is null then
         raise exception 'attempts require an authenticated session';
+    end if;
+
+    -- Only a privileged insert can name this column (see the grant in
+    -- 20260927000100), so for the app it is always now().
+    new.answered_at := coalesce(new.answered_at, now());
+
+    -- The day's door, on the answer itself. Counted under a lock per learner,
+    -- so two devices answering at once are counted one after the other.
+    if new.answered_at >= v_day_start and not (select public.is_unlimited()) then
+        perform pg_advisory_xact_lock(hashtextextended('attempts:' || new.user_id::text, 0));
+        select count(*)::int
+          into v_today
+          from public.attempts a
+         where a.user_id = new.user_id
+           and a.answered_at >= v_day_start;
+        if v_today >= (select public.my_daily_max()) then
+            raise exception 'daily limit reached'
+                using errcode = 'check_violation', hint = 'daily_limit_reached';
+        end if;
     end if;
 
     -- The item still has to exist, and its answer key is still read here and
@@ -344,9 +366,6 @@ begin
         new.stands_for := null;
     end if;
 
-    -- Only a privileged insert can name this column (see the grant above), so
-    -- for the app it is always now().
-    new.answered_at := coalesce(new.answered_at, now());
     return new;
 end;
 $$;
@@ -354,7 +373,9 @@ $$;
 comment on function public.grade_attempt is
     'Grades an answer from the item, never from the client. chosen_index -1 means '
     'the question clock ran out: wrong, with the role timed_out. A stands_for that '
-    'the queue could not have served is cleared.';
+    'the queue could not have served is cleared. An answer that would take today '
+    'past my_daily_max() is refused (hint daily_limit_reached), unless the '
+    'tester''s ceiling is lifted.';
 
 
 -- ==== function grant_entitlement — 20260915000400_entitlement_grants.sql
@@ -680,9 +701,9 @@ as $$
 $$;
 
 
--- ==== function next_items — 20260927000100_a_new_question_not_the_same_one.sql
+-- ==== function next_items — 20260930000300_the_door_is_on_the_answer.sql
 
-create function public.next_items(p_limit integer default 5)
+create or replace function public.next_items(p_limit integer default 5)
 returns table (
     id                text,
     item_type         text,
@@ -734,8 +755,10 @@ as $$
         where a.user_id = (select id from uid)
         group by a.item_id
     ),
-    -- The door, unchanged: the smaller of what was asked for and what the day
-    -- has left, unless this tester's ceiling is lifted.
+    -- The door: the smaller of what was asked for and what the day has left,
+    -- unless this tester's ceiling is lifted. Today is counted as a range on
+    -- answered_at from midnight in Japan, the form attempts_user_time_idx can
+    -- answer, and the same form grade_attempt() counts with.
     bounds as (
         select case
             when (select public.is_unlimited()) then greatest(p_limit, 0)
@@ -746,8 +769,8 @@ as $$
                     - (select count(*)::int
                          from public.attempts a
                         where a.user_id = (select id from uid)
-                          and (a.answered_at at time zone 'Asia/Tokyo')::date
-                              = (now() at time zone 'Asia/Tokyo')::date),
+                          and a.answered_at >= ((now() at time zone 'Asia/Tokyo')::date::timestamp
+                                                at time zone 'Asia/Tokyo')),
                     0))
         end as n
     ),
