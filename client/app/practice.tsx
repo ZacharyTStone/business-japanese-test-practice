@@ -48,6 +48,7 @@ import { clearPreloadedSource, preload } from "expo-audio";
 import { useRouter, type ErrorBoundaryProps } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AppState, Image, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { flushAnswers, flushAnswersWithin, sendAnswer, type AttemptArgs, type FlushResult, type SendOutcome } from "../src/lib/answers";
 import { useAuth } from "../src/lib/auth";
@@ -315,6 +316,8 @@ export default function Practice() {
   // would snap back to the top just as somebody started reading it.
   const scrolledFor = useRef<string | null>(null);
   const reduced = useReducedMotion();
+  // The last button sits above the home indicator, not under it.
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!isConfigured || !session?.user) return;
@@ -755,7 +758,7 @@ export default function Practice() {
   return (
     <ScrollView
       ref={scroller}
-      contentContainerStyle={styles.page}
+      contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}
       keyboardShouldPersistTaps="handled"
     >
       <Keys onKey={onKey} />

@@ -10,6 +10,7 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { flushAnswers } from "../src/lib/answers";
 import { useAuth } from "../src/lib/auth";
@@ -38,6 +39,8 @@ export default function Result() {
   const { lang, t } = useLang();
   const [summary] = useState(() => takeSummary());
   const userId = useAuth().session?.user?.id ?? null;
+  // The last button sits above the home indicator, not under it.
+  const insets = useSafeAreaInsets();
   // The set's answers, as the database now has them. An answer that could not
   // be sent is listed as unsent until the outbox gets it through — which may
   // well happen while this screen is up, since it is the moment the phone is
@@ -102,7 +105,7 @@ export default function Result() {
   const step = () => (beat += 70);
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}>
       {move && move.direction > 0 ? (
         <Card style={{ backgroundColor: colors.correctSoft, gap: space.md }}>
           <View style={styles.trapHead}>
