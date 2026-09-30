@@ -99,6 +99,18 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
  *  top of it. The bar is 76 tall and floats over the content on web. */
 export const TAB_CLEARANCE = 104;
 
+/** The widest a page's content runs. Past this a line of Japanese is too long to
+ *  read and a button too wide to be one; a wider window centres the column. */
+export const PAGE_MAX_WIDTH = 720;
+
+/** A page's content column: the full width on a phone, centred and capped on a
+ *  desktop or tablet. Spread into a `contentContainerStyle`. */
+export const page: ViewStyle = { width: "100%", maxWidth: PAGE_MAX_WIDTH, alignSelf: "center" };
+
+/** The smallest thing a thumb is asked to hit, per both platforms' guidelines.
+ *  A text link reaches it with vertical padding, not `hitSlop`, which web ignores. */
+export const MIN_TOUCH = 44;
+
 export const radius = { sm: 10, md: 16, lg: 22, xl: 28, pill: 999 } as const;
 
 /**

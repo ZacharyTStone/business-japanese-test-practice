@@ -33,28 +33,6 @@ export const supabase = createClient(url ?? "http://localhost:54321", anonKey ??
 export const MISSING_CONFIG_MESSAGE =
   "EXPO_PUBLIC_SUPABASE_URL と EXPO_PUBLIC_SUPABASE_ANON_KEY が設定されていません。client/.env.example を .env にコピーしてください。";
 
-/**
- * What went wrong, in words somebody can act on.
- *
- * A supabase-js failure is not an `Error` — it is a plain object carrying
- * `message`, `details`, `hint` and a Postgres `code` — so `String(e)` would
- * show the user "[object Object]" and hide what actually went wrong.
- *
- * The `code` is kept because it is the part worth searching for: `42703` is
- * "undefined column", which says "this client is newer than this database"
- * far more precisely than any wording of ours would.
- */
-export function errorText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e && typeof e === "object") {
-    const { message, details, hint, code } = e as Record<string, unknown>;
-    const said = [message, details, hint].filter(
-      (part): part is string => typeof part === "string" && part.trim() !== ""
-    );
-    if (said.length > 0) {
-      const text = said.join(" — ");
-      return typeof code === "string" && code !== "" ? `${text} (${code})` : text;
-    }
-  }
-  return String(e);
-}
+/** Kept here for the screens that import it from this module; the definition
+ *  lives in `errors.ts`, which does not create a client when imported. */
+export { errorText } from "./errors";

@@ -26,6 +26,17 @@ const S = {
   config_needed: ["設定が必要です", "Setup needed"],
   cant_connect: ["接続できません", "Can't connect"],
   cant_load: ["読み込めません", "Couldn't load"],
+  // What went wrong, said so a learner can act on it (lib/errors.ts).
+  err_offline: [
+    "インターネットに接続できません。接続を確かめて、もう一度お試しください。",
+    "You're offline. Check your connection and try again.",
+  ],
+  err_session_expired: [
+    "ログインの有効期限が切れました。もう一度ログインしてください。",
+    "Your sign-in has expired. Please sign in again.",
+  ],
+  err_wrong_password: ["メールアドレスかパスワードが違います。", "The email address or password is wrong."],
+  err_other: ["問題が起きました。しばらくしてから、もう一度お試しください。", "Something went wrong. Please try again in a moment."],
   loading: ["読み込み中…", "Loading…"],
   tab_home: ["ホーム", "Home"],
   tab_progress: ["記録", "Progress"],
