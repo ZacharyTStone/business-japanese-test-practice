@@ -6,9 +6,13 @@ import { describe, expect, it } from "vitest";
 import {
   initialPractice,
   practiceReducer,
+  questionView,
+  settleAnswers,
   thinkTime,
+  verdictKind,
   type PracticeAction,
   type PracticeState,
+  type QuestionContext,
 } from "./practice";
 import type { QueuedItem } from "./types";
 
@@ -72,7 +76,7 @@ describe("one press, one move", () => {
     const s = run([
       loaded(3),
       { type: "choose", position: 0, stage: "answer", now: 2000 },
-      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
       { type: "next", now: 3000 },
       { type: "next", now: 3001 },
     ]);
@@ -85,7 +89,7 @@ describe("one press, one move", () => {
     const s = run([
       loaded(3),
       { type: "choose", position: 0, stage: "answer", now: 2000 },
-      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
       { type: "next", now: 3000 },
       { type: "next", now: 3080 },
       { type: "choose", position: 3, stage: "answer", now: 3090 },
@@ -113,7 +117,7 @@ describe("the stage", () => {
       loaded(2),
       { type: "stage", stage: "listen", now: 1500 },
       { type: "choose", position: 0, stage: "listen", now: 2000 },
-      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
       { type: "stage", stage: "answer", now: 2500 },
     ]);
     expect(s.stage).toBe("reveal");
@@ -146,7 +150,7 @@ describe("the end of the set", () => {
     const s = run([
       loaded(1),
       { type: "choose", position: 2, stage: "answer", now: 2000 },
-      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual" } },
+      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual", saved: true } },
       { type: "next", now: 3000 },
     ]);
     expect(s.done).toBe("result");
@@ -158,7 +162,7 @@ describe("the end of the set", () => {
     const last = run([
       loaded(2),
       { type: "choose", position: 0, stage: "answer", now: 2000 },
-      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
       { type: "next", now: 3000 },
       { type: "vetoed", now: 3500 },
     ]);
@@ -182,19 +186,19 @@ describe("the verdict", () => {
     const miss = run([
       loaded(2),
       { type: "choose", position: 3, stage: "answer", now: 2000 },
-      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual" } },
+      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual", saved: true } },
     ]);
     expect(miss.showDetails).toBe(true);
     const right = run([
       loaded(2),
       { type: "choose", position: 0, stage: "answer", now: 2000 },
-      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
     ]);
     expect(right.showDetails).toBe(false);
   });
 
   it("ignores a verdict with no answer waiting for it", () => {
-    const s = run([loaded(1), { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } }]);
+    const s = run([loaded(1), { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } }]);
     expect(s.graded).toBeNull();
     expect(s.answers).toHaveLength(0);
   });
@@ -230,7 +234,7 @@ describe("help the exam does not give", () => {
       { type: "replayed" },
       { type: "toggleOptionsText" },
       { type: "choose", position: 0, stage: "answer", now: 2000 },
-      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct" } },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
       { type: "next", now: 3000 },
     ]);
     expect(s.replays).toBe(0);
@@ -259,5 +263,189 @@ describe("think time", () => {
 
   it("has none for a listening item read as text", () => {
     expect(thinkTime({ answerFrom: null, shownAt: 1000 }, { at: 40000, stage: "answer" }, unheard)).toBeNull();
+  });
+});
+
+describe("the question as drawn", () => {
+  const reading: QuestionContext = { playable: false, picture: false, narrated: false, spokenOptions: false, audioFailed: false };
+  const spoken: QuestionContext = { playable: true, picture: true, narrated: true, spokenOptions: true, audioFailed: false };
+
+  it("takes a bare reading item straight to its options, printed, with the clock running", () => {
+    const s = run([loaded(2)]);
+    const v = questionView(s, s.items[0], reading);
+    expect(v.stage).toBe("answer");
+    expect(v.hasScene).toBe(false);
+    expect(v.stemAsText).toBe(true);
+    expect(v.optionsShown).toBe(true);
+    expect(v.optionTextHidden).toBe(false);
+    expect(v.clockRunning).toBe(true);
+  });
+
+  it("opens a listening item on its scene, with nothing to answer yet", () => {
+    const s = run([loaded(2)]);
+    const v = questionView(s, s.items[0], spoken);
+    expect(v.stage).toBe("scene");
+    expect(v.afterScene).toBe("listen");
+    expect(v.optionsShown).toBe(false);
+    expect(v.clockRunning).toBe(false);
+  });
+
+  it("shows spoken options as numbers while the audio plays, and their words after the answer", () => {
+    const listening = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    const during = questionView(listening, listening.items[0], spoken);
+    expect(during.optionsShown).toBe(true);
+    expect(during.optionTextHidden).toBe(true);
+    expect(during.stemAsText).toBe(false);
+
+    const answered = run([
+      loaded(2),
+      { type: "stage", stage: "listen", now: 1500 },
+      { type: "choose", position: 2, stage: "listen", now: 2000 },
+      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual", saved: true } },
+    ]);
+    const after = questionView(answered, answered.items[0], spoken);
+    expect(after.revealed).toBe(true);
+    expect(after.optionTextHidden).toBe(false);
+    expect(after.kind).toBe("manner");
+  });
+
+  it("keeps printed options back until the audio has finished", () => {
+    const s = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    expect(questionView(s, s.items[0], { ...spoken, spokenOptions: false }).optionsShown).toBe(false);
+  });
+
+  it("puts every word on the page when the audio would not play, without calling it a peek", () => {
+    const s = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    const withTurns = { ...s.items[0], dialogue: [{ speaker_role: "a", text: "一", clip_id: null, audio_path: "t0" }] };
+    const v = questionView(s, withTurns, { ...spoken, audioFailed: true });
+    expect(v.stemAsText).toBe(true);
+    expect(v.dialogueAsText).toBe(true);
+    expect(v.optionTextHidden).toBe(false);
+    expect(s.peeked).toBe(false);
+  });
+
+  it("never waits in the listening stage with nothing to play", () => {
+    const s = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    expect(questionView(s, s.items[0], { ...reading, picture: true }).stage).toBe("answer");
+  });
+
+  it("locks the options and stops the clock the moment an answer is given", () => {
+    const s = run([loaded(2), { type: "choose", position: 1, stage: "answer", now: 2000 }]);
+    const v = questionView(s, s.items[0], reading);
+    expect(v.locked).toBe(true);
+    expect(v.clockRunning).toBe(false);
+    // The chosen option's role stands in until the database's arrives.
+    expect(v.role).toBe("register_too_casual");
+    expect(v.kind).toBeNull();
+  });
+});
+
+describe("the kind of verdict", () => {
+  it("draws a listener only for a miss about manners", () => {
+    expect(verdictKind("correct", true)).toBe("right");
+    expect(verdictKind("register_too_casual", false)).toBe("manner");
+    // A comprehension role: the row next to the right one, the scene next door.
+    expect(verdictKind("adjacent_setting", false)).toBe("reading");
+    expect(verdictKind("timed_out", false)).toBe("time");
+  });
+});
+
+describe("an answer the database has not got yet", () => {
+  const unsent: PracticeAction[] = [
+    loaded(2),
+    { type: "choose", position: 1, stage: "answer", now: 2000 },
+    { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual", saved: false } },
+  ];
+
+  it("is shown and listed as unsent", () => {
+    const s = run(unsent);
+    expect(s.graded?.saved).toBe(false);
+    expect(s.answers[0].saved).toBe(false);
+  });
+
+  it("takes the database's verdict when it arrives, on the card and in the list", () => {
+    const s = run([...unsent, { type: "synced", itemId: "q1", verdict: { isCorrect: true, chosenRole: "correct" } }]);
+    expect(s.graded).toEqual({ isCorrect: true, chosenRole: "correct", saved: true });
+    expect(s.answers[0]).toMatchObject({ isCorrect: true, role: "correct", saved: true });
+  });
+
+  it("updates the list and leaves the card alone once the question has moved on", () => {
+    const s = run([
+      ...unsent,
+      { type: "next", now: 3000 },
+      { type: "synced", itemId: "q1", verdict: { isCorrect: false, chosenRole: "register_too_casual" } },
+    ]);
+    expect(s.graded).toBeNull();
+    expect(s.answers[0].saved).toBe(true);
+  });
+
+  it("stops counting one the database refused when it was finally sent", () => {
+    const s = run([...unsent, { type: "dropped", itemId: "q1" }]);
+    expect(s.answers).toHaveLength(0);
+  });
+
+  it("settles a whole flush at once, touching only the unsent", () => {
+    const s = run([
+      loaded(3),
+      { type: "choose", position: 0, stage: "answer", now: 2000 },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
+      { type: "next", now: 3000 },
+      { type: "choose", position: 1, stage: "answer", now: 4000 },
+      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual", saved: false } },
+      { type: "next", now: 5000 },
+      { type: "choose", position: 2, stage: "answer", now: 6000 },
+      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual", saved: false } },
+    ]);
+    const settled = settleAnswers(s.answers, {
+      saved: [
+        { itemId: "q1", graded: { isCorrect: false, chosenRole: "register_too_casual" } },
+        { itemId: "q2", graded: { isCorrect: true, chosenRole: "correct" } },
+      ],
+      dropped: [{ itemId: "q3" }],
+    });
+    expect(settled.map((a) => [a.item.id, a.isCorrect, a.saved])).toEqual([
+      ["q1", true, true],
+      ["q2", true, true],
+    ]);
+  });
+});
+
+describe("the database's two refusals", () => {
+  it("skips a question that has left the bank, without counting it", () => {
+    const s = run([
+      loaded(3),
+      { type: "choose", position: 1, stage: "answer", now: 2000 },
+      { type: "unavailable", now: 2500 },
+    ]);
+    expect(s.items.map((i) => i.id)).toEqual(["q2", "q3"]);
+    expect(s.index).toBe(0);
+    expect(s.chosen).toBeNull();
+    expect(s.pending).toBeNull();
+    expect(s.answers).toHaveLength(0);
+  });
+
+  it("ignores a refusal with no answer waiting for it", () => {
+    const s = run([loaded(2), { type: "unavailable", now: 2500 }]);
+    expect(s.items).toHaveLength(2);
+  });
+
+  it("ends the set at the day's ceiling: the result if anything was answered", () => {
+    const s = run([
+      loaded(3),
+      { type: "choose", position: 0, stage: "answer", now: 2000 },
+      { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
+      { type: "next", now: 3000 },
+      { type: "choose", position: 1, stage: "answer", now: 4000 },
+      { type: "dayOver" },
+    ]);
+    expect(s.done).toBe("result");
+    expect(s.pending).toBeNull();
+    expect(s.answers).toHaveLength(1);
+  });
+
+  it("ends the set at the day's ceiling: the day's done screen if nothing was", () => {
+    const s = run([loaded(3), { type: "choose", position: 0, stage: "answer", now: 2000 }, { type: "dayOver" }]);
+    expect(s.done).toBe("day");
+    expect(s.answers).toHaveLength(0);
   });
 });

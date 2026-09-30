@@ -1,13 +1,19 @@
 /**
- * The day, as Japan counts it.
+ * The day, as Japan counts it, and where today stands.
  *
  * The database closes the day at midnight in Japan (`v_my_day`, the streak, the
  * ceiling), whatever clock the device keeps. The screens that say something
- * about the day have to agree with it: when it turns over, and what that is
- * on the clock in the learner's hand.
+ * about the day have to agree with it: when it turns over, what that is on the
+ * clock in the learner's hand, and — from the database's own count, never one
+ * the app keeps — how big the next set is. Home draws its three states from
+ * `dayState` and practice asks for `setSize` questions; next_items() does the
+ * same arithmetic and caps the set anyway, so the screens and the queue cannot
+ * disagree about the day.
  *
- * Plain arithmetic on instants, so `npm test` can hold it with a fixed clock.
+ * Plain arithmetic, so `npm test` can hold it with a fixed clock.
  */
+import type { DayStatus } from "./types";
+
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 /** Japan keeps UTC+9 all year: no summer time to account for. */
@@ -53,4 +59,33 @@ export const REFRESH_AFTER_MS = 10 * MINUTE;
  */
 export function shouldRefresh(loadedAt: number, now: number): boolean {
   return jstDate(loadedAt) !== jstDate(now) || now - loadedAt > REFRESH_AFTER_MS;
+}
+
+/**
+ * `open` — the day's set is not done yet.
+ * `bonus` — it is, and the rest of the allowance is on offer as a bonus set.
+ * `done` — the day's ceiling is reached: a full stop until midnight in Japan.
+ * An account whose ceiling is lifted is never `done`.
+ */
+export type DayState = "open" | "bonus" | "done";
+
+export function dayState(day: DayStatus): DayState {
+  // `left_today` is null only where the ceiling is lifted; anywhere else a
+  // missing number is read as nothing left, which is the door's safe side.
+  if (!day.unlimited && (day.left_today ?? 0) <= 0) return "done";
+  return day.answered_today < day.goal ? "open" : "bonus";
+}
+
+/**
+ * How many questions to ask the queue for: what the day has left of its set,
+ * or the bonus set once the set is done — the rest of the allowance, or a
+ * full set for an account whose ceiling is lifted. Never past the ceiling, and
+ * zero when the day is over.
+ */
+export function setSize(day: DayStatus): number {
+  const state = dayState(day);
+  if (state === "done") return 0;
+  const size =
+    state === "open" ? day.goal - day.answered_today : day.unlimited ? day.goal : (day.left_today ?? 0);
+  return day.unlimited ? size : Math.min(size, day.left_today ?? 0);
 }

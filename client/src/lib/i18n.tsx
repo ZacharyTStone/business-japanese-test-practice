@@ -240,7 +240,7 @@ const S = {
   ch_phone: ["電話", "Phone"],
   ch_video: ["オンライン", "Video call"],
   ch_written: ["文書", "Written"],
-  scene_hint_listen: ["準備ができたら、聞いてください。一回だけ流れます。", "When you're ready, listen. It plays once."],
+  scene_hint_listen: ["準備ができたら、聞いてください。自動で一回流れます。", "When you're ready, listen. It plays once by itself."],
   scene_hint_read: ["準備ができたら、問題へ。", "When you're ready, go to the question."],
   btn_listen: ["聞く", "Listen"],
   btn_to_q: ["問題へ", "To the question"],
@@ -374,7 +374,7 @@ const S = {
   listening: ["聞いています…", "Listening…"],
   skip: ["とばして選択肢へ", "Skip to the options"],
   play_option: ["{label}をもう一回聞く", "Play {label} again"],
-  option_spoken: ["{label}（音声）", "{label} (spoken)"],
+  option_spoken: ["{label}番で答える", "Answer {label}"],
   show_options_text: ["選択肢を文字で見る", "Show the options as text"],
   hide_options_text: ["選択肢の文字を隠す", "Hide the text"],
   // the script, line by line, once the answer is in
@@ -405,6 +405,22 @@ const S = {
   chart_bar: ["棒グラフ", "Bar chart"],
   chart_line: ["折れ線グラフ", "Line chart"],
   chart_unit: ["単位", "unit"],
+
+  // practice and result, once the answer is in: an answer the database has not
+  // got yet (lib/outbox.ts), and the ways out of a failure.
+  unsent_offline: ["未送信：接続が戻ったら送ります", "Not sent yet: it goes when you're back online"],
+  unsent_short: ["未送信", "Not sent"],
+  send_failed: ["答えを記録できませんでした", "Your answer wasn't recorded"],
+  send_retry: ["もう一度送る", "Send again"],
+  // on the verdict card after a miss: the marked options are above, off screen.
+  correct_is: ["正解は {n}", "The answer was {n}"],
+  // while a spoken-option item plays: its numbers can already be pressed.
+  listen_hint_spoken: ["番号を押せば、聞きながら答えられます。", "Press a number to answer while you listen."],
+  // audio that would not play: the words go on the page instead.
+  audio_failed: ["音声を再生できませんでした。文字で読んでください。", "The audio couldn't be played. The words are on the page instead."],
+  dialogue_as_text: ["会話（文字で）", "Conversation (as text)"],
+  // the practice screen's own error boundary: something threw while drawing.
+  practice_broke: ["この問題を表示できませんでした", "This question couldn't be shown"],
 
   // faces
   mood_happy: ["相手は満足しています", "They're pleased"],

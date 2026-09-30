@@ -96,7 +96,7 @@ export function readChart(block: DocBlock): ChartData | null {
 
 /** A figure as print sets it: thousands separated, at most two decimals, no
  *  trailing zeros. The same string the models are shown. */
-function formatValue(value: number | null): string {
+export function formatValue(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return "—";
   const [whole, fraction = ""] = Math.abs(value).toFixed(2).split(".");
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -106,7 +106,7 @@ function formatValue(value: number | null): string {
 }
 
 /** Gridline values: round numbers, zero among them, spanning every figure. */
-function niceTicks(values: number[], target = 5): number[] {
+export function niceTicks(values: number[], target = 5): number[] {
   let lo = Math.min(0, ...values);
   let hi = Math.max(0, ...values);
   if (lo === hi) hi = lo + 1;

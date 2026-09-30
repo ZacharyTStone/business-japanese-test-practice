@@ -5,7 +5,9 @@
  * has to feel after 「まだですか」 to a client is not "minus one" — it is the
  * flicker on the other person's face. Five moods, keyed off the same two axes
  * the 失礼度メーター uses: the ruder the answer, the worse the face; a polite
- * miss only puzzles.
+ * miss only puzzles. A miss that is not about manners at all — a misread
+ * table, the clock running out — has no listener to react, and the practice
+ * screen draws no face for it.
  *
  * Abstract on purpose. No skin tone, no gender, no age: it is *whoever* the
  * item says was listening, and the scene drawing already shows the room.
@@ -13,7 +15,7 @@
 import React from "react";
 import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 
-import { tr, type Lang } from "../lib/i18n";
+import { tr, useLang, type Lang } from "../lib/i18n";
 import { roleInfo } from "../lib/roles";
 import { colors } from "./theme";
 
@@ -32,6 +34,8 @@ const FACE = "#FFE2B8";
 const LINE = colors.text;
 
 export function Face({ mood, size = 72 }: { mood: Mood; size?: number }) {
+  // Described in the language the rest of the screen is in.
+  const { lang } = useLang();
   // Drawn in a 100×100 box and scaled.
   const eyeR = mood === "shocked" ? 6 : 4.2;
   const eyeY = mood === "shocked" ? 42 : 44;
@@ -59,7 +63,7 @@ export function Face({ mood, size = 72 }: { mood: Mood; size?: number }) {
             : "";
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel={moodLabel(mood, "ja")}>
+    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel={moodLabel(mood, lang)}>
       <Circle cx="50" cy="52" r="42" fill={FACE} />
       {brows.map((d, i) => (
         <Path key={i} d={d} stroke={LINE} strokeWidth={4} strokeLinecap="round" fill="none" />

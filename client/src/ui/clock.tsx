@@ -28,8 +28,20 @@
  * and no noise. Somebody is reading Japanese; the clock is furniture.
  */
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Platform, StyleSheet, Text, View } from "react-native";
 
+import {
+  clockFace,
+  clockFor,
+  newClock,
+  pause,
+  resume,
+  tick,
+  URGENT_AT,
+  WARN_AT,
+  warningCrossed,
+  type Clock,
+} from "../lib/clock";
 import { useLang } from "../lib/i18n";
 import { colors, radius, space, tabular, type } from "./theme";
 
@@ -37,25 +49,10 @@ import { colors, radius, space, tabular, type } from "./theme";
  *  the seconds tick over on time, and rare enough to cost nothing. */
 const TICK_MS = 250;
 
-/** Below this share of the budget the bar goes amber, and below the second it
- *  goes red. Roughly "a quarter left" and "nearly gone", which is what a person
- *  glancing at it needs to know. */
-const WARN_AT = 0.25;
-const URGENT_AT = 0.1;
-
 function barColor(share: number): string {
   if (share <= URGENT_AT) return colors.wrong;
   if (share <= WARN_AT) return colors.warn;
   return colors.accent;
-}
-
-/** mm:ss, floored at zero. Seconds are rounded UP so the clock reads 1:00 for
- *  the whole first second rather than flicking to 0:59 immediately. */
-function clockFace(remainingMs: number): string {
-  const total = Math.max(0, Math.ceil(remainingMs / 1000));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 /**
@@ -64,6 +61,10 @@ function clockFace(remainingMs: number): string {
  * `running` false holds the clock at its current reading rather than resetting
  * it — that is what an answered question needs, so the learner can see what
  * they had left. `onExpire` fires exactly once per run.
+ *
+ * The practice screen also keys this by the item, so a new question is a new
+ * component; the clock value (src/lib/clock.ts) makes the same promise on its
+ * own, so neither half depends on the other being remembered.
  */
 export function QuestionClock({
   seconds,
@@ -79,47 +80,73 @@ export function QuestionClock({
 }) {
   const { t } = useLang();
   const totalMs = Math.max(1, seconds) * 1000;
-  const deadline = useRef(Date.now() + totalMs);
-  const fired = useRef(false);
+  // The clock lives in a ref, not in state: the interval reads and writes it
+  // between renders, and a value that only lands on the next render is the
+  // stale reading that once carried one question's time into the next. The
+  // state below is only what is drawn.
+  const clock = useRef<Clock>(newClock(runKey, totalMs));
   const [remaining, setRemaining] = useState(totalMs);
 
   // Held in a ref rather than taken as a dependency below. The parent rebuilds
   // its handler on every render — it closes over the current question — and an
-  // interval that restarted with it would rebuild the deadline from a rounded
-  // reading four times a second, which is the drift this design exists to
-  // avoid. The ref means the clock does not care how stable the callback is.
+  // interval that restarted with it would restart four times a second. The ref
+  // means the clock does not care how stable the callback is.
   const expire = useRef(onExpire);
   useEffect(() => {
     expire.current = onExpire;
   });
 
-  // A new question is a new clock. Done in an effect rather than during render
-  // because it resets two refs as well as the state, and it is declared before
-  // the interval below so that a new question is reset before it is counted.
+  // The two moments the bar changes colour, said aloud to somebody who cannot
+  // see it change — and only to them: to everybody else a voice counting down
+  // over a passage is the flashing this clock exists not to do. Native
+  // platforms announce; the web has no announcer, so a hidden live region
+  // carries the line (and the web reports a screen reader as always on,
+  // which a hidden line is harmless to).
+  const reader = useRef(false);
+  const [spoken, setSpoken] = useState("");
+  const say = useRef<(ms: number) => void>(() => undefined);
+  say.current = (ms: number) => {
+    const line = t("time_left", { time: clockFace(ms) });
+    if (Platform.OS === "web") setSpoken(line);
+    else AccessibilityInfo.announceForAccessibility(line);
+  };
   useEffect(() => {
-    deadline.current = Date.now() + totalMs;
-    fired.current = false;
-    setRemaining(totalMs);
-  }, [runKey, totalMs]);
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((on) => {
+        reader.current = on;
+      })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener("screenReaderChanged", (on: boolean) => {
+      reader.current = on;
+    });
+    return () => sub?.remove();
+  }, []);
 
+  // One effect for the whole life of a run: a new question (or budget) is a new
+  // clock at the full budget, then it counts while `running` and is held,
+  // reading what was left, when it stops.
   useEffect(() => {
+    const current = clockFor(clock.current, runKey, totalMs);
+    clock.current = current;
+    setRemaining(current.remainingMs);
     if (!running) return;
-    // The deadline moves with the pause: time spent not running is not spent.
-    deadline.current = Date.now() + remaining;
+    clock.current = resume(current, Date.now());
     const id = setInterval(() => {
-      const left = deadline.current - Date.now();
-      setRemaining(Math.max(0, left));
-      if (left <= 0 && !fired.current) {
-        fired.current = true;
-        expire.current();
+      const before = clock.current.remainingMs;
+      const read = tick(clock.current, Date.now());
+      clock.current = read.clock;
+      setRemaining(read.clock.remainingMs);
+      if (reader.current && warningCrossed(before, read.clock.remainingMs, totalMs) !== null) {
+        say.current(read.clock.remainingMs);
       }
+      if (read.expired) expire.current();
     }, TICK_MS);
-    return () => clearInterval(id);
-    // `remaining` is read once, when the clock starts or resumes, and is not a
-    // dependency: it changes on every tick, and restarting the interval for
-    // each one is exactly the drift described above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, runKey]);
+    return () => {
+      clearInterval(id);
+      clock.current = pause(clock.current, Date.now());
+      setRemaining(clock.current.remainingMs);
+    };
+  }, [running, runKey, totalMs]);
 
   const share = remaining / totalMs;
   const out = remaining <= 0;
@@ -149,6 +176,11 @@ export function QuestionClock({
       >
         {clockFace(remaining)}
       </Text>
+      {Platform.OS === "web" ? (
+        <Text style={styles.unseen} accessibilityLiveRegion="polite">
+          {spoken}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -165,4 +197,6 @@ const styles = StyleSheet.create({
   fill: { height: 6, borderRadius: radius.pill },
   // Wide enough for "10:00" so the row does not shuffle as the digits change.
   face: { minWidth: 42, textAlign: "right" },
+  // Read by a screen reader, drawn for nobody.
+  unseen: { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 },
 });
