@@ -32,7 +32,7 @@ from . import (
     withdrawn,
 )
 from . import llm as llmmod
-from .llm import LLMBillingError, LLMError
+from .llm import LLMError
 from .db import Store
 from .fidelity import difficulty, discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
@@ -582,11 +582,18 @@ def cmd_batch(args) -> int:
     whole-batch checks that a per-item gate cannot see."""
     store = Store()
     try:
-        path, kept = pipeline.run_batch(
-            store, args.type, args.level, args.n,
-            gate=not args.no_gate, sanity_check=not args.no_sanity,
-            force=args.force, out=args.out,
-        )
+        try:
+            path, kept = pipeline.run_batch(
+                store, args.type, args.level, args.n,
+                gate=not args.no_gate, sanity_check=not args.no_sanity,
+                force=args.force, out=args.out,
+            )
+        except pipeline.ShelfStopped as e:
+            # The ceiling, or an empty account: what was kept before it is
+            # bundled all the same, and the stop is said, not hidden.
+            print(f"\nStopped at {e.kept} of {args.n}: {e}", file=sys.stderr)
+            print(llmmod.spend.report())
+            path = e.path
         if path is None:
             return 1
         bundle = batchmod.load(path)
@@ -861,45 +868,12 @@ def cmd_nightly(args) -> int:
         return 0
 
     store = Store()
-    written: list[tuple[str, str, int, pathlib.Path]] = []
-    failures: list[str] = []
     try:
-        for w in order:
-            print(f"\n--- {w.n} × {w.item_type} {w.level} " + "-" * 32)
-            before = llmmod.spend.usd
-            try:
-                path, kept = pipeline.run_batch(
-                    store, w.item_type, w.level, w.n, gate=not args.no_gate,
-                    sanity_check=not args.no_sanity, force=False,
-                )
-            except LLMBillingError as e:
-                # The account is empty, or this run has spent its ceiling.
-                # Every remaining shelf would fail the same way, so say it
-                # once and keep what was written.
-                print(f"  stopping the run: {e}", file=sys.stderr)
-                failures.append(f"{w.item_type} {w.level} and everything after it: {e}")
-                break
-            except (LLMError, FileNotFoundError) as e:
-                # One shelf failing is not the run failing. A key that ran out of
-                # quota halfway through should still leave the batches it already
-                # wrote, checked and reviewable.
-                print(f"  skipped: {e}", file=sys.stderr)
-                failures.append(f"{w.item_type} {w.level}: {e}")
-                continue
-            finally:
-                # The bill so far, after every shelf, so the log says where
-                # the money went while it is going.
-                print(f"  this shelf ${llmmod.spend.usd - before:.2f}; "
-                      f"run so far ${llmmod.spend.usd:.2f} of "
-                      f"${config.RUN_BUDGET_USD:.2f} in {llmmod.spend.calls} call(s)")
-            if path is None:
-                failures.append(f"{w.item_type} {w.level}: nothing passed the gates")
-                continue
-            sql, _ = publish.publish_bundle(path)
-            print(f"  SQL → {sql}")
-            written.append((w.item_type, w.level, kept, path))
+        night = pipeline.run_night(store, order, gate=not args.no_gate,
+                                   sanity_check=not args.no_sanity)
     finally:
         store.close()
+    written, failures = night.written, night.failures
 
     summary = _nightly_summary(written, failures, spend=llmmod.spend)
     print()
