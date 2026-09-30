@@ -113,9 +113,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
-      // supabase-js says so itself when it read a reset link out of the
-      // address — belt and braces with LAUNCH_LINK, which may have been read
-      // on a page that was then navigated.
+      // supabase-js says so itself when it reads a reset link out of the
+      // address. LAUNCH_LINK has usually said it first; this is the library's
+      // own word for it, should the two ever read the address differently.
       if (event === "PASSWORD_RECOVERY") setRecovering(true);
     });
 
@@ -230,6 +230,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password,
         });
         if (signInError) throw signInError;
+        // Signed in with a password: whatever reset link came before is moot,
+        // and asking for a new password now would be asking twice.
+        setRecovering(false);
+        setLinkFailure(null);
       },
 
       async signUp(email, password) {
