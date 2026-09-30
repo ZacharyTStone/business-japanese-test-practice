@@ -206,6 +206,8 @@ def review_with_model(image: bytes, media_type: str, scene: scenes.Scene) -> Ver
                 try:
                     res = llm.answer_from_image(image, media_type, scene.question, list(scene.options))
                     chosen = int(res.get("choice", -1))
+                except llm.LLMBillingError:
+                    raise
                 except (llm.LLMError, ValueError, TypeError):
                     chosen = -1
                 if chosen != scene.answer:

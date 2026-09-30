@@ -32,7 +32,7 @@ from . import (
     withdrawn,
 )
 from . import llm as llmmod
-from .llm import LLMError
+from .llm import LLMBillingError, LLMError
 from .db import Store
 from .fidelity import difficulty, discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
@@ -191,6 +191,8 @@ def cmd_smoke(args) -> int:
                 verdict = detail.split("verdict=")[-1].split()[0] if "verdict=" in detail else "?"
                 verdicts[verdict] = verdicts.get(verdict, 0) + 1
                 print(f"  [{i+1}/{args.n}] ok  topic={item.get('topic','')!r}  {detail}")
+            except LLMBillingError:
+                raise  # the ceiling or an empty account: every later item would fail too
             except Exception as e:  # a crash is a hard failure of the DoD check
                 failures += 1
                 print(f"  [{i+1}/{args.n}] CRASH: {e}")

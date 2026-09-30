@@ -94,8 +94,18 @@ def generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_c
     # its pass rate is the difficulty prior. Only for an item that is going to
     # ship — a discarded item's difficulty is nobody's business — and skipped
     # entirely when switched off, which the result says rather than hides.
-    dres = difficulty.measure(item) if kept else difficulty.DifficultyResult(
-        measured=False, notes="not probed: item discarded")
+    if kept:
+        try:
+            dres = difficulty.measure(item)
+        except LLMBillingError as e:
+            # The gate has already passed this item and been paid for; the
+            # ceiling reached while measuring it leaves it unmeasured (the
+            # gate's rate stands in) rather than thrown away. The stop is not
+            # lost: the ceiling is still reached, so the next call raises it.
+            dres = difficulty.DifficultyResult(measured=False,
+                                               notes=f"not probed: {e}")
+    else:
+        dres = difficulty.DifficultyResult(measured=False, notes="not probed: item discarded")
 
     item_id = store.insert_item(
         item_type, level, item, config.GEN_MODEL,

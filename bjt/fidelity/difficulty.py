@@ -112,6 +112,8 @@ def _by_probability(question: str, options: list[str], answer: int, model: str) 
     A failed call is unmeasured, exactly as a failed trial is above."""
     try:
         probs = jev.choice_probabilities(question, options, model=model)
+    except llm.LLMBillingError:
+        raise
     except llm.LLMError as e:
         return DifficultyResult(
             model=model, measured=False,

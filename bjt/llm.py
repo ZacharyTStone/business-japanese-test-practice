@@ -33,7 +33,9 @@ class LLMBillingError(LLMError):
 
     A run that meets this should stop, not carry on through forty more slots
     of the same refusal. Raised as its own class so the callers that tolerate
-    a failed call (one shelf, one probe) can let this one through.
+    a failed call (one shelf, one probe) can let this one through — and they
+    must: it is an `LLMError`, so a bare `except LLMError` swallows it. Every
+    tolerant catch site puts `except LLMBillingError: raise` first.
     """
 
 

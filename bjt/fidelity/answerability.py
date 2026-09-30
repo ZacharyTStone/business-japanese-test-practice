@@ -109,7 +109,8 @@ def run_trials(question: str, options: list[str], answer: int, side: str, *,
     refusal, a reply cut off or not an index — is a trial with `chosen=None`,
     and the trials stop there: both callers read one unanswered trial as no
     result at all (the gate: unchecked; the probe: unmeasured), so every call
-    after it would be paid for and thrown away.
+    after it would be paid for and thrown away. What stops the run — its own
+    ceiling, an account that cannot pay — is not a failed trial and is raised.
 
     `decided` is the early stop. The gate's verdicts are by count over the
     planned trials, so once the count already settles the verdict — two right
@@ -125,6 +126,8 @@ def run_trials(question: str, options: list[str], answer: int, side: str, *,
             res = llm.answer_choice(question, options, model=model)
             chosen = int(res.get("choice", -1))
             reason = str(res.get("reason", "") or "")
+        except llm.LLMBillingError:
+            raise  # not an unanswered trial: the run itself has to stop
         except (llm.LLMError, ValueError, TypeError):
             chosen = None
         out.append(Trial(side=side, trial=t, chosen=chosen, correct=chosen == answer,
