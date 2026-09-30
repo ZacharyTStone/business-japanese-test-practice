@@ -495,20 +495,20 @@ export function AutoPlaylist({
             {t("audio_failed")}
           </Text>
         ) : null}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t("listen_again")}
-        onPress={() => {
-          onReplay?.();
-          queue.start();
-        }}
-        style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
-      >
-        <View style={styles.playIcon}>
-          <Icon name="play" size={18} color={colors.onAccent} strokeWidth={2} />
-        </View>
-        <Text style={type.body}>{t("listen_again")}</Text>
-      </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("listen_again")}
+          onPress={() => {
+            onReplay?.();
+            queue.start();
+          }}
+          style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
+        >
+          <View style={styles.playIcon}>
+            <Icon name="play" size={18} color={colors.onAccent} strokeWidth={2} />
+          </View>
+          <Text style={type.body}>{t("listen_again")}</Text>
+        </Pressable>
       </View>
     );
   }
@@ -517,7 +517,12 @@ export function AutoPlaylist({
   const fraction =
     status.duration && status.duration > 0 ? Math.min(1, status.currentTime / status.duration) : 0;
   return (
-    <View style={styles.listening} accessibilityLiveRegion="polite">
+    // Not a live region. The counter below changes with every clip, and a
+    // screen reader reading "3 / 8" over the conversation it is meant to be
+    // listening to is the one thing this stage cannot afford. The stage says
+    // what it is when it is reached; a clip that will not play is the one
+    // status worth interrupting for, and that line is a live region.
+    <View style={styles.listening}>
       <View style={styles.listeningRow}>
         <View style={styles.playIcon}>
           <Icon name="headphones" size={18} color={colors.onAccent} strokeWidth={2} />
