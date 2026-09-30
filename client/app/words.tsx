@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   search: {
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+    borderColor: colors.inputBorder,
     borderWidth: 1,
     borderRadius: radius.md,
     paddingHorizontal: space.md,

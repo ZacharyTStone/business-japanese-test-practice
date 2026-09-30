@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   card: { gap: space.md, alignItems: "stretch" },
   input: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: colors.inputBorder,
     borderWidth: 1,
     borderRadius: radius.md,
     paddingHorizontal: space.md,

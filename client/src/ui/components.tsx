@@ -540,7 +540,7 @@ export function DateField({
           fontSize: 16,
           color: colors.text,
           backgroundColor: colors.surfaceAlt,
-          border: `1px solid ${colors.border}`,
+          border: `1px solid ${colors.inputBorder}`,
           borderRadius: radius.md,
           padding: `${space.md}px ${space.lg}px`,
           width: "100%",
@@ -637,7 +637,7 @@ export function NumberField({
           fontSize: 16,
           color: colors.text,
           backgroundColor: colors.surfaceAlt,
-          border: `1px solid ${colors.border}`,
+          border: `1px solid ${colors.inputBorder}`,
           borderRadius: radius.md,
           padding: `${space.md}px ${space.lg}px`,
           width: "100%",
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
   buttonSub: { fontSize: 12, ...tabular },
   pressed: { opacity: 0.85 },
   // Off, not faded: a flat surface inside a hairline, with no shadow to lift
-  // it. `muted` on `surfaceAlt` is 4.84:1, so the label is still a label —
+  // it. `muted` on `surfaceAlt` is 5.7:1, so the label is still a label —
   // which is the half that dimming to 45% gives up.
   buttonOff: {
     backgroundColor: colors.surfaceAlt,
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.inputBorder,
     borderRadius: radius.md,
     paddingVertical: space.md,
     paddingHorizontal: space.lg,

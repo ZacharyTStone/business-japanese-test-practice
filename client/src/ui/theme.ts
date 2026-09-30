@@ -32,7 +32,10 @@ export const colors = {
    *  for a control's boundary. */
   inputBorder: "#8A88A3",
   text: "#1B1A2E",
-  muted: "#6E6C89",
+  /** The second line. Dark enough to be read on every soft fill it sits on —
+   *  the verdict card's green and red, the violet of a default tag — and not
+   *  only on white: #6E6C89 was 4.4:1 on those, this is 5.1–5.3 (5.9 on white). */
+  muted: "#636180",
   /** The edge of a card. A shadow alone reads as a smudge on a bright screen;
    *  a hairline under it is what makes the edge a decision. Kept translucent
    *  so it is the same tint on white and on the soft violet. */
@@ -56,7 +59,11 @@ export const colors = {
   correctSoft: "#E3F6EF",
   wrong: "#C62B3C",
   wrongSoft: "#FDEBEE",
-  warn: "#E0952A",
+  /** The one amber that warns — the reading clock running low, the 場面ちがい
+   *  meter, a notice's alert. It is drawn as a shape, not as text, so the bar
+   *  is 3:1: 4.4 on white, 3.9 on `wrongSoft`. The lighter amber it replaces
+   *  was 2.5 and 2.2, a clock bar that faded into the card as it ran out. */
+  warn: "#A86A10",
 } as const;
 
 /**
@@ -86,13 +93,16 @@ export const ink = {
  * The tints a counted thing can wear. Assigned per card, not per value — the
  * colour says *which* statistic this is so the eye can come back to the same one
  * tomorrow, and it never encodes whether the number is good.
+ *
+ * `fg` is text as well as an icon: `Tag` writes 13px bold in it on `bg`, so
+ * each pair clears 4.5:1 (5.2–5.6), not just the 3:1 an icon would need.
  */
 export const badge = {
-  violet: { fg: "#6C5CE7", bg: "#EFEDFF" },
-  teal: { fg: "#0E9A9A", bg: "#E0F5F5" },
-  pink: { fg: "#DB4E9B", bg: "#FCE9F3" },
-  amber: { fg: "#CE8A1E", bg: "#FBF1DF" },
-  blue: { fg: "#3A76E0", bg: "#E7F0FD" },
+  violet: { fg: "#5646D6", bg: "#EFEDFF" },
+  teal: { fg: "#0A6F6F", bg: "#E0F5F5" },
+  pink: { fg: "#B0306F", bg: "#FCE9F3" },
+  amber: { fg: "#8A5A0E", bg: "#FBF1DF" },
+  blue: { fg: "#2A5FC0", bg: "#E7F0FD" },
 } as const;
 
 export type BadgeTone = keyof typeof badge;

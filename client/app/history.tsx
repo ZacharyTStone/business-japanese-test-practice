@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.md },
   note: {
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+    borderColor: colors.inputBorder,
     borderWidth: 1,
     borderRadius: radius.md,
     paddingHorizontal: space.md,
