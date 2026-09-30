@@ -9,11 +9,14 @@
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { flushAnswers } from "../src/lib/answers";
+import { useAuth } from "../src/lib/auth";
 import { fetchSectionLevels, hasAdFree } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { levelMove, SECTION_NAME } from "../src/lib/levels";
+import { settleAnswers } from "../src/lib/practice";
 import { roleInfo, worstTrap } from "../src/lib/roles";
 import { clearSummary, takeSummary } from "../src/lib/session";
 import type { SectionLevel } from "../src/lib/types";
@@ -34,6 +37,12 @@ export default function Result() {
   const router = useRouter();
   const { lang, t } = useLang();
   const [summary] = useState(() => takeSummary());
+  const userId = useAuth().session?.user?.id ?? null;
+  // The set's answers, as the database now has them. An answer that could not
+  // be sent is listed as unsent until the outbox gets it through — which may
+  // well happen while this screen is up, since it is the moment the phone is
+  // put down.
+  const [answers, setAnswers] = useState(() => summary?.answers ?? []);
   const [adFree, setAdFree] = useState(true); // assume paid until told otherwise
   const [levelsNow, setLevelsNow] = useState<SectionLevel[]>([]);
 
@@ -49,6 +58,20 @@ export default function Result() {
     return () => clearSummary();
   }, []);
 
+  useEffect(() => {
+    if (!userId || !answers.some((a) => a.saved === false)) return;
+    const retry = () =>
+      void flushAnswers(userId).then((flushed) => setAnswers((now) => settleAnswers(now, flushed)));
+    retry();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") retry();
+    });
+    return () => sub.remove();
+    // Once per screen, and again when the app comes back to the front; a list
+    // that settles does not need to start it over.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   if (!summary) {
     return (
       <View style={styles.page}>
@@ -58,13 +81,13 @@ export default function Result() {
     );
   }
 
-  const total = summary.answers.length;
-  const correct = summary.answers.filter((a) => a.isCorrect).length;
+  const total = answers.length;
+  const correct = answers.filter((a) => a.isCorrect).length;
   const minutes = Math.max(1, Math.round((summary.finishedAt - summary.startedAt) / 60000));
   // The graded role, as the database wrote it — including `timed_out`, which no
   // option carries and which is worth naming: on a timed set, "you ran out of
   // time four times" is the most actionable thing this screen can say.
-  const trap = worstTrap(summary.answers.filter((a) => !a.isCorrect).map((a) => a.role));
+  const trap = worstTrap(answers.filter((a) => !a.isCorrect).map((a) => a.role));
 
   // Which SECTION moved, not merely that something did. "聴解のレベルが上がりま
   // した" is a fact somebody can act on; "レベルが上がりました" leaves them
@@ -156,7 +179,7 @@ export default function Result() {
       <FadeIn delay={step()} style={{ gap: space.sm }}>
         <SectionLabel>{t("breakdown")}</SectionLabel>
         <Card style={{ gap: space.md }}>
-          {summary.answers.map((a, i) => (
+          {answers.map((a, i) => (
             <View key={a.item.id} style={styles.row}>
               <Text
                 style={[
@@ -171,6 +194,11 @@ export default function Result() {
               <Text style={[type.small, { flex: 1 }]}>
                 {i + 1}. {a.item.topic}
               </Text>
+              {/* Not in the record yet: the mark beside it is the phone's own
+                  reading of the key until the database has it. */}
+              {a.saved === false ? (
+                <Text style={[type.small, { fontWeight: "700" }]}>{t("unsent_short")}</Text>
+              ) : null}
             </View>
           ))}
           {correct < total ? (

@@ -37,15 +37,18 @@
  * so the screen could grade locally and feel a few hundred milliseconds faster —
  * but then the app's opinion and the database's could drift apart, and the
  * database's is the one the weakness profile is built on. The round trip is the
- * price of those two never disagreeing.
+ * price of those two never disagreeing. When it cannot be made, the card shows
+ * the phone's reading of the key marked unsent, and the insert itself — never a
+ * grade — waits in the outbox (src/lib/outbox.ts) until it can be.
  *
  * **No ads here, ever.** Not in a break, not between the narration and the
  * options. See AdSlot: the placement type has no member for this screen.
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
+import { AppState, Image, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 
+import { flushAnswers, flushAnswersWithin, sendAnswer, type AttemptArgs, type FlushResult, type SendOutcome } from "../src/lib/answers";
 import { useAuth } from "../src/lib/auth";
 import {
   clipUrl,
@@ -57,14 +60,14 @@ import {
   fetchSectionLevels,
   finishSession,
   mayVeto,
-  recordAttempt,
   sceneUrl,
   startSession,
 } from "../src/lib/db";
+import { friendlyError } from "../src/lib/errors";
 import { examIsNear } from "../src/lib/exam";
 import { useLang, type Key } from "../src/lib/i18n";
 import { budgetSeconds, type TypePace } from "../src/lib/pace";
-import { initialPractice, practiceReducer, thinkTime, type Stage } from "../src/lib/practice";
+import { initialPractice, practiceReducer, settleAnswers, thinkTime, type Stage } from "../src/lib/practice";
 import { roleInfo, verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
@@ -206,6 +209,20 @@ export default function Practice() {
   /** 「いち」「に」「さん」「よん」, or null until all four are synthesised.
    *  Furniture too: without them the spoken options play unnumbered. */
   const [labels, setLabels] = useState<string[] | null>(null);
+  /** An answer the database answered with an error — not a lost connection,
+   *  which the outbox deals with by itself. Kept with the insert, so the card
+   *  can offer to send exactly that again. */
+  const [sendError, setSendError] = useState<{
+    itemId: string;
+    args: AttemptArgs;
+    message: string;
+    detail: string;
+    busy: boolean;
+  } | null>(null);
+  const userId = session?.user?.id ?? null;
+  /** Today's count as the day stood when the set was built, for the day's done
+   *  screen if the database closes the day part-way through. */
+  const answeredAtLoad = useRef(0);
 
   const startedAt = useRef(Date.now());
   const levelsBefore = useRef<SectionLevel[]>([]);
@@ -222,6 +239,9 @@ export default function Practice() {
     let cancelled = false;
     (async () => {
       try {
+        // Anything a previous set could not send goes first, so the day's count
+        // read next already includes it.
+        await flushAnswers(session.user.id);
         const [day, levels, profile, paces, spokenLabels] = await Promise.all([
           fetchDay(),
           fetchSectionLevels(),
@@ -251,6 +271,7 @@ export default function Practice() {
             : day.unlimited
               ? day.goal
               : (day.left_today ?? 0);
+        answeredAtLoad.current = day.answered_today;
         setBlocked(remaining <= 0 ? day.answered_today : null);
         const queue = remaining > 0 ? await fetchQueue(remaining) : [];
         if (cancelled) return;
@@ -267,64 +288,156 @@ export default function Practice() {
     };
   }, [session?.user?.id]);
 
+  /** An outbox flush, told to the reducer: an answer that waited and has now
+   *  landed takes the database's verdict, one it refused is no longer counted. */
+  function applyFlush(result: FlushResult) {
+    for (const s of result.saved) dispatch({ type: "synced", itemId: s.itemId, verdict: s.graded });
+    for (const d of result.dropped) dispatch({ type: "dropped", itemId: d.itemId });
+  }
+
+  // The connection is likelier to be back when the app is: send what waited.
+  // On the web the browser also says so outright.
+  useEffect(() => {
+    if (!userId) return;
+    const retry = () => void flushAnswers(userId).then(applyFlush);
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") retry();
+    });
+    const web = Platform.OS === "web" && typeof window !== "undefined" ? window : null;
+    web?.addEventListener("online", retry);
+    return () => {
+      sub.remove();
+      web?.removeEventListener("online", retry);
+    };
+  }, [userId]);
+
+  /**
+   * What became of an answer, on the screen. The database's verdict when it
+   * landed. When it did not, the phone reads the answer key for the card —
+   * drawn, marked unsent, and never written anywhere — and the insert itself
+   * waits in the outbox (a lost connection) or behind a button (an error).
+   * The database's two refusals change the set instead of the card.
+   */
+  function settle(outcome: SendOutcome, it: QueuedItem, args: AttemptArgs) {
+    const ranOut = args.chosenIndex === NO_ANSWER;
+    const local = () => {
+      const option = it.options.find((o) => o.position === args.chosenIndex);
+      return {
+        isCorrect: !ranOut && args.chosenIndex === it.correct_index,
+        chosenRole: ranOut ? "timed_out" : (option?.role ?? ""),
+        saved: false,
+      };
+    };
+    switch (outcome.kind) {
+      case "saved":
+        dispatch({ type: "graded", verdict: { ...outcome.graded, saved: true } });
+        buzz(outcome.graded.isCorrect ? [0, 18, 60, 18] : 40);
+        return;
+      case "queued":
+        dispatch({ type: "graded", verdict: local() });
+        return;
+      case "failed": {
+        dispatch({ type: "graded", verdict: local() });
+        const said = friendlyError(outcome.error, t);
+        setSendError({ itemId: it.id, args, ...said, busy: false });
+        return;
+      }
+      case "day_over":
+        dispatch({ type: "dayOver" });
+        return;
+      case "unavailable":
+        dispatch({ type: "unavailable", now: Date.now() });
+        return;
+    }
+  }
+
   // An answer, posted once. The reducer accepts one `choose` per question, so
   // however many presses arrived there is one pending answer, and this runs
-  // once for it. The database grades it; if the round trip fails, the answer
-  // is graded locally for display only and nothing is written from that.
+  // once for it. The database grades it; see `settle` for when it cannot.
   useEffect(() => {
     const pending = state.pending;
-    if (!pending) return;
+    if (!pending || !userId) return;
     const it = state.items[pending.index];
     if (!it) return;
     const ranOut = pending.position === NO_ANSWER;
     // A longer single buzz for the clock: it is the one verdict that arrives
     // without anybody having pressed anything, so it announces itself.
     buzz(ranOut ? 60 : 12);
-    const thinkMs = thinkTime(state, pending, {
-      selfPaced: Boolean(pace[it.item_type]),
-      listenable: playlistFor(it, labels).length > 0,
-    });
-    recordAttempt({
+    const args: AttemptArgs = {
       itemId: it.id,
       chosenIndex: pending.position,
       sessionId,
       elapsedMs: pending.at - state.shownAt,
-      thinkMs,
+      thinkMs: thinkTime(state, pending, {
+        selfPaced: Boolean(pace[it.item_type]),
+        listenable: playlistFor(it, labels).length > 0,
+      }),
       replays: state.replays,
       peeked: state.peeked,
       standsFor: it.stands_for ?? null,
-    })
-      .then((verdict) => {
-        dispatch({ type: "graded", verdict });
-        buzz(verdict.isCorrect ? [0, 18, 60, 18] : 40);
-      })
-      .catch(() => {
-        const option = it.options.find((o) => o.position === pending.position);
-        dispatch({
-          type: "graded",
-          verdict: {
-            isCorrect: !ranOut && pending.position === it.correct_index,
-            chosenRole: ranOut ? "timed_out" : (option?.role ?? ""),
-          },
-        });
-      });
+    };
+    (async () => {
+      // What waited goes first, in the order it was given.
+      applyFlush(await flushAnswers(userId));
+      settle(await sendAnswer(userId, args), it, args);
+    })();
   }, [state.pending]);
 
+  /** "Send again", after an error the database gave rather than a lost line. */
+  async function resend() {
+    if (!sendError || sendError.busy || !userId) return;
+    const { itemId, args } = sendError;
+    setSendError({ ...sendError, busy: true });
+    applyFlush(await flushAnswers(userId));
+    const outcome = await sendAnswer(userId, args);
+    switch (outcome.kind) {
+      case "saved":
+        dispatch({ type: "synced", itemId, verdict: outcome.graded });
+        setSendError(null);
+        return;
+      case "queued":
+        setSendError(null);
+        return;
+      case "failed":
+        setSendError({ itemId, args, ...friendlyError(outcome.error, t), busy: false });
+        return;
+      case "day_over":
+        dispatch({ type: "dropped", itemId });
+        dispatch({ type: "dayOver" });
+        setSendError(null);
+        return;
+      case "unavailable":
+        dispatch({ type: "dropped", itemId });
+        setSendError(null);
+        return;
+    }
+  }
+
   // The end of the set: the result screen, or home when a veto left nothing.
+  // The day's done screen, when the database closed the day before anything
+  // was answered, is drawn below rather than navigated to.
   useEffect(() => {
-    if (!state.done) return;
+    if (!state.done || state.done === "day") return;
     if (state.done === "home") {
       router.replace("/");
       return;
     }
     if (sessionId) void finishSession(sessionId);
-    setSummary({
-      answers: state.answers,
-      startedAt: startedAt.current,
-      finishedAt: Date.now(),
-      levelsBefore: levelsBefore.current,
-    });
-    router.replace("/result");
+    const finishedAt = Date.now();
+    (async () => {
+      // One more try for anything still waiting, so the result lists what the
+      // database has — but not a long one: a connection that is not back in a
+      // few seconds is not worth holding the result for, and the outbox keeps
+      // what it has either way.
+      const flushed = userId ? await flushAnswersWithin(userId, 3000) : null;
+      setSummary({
+        answers: flushed ? settleAnswers(state.answers, flushed) : state.answers,
+        startedAt: startedAt.current,
+        finishedAt,
+        levelsBefore: levelsBefore.current,
+      });
+      router.replace("/result");
+    })();
   }, [state.done]);
 
   const index = state.index;
@@ -375,11 +488,12 @@ export default function Practice() {
   }
   if (!loaded && blocked === null) return <Loading label={t("preparing")} />;
 
-  if (blocked !== null) {
-    // The door, from this side: a deep link or a stale tab past the ceiling.
+  if (blocked !== null || state.done === "day") {
+    // The door, from this side: a deep link or a stale tab past the ceiling —
+    // or the database closing the day under a set that had not started.
     return (
       <View style={styles.page}>
-        <DayDone answered={blocked} streak={0} onHome={() => router.replace("/")} />
+        <DayDone answered={blocked ?? answeredAtLoad.current} streak={0} onHome={() => router.replace("/")} />
       </View>
     );
   }
@@ -762,6 +876,23 @@ export default function Practice() {
               </View>
             </View>
             {!graded.isCorrect && !ranOut ? <RudenessMeter role={role} showLabel={false} /> : null}
+            {/* Not yet in the record. Said on the card, because the verdict above
+                is the phone's reading of the key until the database has it. */}
+            {!graded.saved && sendError?.itemId === item.id ? (
+              <View style={{ gap: space.xs }}>
+                <Text style={[type.small, { color: colors.wrong, fontWeight: "700" }]}>{t("send_failed")}</Text>
+                <Text style={type.small}>{sendError.message}</Text>
+                {sendError.detail ? <Text style={type.mono}>{sendError.detail}</Text> : null}
+                <Button
+                  label={t("send_retry")}
+                  tone="secondary"
+                  disabled={sendError.busy}
+                  onPress={() => void resend()}
+                />
+              </View>
+            ) : !graded.saved ? (
+              <Text style={[type.small, { fontWeight: "700" }]}>{t("unsent_offline")}</Text>
+            ) : null}
             {/* Why this question was here, said once it can no longer be a
                 hint: a 類題 re-tests a trap that caught them before. */}
             {item.stands_for ? (

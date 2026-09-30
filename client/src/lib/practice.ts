@@ -29,8 +29,10 @@ const SETTLE_MS = 350;
 
 export type Stage = "scene" | "listen" | "answer" | "reveal";
 
-/** The database's verdict on an answer, or the display-only fallback. */
-export type Verdict = { isCorrect: boolean; chosenRole: string };
+/** The database's verdict on an answer — or, with `saved` false, the phone's
+ *  reading of the answer key while the answer waits to be sent (see
+ *  src/lib/outbox.ts). That reading is drawn on the card and never written. */
+export type Verdict = { isCorrect: boolean; chosenRole: string; saved: boolean };
 
 /** An answer on its way to the database. */
 export type PendingAnswer = {
@@ -63,8 +65,10 @@ export type PracticeState = {
   /** Help the exam does not give: another listen, the options read. */
   replays: number;
   peeked: boolean;
-  /** Where the set ends up: the result screen, or home when a veto emptied it. */
-  done: "result" | "home" | null;
+  /** Where the set ends up: the result screen, home when a veto emptied it,
+   *  or the day's done screen when the database closed the day before this
+   *  set had an answer to show. */
+  done: "result" | "home" | "day" | null;
 };
 
 export type PracticeAction =
@@ -76,7 +80,15 @@ export type PracticeAction =
   | { type: "toggleOptionsText" }
   | { type: "toggleDetails" }
   | { type: "next"; now: number }
-  | { type: "vetoed"; now: number };
+  | { type: "vetoed"; now: number }
+  /** The database refused the pending answer: the question is out of the bank. */
+  | { type: "unavailable"; now: number }
+  /** The database refused the pending answer: the day's ceiling is reached. */
+  | { type: "dayOver" }
+  /** An answer that waited in the outbox has reached the database. */
+  | { type: "synced"; itemId: string; verdict: { isCorrect: boolean; chosenRole: string } }
+  /** An answer that waited was refused when it was sent: it is not counted. */
+  | { type: "dropped"; itemId: string };
 
 export function initialPractice(now: number): PracticeState {
   return {
@@ -112,6 +124,19 @@ function nextQuestion(state: PracticeState, now: number): PracticeState {
     replays: 0,
     peeked: false,
   };
+}
+
+/** Take the question on screen out of the set — a veto, or a question the
+ *  database says is gone — and start the one after it from its first stage. */
+function removeCurrent(state: PracticeState, now: number): PracticeState {
+  const items = state.items.filter((_, i) => i !== state.index);
+  if (items.length === 0) return { ...state, items, pending: null, done: "home" };
+  if (state.index >= items.length) {
+    return { ...state, items, pending: null, done: state.answers.length > 0 ? "result" : "home" };
+  }
+  // `index` stays put, which is now the question after the removed one — and
+  // every per-question field starts again, the stage included.
+  return { ...nextQuestion(state, now), items };
 }
 
 export function practiceReducer(state: PracticeState, action: PracticeAction): PracticeState {
@@ -164,10 +189,38 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
             chosenIndex: pending.position,
             isCorrect: action.verdict.isCorrect,
             role: action.verdict.chosenRole,
+            saved: action.verdict.saved,
           },
         ],
       };
     }
+
+    case "synced": {
+      // The database's verdict replaces the phone's, on the card if the
+      // question is still on screen and in the list the result is built from.
+      const onScreen = state.items[state.index]?.id === action.itemId && state.graded?.saved === false;
+      return {
+        ...state,
+        answers: settleAnswers(state.answers, { saved: [{ itemId: action.itemId, graded: action.verdict }] }),
+        graded: onScreen ? { ...action.verdict, saved: true } : state.graded,
+      };
+    }
+
+    case "dropped":
+      return { ...state, answers: settleAnswers(state.answers, { dropped: [{ itemId: action.itemId }] }) };
+
+    case "unavailable":
+      // The database would not take the answer because the question has left
+      // the bank since the set was built. Nothing was recorded, so nothing is
+      // counted: it goes the way a veto does.
+      if (!state.pending) return state;
+      return removeCurrent(state, action.now);
+
+    case "dayOver":
+      // The ceiling was reached — on another device, most likely — and the
+      // pending answer was refused. The set stops where it is: the result of
+      // what was answered, or the day's done screen if nothing was.
+      return { ...state, pending: null, done: state.answers.length > 0 ? "result" : "day" };
 
     case "replayed":
       return state.chosen === null ? { ...state, replays: state.replays + 1 } : state;
@@ -189,17 +242,35 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
       if (state.index + 1 >= state.items.length) return { ...state, done: "result" };
       return { ...nextQuestion(state, action.now), index: state.index + 1 };
 
-    case "vetoed": {
+    case "vetoed":
       // Instead of answering, never after: nothing is recorded for a veto.
       if (state.chosen !== null) return state;
-      const items = state.items.filter((_, i) => i !== state.index);
-      if (items.length === 0) return { ...state, items, done: "home" };
-      if (state.index >= items.length) return { ...state, items, done: "result" };
-      // `index` stays put, which is now the question after the vetoed one —
-      // and every per-question field starts again, the stage included.
-      return { ...nextQuestion(state, action.now), items };
-    }
+      return removeCurrent(state, action.now);
   }
+}
+
+/**
+ * The set's answers with an outbox flush's news applied: one that has reached
+ * the database carries the database's verdict, one it refused is no longer
+ * counted. Only unsent answers are touched — a set asks a question once, so the
+ * item is enough to find it. The screen runs this on the way to the result, so
+ * the list handed over is the one the database now agrees with.
+ */
+export function settleAnswers(
+  answers: AnsweredItem[],
+  news: {
+    saved?: { itemId: string; graded: { isCorrect: boolean; chosenRole: string } }[];
+    dropped?: { itemId: string }[];
+  }
+): AnsweredItem[] {
+  const saved = new Map((news.saved ?? []).map((s) => [s.itemId, s.graded]));
+  const dropped = new Set((news.dropped ?? []).map((d) => d.itemId));
+  return answers
+    .filter((a) => !(a.saved === false && dropped.has(a.item.id)))
+    .map((a) => {
+      const graded = a.saved === false ? saved.get(a.item.id) : undefined;
+      return graded ? { ...a, isCorrect: graded.isCorrect, role: graded.chosenRole, saved: true } : a;
+    });
 }
 
 /**

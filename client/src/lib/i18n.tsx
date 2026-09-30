@@ -369,6 +369,13 @@ const S = {
   chart_line: ["折れ線グラフ", "Line chart"],
   chart_unit: ["単位", "unit"],
 
+  // practice and result, once the answer is in: an answer the database has not
+  // got yet (lib/outbox.ts), and the ways out of a failure.
+  unsent_offline: ["未送信：接続が戻ったら送ります", "Not sent yet: it goes when you're back online"],
+  unsent_short: ["未送信", "Not sent"],
+  send_failed: ["答えを記録できませんでした", "Your answer wasn't recorded"],
+  send_retry: ["もう一度送る", "Send again"],
+
   // faces
   mood_happy: ["相手は満足しています", "They're pleased"],
   mood_puzzled: ["相手は首をかしげています", "They're puzzled"],
