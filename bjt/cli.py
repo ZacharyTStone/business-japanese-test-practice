@@ -1106,23 +1106,12 @@ def cmd_synth(args) -> int:
         print(f"Re-making {len(remake)} named clip(s) if this bundle asks for them — "
               "the recording a learner already heard is being replaced.")
 
-    # Only what is still served: a withdrawn question's lines would be paid for
-    # and never heard. A clip it shares with a live item is still made.
-    live = withdrawn.live_bundle(bundle)
-    skipped = len(bundle.get("audio_manifest", [])) - len(live["audio_manifest"])
-    if skipped:
-        print(f"Skipping {skipped} clip(s) only withdrawn items use "
+    run = synth.run(bundle, provider=provider, bucket=bucket, media_dir=args.media_dir,
+                    force=args.force_clips, limit=args.limit, have=have, remake=remake)
+    result, up = run.report, run.uploaded
+    if run.skipped:
+        print(f"Skipping {run.skipped} clip(s) only withdrawn items use "
               f"(batches/{withdrawn.LEDGER_NAME}).")
-
-    result = synth.synthesise_bundle(
-        live,
-        provider=provider,
-        out_dir=args.media_dir,
-        force=args.force_clips,
-        limit=args.limit,
-        have=have,
-        remake=remake,
-    )
 
     print(result.summary())
     for clip_id, error in result.failed:
@@ -1136,23 +1125,13 @@ def cmd_synth(args) -> int:
               "they can never be\n  mistaken for real recordings. Set GEMINI_API_KEY or "
               "OPENAI_API_KEY for\n  real voices; `bjt audition` compares them.")
 
-    if bucket is not None and result.clips:
-        up = synth.upload_clips(result, bucket, args.media_dir, remake=remake)
+    if bucket is not None and up is not None:
         print(f"uploaded {len(up.sent)} clip(s) to the `{bucket.name}` bucket")
         if up.existing:
-            # Live all along, whatever --have said: left as they are, and out
-            # of the SQL, which would otherwise describe tonight's recording.
-            found = {pathlib.Path(p).stem for p in up.existing}
-            print(f"{len(found)} clip(s) were already in the bucket; left alone and "
+            print(f"{len(up.existing)} clip(s) were already in the bucket; left alone and "
                   "counted as live")
-            result.drop(found)
-            result.live.extend(sorted(found))
         for clip_path, why in up.failed:
             print(f"not uploaded: {clip_path}: {why}", file=sys.stderr)
-        if up.failed:
-            # The SQL below must describe the bucket, not this machine.
-            result.drop({pathlib.Path(p).stem for p in up.failed_paths})
-            result.failed.extend((pathlib.Path(p).stem, why) for p, why in up.failed)
 
     if not result.clips and not result.live:
         return 0
@@ -1248,36 +1227,14 @@ def cmd_scenes(args) -> int:
         except KeyError as exc:
             print(exc.args[0], file=sys.stderr)
             return 2
-        if args.generate:
-            unknown = sorted(set(args.generate) - {s.scene_id for s in survey})
-            if unknown:
-                print(f"no such scene(s): {', '.join(unknown)}", file=sys.stderr)
-                return 2
-            wanted = [s for s in survey if s.scene_id in args.generate]
-        else:
-            wanted = list(survey)
-        if not args.force:
-            wanted = [s for s in wanted if not s.has_art]
-        if args.only == "bank":
-            wanted = [s for s in wanted if not s.is_picture]
-        elif args.only == "pictures":
-            wanted = [s for s in wanted if s.is_picture]
-        # A night draws at most so many per-item pictures: each is an image
-        # call and several vision calls per draft, and the tree may hold more
-        # new items than one night should pay for.
-        pictures = [s for s in wanted if s.is_picture][:config.NIGHT_MAX_PICTURES]
-        wanted = [s for s in wanted if not s.is_picture] + pictures
-        # What the bucket remembers being refused, so a scene at its lifetime
-        # allowance is not drawn again; and the ledger grows as tonight refuses.
-        prior: dict[str, int] = {}
-        on_reject = None
-        if bucket.configured:
-            try:
-                prior = bucket.refusals()
-            except RuntimeError as exc:
-                print(f"could not read the refusals ledger: {exc}", file=sys.stderr)
-            if args.upload:
-                on_reject = bucket.record_refusal
+        try:
+            wanted = scene_art.select(survey, args.generate, force=args.force, only=args.only)
+        except ValueError as exc:
+            print(exc, file=sys.stderr)
+            return 2
+        prior, on_reject, warning = scene_art.lifetime_ledger(bucket, record=args.upload)
+        if warning:
+            print(warning, file=sys.stderr)
         if not wanted:
             note = "every scene already has artwork; nothing to draw (--force redraws)"
             print(note)

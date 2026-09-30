@@ -34,7 +34,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .. import config, publish, scene_art
+from .. import config, publish, scene_art, withdrawn
 from ..files import write_atomic
 from . import channel as channel_mod
 from .providers import Provider, direction_for, get_provider
@@ -185,6 +185,64 @@ def synthesise_bundle(
         )
 
     return report
+
+
+@dataclass
+class SynthRun:
+    """One `bjt synth`: what was made, and what the upload did with it."""
+    report: SynthReport
+    #: None when nothing was uploaded (no bucket, or no clips).
+    uploaded: "scene_art.UploadResult | None" = None
+    #: Clips in the bundle's manifest that only withdrawn items use.
+    skipped: int = 0
+
+
+def run(bundle: dict, *, provider: "Provider | str" = "silent",
+        bucket: "scene_art.Bucket | None" = None, media_dir: Path | None = None,
+        force: bool = False, limit: int | None = None,
+        have: set[str] | None = None, remake: set[str] | None = None) -> SynthRun:
+    """A bundle's audio, start to finish: the live items' clips made (none that
+    `have` says are live but the ones `remake` names), uploaded when a bucket
+    is given, and the report left describing the bucket rather than this
+    machine — a clip the bucket already held is live, a clip that did not
+    arrive is a failure, and neither is in the SQL.
+
+    An upload needs `have` (the database's list of live clips, empty on a
+    fresh project) and a real voice: without the one every clip on an empty
+    machine looks new, and the other would put silence where the app shows
+    the text. Both are refused here, whoever the caller is.
+    """
+    if isinstance(provider, str):
+        provider = get_provider(provider)
+    if bucket is not None and have is None:
+        raise ValueError("an upload needs the list of clips already live (`have`); "
+                         "a live clip is never re-made")
+    if bucket is not None and provider.name == "silent":
+        raise ValueError("an upload of the silent provider would ship silence")
+
+    # Only what is still served: a withdrawn question's lines would be paid
+    # for and never heard. A clip it shares with a live item is still made.
+    live = withdrawn.live_bundle(bundle)
+    skipped = len(bundle.get("audio_manifest", [])) - len(live["audio_manifest"])
+    report = synthesise_bundle(live, provider=provider, out_dir=media_dir, force=force,
+                               limit=limit, have=have, remake=remake)
+    out = SynthRun(report=report, skipped=skipped)
+    if bucket is None or not report.clips:
+        return out
+
+    up = upload_clips(report, bucket, media_dir, remake=remake)
+    out.uploaded = up
+    if up.existing:
+        # Live all along, whatever `have` said: left as they are, and out of
+        # the SQL, which would otherwise describe tonight's recording.
+        found = {Path(p).stem for p in up.existing}
+        report.drop(found)
+        report.live.extend(sorted(found))
+    if up.failed:
+        # The SQL must describe the bucket, not this machine.
+        report.drop({Path(p).stem for p in up.failed_paths})
+        report.failed.extend((Path(p).stem, why) for p, why in up.failed)
+    return out
 
 
 def _duration_of(path: Path) -> int:

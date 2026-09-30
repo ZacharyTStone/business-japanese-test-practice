@@ -412,6 +412,60 @@ def draw(
     return DrawResult(drawn=drawn, provider=provider.name)
 
 
+# ----- what a run draws ------------------------------------------------------
+
+
+def select(survey: list[scenes.Scene], names: list[str] | None = None, *,
+           force: bool = False, only: str | None = None,
+           max_pictures: int | None = None) -> list[scenes.Scene]:
+    """The scenes a run draws, in the order it draws them.
+
+    `names` narrows it to those scenes (an unknown one is a ValueError, named);
+    without `force` a scene that has art is left alone; `only` is "bank" or
+    "pictures". The shared bank comes first, then at most `max_pictures`
+    per-item pictures (config.NIGHT_MAX_PICTURES): each is an image call and
+    several vision calls per draft, and the tree may hold more new 画像把握
+    items than one night should pay for.
+    """
+    if names:
+        unknown = sorted(set(names) - {s.scene_id for s in survey})
+        if unknown:
+            raise ValueError(f"no such scene(s): {', '.join(unknown)}")
+        wanted = [s for s in survey if s.scene_id in names]
+    else:
+        wanted = list(survey)
+    if not force:
+        wanted = [s for s in wanted if not s.has_art]
+    if only == "bank":
+        wanted = [s for s in wanted if not s.is_picture]
+    elif only == "pictures":
+        wanted = [s for s in wanted if s.is_picture]
+    cap = config.NIGHT_MAX_PICTURES if max_pictures is None else max_pictures
+    pictures = [s for s in wanted if s.is_picture][:cap]
+    return [s for s in wanted if not s.is_picture] + pictures
+
+
+def lifetime_ledger(bucket: "Bucket", *, record: bool
+                    ) -> tuple[dict[str, int], OnReject | None, str | None]:
+    """What the bucket remembers refusing, so a scene at its lifetime allowance
+    is not drawn again; and, with `record`, the callback that grows the ledger
+    as tonight refuses. Returns (prior refusals, on_reject, a warning or None).
+
+    An unconfigured bucket remembers nothing and records nothing. A ledger
+    that cannot be read is a warning, not a stop: the lifetime cap then does
+    not hold tonight, and the run's own ceilings still do.
+    """
+    if not bucket.configured:
+        return {}, None, None
+    prior: dict[str, int] = {}
+    warning = None
+    try:
+        prior = bucket.refusals()
+    except RuntimeError as exc:
+        warning = f"could not read the refusals ledger: {exc}"
+    return prior, (bucket.record_refusal if record else None), warning
+
+
 # ----- the bucket -----------------------------------------------------------
 
 
