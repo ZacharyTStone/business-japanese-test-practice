@@ -528,6 +528,7 @@ Environment variables (`bjt/config.py`; a root `.env` is loaded).
 | `BJT_DIFFICULTY_MODEL` · `_TRIALS` | proofreader's model · `5` | difficulty probe (`jev-latest` + `TYPESAFE_API_KEY` for Jev) |
 | `BJT_GATE_TRIALS` | `3` | gate tries per view |
 | `BJT_RUN_BUDGET_USD` · `_MAX_CALLS` · `_MAX_MINUTES` | `2` · `500` · `30` | run ceilings |
+| `BJT_SPEND_LEDGER` | unset | a JSON file one job's bjt steps share their spend and clock through |
 | `BJT_MAX_TOKENS_CEILING` · `BJT_EFFORT_CEILING` | `8000` · `high` | per-call caps |
 | `BJT_NIGHT_MAX_BUDGET` · `_PER_SLOT` | `24` · `6` | hard cap on a night's size |
 | `BJT_IMAGE_MODEL` · `_QUALITY` | `gpt-image-1` · `medium` | pictures |
@@ -547,9 +548,9 @@ gracefully without it.
 
 ```
 bjt/
-  cli.py · config.py · llm.py (Claude wrapper + ceilings) · jev.py
+  cli/ (a module per group of commands) · config.py · llm.py (Claude wrapper + ceilings) · jev.py · http.py · files.py
   generators/  one per type        schemas.py  item schemas, exam shares
-  seedtable.py · plan.py · pipeline.py · batch.py · publish.py · withdrawn.py · backfill.py
+  seedtable.py · plan.py · pipeline.py · batch.py · publish.py · withdrawn.py · backfill.py · regate.py
   fidelity/    roles, proofreader, naturalness, gate, difficulty, discriminator, vocab, dedupe
   render/      document templates, charts, numerals
   tts/         audio planning, synthesis, phone channel, voices

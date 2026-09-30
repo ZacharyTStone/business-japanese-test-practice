@@ -20,6 +20,7 @@ supabase/test/run.sh                    # schema + RLS + publish, on a throwaway
 cd client && npm run typecheck          # the app
 cd client && npm test                   # the app's pure parts: the practice reducer, the clock, the roles
 cd client && npm run lint               # the rules of hooks
+mypy bjt                                # types: a None where a value is needed, a list where a bool is
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json   # the reference batch
 ```
 
@@ -56,9 +57,12 @@ accident is not.
   runs by itself, deploys exactly the commit `checks` passed, and publishes the
   items and their audio together; by hand it runs only from `main`.
 - **A run's ceilings are checked before the call, not after.** `bjt/llm.py`
-  prices each response from its reported usage and refuses the next call once
-  the process has spent `BJT_RUN_BUDGET_USD` (default $2), made
-  `BJT_RUN_MAX_CALLS`, or run `BJT_RUN_MAX_MINUTES` (30). No call may ask for
+  prices each response from its reported usage (a timed-out request at its
+  output ceiling, an unknown model at 15/75 per MTok) and refuses the next
+  request once the process — or, with `BJT_SPEND_LEDGER`, the job's bjt steps
+  together — has spent `BJT_RUN_BUDGET_USD` (default $2), sent
+  `BJT_RUN_MAX_CALLS` requests (retries included; the SDK retries nothing
+  itself), or run `BJT_RUN_MAX_MINUTES` (30). No call may ask for
   more than `BJT_MAX_TOKENS_CEILING` output or think above `BJT_EFFORT_CEILING`;
   a night is clamped to `BJT_NIGHT_MAX_BUDGET` / `_PER_SLOT` whatever the
   workflow input says; the job has a clock; the night's files are an artifact
@@ -68,7 +72,8 @@ accident is not.
   is not.
 - **Every run writes reading items.** The first `--reading-min` (1) items go to
   the emptiest reading shelves (no audio or picture needed) before the
-  emptiest-first rule sees the rest. A night is three items, two to a shelf at
+  emptiest-first rule sees the rest; their lines come first in the work order,
+  so a night its ceiling ends early still has them. A night is three items, two to a shelf at
   most (`plan.DEFAULT_BUDGET` / `_PER_SLOT`, and the nightly workflow's own
   defaults, which must agree), sized to how little the app is used. A type in
   `plan.NIGHT_TYPE_CAPS` (画像把握: one) never exceeds its nightly allowance,
@@ -90,7 +95,8 @@ accident is not.
   both the document and the audio" (a narration-only full view selects exactly
   the items the README forbids). Trials stop once the verdict is settled; the
   verdict is by count over the planned trials, so stopping early never changes
-  it.
+  it. A trial the judge did not answer ends the gate as `unchecked`: never
+  kept, and nothing passed to the next draft.
 - **A rejected draft's reason goes to the next draft on that shelf.** The gate,
   the proofreader and the dedupe check each give one sentence and `run_batch`
   passes it on, so a shelf's second and third drafts are not written blind. A
@@ -163,13 +169,16 @@ accident is not.
   `next_items()` hold the item back until `scenes.image_path` is set; every
   other type ships without a picture. A picture refused
   `BJT_SCENE_LIFETIME_ATTEMPTS` times over its life (the bucket's `rejected/`
-  ledger remembers) is given up on: a bank scene then shows its stand-in
+  ledger remembers; a reader that gave no answer is an error, never a refusal,
+  and the job checks the run's ceilings before every image) is given up on: a bank scene then shows its stand-in
   (`scenes.STAND_INS`); a per-item picture's item stays unserved.
 - **The voice is OpenAI, cast by role, and a live clip is never re-made.**
   `bjt/tts/providers.py` records the provider as `DEFAULT` and the seven roles
   as `VOICE_IDS`, and neither follows whichever key is set: a different voice
   every question turns listening into speaker identification. Recast a role
-  before its clips are live or not at all.
+  before its clips are live or not at all. `bjt synth --upload` requires
+  `--have` and never uploads over a file already in the bucket, except the ids
+  `--remake` names; such a file is counted live.
 - **Spoken formulas are spelled one way.** `bjt/phrasebook.py` shows the spoken
   types the stock lines in the wording the library already has a clip for, so
   「少々お待ちください。」 is one file, not five. A nudge, never a quota: a distractor that
