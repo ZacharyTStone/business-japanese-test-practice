@@ -203,7 +203,7 @@ const S = {
   ch_phone: ["電話", "Phone"],
   ch_video: ["オンライン", "Video call"],
   ch_written: ["文書", "Written"],
-  scene_hint_listen: ["準備ができたら、聞いてください。一回だけ流れます。", "When you're ready, listen. It plays once."],
+  scene_hint_listen: ["準備ができたら、聞いてください。自動で一回流れます。", "When you're ready, listen. It plays once by itself."],
   scene_hint_read: ["準備ができたら、問題へ。", "When you're ready, go to the question."],
   btn_listen: ["聞く", "Listen"],
   btn_to_q: ["問題へ", "To the question"],
@@ -377,6 +377,8 @@ const S = {
   send_retry: ["もう一度送る", "Send again"],
   // on the verdict card after a miss: the marked options are above, off screen.
   correct_is: ["正解は {n}", "The answer was {n}"],
+  // while a spoken-option item plays: its numbers can already be pressed.
+  listen_hint_spoken: ["番号を押せば、聞きながら答えられます。", "Press a number to answer while you listen."],
   // audio that would not play: the words go on the page instead.
   audio_failed: ["音声を再生できませんでした。文字で読んでください。", "The audio couldn't be played. The words are on the page instead."],
   dialogue_as_text: ["会話（文字で）", "Conversation (as text)"],

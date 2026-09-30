@@ -850,8 +850,12 @@ export default function Practice() {
         </FadeIn>
       )}
 
+      {/* What happens next, as the screen actually does it: printed options
+          wait for the audio to end, numbered ones can be pressed now. */}
       {stage === "listen" ? (
-        <Text style={[type.small, styles.hint]}>{t("listen_hint")}</Text>
+        <Text style={[type.small, styles.hint]}>
+          {optionTextHidden ? t("listen_hint_spoken") : t("listen_hint")}
+        </Text>
       ) : null}
 
       {optionsShown ? (
