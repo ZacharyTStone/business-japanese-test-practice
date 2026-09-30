@@ -78,7 +78,9 @@ SANITY_ENABLED = _env("BJT_SANITY", "1").strip().lower() not in ("0", "false", "
 # independent of each other, so that a bug in one of them is caught by the
 # others.
 
-# The most one process may spend, measured from the usage every response
+# The most one process may spend — or one job, when BJT_SPEND_LEDGER names
+# the file its steps share (bjt/llm.py `Spend`); the call and minute ceilings
+# below are shared the same way — measured from the usage every response
 # reports and priced with the table in bjt/llm.py. Checked before each call;
 # reached, the run stops with what it has (LLMSpendLimitError, which the
 # nightly loop treats like an empty account). Two dollars is a normal night

@@ -14,10 +14,15 @@ checkbatch) run with neither the package nor an API key present.
 """
 from __future__ import annotations
 
+import atexit
 import json
+import math
+import os
 import random
+import tempfile
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Optional
 
@@ -131,6 +136,19 @@ class Spend:
     `attempts` is every request sent, counted before it is sent — a retry, a
     request that timed out, one that failed — and it is what the call ceiling
     holds; `calls` is every response priced.
+
+    **One job, one budget.** The nightly job runs `bjt nightly` and then `bjt
+    scenes` as two processes, and each used to start with a fresh allowance
+    and a fresh clock: two fifty-cent ceilings and two half-hours for one
+    fifty-cent night. With `BJT_SPEND_LEDGER` naming a file, the process
+    starts from what the file says was spent (dollars, calls, requests) and
+    when (the clock's start), and writes its totals back after every request
+    and every priced response and when it exits — atomically, so the next
+    step never reads half a file. Everything that spends reads this one
+    object (`llm.spend`): the Anthropic calls, Jev, and the picture job's
+    image requests, so they share it too. A file that cannot be read is not
+    an empty ledger: nothing is spent until it is fixed. Unset, a process has
+    its own ceilings, as it always had.
     """
     calls: int = 0
     attempts: int = 0
@@ -141,11 +159,64 @@ class Spend:
     usd: float = 0.0
     usd_by_model: dict[str, float] = field(default_factory=dict)
     calls_by_model: dict[str, int] = field(default_factory=dict)
-    started: float = field(default_factory=time.monotonic)
+    #: When the run's clock started, in epoch seconds: this process's start,
+    #: or the first step of the job's when a ledger carries it.
+    started: float = field(default_factory=time.time)
+    #: The shared ledger file, or None for a process on its own.
+    ledger: Optional[Path] = None
+    #: What earlier steps of the job had spent when this one started.
+    carried_usd: float = 0.0
+    carried_calls: int = 0
+    #: Why the ledger could not be read, when it could not. Checked before
+    #: every request: an unreadable ledger spends nothing.
+    ledger_error: Optional[str] = None
+
+    @classmethod
+    def from_environment(cls) -> "Spend":
+        """The process's ledger: shared through `BJT_SPEND_LEDGER` when set."""
+        raw = os.environ.get(LEDGER_ENV, "").strip()
+        out = cls(ledger=Path(raw) if raw else None)
+        out.load()
+        return out
+
+    def load(self) -> None:
+        """Start from the shared ledger, if there is one and it exists."""
+        if self.ledger is None or not self.ledger.exists():
+            return
+        try:
+            data = json.loads(self.ledger.read_text(encoding="utf-8"))
+            usd, calls = float(data["usd"]), int(data["calls"])
+            attempts, started = int(data["attempts"]), float(data["started_at"])
+            if not all(math.isfinite(x) and x >= 0 for x in (usd, calls, attempts, started)):
+                raise ValueError("a negative or non-finite number")
+        except (OSError, ValueError, TypeError, KeyError) as e:
+            self.ledger_error = f"the spend ledger {self.ledger} cannot be read ({e!r})"
+            return
+        self.usd += usd
+        self.calls += calls
+        self.attempts += attempts
+        self.started = min(self.started, started)
+        self.carried_usd, self.carried_calls = usd, calls
+
+    def save(self) -> None:
+        """Write the totals to the shared ledger, whole or not at all."""
+        if self.ledger is None or self.ledger_error is not None:
+            return
+        body = json.dumps({"usd": self.usd, "calls": self.calls,
+                           "attempts": self.attempts, "started_at": self.started})
+        self.ledger.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix=self.ledger.name + ".", dir=self.ledger.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(body + "\n")
+            os.replace(tmp, self.ledger)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
 
     @property
     def minutes(self) -> float:
-        return (time.monotonic() - self.started) / 60
+        return (time.time() - self.started) / 60
 
     def add(self, model: str, usage: Any) -> float:
         cost = price_usd(model, usage)
@@ -158,6 +229,7 @@ class Spend:
         self.usd += cost
         self.usd_by_model[model] = self.usd_by_model.get(model, 0.0) + cost
         self.calls_by_model[model] = self.calls_by_model.get(model, 0) + 1
+        self.save()
         return cost
 
     def begin_request(self) -> None:
@@ -166,9 +238,14 @@ class Spend:
         ceiling counts what was asked for, not what came back."""
         self.check_ceilings()
         self.attempts += 1
+        self.save()
 
     def check_ceilings(self) -> None:
         """Raise if the next call would be one too many. Called before it."""
+        if self.ledger_error is not None:
+            raise LLMSpendLimitError(
+                f"{self.ledger_error}; nothing is spent without knowing what was "
+                f"spent ({LEDGER_ENV})")
         if self.attempts >= config.RUN_MAX_CALLS:
             raise LLMSpendLimitError(
                 f"call ceiling reached: {self.attempts} requests this run "
@@ -194,13 +271,26 @@ class Spend:
             f"{self.cache_write_tokens:,} cache-write, {self.cache_read_tokens:,} "
             f"cache-read, {self.output_tokens:,} output token(s).",
         ]
+        if self.carried_calls or self.carried_usd:
+            lines.append(f"- earlier steps of this job ({LEDGER_ENV}): "
+                         f"${self.carried_usd:.2f} in {self.carried_calls} call(s)")
         for model in sorted(self.usd_by_model, key=self.usd_by_model.get, reverse=True):
             lines.append(f"- {model}: ${self.usd_by_model[model]:.2f} "
                          f"in {self.calls_by_model[model]} call(s)")
         return "\n".join(lines)
 
 
-spend = Spend()
+#: Names the JSON file one job's processes share their spend through.
+LEDGER_ENV = "BJT_SPEND_LEDGER"
+
+spend = Spend.from_environment()
+
+
+@atexit.register
+def _save_on_exit() -> None:
+    # Whatever `spend` is by then; a process that made no request still
+    # passes on when the job's clock started.
+    spend.save()
 
 
 _EFFORTS = ("low", "medium", "high", "xhigh", "max")

@@ -41,6 +41,10 @@ def no_network(request, monkeypatch):
     for name in list(os.environ):
         if name.startswith(_LIVE_ENV_PREFIXES) or name in _LIVE_ENV_NAMES:
             monkeypatch.delenv(name, raising=False)
+    # A bill of its own for every test, and never a shared ledger file: the
+    # process's `llm.spend` was made at import, before the environment above
+    # was cleaned, and a test must not add to (or be stopped by) a real job's.
+    monkeypatch.setattr(llm, "spend", llm.Spend())
     if request.node.get_closest_marker("unmocked_seams"):
         return
 
