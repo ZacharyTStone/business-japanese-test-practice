@@ -1,5 +1,10 @@
 /**
  * The handful of pieces every screen uses.
+ *
+ * The larger pieces live beside this file — the two typed fields
+ * (fields.tsx), the ring and the bar (progress.tsx), the ad seam (ad.tsx) —
+ * and are re-exported from here, so a screen imports every piece from one
+ * place and none of them has to know which file a piece is in.
  */
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -10,7 +15,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
   type StyleProp,
   type ViewProps,
@@ -19,11 +23,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
-import { isIsoDate } from "../lib/exam";
+import { friendlyError } from "../lib/errors";
+import { useLang } from "../lib/i18n";
 import { Icon, type IconName } from "./icons";
-import { usePressScale, useReducedMotion, useTween } from "./motion";
+import { usePressScale, useReducedMotion } from "./motion";
 import { badge, card, colors, motion, radius, shadow, space, tabular, type } from "./theme";
 import type { BadgeTone } from "./theme";
+
+export { AdSlot } from "./ad";
+export { DateField, NumberField } from "./fields";
+export { ProgressBar, ProgressRing } from "./progress";
 
 /** Anything else a View takes comes through — the accessibility props in
  *  particular, so a card that appears in response to an answer can announce
@@ -87,7 +96,9 @@ export function Button({
 }: {
   label: string;
   onPress: () => void;
-  tone?: "primary" | "secondary" | "onAccent";
+  /** `danger` is for the one press that cannot be undone — erasing the
+   *  record — and only once it has been asked for: white on `wrong`. */
+  tone?: "primary" | "secondary" | "onAccent" | "danger";
   disabled?: boolean;
   sub?: string;
   icon?: IconName;
@@ -99,7 +110,7 @@ export function Button({
   // the two indistinguishable.
   const labelColor = disabled
     ? colors.muted
-    : tone === "primary"
+    : tone === "primary" || tone === "danger"
       ? colors.onAccent
       : tone === "onAccent"
         ? colors.accentDeep
@@ -108,7 +119,9 @@ export function Button({
     ? colors.muted
     : tone === "primary"
       ? colors.onAccentMuted
-      : colors.muted;
+      : tone === "danger"
+        ? colors.onAccent
+        : colors.muted;
   // The face of the button scales under the finger; the Pressable around it
   // is the hit area and does not move, so a press that started on the edge
   // is still on the button when it lifts.
@@ -131,6 +144,7 @@ export function Button({
             tone === "primary" && styles.buttonPrimary,
             tone === "secondary" && styles.buttonSecondary,
             tone === "onAccent" && styles.buttonOnAccent,
+            tone === "danger" && styles.buttonDanger,
             // Last of the fills, so it replaces the tone's rather than sitting
             // over it at half strength.
             disabled && styles.buttonOff,
@@ -190,11 +204,16 @@ export function Loading({ label }: { label?: string }) {
 export function Notice({
   title,
   body,
+  detail,
   tone = "info",
   action,
 }: {
   title: string;
   body: string;
+  /** The technical account of a failure, in small print under the sentence a
+   *  learner can act on: not for them, but for whoever they send a screenshot
+   *  to. Empty or absent draws nothing. */
+  detail?: string;
   tone?: "info" | "warn";
   action?: { label: string; onPress: () => void };
 }) {
@@ -207,13 +226,67 @@ export function Notice({
         </View>
         <Text style={[type.h2, { flex: 1 }]}>{title}</Text>
       </View>
-      <Text style={[type.small, { marginTop: space.sm }]}>{body}</Text>
+      {body ? <Text style={[type.small, { marginTop: space.sm }]}>{body}</Text> : null}
+      {detail ? (
+        <Text style={[type.mono, { marginTop: space.xs }]} selectable>
+          {detail}
+        </Text>
+      ) : null}
       {action ? (
         <View style={{ marginTop: space.lg }}>
           <Button label={action.label} tone="secondary" onPress={action.onPress} />
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * A screen whose data did not arrive. The sentence is one a learner can act on
+ * — offline, signed out, or "try again in a moment" — in their language, with
+ * the technical text in small print under it rather than instead of it, and
+ * the way to try again: a load error with no retry is a dead end.
+ */
+export function LoadFailed({
+  error,
+  onRetry,
+  title,
+}: {
+  error: unknown;
+  onRetry: () => void;
+  /** Defaults to 「読み込めません」. */
+  title?: string;
+}) {
+  const { t } = useLang();
+  const { message, detail } = friendlyError(error, t);
+  return (
+    <Notice
+      title={title ?? t("cant_load")}
+      body={message}
+      detail={detail}
+      tone="warn"
+      action={{ label: t("retry"), onPress: onRetry }}
+    />
+  );
+}
+
+/**
+ * A failure said where it happened: inside the card whose control failed,
+ * rather than at the foot of the page where nobody connects it to the press
+ * that caused it. The sentence a learner can act on, and small print under it.
+ */
+export function InlineError({ error }: { error: unknown }) {
+  const { t } = useLang();
+  const { message, detail } = friendlyError(error, t);
+  return (
+    <View style={{ gap: 2 }} accessibilityLiveRegion="polite">
+      <Text style={[type.small, { color: colors.wrong }]}>{message}</Text>
+      {detail ? (
+        <Text style={type.mono} selectable>
+          {detail}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -239,129 +312,6 @@ export function IconBadge({ name, tone, size = 34 }: { name: IconName; tone: Bad
       ]}
     >
       <Icon name={name} size={size * 0.55} color={badge[tone].fg} strokeWidth={2} />
-    </View>
-  );
-}
-
-/**
- * A ring, for a fraction of something finite — today's goal, a run of answers.
- *
- * Never an accuracy or a level. A ring reads as "how far along", and accuracy is
- * not a journey to the edge of a circle.
- */
-export function ProgressRing({
-  value,
-  size = 84,
-  stroke = 9,
-  color = colors.onAccent,
-  track = "rgba(255,255,255,0.28)",
-  label,
-  caption,
-  labelColor = colors.onAccent,
-  captionColor = colors.onAccentMuted,
-  accessibilityLabel,
-}: {
-  value: number;
-  size?: number;
-  stroke?: number;
-  color?: string;
-  track?: string;
-  label: string;
-  caption?: string;
-  labelColor?: string;
-  /** The caption is the quiet half of the ring: the same token as every other
-   *  quiet line on an accent fill, rather than the label faded, so a contrast
-   *  check can see it and it moves when that one does. */
-  captionColor?: string;
-  /** What the ring means in words. Without it a screen reader reads "3 / 5" and
-   *  "today" as two loose fragments with a circle between them. */
-  accessibilityLabel?: string;
-}) {
-  const clamped = Math.max(0, Math.min(1, value));
-  // The arc is drawn to where the number is on its way to, from empty on the
-  // first frame: a ring that fills is read as "this much", a ring that is
-  // simply full when the screen appears is read as decoration. The
-  // accessibility value is the destination, not the frame.
-  const drawn = useTween(clamped, { from: 0 });
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  return (
-    <View
-      style={{ width: size, height: size }}
-      accessible
-      accessibilityRole="progressbar"
-      accessibilityLabel={accessibilityLabel ?? (caption ? `${caption} ${label}` : label)}
-      accessibilityValue={{ now: Math.round(clamped * 100), min: 0, max: 100 }}
-    >
-      <Svg width={size} height={size}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={stroke} fill="none" />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={circumference * (1 - drawn)}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <View style={[StyleSheet.absoluteFill, styles.ringCenter]}>
-        <Text style={[styles.ringLabel, { color: labelColor }]}>{label}</Text>
-        {caption ? (
-          <Text style={[styles.ringCaption, { color: captionColor }]}>{caption}</Text>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-/**
- * A bar, for the same kind of thing as the ring: a fraction of something
- * finite, or an accuracy laid beside others of its kind so the lengths can be
- * compared. The fill moves to its value rather than jumping, and moves again
- * when the value does — on the practice screen that is one question's width
- * every answer, which is the whole of what the bar has to say.
- */
-export function ProgressBar({
-  value,
-  height = 8,
-  color = colors.accent,
-  track = colors.border,
-  style,
-}: {
-  value: number;
-  height?: number;
-  color?: string;
-  track?: string;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const reduced = useReducedMotion();
-  const clamped = Math.max(0, Math.min(1, value));
-  const width = useRef(new Animated.Value(clamped)).current;
-  useEffect(() => {
-    const anim = Animated.timing(width, {
-      toValue: clamped,
-      duration: reduced ? 0 : motion.fill,
-      easing: Easing.out(Easing.cubic),
-      // Width is layout, which no native driver animates.
-      useNativeDriver: false,
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [clamped, reduced, width]);
-  return (
-    <View style={[styles.track, { height, borderRadius: height / 2, backgroundColor: track }, style]}>
-      <Animated.View
-        style={{
-          height,
-          borderRadius: height / 2,
-          backgroundColor: color,
-          width: width.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
-        }}
-      />
     </View>
   );
 }
@@ -397,10 +347,20 @@ export function ScreenHeader({
  * empty shelf. It exists so those branches keep the safe-area padding that the
  * scrolling version of the same screen gets from its header.
  */
-export function ScreenMessage({ children }: { children: React.ReactNode }) {
+export function ScreenMessage({
+  children,
+  underHeader = false,
+}: {
+  children: React.ReactNode;
+  /** On a stack screen the header already clears the status bar, so the
+   *  message starts a gutter below it rather than a status bar further down. */
+  underHeader?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.screenMessage, { paddingTop: insets.top + space.xl }]}>{children}</View>
+    <View style={[styles.screenMessage, { paddingTop: underHeader ? space.lg : insets.top + space.xl }]}>
+      {children}
+    </View>
   );
 }
 
@@ -445,205 +405,6 @@ export function Chip({
   );
 }
 
-/**
- * A date somebody actually picks.
- *
- * The exam is on a published day; rounding it to a month would make the
- * countdown that hangs off it wrong by up to a fortnight, which is the
- * difference between two more weekends of revision and none.
- *
- * On the web this is the browser's own date control, because that is the best
- * picker already on the device and it costs nothing to use. Everywhere else it
- * is a plain YYYY-MM-DD field: a wheel picker means a native module, and one
- * date on one screen does not earn a dependency. Either way the value is only
- * handed up once it is a real day, so a half-typed date never reaches the
- * profile.
- */
-export function DateField({
-  value,
-  onChange,
-  placeholder,
-  min,
-  accessibilityLabel,
-}: {
-  value: string | null;
-  onChange: (date: string | null) => void;
-  placeholder: string;
-  /** The earliest day worth offering, as YYYY-MM-DD. */
-  min?: string;
-  accessibilityLabel: string;
-}) {
-  const [text, setText] = React.useState(value ?? "");
-  // Follows the profile when it is loaded or cleared from elsewhere on the
-  // screen, without fighting what is being typed here.
-  React.useEffect(() => setText(value ?? ""), [value]);
-
-  function commit(next: string) {
-    setText(next);
-    if (next === "") {
-      if (value !== null) onChange(null);
-      return;
-    }
-    if (isIsoDate(next) && next !== value) onChange(next);
-  }
-
-  if (Platform.OS === "web") {
-    return (
-      <input
-        type="date"
-        value={text}
-        min={min}
-        aria-label={accessibilityLabel}
-        onChange={(e) => commit(e.target.value)}
-        style={{
-          fontFamily: "inherit",
-          fontSize: 16,
-          color: colors.text,
-          backgroundColor: colors.surfaceAlt,
-          border: `1px solid ${colors.border}`,
-          borderRadius: radius.md,
-          padding: `${space.md}px ${space.lg}px`,
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      />
-    );
-  }
-
-  return (
-    <TextInput
-      value={text}
-      onChangeText={commit}
-      placeholder={placeholder}
-      placeholderTextColor={colors.muted}
-      accessibilityLabel={accessibilityLabel}
-      autoCapitalize="none"
-      autoCorrect={false}
-      inputMode="numeric"
-      maxLength={10}
-      style={styles.dateInput}
-    />
-  );
-}
-
-/**
- * A whole number somebody types, between two bounds.
- *
- * The same shape as DateField and for the same reason: on the web this is the
- * browser's own number control, because it is the best one already on the
- * device, and everywhere else a plain numeric field. The value is handed up
- * only when editing ends — the field loses focus, or Enter is pressed — and
- * only if it is a whole number inside the bounds. Saving on every keystroke
- * would store each step on the way — typing "15" saves 1 and then 15, and two
- * writes can land in either order — and some browsers step a focused number
- * box with the mouse wheel. A field left empty or out of range falls back to
- * the last good value instead of saving something nobody meant.
- *
- * There is exactly one of these in the app, on the account screen, and only
- * for an account the database says may size its own day. It is not a difficulty
- * or a level or a type: it is how long a sitting is.
- */
-export function NumberField({
-  value,
-  onChange,
-  min,
-  max,
-  accessibilityLabel,
-}: {
-  value: number;
-  onChange: (n: number) => void;
-  min: number;
-  max: number;
-  accessibilityLabel: string;
-}) {
-  const [text, setText] = useState(String(value));
-  // Follows the profile when it is loaded or changed from elsewhere, without
-  // fighting what is being typed here.
-  useEffect(() => setText(String(value)), [value]);
-
-  function parse(next: string): number | null {
-    if (!/^\d+$/.test(next)) return null;
-    const n = Number(next);
-    return n >= min && n <= max ? n : null;
-  }
-
-  /** Editing is over: save a usable number, or put back what is saved. */
-  function settle() {
-    const n = parse(text);
-    if (n === null) setText(String(value));
-    else if (n !== value) onChange(n);
-  }
-
-  if (Platform.OS === "web") {
-    return (
-      <input
-        type="number"
-        value={text}
-        min={min}
-        max={max}
-        step={1}
-        aria-label={accessibilityLabel}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={settle}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
-        }}
-        // Some browsers step a focused number box with the wheel; let it
-        // scroll the page instead.
-        onWheel={(e) => e.currentTarget.blur()}
-        style={{
-          fontFamily: "inherit",
-          fontSize: 16,
-          color: colors.text,
-          backgroundColor: colors.surfaceAlt,
-          border: `1px solid ${colors.border}`,
-          borderRadius: radius.md,
-          padding: `${space.md}px ${space.lg}px`,
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      />
-    );
-  }
-
-  return (
-    <TextInput
-      value={text}
-      onChangeText={setText}
-      onBlur={settle}
-      onSubmitEditing={settle}
-      accessibilityLabel={accessibilityLabel}
-      inputMode="numeric"
-      keyboardType="number-pad"
-      maxLength={5}
-      style={styles.dateInput}
-    />
-  );
-}
-
-/**
- * Where an ad may go — and, more importantly, where one may not.
- *
- * The placement type has exactly two members, so putting an ad on the practice
- * screen is a type error rather than a judgement call somebody makes later under
- * deadline. Listening practice is never interrupted: an ad between the narration
- * and the options would not just be annoying, it would make the question harder
- * in a way the exam never does.
- *
- * Nothing renders yet — no ad SDK is wired up, and the free tier is meant to be
- * genuinely complete. This is the seam, kept honest by the type.
- */
-type AdPlacement = "session_result" | "list_screen";
-
-export function AdSlot({ placement, enabled }: { placement: AdPlacement; enabled: boolean }) {
-  if (!enabled || !__DEV__) return null;
-  return (
-    <View style={styles.adSlot}>
-      <Text style={type.mono}>ad slot · {placement}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   gradientCard: {
     borderRadius: radius.xl,
@@ -671,6 +432,7 @@ const styles = StyleSheet.create({
   buttonPrimaryHover: { backgroundColor: colors.accentInk, ...shadow.cardRaised },
   buttonSecondary: { backgroundColor: colors.accentSoft },
   buttonOnAccent: { backgroundColor: colors.onAccent },
+  buttonDanger: { backgroundColor: colors.wrong },
   // A pointer over a light button: a shade deeper, not a shadow — the light
   // ones sit flat on purpose, and lifting them would rank them with the
   // primary.
@@ -679,7 +441,7 @@ const styles = StyleSheet.create({
   buttonSub: { fontSize: 12, ...tabular },
   pressed: { opacity: 0.85 },
   // Off, not faded: a flat surface inside a hairline, with no shadow to lift
-  // it. `muted` on `surfaceAlt` is 4.84:1, so the label is still a label —
+  // it. `muted` on `surfaceAlt` is 5.7:1, so the label is still a label —
   // which is the half that dimming to 45% gives up.
   buttonOff: {
     backgroundColor: colors.surfaceAlt,
@@ -704,10 +466,6 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs,
   },
   iconBadge: { alignItems: "center", justifyContent: "center" },
-  ringCenter: { alignItems: "center", justifyContent: "center" },
-  ringLabel: { fontSize: 20, fontWeight: "700", ...tabular },
-  ringCaption: { fontSize: 11, fontWeight: "600" },
-  track: { overflow: "hidden" },
   // No horizontal padding: the screen owns its gutter, and a header that added
   // its own would sit a notch further in than the cards under it.
   header: { flexDirection: "row", alignItems: "center", gap: space.md, paddingBottom: space.xs },
@@ -727,24 +485,6 @@ const styles = StyleSheet.create({
   chipOff: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, shadowOpacity: 0, elevation: 0 },
   chipTextOff: { color: colors.muted },
   chipHover: shadow.cardRaised,
-  dateInput: {
-    fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingVertical: space.md,
-    paddingHorizontal: space.lg,
-  },
   chipText: { fontSize: 14, fontWeight: "700", color: colors.text },
   chipTextOn: { color: colors.onAccent },
-  adSlot: {
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingVertical: space.lg,
-    alignItems: "center",
-  },
 });

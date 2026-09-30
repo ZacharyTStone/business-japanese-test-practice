@@ -14,6 +14,7 @@ import {
   fold,
   furigana,
   linesOf,
+  makeAnnotator,
   sentenceWith,
 } from "./words";
 
@@ -83,6 +84,30 @@ describe("annotate", () => {
     expect(annotate("会って話す。", meet).filter((s) => s.ruby)).toEqual([{ text: "会", ruby: "あ" }]);
     expect(annotate("会議の会の話。", meet).filter((s) => s.ruby)).toEqual([]);
     expect(sentenceWith("会議です。明日伺っております。", "伺う")).toBe("明日伺っております。");
+  });
+
+  it("reads the longest word that starts at a place, not the first one noted", () => {
+    const both = [
+      { term: "引き継ぎ", reading: "ひきつぎ", meaning: "handover" },
+      { term: "引き継ぎ書", reading: "ひきつぎしょ", meaning: "handover note" },
+    ];
+    expect(annotate("引き継ぎ書を送ります。", both).filter((s) => s.ruby)).toEqual([
+      { text: "引", ruby: "ひ" },
+      { text: "継", ruby: "つ" },
+      { text: "書", ruby: "しょ" },
+    ]);
+    expect(annotate("引き継ぎの件です。", both).filter((s) => s.ruby)).toEqual([
+      { text: "引", ruby: "ひ" },
+      { text: "継", ruby: "つ" },
+    ]);
+  });
+
+  it("gives the same answer from a kept annotator, and remembers a sentence", () => {
+    const annotator = makeAnnotator(notes);
+    const sentences = ["事前にすり合わせてまいりました。", "引き継ぎの件です。", "よろしくお願いします。"];
+    for (const s of sentences) expect(annotator(s)).toEqual(annotate(s, notes));
+    // The list redraws on every keystroke; the second ask is a lookup.
+    expect(annotator(sentences[0])).toBe(annotator(sentences[0]));
   });
 
   it("drops a note's 〜 when looking for it", () => {

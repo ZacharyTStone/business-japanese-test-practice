@@ -41,8 +41,9 @@ type RoleInfo = {
   manner: boolean;
   /** One line of advice, shown under the meter. */
   advice: string;
-  /** The one sentence said first after a wrong answer. 「相手」 / "them" is
-   *  replaced with who they were talking to, when the item says. */
+  /** The one sentence said first after a wrong answer. In Japanese 「相手」 is
+   *  replaced with who they were talking to, when the item says; see
+   *  `verdictFor` for English. */
   verdict: string;
 };
 
@@ -417,7 +418,7 @@ const ROLES: Record<DistractorRole | RecordedRole, Entry> = {
     en: {
       label: "Too casual",
       advice: "The content is right. Only the register needs raising to match the distance.",
-      verdict: "Too casual for 相手",
+      verdict: "Too casual for them",
     },
   },
   wrong_uchi_soto: {
@@ -431,7 +432,7 @@ const ROLES: Record<DistractorRole | RecordedRole, Entry> = {
     en: {
       label: "In-group / out-group mix-up",
       advice: "To an outsider, your own company's people get plain names and humble forms.",
-      verdict: "You elevated your own side in front of 相手",
+      verdict: "You elevated your own side in front of them",
     },
   },
   wrong_honorific_direction: {
@@ -515,7 +516,7 @@ const ROLES: Record<DistractorRole | RecordedRole, Entry> = {
     en: {
       label: "Didn't answer the question",
       advice: "Polite, but it doesn't give them what they asked for.",
-      verdict: "It didn't answer what 相手 wanted to know",
+      verdict: "It didn't answer what they wanted to know",
     },
   },
 
@@ -577,7 +578,7 @@ const ROLES: Record<DistractorRole | RecordedRole, Entry> = {
     en: {
       label: "Talks down to them",
       advice: "Grammatical, but it places them beneath you.",
-      verdict: "It talked down to 相手",
+      verdict: "It talked down to them",
     },
   },
   correct_keigo_wrong_speech_act: {
@@ -609,14 +610,26 @@ export function roleInfo(role: string | null | undefined, lang: Lang = "ja"): Ro
   };
 }
 
-/** The sentence said first. 「上司には、くだけすぎでした」 — who, and what. */
+/**
+ * The sentence said first. 「上司には、くだけすぎでした」 — who, and what.
+ *
+ * The listener is the item's own role name, and it is Japanese (「取引先の担当者」).
+ * Spliced into an English sentence it would read "Too casual for 取引先の担当者",
+ * and English needs "they" in one place and "them" in another besides. So the
+ * English sentences say "them" / "they" as written, and the listener follows
+ * in brackets — only for a role whose sentence is about who the words landed
+ * on, which is the ones whose Japanese names 相手.
+ */
 export function verdictFor(
   role: string | null | undefined,
   listener: string | null | undefined,
   lang: Lang = "ja"
 ): string {
-  const who = listener?.trim() || (lang === "ja" ? "相手" : "them");
-  return roleInfo(role, lang).verdict.split("相手").join(who);
+  const who = listener?.trim();
+  const ja = roleInfo(role, "ja").verdict;
+  if (lang === "ja") return ja.split("相手").join(who || "相手");
+  const en = roleInfo(role, "en").verdict;
+  return who && ja.includes("相手") ? `${en} (${who})` : en;
 }
 
 /** The headline for a whole session: the trap that caught them most. */

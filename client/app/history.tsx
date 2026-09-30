@@ -28,20 +28,37 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useAuth } from "../src/lib/auth";
 import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { HistoryEntry, ReviewDetail } from "../src/lib/types";
 import { MiniPlay, Transcript } from "../src/ui/audio";
-import { Button, Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
+import { ScreenGate } from "../src/ui/screen";
+import { ScreenCrash } from "../src/ui/crash";
 import { DocumentView } from "../src/ui/document";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
 const NUMBERS = ["1", "2", "3", "4"];
 
-export default function History() {
+/** A throw while drawing stays on this screen (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
+
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function HistoryScreen() {
+  return (
+    <ScreenGate underHeader>
+      <History />
+    </ScreenGate>
+  );
+}
+
+function History() {
+  // The list runs to the bottom of the screen, where the home indicator is.
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   // The result screen replaces itself with this one, which leaves nothing
   // underneath to go back to. Every way out goes through this, so none of
@@ -51,7 +68,8 @@ export default function History() {
   const { lang, t } = useLang();
   const { item: onlyItem } = useLocalSearchParams<{ item?: string }>();
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [reloads, setReloads] = useState(0);
   const [wrongOnly, setWrongOnly] = useState(!onlyItem);
   const [open, setOpen] = useState<string | null>(null);
   /** The rest of each question opened so far, by item: loaded on first
@@ -61,7 +79,6 @@ export default function History() {
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isConfigured) return;
     let cancelled = false;
     setEntries(null);
     fetchHistory(50, onlyItem || undefined)
@@ -77,11 +94,14 @@ export default function History() {
           toggle(rows[0]);
         }
       })
-      .catch((e) => !cancelled && setError(errorText(e)));
+      .catch((e) => !cancelled && setError(e ?? "error"));
     return () => {
       cancelled = true;
     };
-  }, [onlyItem]);
+    // Not `toggle`: it is remade every render, and this opens the one entry
+    // once, on arrival — not again whenever the screen redraws.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlyItem, reloads]);
 
   const shown = useMemo(
     () => (entries ?? []).filter((e) => !wrongOnly || !e.is_correct),
@@ -101,21 +121,16 @@ export default function History() {
       .catch(() => setDetails((d) => ({ ...d, [entry.item_id]: "error" })));
   }
 
-  if (!isConfigured) {
+  if (error != null) {
+    // The way back is the header's; this is the way forward.
     return (
       <View style={styles.page}>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </View>
-    );
-  }
-  if (error) {
-    return (
-      <View style={styles.page}>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{ label: t("back"), onPress: leave }}
+        <LoadFailed
+          error={error}
+          onRetry={() => {
+            setError(null);
+            setReloads((n) => n + 1);
+          }}
         />
       </View>
     );
@@ -137,7 +152,7 @@ export default function History() {
   const wrong = entries.filter((e) => !e.is_correct).length;
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}>
       <Card style={{ gap: space.sm }}>
         <Text style={type.small}>{t("hist_recent", { n: entries.length })}</Text>
         <Text style={type.h2}>{t("hist_wrong_n", { n: wrong })}</Text>
@@ -301,6 +316,7 @@ function NoteEditor({
   onSaved: (text: string) => void;
 }) {
   const { t } = useLang();
+  const { session } = useAuth();
   const [text, setText] = useState(saved);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   useEffect(() => setText(saved), [saved]);
@@ -327,8 +343,13 @@ function NoteEditor({
             selected={false}
             onPress={() => {
               if (state === "saving" || !dirty) return;
+              const userId = session?.user.id;
+              if (!userId) {
+                setState("failed");
+                return;
+              }
               setState("saving");
-              saveNote(itemId, text)
+              saveNote(userId, itemId, text)
                 .then(() => {
                   onSaved(text.trim());
                   setState("saved");
@@ -345,10 +366,10 @@ function NoteEditor({
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  page: { padding: space.lg, gap: space.md },
   note: {
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+    borderColor: colors.inputBorder,
     borderWidth: 1,
     borderRadius: radius.md,
     paddingHorizontal: space.md,

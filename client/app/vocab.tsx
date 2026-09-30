@@ -16,25 +16,42 @@
  * Still a record, not a drill. Nothing here decides what is served next — that
  * is next_items() and nothing else — and there is nothing to choose about the
  * questions: it is the same kind of screen as 解いた問題, reached from the same
- * place.
+ * place. Its title is the button's words, 「まちがえた問題のことば」, so the
+ * button and the screen it opens say the same thing beside 「ことば一覧」.
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchTermSentence, fetchVocab } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { TermSentence, VocabEntry } from "../src/lib/types";
 import { MiniPlay } from "../src/ui/audio";
-import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
+import { ScreenGate } from "../src/ui/screen";
+import { ScreenCrash } from "../src/ui/crash";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
-export default function Vocab() {
+/** A throw while drawing stays on this screen (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
+
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function VocabScreen() {
+  return (
+    <ScreenGate underHeader>
+      <Vocab />
+    </ScreenGate>
+  );
+}
+
+function Vocab() {
+  // The list runs to the bottom of the screen, where the home indicator is.
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useLang();
   const [entries, setEntries] = useState<VocabEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [reloads, setReloads] = useState(0);
   /** Readings and meanings hidden until a word is opened: checking yourself. */
   const [hidden, setHidden] = useState(false);
@@ -43,11 +60,10 @@ export default function Vocab() {
   const [sentences, setSentences] = useState<Record<string, TermSentence | null | "loading" | "error">>({});
 
   useEffect(() => {
-    if (!isConfigured) return;
     let cancelled = false;
     fetchVocab()
       .then((rows) => !cancelled && setEntries(rows))
-      .catch((e) => !cancelled && setError(errorText(e)));
+      .catch((e) => !cancelled && setError(e ?? "error"));
     return () => {
       cancelled = true;
     };
@@ -65,26 +81,14 @@ export default function Vocab() {
       .catch(() => setSentences((s) => ({ ...s, [entry.term]: "error" })));
   }
 
-  if (!isConfigured) {
+  if (error != null) {
     return (
       <View style={styles.page}>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </View>
-    );
-  }
-  if (error) {
-    return (
-      <View style={styles.page}>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{
-            label: t("retry"),
-            onPress: () => {
-              setError(null);
-              setReloads((n) => n + 1);
-            },
+        <LoadFailed
+          error={error}
+          onRetry={() => {
+            setError(null);
+            setReloads((n) => n + 1);
           }}
         />
       </View>
@@ -100,16 +104,18 @@ export default function Vocab() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}>
       <Card style={{ gap: space.sm }}>
         <Text style={type.small}>{t("vocab_head")}</Text>
         <Text style={type.h2}>{t("vocab_count", { n: entries.length })}</Text>
         {hidden ? <Text style={type.small}>{t("vocab_tap")}</Text> : null}
       </Card>
 
+      {/* One label whatever the state, and the state is the fill: a chip that
+          said "show" while lit read as the opposite of what it was doing. */}
       <View style={styles.row}>
         <Chip
-          label={hidden ? t("vocab_show") : t("vocab_hide")}
+          label={t("vocab_hide")}
           selected={hidden}
           onPress={() => {
             setHidden((h) => !h);
@@ -167,7 +173,7 @@ export default function Vocab() {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  page: { padding: space.lg, gap: space.md },
   row: { flexDirection: "row", gap: space.sm },
   entry: {
     backgroundColor: colors.surface,

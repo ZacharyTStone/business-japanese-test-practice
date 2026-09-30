@@ -16,36 +16,50 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { useAuth } from "../../src/lib/auth";
-import { fetchDay, fetchProfile, fetchReviewLoad, fetchSectionLevels, fetchStreak } from "../../src/lib/db";
+import {
+  fetchDay,
+  fetchPace,
+  fetchProfile,
+  fetchRecentPace,
+  fetchReviewLoad,
+  fetchSectionLevels,
+  fetchStreak,
+} from "../../src/lib/db";
+import { minutesFor, secondsPerQuestion } from "../../src/lib/estimate";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   GradientCard,
   Loading,
-  Notice,
+  LoadFailed,
   ProgressRing,
   ScreenHeader,
   ScreenMessage,
 } from "../../src/ui/components";
+import { ScreenGate } from "../../src/ui/screen";
 import { DayDone } from "../../src/ui/done";
 import { Icon } from "../../src/ui/icons";
+import { useFreshToday } from "../../src/ui/fresh";
 import { FadeIn } from "../../src/ui/motion";
-import { colors, shadow, space, TAB_CLEARANCE, tabular, type } from "../../src/ui/theme";
+import { useTabClearance } from "../../src/ui/tabbar";
+import { colors, shadow, space, tabular } from "../../src/ui/theme";
 
-/** About how long a set takes: a question is a little over half a minute. */
-function minutesFor(n: number): number {
-  return Math.max(1, Math.round(n * 0.6));
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function HomeScreen() {
+  return (
+    <ScreenGate>
+      <Home />
+    </ScreenGate>
+  );
 }
 
-export default function Home() {
+function Home() {
+  const clearance = useTabClearance();
   const router = useRouter();
   const { lang, t } = useLang();
-  const { loading: authLoading, error: authError, retry: retryAuth } = useAuth();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState(0);
@@ -53,22 +67,31 @@ export default function Home() {
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   // Lessons due for a 類題. Furniture: the button works without it.
   const [due, setDue] = useState(0);
+  // Seconds a question takes this learner (lib/estimate.ts). Furniture too:
+  // without it the button says the exam's reading pace.
+  const [perQuestion, setPerQuestion] = useState(() => secondsPerQuestion([], []));
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** A load that failed, kept whole so it is said in the learner's words and
+   *  language at render time (LoadFailed), not frozen as technical text. */
+  const [error, setError] = useState<unknown>(null);
   const [reloads, setReloads] = useState(0);
+  /** When today's numbers were read: what decides whether coming back to the
+   *  app should read them again (ui/fresh.ts). */
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      if (!isConfigured || authLoading) return;
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, d, lv, load] = await Promise.all([
+          const [p, s, d, lv, load, recent, pace] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchDay(),
             fetchSectionLevels(),
             fetchReviewLoad().catch(() => null),
+            fetchRecentPace().catch(() => []),
+            fetchPace().catch(() => ({})),
           ]);
           if (cancelled) return;
           setProfile(p);
@@ -76,9 +99,16 @@ export default function Home() {
           setDay(d);
           setLevels(lv);
           setDue(load?.due_now ?? 0);
+          setPerQuestion(
+            secondsPerQuestion(
+              recent,
+              Object.values(pace).map((budget) => budget.seconds)
+            )
+          );
+          setLoadedAt(Date.now());
         } catch (e) {
           // A spinner that never ends looks exactly like an app that has hung.
-          if (!cancelled) setError(errorText(e));
+          if (!cancelled) setError(e ?? "error");
         } finally {
           if (!cancelled) setLoading(false);
         }
@@ -86,7 +116,8 @@ export default function Home() {
       return () => {
         cancelled = true;
       };
-    }, [authLoading, reloads])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `reloads` is the retry: bumping it is what reads again
+    }, [reloads])
   );
 
   function retry() {
@@ -95,35 +126,15 @@ export default function Home() {
     setReloads((n) => n + 1);
   }
 
-  if (!isConfigured) {
+  // Past midnight in Japan the day's count starts again. Read quietly, with
+  // what is on screen left there until the new numbers arrive.
+  useFreshToday(loadedAt, () => setReloads((n) => n + 1));
+
+  if (loading) return <Loading label={t("loading")} />;
+  if (error != null) {
     return (
       <ScreenMessage>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </ScreenMessage>
-    );
-  }
-  if (authLoading || loading) return <Loading label={t("loading")} />;
-  if (authError) {
-    return (
-      <ScreenMessage>
-        <Notice
-          title={t("cant_connect")}
-          body={authError}
-          tone="warn"
-          action={{ label: t("retry"), onPress: retryAuth }}
-        />
-      </ScreenMessage>
-    );
-  }
-  if (error) {
-    return (
-      <ScreenMessage>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{ label: t("retry"), onPress: retry }}
-        />
+        <LoadFailed error={error} onRetry={retry} />
       </ScreenMessage>
     );
   }
@@ -154,7 +165,7 @@ export default function Home() {
           });
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: clearance }]}>
       <ScreenHeader
         title={t("tab_home")}
         subtitle={levelLine}
@@ -174,7 +185,12 @@ export default function Home() {
           because it is a bonus, not the job. */}
       {blocked ? (
         <FadeIn>
-          <DayDone answered={answered} streak={streak} countdown={countdown ?? undefined} />
+          <DayDone
+            answered={answered}
+            streak={streak}
+            countdown={countdown ?? undefined}
+            action={{ label: t("review_btn"), onPress: () => router.push("/history") }}
+          />
         </FadeIn>
       ) : done >= goal ? (
         <FadeIn>
@@ -229,8 +245,8 @@ export default function Home() {
               label={t("btn_today")}
               sub={
                 due > 0
-                  ? t("btn_today_sub_due", { n: goal - done, min: minutesFor(goal - done), due })
-                  : t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done) })
+                  ? t("btn_today_sub_due", { n: goal - done, min: minutesFor(goal - done, perQuestion), due })
+                  : t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done, perQuestion) })
               }
               tone="onAccent"
               icon="play"
@@ -244,7 +260,7 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
+  page: { paddingHorizontal: space.lg, gap: space.lg },
   heroRow: { flexDirection: "row", alignItems: "center", gap: space.lg },
   heroLabel: { color: colors.onAccentMuted, fontSize: 13, fontWeight: "700", letterSpacing: 0.6 },
   heroTitle: {
