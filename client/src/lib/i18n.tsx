@@ -103,7 +103,7 @@ const S = {
   wel_p2_title: ["弱いところを、狙って出します", "It aims at your weak spots"],
   wel_p2_body: ["正誤だけでなく、どのまちがえ方をしたかまで見ます。ひっかかったわなは一晩おいて、同じわなを持つ別の問題でもう一度確かめます。できたら三日後、一週間後と間をあけていきます。新しい問題が残っているかぎり、同じ問題はくり返しません。", "Not just right or wrong — which way you went wrong. A trap that caught you comes back after a night's sleep, in a new question that sets the same trap; get it right and the next one comes in three days, then a week, then longer. You won't meet the same question twice while there are new ones left."],
   wel_p3_title: ["あなたがすることは、答えるだけ", "Your part is to answer"],
-  wel_p3_body: ["1日10問、10分ほど。読解の問題には本番と同じだけの時間をはかります（設定で外せます）。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about ten minutes. Reading questions are timed at exam pace — you can turn that off in settings. The longer you keep at it, the better the questions fit you."],
+  wel_p3_body: ["1日10問、10分ほど。読解の問題には本番と同じだけの時間をはかります（設定で外せます）。本番の音声は一回きりなので、聞き直したり、選択肢を文字で読んだりして答えた問題は、レベルを動かす材料にしません。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about ten minutes. Reading questions are timed at exam pace — you can turn that off in settings. The exam plays each recording once, so an answer given after listening again, or after reading the options as text, doesn't count toward moving your level. The longer you keep at it, the better the questions fit you."],
   wel_start: ["始める", "Get started"],
   wel_testers_note: ["いまはテスト中です。登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   wel_honesty: ["問題はすべて独自に作ったものです。過去問は使っていません。点数の予測は出しません。", "Every question is an original composition — no past papers. The app never predicts a score."],
