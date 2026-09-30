@@ -28,9 +28,20 @@
  * and no noise. Somebody is reading Japanese; the clock is furniture.
  */
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Platform, StyleSheet, Text, View } from "react-native";
 
-import { clockFace, clockFor, newClock, pause, resume, tick, URGENT_AT, WARN_AT, type Clock } from "../lib/clock";
+import {
+  clockFace,
+  clockFor,
+  newClock,
+  pause,
+  resume,
+  tick,
+  URGENT_AT,
+  WARN_AT,
+  warningCrossed,
+  type Clock,
+} from "../lib/clock";
 import { useLang } from "../lib/i18n";
 import { colors, radius, space, tabular, type } from "./theme";
 
@@ -85,6 +96,32 @@ export function QuestionClock({
     expire.current = onExpire;
   });
 
+  // The two moments the bar changes colour, said aloud to somebody who cannot
+  // see it change — and only to them: to everybody else a voice counting down
+  // over a passage is the flashing this clock exists not to do. Native
+  // platforms announce; the web has no announcer, so a hidden live region
+  // carries the line (and the web reports a screen reader as always on,
+  // which a hidden line is harmless to).
+  const reader = useRef(false);
+  const [spoken, setSpoken] = useState("");
+  const say = useRef<(ms: number) => void>(() => undefined);
+  say.current = (ms: number) => {
+    const line = t("time_left", { time: clockFace(ms) });
+    if (Platform.OS === "web") setSpoken(line);
+    else AccessibilityInfo.announceForAccessibility(line);
+  };
+  useEffect(() => {
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((on) => {
+        reader.current = on;
+      })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener("screenReaderChanged", (on: boolean) => {
+      reader.current = on;
+    });
+    return () => sub?.remove();
+  }, []);
+
   // One effect for the whole life of a run: a new question (or budget) is a new
   // clock at the full budget, then it counts while `running` and is held,
   // reading what was left, when it stops.
@@ -95,9 +132,13 @@ export function QuestionClock({
     if (!running) return;
     clock.current = resume(current, Date.now());
     const id = setInterval(() => {
+      const before = clock.current.remainingMs;
       const read = tick(clock.current, Date.now());
       clock.current = read.clock;
       setRemaining(read.clock.remainingMs);
+      if (reader.current && warningCrossed(before, read.clock.remainingMs, totalMs) !== null) {
+        say.current(read.clock.remainingMs);
+      }
       if (read.expired) expire.current();
     }, TICK_MS);
     return () => {
@@ -135,6 +176,11 @@ export function QuestionClock({
       >
         {clockFace(remaining)}
       </Text>
+      {Platform.OS === "web" ? (
+        <Text style={styles.unseen} accessibilityLiveRegion="polite">
+          {spoken}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -151,4 +197,6 @@ const styles = StyleSheet.create({
   fill: { height: 6, borderRadius: radius.pill },
   // Wide enough for "10:00" so the row does not shuffle as the digits change.
   face: { minWidth: 42, textAlign: "right" },
+  // Read by a screen reader, drawn for nobody.
+  unseen: { position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 },
 });

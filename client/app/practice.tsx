@@ -47,7 +47,18 @@
 import { clearPreloadedSource, preload } from "expo-audio";
 import { useRouter, type ErrorBoundaryProps } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { AppState, Image, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
+import {
+  AccessibilityInfo,
+  AppState,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  Vibration,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { flushAnswers, flushAnswersWithin, sendAnswer, type AttemptArgs, type FlushResult, type SendOutcome } from "../src/lib/answers";
@@ -317,6 +328,9 @@ export default function Practice() {
   const scrolledFor = useRef<string | null>(null);
   /** How tall the sticky counter is, so a scroll to the verdict clears it. */
   const headerHeight = useRef(0);
+  /** Around the Next button under the verdict, to put the keyboard's focus
+   *  there on the web. */
+  const nextWrap = useRef<View>(null);
   const reduced = useReducedMotion();
   // The last button sits above the home indicator, not under it.
   const insets = useSafeAreaInsets();
@@ -736,6 +750,19 @@ export default function Practice() {
           : roleInfo(role, lang).label
     : "";
 
+  // The verdict as one sentence to be spoken: what happened, the line under
+  // it, which one was right, and whether it is in the record yet.
+  const verdictSpoken = graded
+    ? [
+        graded.isCorrect ? t("correct_title") : ranOut ? t("time_up") : verdictFor(role, item.listener_role, lang),
+        verdictSub,
+        graded.isCorrect ? "" : t("correct_is", { n: NUMBERS[item.correct_index] ?? "" }),
+        graded.saved ? "" : t("unsent_short"),
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : "";
+
   /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
   function onKey(key: string): boolean | void {
     if (!revealed && optionsShown && chosen === null && !busy) {
@@ -951,11 +978,23 @@ export default function Practice() {
             // Jumped rather than glided for somebody who has asked the OS for
             // less motion.
             scroller.current?.scrollTo({ y: Math.max(0, y - space.sm), animated: !reduced });
+            // Said, where the card's live region is not heard: iOS has none.
+            if (Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(verdictSpoken);
+            // On the web the keyboard's focus goes to Next, so Enter does what
+            // the hint says whatever was clicked to answer — and a screen
+            // reader lands on the way on. Not scrolled to: the verdict is.
+            if (Platform.OS === "web") {
+              const node = nextWrap.current as unknown as HTMLElement | null;
+              const button = node?.querySelector?.<HTMLElement>('[role="button"]');
+              button?.focus({ preventScroll: true });
+            }
           }}
         >
           <Card
             // Said out loud the moment it appears: without this, answering with
-            // a screen reader on changes the colours and announces nothing.
+            // a screen reader on changes the colours and announces nothing. A
+            // live region is heard on Android and the web; iOS has none, and is
+            // told the same thing in words when the card lands (above).
             accessibilityLiveRegion="polite"
             style={{
               gap: space.md,
@@ -1014,14 +1053,16 @@ export default function Practice() {
           {/* The way on, right under the verdict: most answers need no more
               than the verdict, and the explanation below can be long. The one
               at the bottom is for whoever read all of it. */}
-          <Button
-            label={nextLabel}
-            // The other half of the keyboard hint, where the key it names is
-            // the one that does something.
-            sub={HAS_KEYBOARD ? t("key_hint_next") : undefined}
-            icon="chevron"
-            onPress={next}
-          />
+          <View ref={nextWrap}>
+            <Button
+              label={nextLabel}
+              // The other half of the keyboard hint, where the key it names is
+              // the one that does something.
+              sub={HAS_KEYBOARD ? t("key_hint_next") : undefined}
+              icon="chevron"
+              onPress={next}
+            />
+          </View>
 
           <Pressable
             accessibilityRole="button"

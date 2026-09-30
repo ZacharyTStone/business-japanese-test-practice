@@ -64,9 +64,23 @@ export function tick(clock: Clock, now: number): { clock: Clock; expired: boolea
 
 /** Below this share of the budget the bar goes amber, and below the second it
  *  goes red: roughly "a quarter left" and "nearly gone", which is what a
- *  person glancing at it needs to know. */
+ *  person glancing at it needs to know. A screen reader hears the same two
+ *  moments, once each, since it cannot glance at the colour. */
 export const WARN_AT = 0.25;
 export const URGENT_AT = 0.1;
+
+/** Which of the two warnings a reading from `beforeMs` to `afterMs` crossed —
+ *  so each is said once, on the tick that crosses it, and not on every tick
+ *  after. A reading that jumps past both (a phone that slept) says the later. */
+export function warningCrossed(beforeMs: number, afterMs: number, totalMs: number): number | null {
+  const before = beforeMs / totalMs;
+  const after = afterMs / totalMs;
+  if (afterMs <= 0) return null;
+  if (before > URGENT_AT && after <= URGENT_AT) return URGENT_AT;
+  if (before > WARN_AT && after <= WARN_AT) return WARN_AT;
+  return null;
+}
+
 
 /** mm:ss, floored at zero. Seconds are rounded UP so the clock reads 1:00 for
  *  the whole first second rather than flicking to 0:59 immediately. */

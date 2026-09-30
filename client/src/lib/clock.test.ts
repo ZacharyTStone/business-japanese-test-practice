@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { clockFace, clockFor, newClock, pause, resume, tick } from "./clock";
+import { clockFace, clockFor, newClock, pause, resume, tick, URGENT_AT, WARN_AT, warningCrossed } from "./clock";
 
 describe("one clock per question", () => {
   it("starts a new runKey at the new budget, even while the old one is running", () => {
@@ -56,6 +56,21 @@ describe("holding and running", () => {
   it("reads nothing while held", () => {
     const c = newClock("A", 1_000);
     expect(tick(c, 999_999)).toEqual({ clock: c, expired: false });
+  });
+});
+
+describe("the two warnings", () => {
+  const total = 100_000;
+  it("crosses each once, on the tick that crosses it", () => {
+    expect(warningCrossed(26_000, 25_000, total)).toBe(WARN_AT);
+    expect(warningCrossed(25_000, 24_000, total)).toBeNull();
+    expect(warningCrossed(10_500, 9_900, total)).toBe(URGENT_AT);
+    expect(warningCrossed(9_900, 9_000, total)).toBeNull();
+  });
+
+  it("says the later one when a reading jumps past both, and nothing at zero", () => {
+    expect(warningCrossed(40_000, 5_000, total)).toBe(URGENT_AT);
+    expect(warningCrossed(5_000, 0, total)).toBeNull();
   });
 });
 
