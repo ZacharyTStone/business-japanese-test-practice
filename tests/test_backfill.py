@@ -59,6 +59,7 @@ def measured(monkeypatch):
 
     def measure(item, **k):
         seen.append(item["seed_cell"]["id"])
+        llm.spend.begin_request()  # what a real call does first
         llm.spend.add("claude-haiku-4-5", SimpleNamespace(input_tokens=100, output_tokens=10))
         return difficulty.DifficultyResult(rate=0.6, model="weak-model", measured=True, trials=[
             answerability.Trial(side="difficulty", trial=t, chosen=0, correct=t < 3)
@@ -184,6 +185,7 @@ def reviewers(bank, monkeypatch):
     def proofread(item, **k):
         cell = item["seed_cell"]["id"]
         asked["sanity"].append(cell)
+        llm.spend.begin_request()
         llm.spend.add("claude-haiku-4-5", SimpleNamespace(input_tokens=100, output_tokens=10))
         if plan.get(cell) == "down":
             return sanity.SanityResult(checked=False, notes="API request failed: overloaded")

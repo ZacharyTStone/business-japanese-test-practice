@@ -101,7 +101,9 @@ RUN_MAX_MINUTES = float(_env("BJT_RUN_MAX_MINUTES", "30"))
 
 # How long one API call may take before the SDK gives up on it, and how many
 # times it may retry a transient failure. A call that hangs is paid for in
-# minutes; a call retried many times is paid for in money.
+# minutes; a call retried many times is paid for in money. The retries are
+# made by bjt/llm.py, not the SDK, so each one is counted and checked against
+# the ceilings above before it is sent.
 API_TIMEOUT_SECONDS = float(_env("BJT_API_TIMEOUT_SECONDS", "300"))
 API_MAX_RETRIES = int(_env("BJT_API_MAX_RETRIES", "2"))
 

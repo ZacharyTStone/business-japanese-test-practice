@@ -15,8 +15,10 @@ checkbatch) run with neither the package nor an API key present.
 from __future__ import annotations
 
 import json
+import random
 import time
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any, Optional
 
 from . import config
@@ -124,8 +126,14 @@ class Spend:
     One per process (`spend`, below). Anything that wants the bill for a run
     — the nightly summary, `bjt batch`'s last line — reads it; the ceilings in
     config are enforced against it before every call.
+
+    Two counts, because they differ exactly when something goes wrong:
+    `attempts` is every request sent, counted before it is sent — a retry, a
+    request that timed out, one that failed — and it is what the call ceiling
+    holds; `calls` is every response priced.
     """
     calls: int = 0
+    attempts: int = 0
     input_tokens: int = 0
     cache_write_tokens: int = 0
     cache_read_tokens: int = 0
@@ -152,11 +160,18 @@ class Spend:
         self.calls_by_model[model] = self.calls_by_model.get(model, 0) + 1
         return cost
 
+    def begin_request(self) -> None:
+        """The ceilings, then one more request on the count. Called before
+        every request any vendor is sent — each retry included — so the call
+        ceiling counts what was asked for, not what came back."""
+        self.check_ceilings()
+        self.attempts += 1
+
     def check_ceilings(self) -> None:
         """Raise if the next call would be one too many. Called before it."""
-        if self.calls >= config.RUN_MAX_CALLS:
+        if self.attempts >= config.RUN_MAX_CALLS:
             raise LLMSpendLimitError(
-                f"call ceiling reached: {self.calls} calls this run "
+                f"call ceiling reached: {self.attempts} requests this run "
                 f"(BJT_RUN_MAX_CALLS={config.RUN_MAX_CALLS}); ${self.usd:.2f} spent")
         if self.usd >= config.RUN_BUDGET_USD:
             raise LLMSpendLimitError(
@@ -173,7 +188,8 @@ class Spend:
         """The bill, as a few lines for a summary."""
         lines = [
             f"Spent ${self.usd:.2f} of the ${config.RUN_BUDGET_USD:.2f} ceiling in "
-            f"{self.calls} call(s) over {self.minutes:.0f} minute(s): "
+            f"{self.calls} call(s) ({self.attempts} request(s) sent) over "
+            f"{self.minutes:.0f} minute(s): "
             f"{self.input_tokens:,} input, "
             f"{self.cache_write_tokens:,} cache-write, {self.cache_read_tokens:,} "
             f"cache-read, {self.output_tokens:,} output token(s).",
@@ -207,9 +223,87 @@ def _get_client():
                 "The 'anthropic' package is required for generation. "
                 "Install it with: pip install anthropic"
             ) from e
-        _client = anthropic.Anthropic(timeout=config.API_TIMEOUT_SECONDS,
-                                      max_retries=config.API_MAX_RETRIES)
+        # No retries in the SDK: a retry it makes is a request nobody counts
+        # and nobody checks a ceiling before. `_structured` retries instead,
+        # the same number of times, each one through `spend.begin_request`.
+        _client = anthropic.Anthropic(timeout=config.API_TIMEOUT_SECONDS, max_retries=0)
     return _client
+
+
+# ----- retries ---------------------------------------------------------------
+
+#: The statuses the SDK itself would retry: a timeout, a conflict, a rate
+#: limit, and anything the server got wrong.
+_RETRY_STATUSES = (408, 409, 429)
+
+#: The wait before a retry, in seconds: doubling from the first, never more
+#: than the last, or what the server's retry-after asks when that is shorter
+#: than a minute. `_sleep` is the seam the tests replace.
+_BACKOFF_FIRST, _BACKOFF_MAX = 0.5, 8.0
+_sleep = time.sleep
+
+
+def _status_of(exc: BaseException) -> Optional[int]:
+    code = getattr(exc, "status_code", None)
+    return code if isinstance(code, int) else None
+
+
+def _is_connection_error(exc: BaseException) -> bool:
+    """No reply at all: the connection failed or the request timed out."""
+    try:
+        import anthropic
+    except ImportError:  # pragma: no cover
+        return False
+    return isinstance(exc, anthropic.APIConnectionError)
+
+
+def _is_timeout(exc: BaseException) -> bool:
+    try:
+        import anthropic
+    except ImportError:  # pragma: no cover
+        return False
+    return isinstance(exc, anthropic.APITimeoutError)
+
+
+def _retryable(exc: BaseException) -> bool:
+    status = _status_of(exc)
+    if status is not None:
+        return status in _RETRY_STATUSES or status >= 500
+    return _is_connection_error(exc)
+
+
+def _backoff(retry: int, exc: BaseException) -> float:
+    wait = min(_BACKOFF_MAX, _BACKOFF_FIRST * 2 ** retry) * (0.75 + random.random() / 4)
+    headers = getattr(getattr(exc, "response", None), "headers", None) or {}
+    try:
+        asked = float(headers.get("retry-after", ""))
+    except (TypeError, ValueError):
+        asked = None
+    if asked is not None and 0 <= asked <= 60:
+        wait = asked
+    return wait
+
+
+def _worst_case_usage(system: str, user: "str | list", max_tokens: int) -> SimpleNamespace:
+    """What a request that timed out may have cost: its whole output ceiling,
+    and an input counted a token per character (more than Japanese or English
+    takes) with a picture at the most a picture is. The server may well have
+    finished it and billed it; a ledger that priced it at nothing would let a
+    run of timeouts spend without limit."""
+    chars = len(system)
+    blocks = user if isinstance(user, list) else [{"type": "text", "text": user}]
+    for block in blocks:
+        if isinstance(block, dict) and block.get("type") == "image":
+            chars += _IMAGE_TOKENS_MAX
+        elif isinstance(block, dict):
+            chars += len(str(block.get("text", "")))
+        else:
+            chars += len(str(block))
+    return SimpleNamespace(input_tokens=chars, output_tokens=max_tokens)
+
+
+#: The most input tokens one picture can be, at the API's largest image size.
+_IMAGE_TOKENS_MAX = 5000
 
 
 def request_params(
@@ -264,18 +358,34 @@ def _structured(
     max_tokens: int = 8000,
     effort: str = "high",
 ) -> dict:
-    """One structured-output request. Returns the parsed JSON object."""
+    """One structured-output request. Returns the parsed JSON object.
+
+    A transient failure (a timeout, a dropped connection, a rate limit, an
+    overloaded server) is retried here, up to config.API_MAX_RETRIES times,
+    and every attempt goes through the ceilings and onto the count first.
+    """
     # The ceilings are checked before the call, never after: a run that is
     # over its budget makes no further request, not one more.
     spend.check_ceilings()
     client = _get_client()
-    try:
-        resp = client.messages.create(**request_params(
-            model, system, user, schema, max_tokens=max_tokens, effort=effort))
-    except Exception as e:  # surface API errors with context
-        if any(sign in str(e).lower() for sign in _BILLING_SIGNS):
-            raise LLMBillingError(f"API request failed: {e}") from e
-        raise LLMError(f"API request failed: {e}") from e
+    params = request_params(model, system, user, schema, max_tokens=max_tokens, effort=effort)
+    retry = 0
+    while True:
+        spend.begin_request()
+        try:
+            resp = client.messages.create(**params)
+            break
+        except Exception as e:  # surface API errors with context
+            if _is_timeout(e):
+                # Sent, and perhaps finished and billed with nobody listening.
+                spend.add(model, _worst_case_usage(system, user, params["max_tokens"]))
+            if _retryable(e) and retry < config.API_MAX_RETRIES:
+                _sleep(_backoff(retry, e))
+                retry += 1
+                continue
+            if any(sign in str(e).lower() for sign in _BILLING_SIGNS):
+                raise LLMBillingError(f"API request failed: {e}") from e
+            raise LLMError(f"API request failed: {e}") from e
 
     # Priced from what the API says it used, before anything else can fail:
     # a refusal or a malformed reply was paid for too.

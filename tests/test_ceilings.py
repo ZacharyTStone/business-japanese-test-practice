@@ -260,7 +260,9 @@ def test_the_client_has_a_timeout_and_few_retries(monkeypatch):
     monkeypatch.setitem(sys.modules, "anthropic", fake)
     monkeypatch.setattr(llm, "_client", None)
     llm._get_client()
-    assert seen == {"timeout": config.API_TIMEOUT_SECONDS, "max_retries": config.API_MAX_RETRIES}
+    # The SDK retries nothing: every retry is made by llm._structured, through
+    # the ceilings and onto the request count (tests/test_retries.py).
+    assert seen == {"timeout": config.API_TIMEOUT_SECONDS, "max_retries": 0}
     assert config.API_TIMEOUT_SECONDS <= 600 and config.API_MAX_RETRIES <= 2
 
 

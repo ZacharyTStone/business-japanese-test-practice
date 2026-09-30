@@ -134,6 +134,7 @@ def choice_probabilities(question: str, options: list[str],
     key = os.environ.get("TYPESAFE_API_KEY", "")
     if not key:
         raise llm.LLMError("TYPESAFE_API_KEY is not set")
+    llm.spend.begin_request()
     data = json.dumps(request_body(question, options, model), ensure_ascii=False).encode("utf-8")
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     try:
