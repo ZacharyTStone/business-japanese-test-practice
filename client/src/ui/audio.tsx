@@ -347,7 +347,18 @@ function useClipQueue(
         return;
       }
       still += 1;
-      if (still * WATCH_MS >= STALL_MS) advance(true);
+      // Standing at its own end for two looks is a clip that finished without
+      // saying so — the browser that reports the end on neither the last time
+      // update nor the pause — and it moves the run on, as heard. (Two, not
+      // one: a replay's seek back to zero may not have landed at the first.)
+      let duration = 0;
+      try {
+        duration = player.duration;
+      } catch {
+        // Unknown: only the stall rule applies.
+      }
+      if (still >= 2 && now !== null && duration > 0 && now >= duration - 0.25) advance(false);
+      else if (still * WATCH_MS >= STALL_MS) advance(true);
     }, WATCH_MS);
     return () => {
       sub.remove();
