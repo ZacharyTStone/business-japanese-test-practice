@@ -521,6 +521,22 @@ begin
         not exists (select 1 from pg_policies
                      where schemaname = 'public' and 'anon'::name = any(roles)),
         'no policy in public names the anon role');
+    -- The media buckets are public-read at each file's address, which needs no
+    -- policy at all; a policy on storage.objects is a listing of the bank. The
+    -- same door as `public`, then: none for anon or everybody, and any policy
+    -- there is for testers.
+    perform test.check(
+        not exists (select 1 from pg_policies
+                     where schemaname = 'storage'
+                       and ('anon'::name = any(roles) or 'public'::name = any(roles))),
+        'no policy in storage names anon or everybody');
+    perform test.check(
+        not exists (
+            select 1 from pg_policies
+             where schemaname = 'storage'
+               and coalesce(qual, '') not like '%is_tester()%'
+               and coalesce(with_check, '') not like '%is_tester()%'),
+        'every policy in storage requires is_tester()');
     perform test.check(
         not exists (select 1 from information_schema.role_table_grants
                      where grantee = 'anon' and table_schema = 'public'),
