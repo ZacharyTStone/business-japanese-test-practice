@@ -32,7 +32,7 @@ import {
   SectionLabel,
 } from "../src/ui/components";
 import { FadeIn } from "../src/ui/motion";
-import { colors, space, tabular, type } from "../src/ui/theme";
+import { colors, page, space, tabular, type } from "../src/ui/theme";
 
 export default function Result() {
   const router = useRouter();
@@ -77,7 +77,7 @@ export default function Result() {
 
   if (!summary) {
     return (
-      <View style={styles.page}>
+      <View style={[styles.page, page]}>
         <Notice title={t("no_result_title")} body={t("no_result_body")} />
         <Button label={t("to_home")} onPress={() => router.replace("/")} />
       </View>
@@ -105,7 +105,7 @@ export default function Result() {
   const step = () => (beat += 70);
 
   return (
-    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}>
+    <ScrollView contentContainerStyle={[styles.page, page, { paddingBottom: space.xxl + insets.bottom }]}>
       {move && move.direction > 0 ? (
         <Card style={{ backgroundColor: colors.correctSoft, gap: space.md }}>
           <View style={styles.trapHead}>

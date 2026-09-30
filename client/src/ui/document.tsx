@@ -27,17 +27,23 @@
  * of labelled fields instead — the same information, in the order somebody would
  * read it aloud, rather than a horizontal scroll nobody notices is there.
  */
-import React from "react";
-import { Platform, StyleSheet, Text, useWindowDimensions, View, type TextStyle } from "react-native";
+import React, { useState } from "react";
+import { Platform, StyleSheet, Text, useWindowDimensions, View, type LayoutChangeEvent, type TextStyle } from "react-native";
 
 import { useLang, type Key } from "../lib/i18n";
 import type { DocBlock, StimulusDocument } from "../lib/types";
 import { ChartView } from "./chart";
 import { ink, radius, space } from "./theme";
 
-/** Below this width a table becomes stacked rows. Four columns of Japanese at
- *  16px need about this much before the cells start breaking mid-word. */
+/** Below this width of sheet a table becomes stacked rows. Four columns of
+ *  Japanese at 16px need about this much before the cells start breaking
+ *  mid-word. Measured on the sheet itself, not the window: the page and the
+ *  card around it take about a hundred points of a phone's width. */
 const TABLE_MIN_WIDTH = 420;
+
+/** The window's width less what the page and the card take, for the first
+ *  frame, before the sheet has been measured. */
+const SHEET_INSET = 96;
 
 const TEMPLATE_KEY: Record<string, Key> = {
   email_external: "doc_email_external",
@@ -447,14 +453,19 @@ export function DocumentView({ doc }: { doc: StimulusDocument }) {
   const { t } = useLang();
   const kindKey = TEMPLATE_KEY[doc.template];
   const kind = kindKey ? t(kindKey) : doc.template;
-  const { width } = useWindowDimensions();
-  const stacked = width < TABLE_MIN_WIDTH;
+  const { width: windowWidth } = useWindowDimensions();
+  const [sheetWidth, setSheetWidth] = useState(0);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const measured = Math.floor(e.nativeEvent.layout.width);
+    if (measured !== sheetWidth) setSheetWidth(measured);
+  };
+  const stacked = (sheetWidth > 0 ? sheetWidth : windowWidth - SHEET_INSET) < TABLE_MIN_WIDTH;
   const Render = CHROME[doc.template] ?? Plain;
 
   // The kind is for the screen reader only. On the page the document says what
   // it is by its shape, as it would on a desk.
   return (
-    <View accessible={false} accessibilityLabel={`${kind}: ${doc.title}`}>
+    <View accessible={false} accessibilityLabel={`${kind}: ${doc.title}`} onLayout={onLayout}>
       <Render doc={doc} stacked={stacked} />
     </View>
   );

@@ -582,7 +582,7 @@ export default function Practice() {
 
   if (!isConfigured) {
     return (
-      <View style={styles.page}>
+      <View style={[styles.page, page]}>
         <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
       </View>
     );
@@ -617,7 +617,7 @@ export default function Practice() {
     // The door, from this side: a deep link or a stale tab past the ceiling —
     // or the database closing the day under a set that had not started.
     return (
-      <View style={styles.page}>
+      <View style={[styles.page, page]}>
         <DayDone answered={blocked ?? answeredAtLoad.current} streak={0} onHome={() => router.replace("/")} />
       </View>
     );
@@ -626,7 +626,7 @@ export default function Practice() {
   if (state.done) return <Loading />;
   if (items.length === 0) {
     return (
-      <View style={styles.page}>
+      <View style={[styles.page, page]}>
         <Notice
           title={t("no_q_title")}
           body={t("no_q_body")}
@@ -758,7 +758,10 @@ export default function Practice() {
   return (
     <ScrollView
       ref={scroller}
-      contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}
+      // The column is capped and centred on a wide window: a line of Japanese
+      // past about 720 points is too long to read, and an answer card that
+      // wide is not something a pointer finds.
+      contentContainerStyle={[styles.page, page, { paddingBottom: space.xxl + insets.bottom }]}
       keyboardShouldPersistTaps="handled"
     >
       <Keys onKey={onKey} />
@@ -1257,8 +1260,12 @@ const styles = StyleSheet.create({
   stripPillBig: { paddingHorizontal: space.lg, paddingVertical: space.md },
   stripValue: { fontSize: 14, fontWeight: "700", color: colors.text },
   stripValueBig: { fontSize: 17, fontWeight: "700", color: colors.text, lineHeight: 24 },
+  // Full width on a phone; on a desktop no more than 480 wide, which is 320
+  // tall — a picture the size of the screen pushes the question below it.
   scene: {
     width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
     aspectRatio: 3 / 2,
     borderRadius: radius.md,
     backgroundColor: colors.accentSoft,
