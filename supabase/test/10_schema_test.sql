@@ -56,6 +56,11 @@ begin
 end;
 $$;
 
+-- The tests call these from sessions acting as the client roles. A function
+-- created after 20260930000900 gives PUBLIC no EXECUTE by default, these
+-- included, so the test's own helpers are handed out here, on purpose.
+grant execute on all functions in schema test to public;
+
 -- ----------------------------------------------------------------- fixtures
 
 -- Publishing runs as the service role, which bypasses RLS — same as the real
@@ -619,6 +624,44 @@ begin
         'a signed-in user may ask whether they are a tester, and nothing more');
 end
 $$;
+
+-- ...and for whatever the next migration creates. Made here as the role the
+-- migrations ran as, against the stub's copy of Supabase's default privileges,
+-- and rolled back.
+begin;
+create table public.zz_next_table (id integer primary key);
+create view public.zz_next_view as select id from public.zz_next_table;
+create sequence public.zz_next_seq;
+create function public.zz_next_fn() returns integer language sql as $$ select 1 $$;
+create schema zz_next_schema;
+create function zz_next_schema.fn() returns integer language sql as $$ select 1 $$;
+
+do $$
+begin
+    raise notice 'testers only: nothing new for anon';
+    perform test.check(
+        not exists (select 1 from information_schema.role_table_grants
+                     where grantee = 'anon'
+                       and table_name in ('zz_next_table', 'zz_next_view')),
+        'a table or view created from now on gives anon nothing');
+    perform test.check(
+        not has_sequence_privilege('anon', 'public.zz_next_seq', 'usage')
+        and not has_sequence_privilege('anon', 'public.zz_next_seq', 'select'),
+        'nor a sequence');
+    perform test.check(
+        not has_function_privilege('anon', 'public.zz_next_fn()', 'execute'),
+        'nor a function in public, not even through PUBLIC');
+    perform test.check(
+        not has_function_privilege('anon', 'zz_next_schema.fn()', 'execute')
+        and not has_function_privilege('authenticated', 'zz_next_schema.fn()', 'execute'),
+        'and a function anywhere else is callable only by whoever it is granted to');
+    perform test.check(
+        has_table_privilege('authenticated', 'public.zz_next_table', 'select')
+        and has_table_privilege('service_role', 'public.zz_next_table', 'insert'),
+        'while a new table still works for the app and the pipeline, behind its policies');
+end
+$$;
+rollback;
 
 insert into auth.users (id, email, is_anonymous) values
     ('77777777-7777-7777-7777-777777777777', null, true),
