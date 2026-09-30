@@ -1076,7 +1076,30 @@ begin
         denied := true;
     end;
     perform test.check(denied, 'nor write a new one');
+
+    -- Nor the summary on the profile, which is what the first answer after a
+    -- reset seeds all three sections from: writable, it was a level picker
+    -- with two extra steps.
+    denied := false;
+    begin
+        update public.profiles set target_level = 'J1' where id = (select auth.uid());
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied, 'nor the level summary the first answer seeds all three from');
     reset role;
+
+    perform test.check(
+        (select array_agg(a.attname::text order by a.attname)
+           from pg_attribute a
+          where a.attrelid = 'public.profiles'::regclass
+            and a.attnum > 0 and not a.attisdropped
+            and has_column_privilege('authenticated', a.attrelid, a.attnum, 'update'))
+        = array['daily_goal', 'display_name', 'exam_date', 'timed_reading'],
+        'a client may update four columns of its profile, and only those four');
+    perform test.check(
+        not has_table_privilege('authenticated', 'public.profiles', 'insert'),
+        'and may not insert one: a profile is made with the account');
 end
 $$;
 
@@ -1854,8 +1877,9 @@ $$;
 
 -- The fifteen is a ceiling on the account, not a number the client agrees to.
 -- The check constraint on profiles.daily_goal says only that a day is at least
--- one question; what stops a tester PATCHing their way to a forty-question day
--- is the trigger, which asks whose row this is.
+-- one question; what stops a tester PATCHing their way to a forty-question day,
+-- or to any size of day at all, is the trigger, which asks whose row this is
+-- and whether the owner gave that account a number of its own.
 do $$
 declare
     ok boolean;
@@ -1879,12 +1903,28 @@ begin
           where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') = 10,
         'so the goal is still ten');
 
-    -- A ceiling, not a freeze: everything up to it is still theirs to set.
-    update public.profiles set daily_goal = 15
+    -- Nor below it. The size of a day is the product, and changing it belongs
+    -- to the one account the owner gave a number of its own (below).
+    ok := false;
+    begin
+        update public.profiles set daily_goal = 12
+         where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    exception when insufficient_privilege then
+        ok := true;
+    end;
+    perform test.check(ok, 'an ordinary tester cannot change the size of the day at all');
+    perform test.check((select goal from public.v_my_day) = 10,
+        'so it is ten, as it is for everybody');
+
+    -- A goal is judged when it is written, not whenever the row is: sending
+    -- the number back unchanged, with a setting that is theirs, still saves.
+    update public.profiles set daily_goal = 10, timed_reading = false
      where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-    perform test.check((select goal from public.v_my_day) = 15,
-        'and fifteen is still theirs to set');
-    update public.profiles set daily_goal = 10
+    perform test.check(
+        not (select timed_reading from public.profiles
+              where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+        'while the settings that are theirs still save, goal and all');
+    update public.profiles set timed_reading = true
      where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 end
 $$;

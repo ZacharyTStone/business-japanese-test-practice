@@ -458,7 +458,7 @@ comment on function public.is_unlimited() is
     'Answers about the caller alone.';
 
 
--- ==== function keep_the_daily_goal_under_its_ceiling — 20260922000200_a_day_the_owner_sizes.sql
+-- ==== function keep_the_daily_goal_under_its_ceiling — 20260930000200_four_columns_of_a_profile.sql
 
 create or replace function public.keep_the_daily_goal_under_its_ceiling()
 returns trigger
@@ -468,10 +468,11 @@ as $$
 declare
     v_max integer;
 begin
-    -- Only a session writing its own profile — which is to say, the app. A
-    -- migration, a fixture or the owner with the service role has no auth.uid()
-    -- and is not what this is guarding.
-    if (select auth.uid()) is distinct from new.id then
+    -- Only the app: a signed-in request, as PostgREST makes one, writing its
+    -- own profile. A migration, a fixture, a definer function or the owner with
+    -- the service role is none of those and is not what this is guarding.
+    if current_user <> 'authenticated'
+       or (select auth.uid()) is distinct from new.id then
         return new;
     end if;
     -- And only when the goal is what is being written. A row is not re-judged
@@ -482,7 +483,14 @@ begin
     if tg_op = 'UPDATE' and new.daily_goal is not distinct from old.daily_goal then
         return new;
     end if;
-    v_max := (select public.my_daily_max());
+    -- The size of a day is the owner's to give, one account at a time. Without
+    -- a number on this account's tester row it is not the learner's to change
+    -- at all, not even below the fifteen: ten is the product, not a setting.
+    v_max := (select public.my_goal_max());
+    if v_max is null then
+        raise exception 'the size of the day is not this account''s to choose'
+            using errcode = 'insufficient_privilege';
+    end if;
     if new.daily_goal > v_max then
         raise exception 'a daily goal of % is above this account''s ceiling of %',
             new.daily_goal, v_max;
@@ -492,9 +500,10 @@ end;
 $$;
 
 comment on function public.keep_the_daily_goal_under_its_ceiling is
-    'The fifteen, enforced where the client cannot get past it. The check '
-    'constraint on profiles.daily_goal is a hard bound on the column; this is '
-    'the bound on the account, which is a question about the session.';
+    'The size of the day, enforced where the client cannot get past it. A client '
+    'may change profiles.daily_goal only on the account whose tester row carries '
+    'max_daily_goal, and only up to it; everybody else''s goal is not theirs to '
+    'change. Judges a goal being written, never an existing row.';
 
 
 -- ==== function level_evidence — 20260927000100_a_new_question_not_the_same_one.sql
