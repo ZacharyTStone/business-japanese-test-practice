@@ -48,6 +48,9 @@ const S = {
   // A screen that threw while drawing (ui/crash.tsx).
   crash_title: ["この画面を表示できませんでした", "This screen couldn't be shown"],
   crash_again: ["もう一度表示する", "Show it again"],
+  // The radar, said aloud (ui/radar.tsx): every type and its share.
+  radar_a11y: ["種類ごとの正答率。{list}", "Accuracy by type. {list}"],
+  radar_untried: ["まだ解いていません", "not tried yet"],
   loading: ["読み込み中…", "Loading…"],
   tab_home: ["ホーム", "Home"],
   tab_progress: ["記録", "Progress"],
