@@ -1,6 +1,6 @@
 """The bank that already shipped: bundles in (`importbatch`), checked
 (`checkbatch`), out as SQL (`publish`), and the passes over it for what an
-item never got (`probe`, `regate`, in bjt/backfill.py).
+item never got (`probe` in bjt/backfill.py, `regate` in bjt/regate.py).
 """
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import sys
 from .. import batch as batchmod
 from .. import (
     backfill,
+    regate,
     config,
     jev,
     pipeline,
@@ -157,7 +158,7 @@ def cmd_regate(args) -> int:
     shape and nothing else. This asks every live question the two things a
     fresh draft is asked before it ships — does a proofreader find a fault, and
     does the gate find it answerable and not leaky — in the same order and by
-    the same rules (bjt/backfill.py).
+    the same rules (bjt/regate.py).
 
     Every verdict is written to batches/regated.txt as it is reached, so a run
     stopped by the ceilings in bjt/llm.py carries on where it stopped and a
@@ -170,7 +171,7 @@ def cmd_regate(args) -> int:
     """
     try:
         paths = backfill.select_bundles(args.paths, args.all)
-        shelves = backfill.survey_regate(paths)
+        shelves = regate.survey_regate(paths)
     except ValueError as e:
         print(e, file=sys.stderr)
         return 2
@@ -195,7 +196,7 @@ def cmd_regate(args) -> int:
             print(backfill.runs_estimate(items * per_item))
         else:
             print("Every live question here has a verdict.")
-        _print_proposals(backfill.proposals(paths), appended=False)
+        _print_proposals(regate.proposals(paths), appended=False)
         return 0
 
     run = None
@@ -204,7 +205,7 @@ def cmd_regate(args) -> int:
             print("The proofreader is switched off (BJT_SANITY=0), and a regate is the "
                   "proofreader and then the gate; nothing checked.", file=sys.stderr)
             return 2
-        run = backfill.regate_bank([s.path for s in work])
+        run = regate.regate_bank([s.path for s in work])
         verdicts: dict[str, int] = {}
         for _, verdict in run.checked:
             verdicts[verdict] = verdicts.get(verdict, 0) + 1
@@ -220,10 +221,10 @@ def cmd_regate(args) -> int:
     else:
         print("Every live question here has a verdict.")
 
-    found = backfill.proposals(paths)
+    found = regate.proposals(paths)
     if found and args.withdraw:
         try:
-            sqls = backfill.withdraw(found)
+            sqls = regate.withdraw(found)
         except ValueError as e:
             print(f"withdrawn.txt not changed: {e}", file=sys.stderr)
             return 2
@@ -245,7 +246,7 @@ def _print_proposals(found, *, appended: bool) -> None:
           + (f"; appended to batches/{withdrawn.LEDGER_NAME}:" if appended
              else f"; `--withdraw` appends these to batches/{withdrawn.LEDGER_NAME}:"))
     for _, entry in found:
-        print("  " + withdrawn.line(backfill.as_withdrawal(entry)))
+        print("  " + withdrawn.line(regate.as_withdrawal(entry)))
 
 
 def cmd_importbatch(args) -> int:

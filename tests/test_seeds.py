@@ -105,19 +105,19 @@ def _bundle(path, item_type, items):
 
 
 def test_a_withdrawn_or_regate_failed_question_is_never_an_example(tmp_path):
-    from bjt import backfill, withdrawn
+    from bjt import regate, withdrawn
 
     items = [{"id": f"id{i}", "stem": f"stem {i}", "options": [], "explanation_ja": "x"}
              for i in range(4)]
     _bundle(tmp_path / "goi_bunpou_J2_001.json", "goi_bunpou", items)
     (tmp_path / withdrawn.LEDGER_NAME).write_text(
         "id0  unnatural     Invented keigo nobody says.\n", encoding="utf-8")
-    ledger = tmp_path / backfill.REGATE_LEDGER_NAME
-    backfill.record_regated(backfill.Regated("id1", "discarded:sanity", "2026-09-30",
+    ledger = tmp_path / regate.REGATE_LEDGER_NAME
+    regate.record_regated(regate.Regated("id1", "discarded:sanity", "2026-09-30",
                                              "unnatural", "flagged"), ledger)
-    backfill.record_regated(backfill.Regated("id2", "overruled", "2026-09-30",
+    regate.record_regated(regate.Regated("id2", "overruled", "2026-09-30",
                                              "unnatural", "the owner keeps it"), ledger)
-    backfill.record_regated(backfill.Regated("id3", "kept", "2026-09-30", "-", "clean"), ledger)
+    regate.record_regated(regate.Regated("id3", "kept", "2026-09-30", "-", "clean"), ledger)
 
     stems = [ex["stem"] for ex in seeds.examples_from_batches(tmp_path)["goi_bunpou"]]
     assert stems == ["stem 2", "stem 3"], "overruled and kept stay; withdrawn and failed go"

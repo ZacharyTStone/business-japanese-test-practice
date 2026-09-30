@@ -2,8 +2,9 @@
 
 The commands are thin on purpose. What they drive lives in the modules they
 call: one draft's checks and a shelf's loop in `bjt/pipeline.py`, the passes
-over the bank that already shipped (probe, regate) in `bjt/backfill.py`, the
-bundle and its offline checks in `bjt/batch.py`, the SQL in `bjt/publish.py`.
+over the bank that already shipped in `bjt/backfill.py` (the probe) and
+`bjt/regate.py`, the bundle and its offline checks in `bjt/batch.py`, the SQL
+in `bjt/publish.py`.
 
 Each module here registers its own subcommands next to their handlers:
 `generate` (gen, smoke, batch, plan, nightly), `bank` (importbatch,

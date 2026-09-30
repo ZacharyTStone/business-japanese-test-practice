@@ -36,7 +36,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import backfill, config, withdrawn
+from . import config, regate, withdrawn
 
 #: Fields of a published item that are about the bundle or the bank rather
 #: than the item as an example: identity, provenance, media, the answer key
@@ -92,7 +92,7 @@ def examples_from_batches(batch_dir: Path | None = None) -> dict[str, list[dict]
     batch_dir = Path(batch_dir or config.BATCH_DIR)
     gone = withdrawn.ids(batch_dir / withdrawn.LEDGER_NAME)
     failed = {item_id for item_id, entry in
-              backfill.load_regated(batch_dir / backfill.REGATE_LEDGER_NAME).items()
+              regate.load_regated(batch_dir / regate.REGATE_LEDGER_NAME).items()
               if entry.failed}
     by_type: dict[str, dict[str, list[dict]]] = {}
     for path in sorted(batch_dir.glob("*.json")):

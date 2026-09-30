@@ -1,4 +1,4 @@
-"""The passes over the bank that already shipped (bjt/backfill.py).
+"""The passes over the bank that already shipped (bjt/backfill.py, bjt/regate.py).
 
 Every test here fakes the model. What is under test is the bookkeeping around
 it: only live items, only what is missing, every bundle written as soon as it
@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from bjt import backfill, batch, cli, config, llm, publish, withdrawn
+from bjt import backfill, batch, cli, config, llm, publish, regate, withdrawn
 from bjt.fidelity import answerability, difficulty, sanity
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -226,7 +226,7 @@ def test_the_regate_dry_run_counts_the_calls_and_spends_nothing(capsys, monkeypa
     monkeypatch.setattr(sanity, "run_check", explode)
     monkeypatch.setattr(answerability, "run_gate", explode)
 
-    gone, done = withdrawn.ids(), backfill.load_regated()
+    gone, done = withdrawn.ids(), regate.load_regated()
     todo = sum(1 for p in batch.bundles() for it in withdrawn.live_items(batch.load(p), gone)
                if it["id"] not in done)
     assert cli.main(["regate", "--all", "--dry-run"]) == 0
@@ -244,7 +244,7 @@ def test_every_verdict_is_written_down_and_the_failures_are_proposed(bank, revie
     out = capsys.readouterr().out
 
     ids = _ids(bank)
-    got = backfill.load_regated()
+    got = regate.load_regated()
     assert [(got[i].verdict, got[i].reason) for i in ids] == [
         ("kept", "-"),
         ("discarded:sanity", "unnatural"),
@@ -297,12 +297,12 @@ def test_a_regate_stopped_by_its_ceiling_carries_on_where_it_stopped(bank, revie
     # stops the run after two questions.
     monkeypatch.setattr("bjt.config.RUN_MAX_CALLS", 2)
     assert cli.main(["regate", "--all"]) == 0
-    assert list(backfill.load_regated()) == _ids(bank)[:2]
+    assert list(regate.load_regated()) == _ids(bank)[:2]
 
     monkeypatch.setattr(llm, "spend", llm.Spend())
     assert cli.main(["regate", "--all"]) == 0
     assert reviewers.asked["sanity"] == reviewers.cells, "each question checked exactly once"
-    assert list(backfill.load_regated()) == _ids(bank)
+    assert list(regate.load_regated()) == _ids(bank)
 
 
 def test_an_outage_decides_nothing(bank, reviewers):
@@ -310,19 +310,19 @@ def test_an_outage_decides_nothing(bank, reviewers):
         reviewers.plan[cell] = "down"
     assert cli.main(["regate", "--all", "--withdraw"]) == 1
     assert len(reviewers.asked["sanity"]) == backfill.UNREACHABLE_PATIENCE
-    assert not backfill.regate_ledger_path().exists()
+    assert not regate.regate_ledger_path().exists()
     assert withdrawn.load() == {}
 
 
 def test_a_gate_that_could_not_answer_every_trial_decides_nothing(bank, reviewers):
     reviewers.plan[reviewers.cells[0]] = "unreachable"
     assert cli.main(["regate", "--all"]) == 0
-    assert _ids(bank)[0] not in backfill.load_regated()
+    assert _ids(bank)[0] not in regate.load_regated()
 
 
 def test_an_overruled_or_withdrawn_question_is_left_alone(bank, reviewers):
     ids = _ids(bank)
-    backfill.record_regated(backfill.Regated(ids[1], "overruled", "2026-09-27", "unnatural",
+    regate.record_regated(regate.Regated(ids[1], "overruled", "2026-09-27", "unnatural",
                                              "Read by the owner, who keeps it."))
     (bank / withdrawn.LEDGER_NAME).write_text(
         f"{ids[2]}  unclear       Withdrawn by hand before the regate ran.\n", encoding="utf-8")
@@ -333,8 +333,8 @@ def test_an_overruled_or_withdrawn_question_is_left_alone(bank, reviewers):
 
 
 def test_every_proofreader_flag_has_a_reason_in_the_ledgers_set():
-    assert set(backfill.SANITY_REASONS) == set(sanity.RULES)
-    assert set(backfill.SANITY_REASONS.values()) <= set(withdrawn.REASONS)
+    assert set(regate.SANITY_REASONS) == set(sanity.RULES)
+    assert set(regate.SANITY_REASONS.values()) <= set(withdrawn.REASONS)
 
 
 def test_the_withdrawn_ledger_only_grows(tmp_path):
