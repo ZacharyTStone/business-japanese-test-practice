@@ -19,7 +19,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
+import { friendlyError } from "../lib/errors";
 import { isIsoDate, typedDate } from "../lib/exam";
+import { useLang } from "../lib/i18n";
 import { Icon, type IconName } from "./icons";
 import { usePressScale, useReducedMotion, useTween } from "./motion";
 import { badge, card, colors, motion, radius, shadow, space, tabular, type } from "./theme";
@@ -87,7 +89,9 @@ export function Button({
 }: {
   label: string;
   onPress: () => void;
-  tone?: "primary" | "secondary" | "onAccent";
+  /** `danger` is for the one press that cannot be undone — erasing the
+   *  record — and only once it has been asked for: white on `wrong`. */
+  tone?: "primary" | "secondary" | "onAccent" | "danger";
   disabled?: boolean;
   sub?: string;
   icon?: IconName;
@@ -99,7 +103,7 @@ export function Button({
   // the two indistinguishable.
   const labelColor = disabled
     ? colors.muted
-    : tone === "primary"
+    : tone === "primary" || tone === "danger"
       ? colors.onAccent
       : tone === "onAccent"
         ? colors.accentDeep
@@ -108,7 +112,9 @@ export function Button({
     ? colors.muted
     : tone === "primary"
       ? colors.onAccentMuted
-      : colors.muted;
+      : tone === "danger"
+        ? colors.onAccent
+        : colors.muted;
   // The face of the button scales under the finger; the Pressable around it
   // is the hit area and does not move, so a press that started on the edge
   // is still on the button when it lifts.
@@ -131,6 +137,7 @@ export function Button({
             tone === "primary" && styles.buttonPrimary,
             tone === "secondary" && styles.buttonSecondary,
             tone === "onAccent" && styles.buttonOnAccent,
+            tone === "danger" && styles.buttonDanger,
             // Last of the fills, so it replaces the tone's rather than sitting
             // over it at half strength.
             disabled && styles.buttonOff,
@@ -224,6 +231,26 @@ export function Notice({
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * A failure said where it happened: inside the card whose control failed,
+ * rather than at the foot of the page where nobody connects it to the press
+ * that caused it. The sentence a learner can act on, and small print under it.
+ */
+export function InlineError({ error }: { error: unknown }) {
+  const { t } = useLang();
+  const { message, detail } = friendlyError(error, t);
+  return (
+    <View style={{ gap: 2 }} accessibilityLiveRegion="polite">
+      <Text style={[type.small, { color: colors.wrong }]}>{message}</Text>
+      {detail ? (
+        <Text style={type.mono} selectable>
+          {detail}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -685,6 +712,7 @@ const styles = StyleSheet.create({
   buttonPrimaryHover: { backgroundColor: colors.accentInk, ...shadow.cardRaised },
   buttonSecondary: { backgroundColor: colors.accentSoft },
   buttonOnAccent: { backgroundColor: colors.onAccent },
+  buttonDanger: { backgroundColor: colors.wrong },
   // A pointer over a light button: a shade deeper, not a shadow — the light
   // ones sit flat on purpose, and lifting them would rank them with the
   // primary.

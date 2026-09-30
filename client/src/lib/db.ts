@@ -168,16 +168,23 @@ export async function fetchPace(): Promise<Record<string, TypePace>> {
   return out;
 }
 
+/**
+ * Change one of the few things a learner sets.
+ *
+ * `userId` is the signed-in session's, passed in rather than asked for:
+ * `auth.getUser()` is a round trip to the auth server on every call, and the
+ * session the screen already holds says the same thing. Row-level security
+ * checks the id against the token either way.
+ */
 export async function updateProfile(
+  userId: string,
   // Not target_level: the database moves that, on the evidence of the answers.
   patch: Partial<Pick<Profile, "daily_goal" | "display_name" | "exam_date" | "timed_reading">>
 ) {
   // PostgREST refuses an unfiltered update, and row-level security would narrow
   // it to this row anyway — but saying which row is clearer than relying on a
   // policy to save us from a statement that reads as "update every profile".
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) throw new Error("not signed in");
-  const { error } = await supabase.from("profiles").update(patch).eq("id", auth.user.id);
+  const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
   if (error) throw error;
 }
 
@@ -717,10 +724,9 @@ export async function fetchNotes(itemIds: string[]): Promise<Record<string, stri
   return Object.fromEntries((data ?? []).map((row) => [row.item_id as string, row.note as string]));
 }
 
-/** Keep a note, or remove it when it has been emptied. */
-export async function saveNote(itemId: string, note: string): Promise<void> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) throw new Error("not signed in");
+/** Keep a note, or remove it when it has been emptied. `userId` is the
+ *  session's, as for `updateProfile`. */
+export async function saveNote(userId: string, itemId: string, note: string): Promise<void> {
   const text = note.trim();
   if (!text) {
     const { error } = await supabase.from("review_notes").delete().eq("item_id", itemId);
@@ -729,6 +735,6 @@ export async function saveNote(itemId: string, note: string): Promise<void> {
   }
   const { error } = await supabase
     .from("review_notes")
-    .upsert({ user_id: auth.user.id, item_id: itemId, note: text }, { onConflict: "user_id,item_id" });
+    .upsert({ user_id: userId, item_id: itemId, note: text }, { onConflict: "user_id,item_id" });
   if (error) throw error;
 }

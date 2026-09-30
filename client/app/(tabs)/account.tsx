@@ -14,8 +14,8 @@
  * a rounding of one. It is asked here rather than on first launch: a countdown
  * helps, a form on the first screen does not.
  */
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
@@ -29,6 +29,7 @@ import {
 import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/lib/exam";
 import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
 import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
+import { settingSaver, type SettingSaver } from "../../src/lib/save";
 import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
@@ -37,6 +38,7 @@ import {
   Chip,
   DateField,
   IconBadge,
+  InlineError,
   Loading,
   Notice,
   NumberField,
@@ -46,23 +48,38 @@ import {
 } from "../../src/ui/components";
 import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
 
+/** The cards a save can fail under, so the failure is said in the card whose
+ *  control it came from. */
+type SettingCard = "exam" | "goal" | "timer" | "reset";
+
+type Savers = {
+  exam: SettingSaver<string | null>;
+  goal: SettingSaver<number>;
+  timer: SettingSaver<boolean>;
+};
+
 export default function Account() {
   const router = useRouter();
   const { lang, setLang, t } = useLang();
   const {
     email,
+    session,
     signOut,
     loading: authLoading,
     error: authError,
     retry: retryAuth,
   } = useAuth();
+  // Read by the savers when they write, so they never hold on to a stale one.
+  const userId = useRef<string | null>(null);
+  userId.current = session?.user.id ?? null;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   /** Only read for one thing here: whether this account may size its own day,
    *  which is `goal_max` being a number rather than null. */
   const [day, setDay] = useState<DayStatus | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  /** A write that failed, and the card it is said in. */
+  const [failed, setFailed] = useState<{ card: SettingCard; error: unknown } | null>(null);
   const [reloads, setReloads] = useState(0);
   /** Starting again, in three states: closed, asked, and done saying so. One
    *  press is not enough for something that cannot be undone, and a dialog box
@@ -71,63 +88,90 @@ export default function Account() {
   const [wiping, setWiping] = useState(false);
   const [wiped, setWiped] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!isConfigured || authLoading || authError) return;
-    fetchProfile()
-      .then(setProfile)
-      .catch((e) => setProfileError(errorText(e)));
-    // Not fatal: with no levels every section reads 「—」, which is what an
-    // unplaced section says anyway.
-    fetchSectionLevels()
-      .then(setLevels)
-      .catch(() => setLevels([]));
-    // Not fatal either: with no row the set-size card is simply absent, which
-    // is what almost every account sees anyway.
-    fetchDay()
-      .then(setDay)
-      .catch(() => setDay(null));
-  }, [authLoading, authError, reloads]);
+  // One saver per setting, made once (lib/save.ts): a press shows at once,
+  // there is never more than one write out, the last press is the one
+  // written, and a write that fails puts the setting back to what the
+  // database holds and says so in its own card. Their callbacks reach only
+  // for state setters, which React keeps stable, and the user id through its
+  // ref.
+  const savers = useRef<Savers | null>(null);
+  if (savers.current === null) {
+    const write = (patch: Parameters<typeof updateProfile>[1]) =>
+      userId.current ? updateProfile(userId.current, patch) : Promise.reject(new Error("not signed in"));
+    const failedIn = (card: SettingCard) => (error: unknown) => setFailed({ card, error });
+    savers.current = {
+      exam: settingSaver<string | null>({
+        write: (exam_date) => write({ exam_date }),
+        show: (exam_date) => setProfile((p) => (p ? { ...p, exam_date } : p)),
+        failed: failedIn("exam"),
+      }),
+      // The day's size, for the one account that may choose it. The bound
+      // comes from the database (`v_my_day.goal_max`) and the database checks
+      // it again on the way in — the field is drawn from the answer, not
+      // trusted with it — so a failure here is a real refusal and is shown
+      // rather than swallowed.
+      goal: settingSaver<number>({
+        write: (daily_goal) => write({ daily_goal }),
+        show: (daily_goal) => setProfile((p) => (p ? { ...p, daily_goal } : p)),
+        // Home reads the goal from v_my_day, so keep the copy this screen is
+        // holding in step rather than showing yesterday's number until a reload.
+        saved: (goal) => setDay((d) => (d ? { ...d, goal } : d)),
+        failed: failedIn("goal"),
+      }),
+      timer: settingSaver<boolean>({
+        write: (timed_reading) => write({ timed_reading }),
+        show: (timed_reading) => setProfile((p) => (p ? { ...p, timed_reading } : p)),
+        failed: failedIn("timer"),
+      }),
+    };
+  }
+  const save = savers.current;
 
-  async function setExamDate(date: string | null) {
-    setProfile((p) => (p ? { ...p, exam_date: date } : p));
-    try {
-      await updateProfile({ exam_date: date });
-    } catch (e) {
-      setError(errorText(e));
-    }
+  /** A press on one card's control: its old failure, if any, is history. */
+  function press<T>(card: SettingCard, saver: SettingSaver<T>, value: T) {
+    setFailed((f) => (f?.card === card ? null : f));
+    saver.set(value);
   }
 
-  /** The day's size, for the one account that may choose it. The bound comes
-   *  from the database (`v_my_day.goal_max`) and the database checks it again
-   *  on the way in — the field is drawn from the answer, not trusted with it —
-   *  so a failure here is a real refusal and is shown rather than swallowed. */
-  async function setDailyGoal(n: number) {
-    const was = profile?.daily_goal;
-    setProfile((p) => (p ? { ...p, daily_goal: n } : p));
-    setError(null);
-    try {
-      await updateProfile({ daily_goal: n });
-      // Home reads the goal from v_my_day, so keep the copy this screen is
-      // holding in step rather than showing yesterday's number until a reload.
-      setDay((d) => (d ? { ...d, goal: n } : d));
-    } catch (e) {
-      setProfile((p) => (p && was !== undefined ? { ...p, daily_goal: was } : p));
-      setError(errorText(e));
-    }
-  }
-
-  async function setTimedReading(on: boolean) {
-    setProfile((p) => (p ? { ...p, timed_reading: on } : p));
-    try {
-      await updateProfile({ timed_reading: on });
-    } catch (e) {
-      setError(errorText(e));
-    }
-  }
+  // Read on every visit, not once: a set finished since the last visit may
+  // have moved a level, and this screen is where the three are printed.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isConfigured) return;
+      let cancelled = false;
+      fetchProfile()
+        .then((p) => {
+          if (cancelled) return;
+          // A save still out wins over a read that may have left before it.
+          if (save.exam.busy() || save.goal.busy() || save.timer.busy()) return;
+          if (p) {
+            save.exam.confirm(p.exam_date);
+            save.goal.confirm(p.daily_goal);
+            save.timer.confirm(p.timed_reading);
+          }
+          setProfile(p);
+        })
+        .catch((e) => !cancelled && setProfileError(errorText(e)));
+      // Not fatal: with no levels every section reads 「—」, which is what an
+      // unplaced section says anyway.
+      fetchSectionLevels()
+        .then((lv) => !cancelled && setLevels(lv))
+        .catch(() => !cancelled && setLevels([]));
+      // Not fatal either: with no row the set-size card is simply absent, which
+      // is what almost every account sees anyway.
+      fetchDay()
+        .then((d) => !cancelled && setDay(d))
+        .catch(() => !cancelled && setDay(null));
+      return () => {
+        cancelled = true;
+      };
+    }, [reloads, save])
+  );
 
   async function wipe() {
+    if (wiping) return;
     setWiping(true);
-    setError(null);
+    setFailed(null);
     try {
       const counts = await resetProgress();
       setConfirming(false);
@@ -137,7 +181,7 @@ export default function Account() {
       // numbers on screen under a line saying they are gone.
       setReloads((n) => n + 1);
     } catch (e) {
-      setError(errorText(e));
+      setFailed({ card: "reset", error: e });
     } finally {
       setWiping(false);
     }
@@ -230,16 +274,17 @@ export default function Account() {
           </View>
           <DateField
             value={profile.exam_date}
-            onChange={setExamDate}
+            onChange={(date) => press("exam", save.exam, date)}
             placeholder={t("acc_exam_placeholder")}
             min={todayIso()}
             accessibilityLabel={t("acc_exam")}
           />
           {profile.exam_date ? (
             <View style={styles.chips}>
-              <Chip label={t("clear")} selected={false} onPress={() => setExamDate(null)} />
+              <Chip label={t("clear")} selected={false} onPress={() => press("exam", save.exam, null)} />
             </View>
           ) : null}
+          {failed?.card === "exam" ? <InlineError error={failed.error} /> : null}
           {/* What the date is for, beyond the countdown: the ladder brings
               every review in ahead of it, and the last two weeks are set in
               the exam's own proportions. Said once, here, where it is set. */}
@@ -262,11 +307,12 @@ export default function Account() {
             </View>
             <NumberField
               value={profile.daily_goal}
-              onChange={setDailyGoal}
+              onChange={(n) => press("goal", save.goal, n)}
               min={1}
               max={day.goal_max}
               accessibilityLabel={t("acc_setsize_label", { max: day.goal_max })}
             />
+            {failed?.card === "goal" ? <InlineError error={failed.error} /> : null}
             <Text style={type.small}>{t("acc_setsize_sub", { max: day.goal_max })}</Text>
           </Card>
         </View>
@@ -287,14 +333,15 @@ export default function Account() {
             <Chip
               label={t("acc_timer_on")}
               selected={profile.timed_reading}
-              onPress={() => setTimedReading(true)}
+              onPress={() => press("timer", save.timer, true)}
             />
             <Chip
               label={t("acc_timer_off")}
               selected={!profile.timed_reading}
-              onPress={() => setTimedReading(false)}
+              onPress={() => press("timer", save.timer, false)}
             />
           </View>
+          {failed?.card === "timer" ? <InlineError error={failed.error} /> : null}
           <Text style={type.small}>{t("acc_timer_sub")}</Text>
           <Text style={type.small}>{t("acc_timer_exam")}</Text>
         </Card>
@@ -333,15 +380,15 @@ export default function Account() {
           {confirming ? (
             <>
               <Text style={[type.body, { color: colors.wrong }]}>{t("acc_reset_confirm")}</Text>
+              {/* The one red button in the app, and only once it has been
+                  asked for: the press after this one is the one that erases. */}
               <Button
                 label={wiping ? t("acc_reset_busy") : t("acc_reset_do")}
-                tone="secondary"
+                tone="danger"
                 disabled={wiping}
                 onPress={wipe}
               />
-              <View style={styles.chips}>
-                <Chip label={t("cancel")} selected={false} onPress={() => setConfirming(false)} />
-              </View>
+              <Button label={t("cancel")} tone="secondary" disabled={wiping} onPress={() => setConfirming(false)} />
             </>
           ) : (
             <Button
@@ -358,10 +405,9 @@ export default function Account() {
               {t("acc_reset_done", { n: wiped })}
             </Text>
           ) : null}
+          {failed?.card === "reset" ? <InlineError error={failed.error} /> : null}
         </Card>
       </View>
-
-      {error ? <Text style={[type.small, { color: colors.wrong }]}>{error}</Text> : null}
 
       <Notice title={t("acc_noscore_title")} body={t("acc_noscore_body")} />
 

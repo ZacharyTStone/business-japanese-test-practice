@@ -29,6 +29,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { useAuth } from "../src/lib/auth";
 import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
@@ -301,6 +302,7 @@ function NoteEditor({
   onSaved: (text: string) => void;
 }) {
   const { t } = useLang();
+  const { session } = useAuth();
   const [text, setText] = useState(saved);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   useEffect(() => setText(saved), [saved]);
@@ -327,8 +329,13 @@ function NoteEditor({
             selected={false}
             onPress={() => {
               if (state === "saving" || !dirty) return;
+              const userId = session?.user.id;
+              if (!userId) {
+                setState("failed");
+                return;
+              }
               setState("saving");
-              saveNote(itemId, text)
+              saveNote(userId, itemId, text)
                 .then(() => {
                   onSaved(text.trim());
                   setState("saved");
