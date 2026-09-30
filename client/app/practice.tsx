@@ -1279,9 +1279,12 @@ const styles = StyleSheet.create({
   optionPending: { borderColor: colors.accent },
   optionCorrect: { borderColor: colors.correct, backgroundColor: colors.correctSoft },
   optionWrong: { borderColor: colors.wrong, backgroundColor: colors.wrongSoft },
+  // A floor, not a size: at a large text setting the numeral grows and the
+  // badge grows with it rather than cropping it.
   numberBadge: {
-    width: 26,
-    height: 26,
+    minWidth: 26,
+    minHeight: 26,
+    paddingHorizontal: 4,
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
