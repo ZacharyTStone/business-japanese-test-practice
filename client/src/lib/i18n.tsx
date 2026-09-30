@@ -341,7 +341,6 @@ const S = {
   vocab_count: ["{n}語", "{n} word|{n} words"],
   vocab_head: ["まちがえた問題に出てきたことば", "From the questions you missed"],
   vocab_hide: ["読み方と意味をかくす", "Hide readings and meanings"],
-  vocab_show: ["読み方と意味を表示", "Show readings and meanings"],
   vocab_tap: ["タップして思い出せたか確かめる", "Tap to check yourself"],
   vocab_in_context: ["出てきた問題を見る", "See the question"],
   vocab_sentence: ["出てきた文", "Where it appeared"],
@@ -366,10 +365,6 @@ const S = {
 
   // audio
   dialogue_pending: ["会話（音声は準備中）", "Conversation (audio coming soon)"],
-  show_text: ["本文を見る", "Show text"],
-  hide_text: ["本文を隠す", "Hide text"],
-  listen_dialogue: ["会話を聞く", "Play the conversation"],
-  stop_dialogue: ["会話を止める", "Stop"],
   listen_again: ["もう一回聞く", "Listen again"],
   listening: ["聞いています…", "Listening…"],
   skip: ["とばして選択肢へ", "Skip to the options"],

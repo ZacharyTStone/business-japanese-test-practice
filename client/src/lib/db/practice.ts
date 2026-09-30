@@ -10,6 +10,7 @@
 import type {
   QueuedItem,
 } from "../types";
+import type { AttemptArgs, Graded } from "../outbox";
 import type { TypePace } from "../pace";
 import { supabase } from "../supabase";
 
@@ -193,4 +194,29 @@ export async function vetoItem(itemId: string, note = ""): Promise<void> {
     p_note: note.trim(),
   });
   if (error) throw error;
+}
+
+/**
+ * The attempt an outbox entry describes, if the database already has it: same item,
+ * option, timings and replays. Two answers to one question agreeing to the
+ * millisecond on how long each took is not a thing that happens, so a match is
+ * this answer, landed after all.
+ *
+ * The timings are compared here rather than in the filter because `think_ms`
+ * may be null, which an equality filter never matches.
+ */
+export async function findAttempt(args: AttemptArgs): Promise<Graded | null> {
+  const { data, error } = await supabase
+    .from("attempts")
+    .select("is_correct, chosen_role, elapsed_ms, think_ms")
+    .eq("item_id", args.itemId)
+    .eq("chosen_index", args.chosenIndex)
+    .eq("replays", args.replays)
+    .order("answered_at", { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  const row = (data ?? []).find(
+    (r) => (r.elapsed_ms ?? null) === args.elapsedMs && (r.think_ms ?? null) === args.thinkMs
+  );
+  return row ? { isCorrect: row.is_correct as boolean, chosenRole: row.chosen_role as string } : null;
 }

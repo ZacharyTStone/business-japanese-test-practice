@@ -238,3 +238,11 @@ def test_the_one_danger_button_is_readable():
     colours = _tokens()
     ratio = contrast(colours["onAccent"], colours["wrong"])
     assert ratio >= AA_SMALL_TEXT, f"onAccent on wrong is {ratio:.2f}:1"
+
+
+def test_a_secondary_button_is_readable():
+    """`accentDeep` on `accentSoft`: the label of every secondary button — back,
+    try again, the second choice on a card. `accent` there was 4.2:1."""
+    colours = _tokens()
+    ratio = contrast(colours["accentDeep"], colours["accentSoft"])
+    assert ratio >= AA_SMALL_TEXT, f"accentDeep on accentSoft is {ratio:.2f}:1"

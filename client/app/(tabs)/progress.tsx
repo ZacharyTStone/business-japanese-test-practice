@@ -33,6 +33,7 @@ import {
   hasAdFree,
 } from "../../src/lib/db";
 import { TAG_LABELS } from "../../src/lib/generated";
+import { CHANNEL_KEY } from "../../src/lib/labels";
 import { useLang, type Key } from "../../src/lib/i18n";
 import { placedLevel } from "../../src/lib/levels";
 import { rankTraps, rankWeakTags } from "../../src/lib/ranking";
@@ -72,18 +73,11 @@ const SECTIONS: { id: Section; key: Key; icon: IconName; tone: BadgeTone }[] = [
   { id: "dokkai", key: "sec_dokkai", icon: "doc", tone: "blue" },
 ];
 
-const CHANNEL_LABEL: Record<string, Key> = {
-  in_person: "ch_in_person",
-  phone: "ch_phone",
-  video: "ch_video",
-  written: "ch_written",
-};
-
 /** A tag as a person would say it: 「不在を伝える」, not `phone_absence`. The
  *  seed tables name every tag (client/src/lib/generated.ts); the four channels
  *  are words the app already translates. */
 function tagLabel(axis: TagStat["axis"], tag: string, t: (key: Key) => string): string {
-  if (axis === "channel") return CHANNEL_LABEL[tag] ? t(CHANNEL_LABEL[tag]) : tag;
+  if (axis === "channel") return CHANNEL_KEY[tag] ? t(CHANNEL_KEY[tag]) : tag;
   return TAG_LABELS[axis]?.[tag] ?? tag;
 }
 

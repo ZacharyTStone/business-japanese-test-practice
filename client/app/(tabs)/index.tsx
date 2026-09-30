@@ -26,6 +26,7 @@ import {
   fetchStreak,
 } from "../../src/lib/db";
 import { minutesFor, secondsPerQuestion } from "../../src/lib/estimate";
+import { dayState, setSize } from "../../src/lib/day";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
@@ -146,8 +147,9 @@ function Home() {
   const goal = day?.goal ?? profile?.daily_goal ?? 10;
   const answered = day?.answered_today ?? 0;
   const done = Math.min(answered, goal);
-  const blocked = day != null && !day.unlimited && (day.left_today ?? 0) <= 0;
-  const bonus = day?.unlimited ? goal : (day?.left_today ?? 0);
+  // The same arithmetic practice uses to size the set (src/lib/day.ts).
+  const blocked = day != null && dayState(day) === "done";
+  const bonus = day != null ? setSize(day) : 0;
   const countdown = countdownLine(daysUntil(profile?.exam_date), lang);
 
   // Only sections the database has placed get named, so a new account has no

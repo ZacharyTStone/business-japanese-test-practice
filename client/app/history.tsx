@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../src/lib/auth";
 import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
+import { NUMBERS } from "../src/lib/labels";
 import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
 import type { HistoryEntry, ReviewDetail } from "../src/lib/types";
@@ -42,7 +43,6 @@ import { ScreenCrash } from "../src/ui/crash";
 import { DocumentView } from "../src/ui/document";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
-const NUMBERS = ["1", "2", "3", "4"];
 
 /** A throw while drawing stays on this screen (ui/crash.tsx). */
 export const ErrorBoundary = ScreenCrash;

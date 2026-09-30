@@ -112,9 +112,9 @@ export function Button({
     ? colors.muted
     : tone === "primary" || tone === "danger"
       ? colors.onAccent
-      : tone === "onAccent"
-        ? colors.accentDeep
-        : colors.accent;
+      : // The secondary fill is accentSoft, on which accent is 4.2:1 — short of
+        // the 4.5:1 a 16px label needs — and accentDeep is 6.3:1.
+        colors.accentDeep;
   const subColor = disabled
     ? colors.muted
     : tone === "primary"

@@ -366,8 +366,8 @@ function useClipQueue(
     };
     // `at` is a dependency so that two identical clips in a row — which share
     // one player, because the source is what builds it — still get a listener
-    // each.
-  }, [player, running, at]);
+    // each. `owner` is a ref's value, the same for the life of the player.
+  }, [player, running, at, owner]);
 
   const stop = React.useCallback(() => {
     try {
@@ -386,13 +386,15 @@ function useClipQueue(
   stopLatest.current = stop;
 
   React.useEffect(() => {
-    if (!running || !urls[at]) return;
+    // The list is read through `live`, like `stop` reads it: a parent that
+    // rebuilds the same list each render must not restart the clip.
+    if (!running || !live.current.urls[at]) return;
     takeVoice(owner, () => {
       stopLatest.current();
       live.current.onInterrupted?.();
     });
     startPlayer(player);
-  }, [player, running, at]);
+  }, [player, running, at, owner]);
 
   React.useEffect(() => () => releaseVoice(owner), [owner]);
 

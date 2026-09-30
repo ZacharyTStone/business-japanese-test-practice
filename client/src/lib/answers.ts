@@ -1,39 +1,10 @@
 /**
- * The outbox (src/lib/outbox.ts), wired to the database.
- *
- * One query of its own beside `recordAttempt`: whether this learner already has
- * the attempt an entry describes, asked before the entry is sent again. Row-level
- * security scopes `attempts` to the signed-in learner, so nothing here names
- * anybody.
+ * The outbox (src/lib/outbox.ts), wired to the database: `recordAttempt` posts
+ * an answer, and `findAttempt` asks whether an entry already landed before it is
+ * sent again. Both queries live in the data layer (src/lib/db/practice.ts).
  */
-import { recordAttempt } from "./db";
+import { findAttempt, recordAttempt } from "./db";
 import { makeOutbox, type AttemptArgs, type FlushResult, type Graded, type Sender, type SendOutcome } from "./outbox";
-import { supabase } from "./supabase";
-
-/**
- * The attempt this entry describes, if the database already has it: same item,
- * option, timings and replays. Two answers to one question agreeing to the
- * millisecond on how long each took is not a thing that happens, so a match is
- * this answer, landed after all.
- *
- * The timings are compared here rather than in the filter because `think_ms`
- * may be null, which an equality filter never matches.
- */
-async function findAttempt(args: AttemptArgs): Promise<Graded | null> {
-  const { data, error } = await supabase
-    .from("attempts")
-    .select("is_correct, chosen_role, elapsed_ms, think_ms")
-    .eq("item_id", args.itemId)
-    .eq("chosen_index", args.chosenIndex)
-    .eq("replays", args.replays)
-    .order("answered_at", { ascending: false })
-    .limit(20);
-  if (error) throw error;
-  const row = (data ?? []).find(
-    (r) => (r.elapsed_ms ?? null) === args.elapsedMs && (r.think_ms ?? null) === args.thinkMs
-  );
-  return row ? { isCorrect: row.is_correct as boolean, chosenRole: row.chosen_role as string } : null;
-}
 
 const sender: Sender = { post: recordAttempt, find: findAttempt };
 const outbox = makeOutbox();

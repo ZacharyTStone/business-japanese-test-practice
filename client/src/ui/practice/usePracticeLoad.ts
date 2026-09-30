@@ -137,7 +137,8 @@ export function usePracticeLoad(userId: string | null, dispatch: Dispatch<Practi
         }
       }
     };
-  }, [userId, attempt]);
+    // `dispatch` is a reducer's, the same function for the life of the screen.
+  }, [userId, attempt, dispatch]);
 
   const retry = () => {
     setError(null);
