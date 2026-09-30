@@ -13,7 +13,8 @@
  * record, all-time. The two cards under them — the traps, the weak tags — are
  * what the queue is about to do something about, and the queue weighs the
  * last 30 days, so those two rank on the same window — otherwise a person
- * could be told they are weak somewhere the queue has stopped aiming at.
+ * could be told they are weak somewhere the queue has stopped aiming at. The
+ * ranking, its thresholds and its fallback are lib/ranking.ts.
  *
  * A section's level is printed only once the database has placed it. Before
  * that the app is serving a neutral starting level, and a "J2" beside a section
@@ -34,6 +35,7 @@ import {
 import { TAG_LABELS } from "../../src/lib/generated";
 import { useLang, type Key } from "../../src/lib/i18n";
 import { placedLevel } from "../../src/lib/levels";
+import { rankTraps, rankWeakTags } from "../../src/lib/ranking";
 import { roleInfo } from "../../src/lib/roles";
 import type { RoleTrap, Section, SectionLevel, TagStat, TypeStat } from "../../src/lib/types";
 import {
@@ -69,15 +71,6 @@ const SECTIONS: { id: Section; key: Key; icon: IconName; tone: BadgeTone }[] = [
   { id: "choudokkai", key: "sec_choudokkai", icon: "layers", tone: "teal" },
   { id: "dokkai", key: "sec_dokkai", icon: "doc", tone: "blue" },
 ];
-
-/** Tags seen fewer times than this are not shown: three answers is a mood, not
- *  a weakness, and presenting it as one sends people off to drill noise.
- *  Counted over the last 30 days, the window the queue weighs. */
-const MIN_ANSWERS_PER_TAG = 4;
-
-/** A trap is ranked by how often it caught them out of how often it was on
- *  offer, and below three offers that share is noise too. */
-const MIN_TIMES_MET = 3;
 
 const CHANNEL_LABEL: Record<string, Key> = {
   in_person: "ch_in_person",
@@ -160,41 +153,10 @@ function Progress() {
   }
   if (!types) return <Loading />;
 
-  // The queue's window, unless there is nothing in it. Somebody back from a
-  // month away has answered nothing in 30 days, and an empty card there says
-  // less than the record does, so the whole list falls back to all-time and
-  // drops the "last 30 days" label. It is the whole list or none of it: a
-  // per-tag fallback would rank a tag last touched in spring against one
-  // answered yesterday on two different scales, which is not a ranking.
-  const tagsRecent = tags.some((t) => t.recent_answered > 0);
-  const weakTags = (
-    tagsRecent
-      ? tags
-          .filter((t) => t.recent_answered >= MIN_ANSWERS_PER_TAG && t.recent_accuracy !== null)
-          .map((t) => ({ ...t, n: t.recent_answered, acc: t.recent_accuracy ?? 0 }))
-      : tags
-          .filter((t) => t.answered >= MIN_ANSWERS_PER_TAG)
-          .map((t) => ({ ...t, n: t.answered, acc: t.accuracy }))
-  )
-    .sort((a, b) => a.acc - b.acc)
-    .slice(0, 6);
-
-  // Same window rule for the traps: the last 30 days, or all-time when nothing
-  // is recent. Ranked by the share of the times a trap was on offer that it
-  // caught them — a bare count would put the traps that are in every question
-  // on top whether or not they are the problem. The clock is no option's trap
-  // and has no share; it gets its own line.
-  const trapsRecent = traps.some((t) => t.recent_times > 0);
-  const trapRows = traps.map((tr) => ({
-    ...tr,
-    n: trapsRecent ? tr.recent_times : tr.times_chosen,
-    met: (trapsRecent ? tr.recent_met : tr.times_met) ?? 0,
-  }));
-  const timeouts = trapRows.find((tr) => tr.role === "timed_out" && tr.n > 0) ?? null;
-  const topTraps = trapRows
-    .filter((tr) => tr.role !== "timed_out" && tr.n > 0 && tr.met >= MIN_TIMES_MET)
-    .sort((a, b) => b.n / b.met - a.n / a.met || b.n - a.n)
-    .slice(0, 5);
+  // The queue's window, falling back to the record as a whole when nothing
+  // is recent; the clock's timeouts on a line of their own (lib/ranking.ts).
+  const { recent: tagsRecent, rows: weakTags } = rankWeakTags(tags);
+  const { recent: trapsRecent, top: topTraps, timeouts } = rankTraps(traps);
 
   const answered = types.reduce((n, t) => n + t.answered, 0);
 

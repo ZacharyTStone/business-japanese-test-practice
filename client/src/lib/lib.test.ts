@@ -2,9 +2,19 @@
  * The small pure modules: the reading clock, the exam date, the levels and the
  * role table. Each is arithmetic a screen trusts without checking.
  */
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { daysUntil, EXAM_NEAR_DAYS, examIsNear, isIsoDate, typedDate } from "./exam";
+import {
+  countdownLine,
+  daysUntil,
+  EXAM_NEAR_DAYS,
+  examIsNear,
+  formatExamDate,
+  isIsoDate,
+  todayIso,
+  typedDate,
+} from "./exam";
+import { tr } from "./i18n";
 import { DISTRACTOR_ROLES } from "./generated";
 import { levelMove, levelsAgree, placedLevel, placedLevels } from "./levels";
 import { budgetSeconds, type TypePace } from "./pace";
@@ -84,20 +94,48 @@ describe("the reading clock", () => {
 });
 
 describe("the exam date", () => {
-  const inDays = (n: number) =>
-    new Date(Date.now() + 9 * 3600 * 1000 + n * 86400 * 1000).toISOString().slice(0, 10);
+  // 15:30 UTC on 30 September is 00:30 on 1 October in Tokyo: the moment a
+  // count done in UTC and one done in Japan disagree by a day. The expected
+  // dates are written out rather than computed, so a mistake in the code's
+  // own arithmetic cannot be repeated in the test's.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T15:30:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it("counts whole days in Japan", () => {
-    expect(daysUntil(inDays(10))).toBe(10);
+    expect(todayIso()).toBe("2026-10-01");
+    expect(daysUntil("2026-10-01")).toBe(0);
+    expect(daysUntil("2026-10-11")).toBe(10);
+    expect(daysUntil("2026-09-30")).toBe(-1);
     expect(daysUntil(null)).toBeNull();
+    expect(daysUntil("someday")).toBeNull();
   });
 
   it("is near for the last two weeks, today included, and not after", () => {
-    expect(examIsNear(inDays(0))).toBe(true);
-    expect(examIsNear(inDays(EXAM_NEAR_DAYS))).toBe(true);
-    expect(examIsNear(inDays(EXAM_NEAR_DAYS + 1))).toBe(false);
-    expect(examIsNear(inDays(-1))).toBe(false);
+    expect(EXAM_NEAR_DAYS).toBe(14);
+    expect(examIsNear("2026-10-01")).toBe(true);
+    expect(examIsNear("2026-10-15")).toBe(true);
+    expect(examIsNear("2026-10-16")).toBe(false);
+    expect(examIsNear("2026-09-30")).toBe(false);
     expect(examIsNear(null)).toBe(false);
+  });
+
+  it("is said the way a person says a date", () => {
+    expect(formatExamDate("2026-12-06", "ja")).toBe("12月6日");
+    expect(formatExamDate("2026-12-06", "en")).toBe("6 Dec");
+  });
+
+  it("counts down in words, and stops counting once it has passed", () => {
+    expect(countdownLine(null, "ja")).toBeNull();
+    expect(countdownLine(-3, "ja")).toBe("試験はもう終わりました");
+    expect(countdownLine(0, "en")).toBe("The exam is today");
+    expect(countdownLine(1, "en")).toBe("1 day to the exam");
+    expect(countdownLine(12, "en")).toBe("12 days to the exam");
+    expect(countdownLine(12, "ja")).toBe("試験まであと12日");
   });
 
   it("accepts only days that exist", () => {
@@ -121,6 +159,26 @@ describe("the exam date", () => {
     expect(typedDate("2026120199")).toBe("2026-12-01");
     expect(typedDate("")).toBe("");
     expect(isIsoDate(typedDate("20261201"))).toBe(true);
+  });
+});
+
+describe("the string table", () => {
+  it("fills in its variables", () => {
+    expect(tr("ja", "goal_ring", { done: 3, goal: 10 })).toBe("今日の目標10問のうち3問");
+    expect(tr("en", "goal_ring", { done: 3, goal: 10 })).toBe("3 of today's 10 questions");
+  });
+
+  it("picks the English plural by n, and leaves Japanese alone", () => {
+    expect(tr("en", "streak_days", { n: 1 })).toBe("1 day");
+    expect(tr("en", "streak_days", { n: 2 })).toBe("2 days");
+    expect(tr("en", "streak_days", { n: 0 })).toBe("0 days");
+    expect(tr("ja", "streak_days", { n: 1 })).toBe("1日");
+    expect(tr("ja", "streak_days", { n: 2 })).toBe("2日");
+  });
+
+  it("uses a string with no variables as written", () => {
+    expect(tr("en", "retry")).toBe("Try again");
+    expect(tr("ja", "retry")).toBe("もう一度読み込む");
   });
 });
 

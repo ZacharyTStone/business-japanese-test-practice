@@ -51,6 +51,7 @@ const S = {
   // The radar, said aloud (ui/radar.tsx): every type and its share.
   radar_a11y: ["種類ごとの正答率。{list}", "Accuracy by type. {list}"],
   radar_untried: ["まだ解いていません", "not tried yet"],
+  list_sep: ["、", ", "],
   // A forgotten password: a link by mail, and the screen it opens.
   gate_forgot: ["パスワードを忘れた", "Forgot your password?"],
   gate_reset_need_email: [

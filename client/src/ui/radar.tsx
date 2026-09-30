@@ -52,7 +52,7 @@ export function radarDescription(stats: TypeStat[], t: ReturnType<typeof useLang
       ? `${s.label_ja} ${t("radar_untried")}`
       : `${s.label_ja} ${Math.round(s.accuracy * 100)}%`
   );
-  return t("radar_a11y", { list: parts.join("、") });
+  return t("radar_a11y", { list: parts.join(t("list_sep")) });
 }
 
 export function TypeRadar({ stats }: { stats: TypeStat[] }) {
