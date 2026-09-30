@@ -2654,6 +2654,15 @@ begin
             and exists (select 1 from unnest(proconfig) c where split_part(c, '=', 1) = 'search_path')
            from pg_proc where oid = 'public.reset_my_progress()'::regprocedure),
         'and its search_path is pinned');
+    -- Deleting a session nulls every answer that names it, and without an
+    -- index that is a pass over everybody's answers for each session reset.
+    perform test.check(
+        exists (select 1 from pg_index x
+                 where x.indrelid = 'public.attempts'::regclass
+                   and x.indkey[0] = (select attnum from pg_attribute
+                                       where attrelid = 'public.attempts'::regclass
+                                         and attname = 'session_id')),
+        'and the answers a deleted session is looked up in are indexed by session');
 end
 $$;
 
