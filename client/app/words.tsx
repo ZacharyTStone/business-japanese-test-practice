@@ -1,8 +1,8 @@
 /**
  * Every word the questions carry notes for, each with a sentence it is used in.
  *
- * The companion to ことばメモ: that screen keeps the words of the questions
- * that caught you; this one keeps the words of every question you have
+ * The companion to 「まちがえた問題のことば」 (vocab.tsx): that screen keeps the
+ * words of the questions that caught you; this one keeps the words of every question you have
  * answered, searchable, with a level and a section to narrow it by and
  * furigana to switch on. Nothing on it is written for it — the words, readings
  * and meanings are the notes each question shipped with, and the example is a

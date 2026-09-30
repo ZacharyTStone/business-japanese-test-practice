@@ -16,7 +16,8 @@
  * Still a record, not a drill. Nothing here decides what is served next — that
  * is next_items() and nothing else — and there is nothing to choose about the
  * questions: it is the same kind of screen as 解いた問題, reached from the same
- * place.
+ * place. Its title is the button's words, 「まちがえた問題のことば」, so the
+ * button and the screen it opens say the same thing beside 「ことば一覧」.
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -109,9 +110,11 @@ export default function Vocab() {
         {hidden ? <Text style={type.small}>{t("vocab_tap")}</Text> : null}
       </Card>
 
+      {/* One label whatever the state, and the state is the fill: a chip that
+          said "show" while lit read as the opposite of what it was doing. */}
       <View style={styles.row}>
         <Chip
-          label={hidden ? t("vocab_show") : t("vocab_hide")}
+          label={t("vocab_hide")}
           selected={hidden}
           onPress={() => {
             setHidden((h) => !h);

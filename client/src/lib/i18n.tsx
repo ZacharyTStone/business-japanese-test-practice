@@ -80,7 +80,7 @@ const S = {
   title_practice: ["練習", "Practice"],
   title_result: ["結果", "Result"],
   title_history: ["解いた問題", "Answered"],
-  title_vocab: ["ことばメモ", "Vocabulary"],
+  title_vocab: ["まちがえた問題のことば", "Words from missed questions"],
   sec_choukai: ["聴解", "Listening"],
   sec_choudokkai: ["聴読解", "Listening & reading"],
   sec_dokkai: ["読解", "Reading"],
