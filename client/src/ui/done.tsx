@@ -21,6 +21,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { localClock, nextJstMidnight, onJapanTime } from "../lib/day";
 import { useLang } from "../lib/i18n";
 import { Button, Card } from "./components";
 import { Face } from "./face";
@@ -57,7 +58,14 @@ export function DayDone({
       <View style={styles.facts}>
         <View style={styles.fact}>
           <Icon name="check" size={16} color={colors.correct} strokeWidth={2.4} />
-          <Text style={type.small}>{t("day_done_next")}</Text>
+          <Text style={type.small}>
+            {/* Midnight where the database counts the day. On a phone that
+                keeps another clock, "midnight" alone would be the wrong one,
+                so the hour is given on theirs as well. */}
+            {onJapanTime()
+              ? t("day_done_next")
+              : t("day_done_next_away", { time: localClock(nextJstMidnight(Date.now())) })}
+          </Text>
         </View>
         {streak > 0 ? (
           <View style={styles.fact}>

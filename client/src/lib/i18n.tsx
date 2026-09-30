@@ -37,6 +37,14 @@ const S = {
   ],
   err_wrong_password: ["メールアドレスかパスワードが違います。", "The email address or password is wrong."],
   err_other: ["問題が起きました。しばらくしてから、もう一度お試しください。", "Something went wrong. Please try again in a moment."],
+
+  // ---- The client shell's additions, kept together in this one block. ----
+  // When the day's count starts again, for a phone not on Japan's clock: the
+  // day is closed at midnight in Japan whatever the device says.
+  day_done_next_away: [
+    "次の問題は、日本時間の0時（あなたの時刻で{time}）から出ます",
+    "New questions from midnight in Japan ({time} your time)",
+  ],
   loading: ["読み込み中…", "Loading…"],
   tab_home: ["ホーム", "Home"],
   tab_progress: ["記録", "Progress"],
@@ -67,7 +75,7 @@ const S = {
   wel_p2_title: ["弱いところを、狙って出します", "It aims at your weak spots"],
   wel_p2_body: ["正誤だけでなく、どのまちがえ方をしたかまで見ます。ひっかかったわなは一晩おいて、同じわなを持つ別の問題でもう一度確かめます。できたら三日後、一週間後と間をあけていきます。新しい問題が残っているかぎり、同じ問題はくり返しません。", "Not just right or wrong — which way you went wrong. A trap that caught you comes back after a night's sleep, in a new question that sets the same trap; get it right and the next one comes in three days, then a week, then longer. You won't meet the same question twice while there are new ones left."],
   wel_p3_title: ["あなたがすることは、答えるだけ", "Your part is to answer"],
-  wel_p3_body: ["1日10問、6分ほど。読解の問題には本番と同じだけの時間をはかります（設定で外せます）。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about six minutes. Reading questions are timed at exam pace — you can turn that off in settings. The longer you keep at it, the better the questions fit you."],
+  wel_p3_body: ["1日10問、10分ほど。読解の問題には本番と同じだけの時間をはかります（設定で外せます）。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about ten minutes. Reading questions are timed at exam pace — you can turn that off in settings. The longer you keep at it, the better the questions fit you."],
   wel_start: ["始める", "Get started"],
   wel_testers_note: ["いまはテスト中です。登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   wel_honesty: ["問題はすべて独自に作ったものです。過去問は使っていません。点数の予測は出しません。", "Every question is an original composition — no past papers. The app never predicts a score."],

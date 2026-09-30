@@ -17,7 +17,16 @@ import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../../src/lib/auth";
-import { fetchDay, fetchProfile, fetchReviewLoad, fetchSectionLevels, fetchStreak } from "../../src/lib/db";
+import {
+  fetchDay,
+  fetchPace,
+  fetchProfile,
+  fetchRecentPace,
+  fetchReviewLoad,
+  fetchSectionLevels,
+  fetchStreak,
+} from "../../src/lib/db";
+import { minutesFor, secondsPerQuestion } from "../../src/lib/estimate";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
@@ -38,11 +47,6 @@ import { useFreshToday } from "../../src/ui/fresh";
 import { FadeIn } from "../../src/ui/motion";
 import { colors, shadow, space, TAB_CLEARANCE, tabular, type } from "../../src/ui/theme";
 
-/** About how long a set takes: a question is a little over half a minute. */
-function minutesFor(n: number): number {
-  return Math.max(1, Math.round(n * 0.6));
-}
-
 export default function Home() {
   const router = useRouter();
   const { lang, t } = useLang();
@@ -54,6 +58,9 @@ export default function Home() {
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   // Lessons due for a 類題. Furniture: the button works without it.
   const [due, setDue] = useState(0);
+  // Seconds a question takes this learner (lib/estimate.ts). Furniture too:
+  // without it the button says the exam's reading pace.
+  const [perQuestion, setPerQuestion] = useState(() => secondsPerQuestion([], []));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -67,12 +74,14 @@ export default function Home() {
       let cancelled = false;
       (async () => {
         try {
-          const [p, s, d, lv, load] = await Promise.all([
+          const [p, s, d, lv, load, recent, pace] = await Promise.all([
             fetchProfile(),
             fetchStreak(),
             fetchDay(),
             fetchSectionLevels(),
             fetchReviewLoad().catch(() => null),
+            fetchRecentPace().catch(() => []),
+            fetchPace().catch(() => ({})),
           ]);
           if (cancelled) return;
           setProfile(p);
@@ -80,6 +89,12 @@ export default function Home() {
           setDay(d);
           setLevels(lv);
           setDue(load?.due_now ?? 0);
+          setPerQuestion(
+            secondsPerQuestion(
+              recent,
+              Object.values(pace).map((budget) => budget.seconds)
+            )
+          );
           setLoadedAt(Date.now());
         } catch (e) {
           // A spinner that never ends looks exactly like an app that has hung.
@@ -243,8 +258,8 @@ export default function Home() {
               label={t("btn_today")}
               sub={
                 due > 0
-                  ? t("btn_today_sub_due", { n: goal - done, min: minutesFor(goal - done), due })
-                  : t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done) })
+                  ? t("btn_today_sub_due", { n: goal - done, min: minutesFor(goal - done, perQuestion), due })
+                  : t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done, perQuestion) })
               }
               tone="onAccent"
               icon="play"

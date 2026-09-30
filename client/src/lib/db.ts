@@ -333,6 +333,21 @@ export async function fetchReviewLoad(): Promise<ReviewLoad> {
   return data as ReviewLoad;
 }
 
+/** How long this learner's latest answers took, newest first, in ms — the
+ *  learner's own pace, for how long home says a set will take
+ *  (lib/estimate.ts). Answers from an older client carry no time and are
+ *  left out. */
+export async function fetchRecentPace(limit = 30): Promise<number[]> {
+  const { data, error } = await supabase
+    .from("attempts")
+    .select("elapsed_ms")
+    .not("elapsed_ms", "is", null)
+    .order("answered_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((row) => row.elapsed_ms as number);
+}
+
 export async function fetchStreak(): Promise<number> {
   const { data, error } = await supabase.rpc("my_streak");
   if (error) throw error;

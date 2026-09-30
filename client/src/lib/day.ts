@@ -23,6 +23,25 @@ export function nextJstMidnight(instant: number): number {
   return (Math.floor((instant + JST) / DAY) + 1) * DAY - JST;
 }
 
+/** Minutes a device's clock is *behind* UTC, as `Date.getTimezoneOffset` says it:
+ *  Japan is -540. */
+function deviceOffset(instant: number): number {
+  return new Date(instant).getTimezoneOffset();
+}
+
+/** Whether this device keeps Japan's clock, so "midnight" needs no gloss. */
+export function onJapanTime(offsetMinutes: number = deviceOffset(Date.now())): boolean {
+  return offsetMinutes === -JST / MINUTE;
+}
+
+/** An instant as HH:MM on this device's clock — or on the clock `offsetMinutes`
+ *  describes, which is how the tests pin it. */
+export function localClock(instant: number, offsetMinutes: number = deviceOffset(instant)): string {
+  const wall = new Date(instant - offsetMinutes * MINUTE);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(wall.getUTCHours())}:${pad(wall.getUTCMinutes())}`;
+}
+
 /** How stale a screen about today may get before coming back to it re-reads it. */
 export const REFRESH_AFTER_MS = 10 * MINUTE;
 

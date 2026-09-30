@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { jstDate, nextJstMidnight, REFRESH_AFTER_MS, shouldRefresh } from "./day";
+import { jstDate, localClock, nextJstMidnight, onJapanTime, REFRESH_AFTER_MS, shouldRefresh } from "./day";
 
 const at = (iso: string) => Date.parse(iso);
 
@@ -19,6 +19,23 @@ describe("the Japanese day", () => {
     expect(nextJstMidnight(at("2026-09-30T05:00:00Z"))).toBe(at("2026-09-30T15:00:00Z"));
     expect(nextJstMidnight(at("2026-09-30T15:00:00Z"))).toBe(at("2026-10-01T15:00:00Z"));
     expect(nextJstMidnight(at("2026-09-30T14:59:59Z"))).toBe(at("2026-09-30T15:00:00Z"));
+  });
+});
+
+describe("midnight in Japan, on the learner's clock", () => {
+  const midnight = at("2026-09-30T15:00:00Z");
+
+  it("needs no gloss on a device that keeps Japan's time", () => {
+    expect(onJapanTime(-540)).toBe(true);
+    expect(onJapanTime(0)).toBe(false);
+    expect(onJapanTime(420)).toBe(false);
+  });
+
+  it("is said as the hour it is where they are", () => {
+    expect(localClock(midnight, -540)).toBe("00:00");
+    expect(localClock(midnight, -60)).toBe("16:00"); // London in summer
+    expect(localClock(midnight, 420)).toBe("08:00"); // California in summer
+    expect(localClock(midnight, -330)).toBe("20:30"); // India
   });
 });
 
