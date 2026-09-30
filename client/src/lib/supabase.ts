@@ -18,6 +18,18 @@ const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
  *  setup instructions rather than a stack trace, so a fresh clone runs. */
 export const isConfigured = Boolean(url && anonKey);
 
+/**
+ * The address the web app was opened at, read before the client exists.
+ *
+ * supabase-js reads a session out of the address when it starts
+ * (`detectSessionInUrl`) and then wipes it, and a password-reset link is one
+ * of those. By the time anything else could ask, the address no longer says
+ * whether this launch was a reset — so it is kept here, first
+ * (lib/authlink.ts reads it). Null on a phone, which has no address bar.
+ */
+export const LAUNCH_URL: string | null =
+  Platform.OS === "web" && typeof window !== "undefined" ? window.location.href : null;
+
 export const supabase = createClient(url ?? "http://localhost:54321", anonKey ?? "public-anon-key", {
   auth: {
     // On web, supabase-js uses localStorage by default and AsyncStorage's web

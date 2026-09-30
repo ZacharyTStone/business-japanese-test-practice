@@ -10,7 +10,7 @@ import { LangProvider, useLang } from "../src/lib/i18n";
 import { isConfigured } from "../src/lib/supabase";
 import { Loading, Notice, ScreenMessage } from "../src/ui/components";
 import { RootCrash } from "../src/ui/crash";
-import { ClosedScreen, SignInScreen } from "../src/ui/gate";
+import { ClosedScreen, NewPasswordScreen, SignInScreen } from "../src/ui/gate";
 import { Icon } from "../src/ui/icons";
 import { colors, space, type } from "../src/ui/theme";
 import { WelcomeScreen, useWelcome } from "../src/ui/welcome";
@@ -84,6 +84,13 @@ function Navigator() {
   // flash of an app nobody has been introduced to yet.
   const welcome = useWelcome();
   const auth = useAuth();
+  // A reset email's link, opened: its session is for choosing a new password
+  // and nothing else yet, so that comes before the introduction and before
+  // the door. Without a session the link failed, and the sign-in screen says so.
+  if (isConfigured && auth.recovering) {
+    if (auth.loading) return <Loading />;
+    if (auth.session) return <NewPasswordScreen />;
+  }
   if (!welcome.ready) return <Loading />;
   if (!welcome.seen) return <WelcomeScreen onStart={welcome.dismiss} />;
 
@@ -142,6 +149,9 @@ function Navigator() {
             name="words"
             options={{ title: t("title_words"), headerLeft: () => <BackToRecord /> }}
           />
+          {/* Where a reset email lands. By the time the stack is drawn the
+              new password is chosen, so it only passes the learner home. */}
+          <Stack.Screen name="reset-password" options={{ headerShown: false }} />
         </Stack>
   );
 }

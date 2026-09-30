@@ -51,6 +51,28 @@ const S = {
   // The radar, said aloud (ui/radar.tsx): every type and its share.
   radar_a11y: ["種類ごとの正答率。{list}", "Accuracy by type. {list}"],
   radar_untried: ["まだ解いていません", "not tried yet"],
+  // A forgotten password: a link by mail, and the screen it opens.
+  gate_forgot: ["パスワードを忘れた", "Forgot your password?"],
+  gate_reset_need_email: [
+    "メールアドレスを入れてから押してください。そのアドレスに、パスワードを決め直すためのリンクを送ります。",
+    "Enter your email address first, and we'll send a link to it for choosing a new password.",
+  ],
+  gate_reset_sent: [
+    "パスワードを決め直すためのリンクを送りました。メールを開いて、リンクを押してください。",
+    "We've sent a link for choosing a new password. Open the email and follow the link.",
+  ],
+  gate_link_expired: [
+    "リンクの有効期限が切れているか、すでに使われています。もう一度「パスワードを忘れた」を押してください。",
+    "That link has expired or has already been used. Press “Forgot your password?” again.",
+  ],
+  reset_title: ["新しいパスワードを決めてください", "Choose a new password"],
+  reset_body: [
+    "6文字以上です。決めると、そのままログインした状態で始まります。",
+    "At least 6 characters. Once it's set, you carry on signed in.",
+  ],
+  reset_password: ["新しいパスワード", "New password"],
+  reset_save: ["パスワードを変える", "Set the password"],
+  reset_busy: ["変えています…", "Setting it…"],
   loading: ["読み込み中…", "Loading…"],
   tab_home: ["ホーム", "Home"],
   tab_progress: ["記録", "Progress"],
@@ -111,7 +133,7 @@ const S = {
   gate_body: ["いまはテスト中のため、登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   gate_email: ["メールアドレス", "Email"],
   gate_password: ["パスワード", "Password"],
-  gate_password_hint: ["パスワードは6文字以上。登録済みのメールアドレスであれば、初めての方は「アカウントを作る」を押してください。", "Password of at least 6 characters. If your address is already registered, press “Create account” the first time."],
+  gate_password_hint: ["パスワードは6文字以上です。テスト参加者として登録されたアドレスで初めて使うときは、「アカウントを作る」を押してください。", "At least 6 characters. The first time you use an address registered as a tester, press “Create account”."],
   gate_sign_in: ["ログイン", "Sign in"],
   gate_create: ["アカウントを作る", "Create account"],
   gate_busy: ["確認しています…", "Checking…"],
