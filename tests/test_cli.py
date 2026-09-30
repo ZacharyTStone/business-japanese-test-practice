@@ -193,3 +193,12 @@ def test_probe_leaves_the_bundle_alone_when_nothing_could_be_measured(capsys, mo
                         lambda item, **k: difficulty.DifficultyResult(measured=False))
     assert cli.main(["probe", str(dst)]) == 1
     assert dst.read_text(encoding="utf-8") == before
+
+
+def test_a_failing_selftest_says_so_rather_than_crashing(monkeypatch, capsys):
+    """An empty accuracy report made `db_ok` a list, and `ok &= []` a
+    TypeError on the one path that exists to report a failure."""
+    from bjt.db import Store
+    monkeypatch.setattr(Store, "accuracy_by_type", lambda self: [])
+    assert cli.main(["selftest"]) == 1
+    assert "Self-test FAILED" in capsys.readouterr().out

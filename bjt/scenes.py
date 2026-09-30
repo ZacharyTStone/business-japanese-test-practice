@@ -440,8 +440,8 @@ def to_sql(scenes: list[Scene]) -> str:
     nothing about that is an error.
     """
     with_art = [s for s in scenes if s.has_art]
-    borrowed = [(s, stand_in_for(s, scenes)) for s in scenes]
-    borrowed = [(s, other) for s, other in borrowed if other is not None]
+    stand_ins = [(s, stand_in_for(s, scenes)) for s in scenes]
+    borrowed = [(s, other) for s, other in stand_ins if other is not None]
     if not with_art:
         return (
             "-- No approved scene artwork found. Nothing to apply.\n"

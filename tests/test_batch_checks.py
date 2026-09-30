@@ -284,7 +284,7 @@ def test_a_bundle_inside_every_band_passes(bundle):
     bundle is distinguishable from one nobody measured."""
     b = copy.deepcopy(bundle)
     bands = batch.LENGTH_BANDS["hatsugen_choukai"]
-    mid = lambda f: "あ" * ((bands[f][0] + bands[f][1]) // 2)  # noqa: E731
+    mid = lambda f: "あ" * ((bands[f][0] + bands[f][1]) // 2)
     for it in b["items"]:
         it["stem"] = mid("stem")
         for i, o in enumerate(it["options"]):

@@ -316,7 +316,7 @@ def render_block(block: dict) -> str:
     """One block. An unknown type renders as nothing rather than raising: a
     document is a stimulus a learner is in the middle of reading, and losing one
     paragraph beats losing the screen."""
-    renderer = _RENDERERS.get(block.get("type"))
+    renderer = _RENDERERS.get(str(block.get("type")))
     return renderer(block) if renderer else ""
 
 

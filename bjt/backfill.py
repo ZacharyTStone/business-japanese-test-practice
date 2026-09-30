@@ -511,7 +511,7 @@ def regate_item(item: dict) -> Review:
                       f"The gate's cold view: {what} ({sum(t.correct for t in cold)} of "
                       f"{len(cold)} trials){_said(cold, correct=True)}")
     right = sum(t.correct for t in full)
-    chosen = {t.chosen for t in full if not t.correct}
+    chosen = {t.chosen for t in full if not t.correct and t.chosen is not None}
     options = item.get("options") or []
     if not right and len(chosen) == 1 and 0 <= min(chosen) < len(options):
         # Every reading with the whole stimulus settled on the same other
@@ -599,7 +599,7 @@ def proposals(paths: list[Path]) -> list[tuple[Path, Regated]]:
     out = []
     for path in paths:
         for it in withdrawn.live_items(batchmod.load(path), gone):
-            entry = done.get(it.get("id"))
+            entry = done.get(str(it.get("id")))
             if entry is not None and entry.failed:
                 out.append((path, entry))
     return out

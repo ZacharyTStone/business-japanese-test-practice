@@ -109,7 +109,9 @@ def probabilities(reply: dict, n: int) -> list[float]:
 def usage_of(reply: dict, sent: bytes) -> SimpleNamespace:
     """What the ledger prices, in the shape `llm.price_usd` reads."""
     usage = reply.get("usage") if isinstance(reply, dict) else None
-    tokens_in = usage.get("input_tokens") if isinstance(usage, dict) else None
+    if not isinstance(usage, dict):
+        return SimpleNamespace(input_tokens=len(sent), output_tokens=0)
+    tokens_in = usage.get("input_tokens")
     if not isinstance(tokens_in, int) or isinstance(tokens_in, bool) or tokens_in < 0:
         return SimpleNamespace(input_tokens=len(sent), output_tokens=0)
     tokens_out = usage.get("output_tokens")

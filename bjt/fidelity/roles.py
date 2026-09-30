@@ -200,6 +200,6 @@ def validate_roles(item_type: str, options: list[dict]) -> list[str]:
             errors.append(f"role {r!r} is not in the {item_type} enum")
     dupes = {r for r in distractor_roles if distractor_roles.count(r) > 1}
     if dupes:
-        errors.append(f"duplicate distractor role(s): {sorted(dupes)}")
+        errors.append(f"duplicate distractor role(s): {sorted(dupes, key=str)}")
 
     return errors

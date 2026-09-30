@@ -139,7 +139,9 @@ def cmd_selftest(args) -> int:
                                 "fixture", gate_verdict="skipped")
         store.record_response(iid, schemas.correct_index(fixtures.FIXTURES["goi_bunpou"]["options"]), True)
         acc = store.accuracy_by_type()
-        db_ok = bool(store.get_item(iid)) and acc and acc[0]["correct"] == 1
+        # Every part a bool: an empty accuracy list here was a list, and
+        # `ok &= []` a TypeError on exactly the path that reports a failure.
+        db_ok = bool(store.get_item(iid)) and bool(acc) and acc[0]["correct"] == 1
         print(f"  DB insert + response + accuracy round-trip: {'OK' if db_ok else 'FAIL'}")
         ok &= db_ok
         store.close()
@@ -804,7 +806,7 @@ def cmd_regate(args) -> int:
                   "proofreader and then the gate; nothing checked.", file=sys.stderr)
             return 2
         run = backfill.regate_bank([s.path for s in work])
-        verdicts = {}
+        verdicts: dict[str, int] = {}
         for _, verdict in run.checked:
             verdicts[verdict] = verdicts.get(verdict, 0) + 1
         print(f"\nChecked {len(run.checked)} question(s)"
@@ -1326,8 +1328,8 @@ def cmd_scenes(args) -> int:
     if args.sql:
         out = pathlib.Path(args.out) if args.out else config.ROOT / "batches" / "scenes.sql"
         write_atomic(out, scenemod.to_sql(survey))
-        borrowed = [(s, scenemod.stand_in_for(s, survey)) for s in survey]
-        borrowed = [(s, o) for s, o in borrowed if o is not None]
+        stand_ins = [(s, scenemod.stand_in_for(s, survey)) for s in survey]
+        borrowed = [(s, o) for s, o in stand_ins if o is not None]
         print(f"Wrote {out}  ({len(have)} scene(s) with artwork"
               + (f", {len(borrowed)} on a stand-in" if borrowed else "") + ")")
         if args.summary and borrowed:

@@ -208,7 +208,7 @@ def test_every_document_item_type_has_at_least_one_template():
 
 # ----- the chart block ------------------------------------------------------
 
-from bjt.render import chart  # noqa: E402
+from bjt.render import chart
 
 
 def _bar(**overrides):

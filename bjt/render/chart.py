@@ -91,11 +91,13 @@ def normalised(block: dict) -> dict:
     gap, and a series is cut or padded to the categories it has.
     """
     categories = _labels(block.get("categories"))
-    series = []
+    series: list[dict] = []
     for s in block.get("series") or []:
         if not isinstance(s, dict) or len(series) >= MAX_SERIES:
             continue
-        raw = s.get("values") if isinstance(s.get("values"), list) else []
+        raw = s.get("values")
+        if not isinstance(raw, list):
+            raw = []
         values: list[Optional[float]] = [
             float(v) if is_number(v) else None for v in raw[:len(categories)]]
         values += [None] * (len(categories) - len(values))
@@ -126,7 +128,7 @@ def errors(block: dict) -> list[str]:
     if not isinstance(categories, list):
         out.append("needs `categories`, a list of labels")
         categories = []
-    most = MAX_CATEGORIES.get(kind, max(MAX_CATEGORIES.values()))
+    most = MAX_CATEGORIES.get(str(kind), max(MAX_CATEGORIES.values()))
     if categories and not MIN_CATEGORIES <= len(categories) <= most:
         out.append(f"has {len(categories)} categories; a {kind or 'chart'} takes "
                    f"{MIN_CATEGORIES}–{most}")

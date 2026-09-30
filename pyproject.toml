@@ -19,6 +19,10 @@ dev = [
     # ruff can add rules to a family selected below, and the step should
     # change when somebody decides it should, not when a release lands.
     "ruff>=0.16,<0.17",
+    # The type check in the checks workflow (`mypy bjt`), for the same reason
+    # held to one minor release: a new mypy finds new things, and the step
+    # should go red when somebody moves the pin, not overnight.
+    "mypy>=1.20,<1.21",
 ]
 # Only the Google Cloud adapter needs a package; gemini and openai speak plain
 # HTTPS from the standard library, so a key is all they need.
@@ -54,8 +58,24 @@ select = [
     "B007",                                  # a loop variable nobody reads
     "B015", "B018",                          # a comparison or an expression that does nothing: usually a lost assert
     "B023",                                  # a closure over a loop variable, which only ever sees the last value
+    "B904",                                  # a raise inside except that drops the cause
     "B905",                                  # a zip that silently drops the tail of the longer list
+    "RUF100",                                # a noqa for a rule that is not on, or does not exist
 ]
+
+[tool.mypy]
+# Not strict: the aim is the errors that are bugs (a None where a value is
+# needed, a list where a bool is, a name defined twice), not annotations on
+# every function. `mypy bjt` in the checks workflow runs this.
+python_version = "3.11"
+files = ["bjt"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+# The Google Cloud voice is an optional extra (tts-google) with no stubs.
+module = ["google.*"]
+ignore_missing_imports = true
 
 [build-system]
 requires = ["setuptools>=61"]

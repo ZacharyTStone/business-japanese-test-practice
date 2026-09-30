@@ -227,8 +227,8 @@ def review_with_model(image: bytes, media_type: str, scene: scenes.Scene) -> Ver
         return Verdict(approved=not broken, reasons=tuple(broken))
 
     flags = llm.review_scene_image(image, media_type, scenes.prompt_for(scene), RULES)
-    broken = tuple(RULES[rule] for rule in RULES if flags.get(rule))
-    return Verdict(approved=not broken, reasons=broken)
+    faults = tuple(RULES[rule] for rule in RULES if flags.get(rule))
+    return Verdict(approved=not faults, reasons=faults)
 
 
 def approve_everything(image: bytes, media_type: str, scene: scenes.Scene) -> Verdict:
@@ -293,7 +293,8 @@ class DrawResult:
             if d.given_up:
                 result = "given up: lifetime allowance of refused drafts spent"
             else:
-                result = d.path if d.ok else (f"error: {d.error}" if d.error else "no draft passed")
+                result = (d.path or "") if d.ok else (
+                    f"error: {d.error}" if d.error else "no draft passed")
             why = "; ".join(" / ".join(r) for r in d.rejected) or "—"
             lines.append(f"| {d.scene_id} | {result} | {d.attempts} ({d.prior}) | {why} |")
         if self.stopped:

@@ -142,7 +142,7 @@ def synthesise_bundle(
     for clip in manifest:
         # Named for replacement: neither the database's list of live clips nor
         # a copy sitting on this machine stands in the way.
-        named = bool(remake) and clip["clip_id"] in remake
+        named = remake is not None and clip["clip_id"] in remake
         if have and clip["clip_id"] in have and not named:
             report.live.append(clip["clip_id"])
             continue
@@ -170,7 +170,7 @@ def synthesise_bundle(
                 instructions=direction_for(clip["voice"]),
             )
             processed = channel_mod.apply_channel(raw, clip["channel"])
-        except Exception as exc:  # noqa: BLE001 - one bad clip must not stop the run
+        except Exception as exc:  # one bad clip must not stop the run
             # A whole batch failing because one clip did would mean paying for
             # the successful ones again on the retry.
             report.failed.append((clip["clip_id"], str(exc)))

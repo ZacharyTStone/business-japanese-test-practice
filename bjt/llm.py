@@ -111,7 +111,7 @@ def rates_for(model: str) -> tuple[float, float]:
 def price_usd(model: str, usage: Any) -> float:
     """What one response cost, from the usage the API reports on it."""
     per_in, per_out = rates_for(model)
-    get = lambda name: int(getattr(usage, name, None) or 0)  # noqa: E731
+    get = lambda name: int(getattr(usage, name, None) or 0)
     plain = get("input_tokens")
     written = get("cache_creation_input_tokens")
     read = get("cache_read_input_tokens")
@@ -212,7 +212,7 @@ class Spend:
 
     def add(self, model: str, usage: Any) -> float:
         cost = price_usd(model, usage)
-        get = lambda name: int(getattr(usage, name, None) or 0)  # noqa: E731
+        get = lambda name: int(getattr(usage, name, None) or 0)
         self.calls += 1
         self.input_tokens += get("input_tokens")
         self.cache_write_tokens += get("cache_creation_input_tokens")
@@ -266,7 +266,7 @@ class Spend:
         if self.carried_calls or self.carried_usd:
             lines.append(f"- earlier steps of this job ({LEDGER_ENV}): "
                          f"${self.carried_usd:.2f} in {self.carried_calls} call(s)")
-        for model in sorted(self.usd_by_model, key=self.usd_by_model.get, reverse=True):
+        for model in sorted(self.usd_by_model, key=lambda m: self.usd_by_model[m], reverse=True):
             lines.append(f"- {model}: ${self.usd_by_model[model]:.2f} "
                          f"in {self.calls_by_model[model]} call(s)")
         return "\n".join(lines)
@@ -299,7 +299,7 @@ def _get_client():
     global _client
     if _client is None:
         try:
-            import anthropic  # noqa: WPS433 (lazy import is deliberate)
+            import anthropic  # lazy on purpose: the offline commands run without it
         except ImportError as e:  # pragma: no cover
             raise LLMError(
                 "The 'anthropic' package is required for generation. "

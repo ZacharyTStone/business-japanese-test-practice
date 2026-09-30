@@ -374,7 +374,7 @@ def check_bundle(
     items = bundle.get("items", [])
     item_type = bundle.get("item_type", "")
     report = BundleReport()
-    add = lambda name, status, detail: report.checks.append(Check(name, status, detail))  # noqa: E731
+    add = lambda name, status, detail: report.checks.append(Check(name, status, detail))
 
     if not items:
         add("non-empty", "fail", "bundle contains no items")
