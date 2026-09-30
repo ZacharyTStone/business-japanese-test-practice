@@ -21,7 +21,7 @@ import type { ColorValue } from "react-native";
 import { useLang } from "../../src/lib/i18n";
 import { ScreenCrash } from "../../src/ui/crash";
 import { Icon, type IconName } from "../../src/ui/icons";
-import { useTabBarHeight } from "../../src/ui/tabbar";
+import { TAB_LABEL, useTabBarHeight } from "../../src/ui/tabbar";
 import { colors, shadow, space } from "../../src/ui/theme";
 
 function tabIcon(name: IconName) {
@@ -66,7 +66,10 @@ export default function TabsLayout() {
         // The icon and its word are one thing; centring them together is what
         // keeps the three tabs sitting on the same line as each other.
         tabBarItemStyle: { justifyContent: "center", alignItems: "center" },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "700", marginTop: 2, textAlign: "center" },
+        // Twelve, not eleven: the one word under each icon is the only thing
+        // that says what the tab is. It scales with the system text size, and
+        // the bar's height follows it (ui/tabbar.ts).
+        tabBarLabelStyle: { ...TAB_LABEL, fontWeight: "700", marginTop: 2, textAlign: "center" },
       }}
     >
       <Tabs.Screen name="index" options={{ title: t("tab_home"), tabBarIcon: tabIcon("home") }} />
