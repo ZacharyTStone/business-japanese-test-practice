@@ -15,7 +15,10 @@
 #               Only a green run triggers it: a push that fails a check never
 #               reaches the database.
 #   by hand     from the Actions tab, which is also the only way to add a
-#               tester (the form fields exist only there).
+#               tester (the form fields exist only there). From `main` only:
+#               the run form lets anybody with write access pick a branch,
+#               and a run from any other branch would push that branch's
+#               unreviewed migrations to production. It is refused.
 #
 #   migrations   `supabase db push` against SUPABASE_DB_URL. The CLI records
 #                what it applied in supabase_migrations.schema_migrations and
@@ -77,8 +80,10 @@ permissions:
 jobs:
   deploy:
     name: migrate, publish, admit
-    # By hand, always. After `checks`, three things have to be true, and the
-    # last two are what make this workflow safe in a public repository.
+    # By hand, from `main` only: the run form offers every branch, and
+    # `supabase db push` applies whatever migrations the checked-out branch
+    # has. After `checks`, three things have to be true, and the last two are
+    # what make this workflow safe in a public repository.
     #
     # `branches: [main]` above matches the NAME of the branch the `checks` run
     # was on, and it cannot tell one repository's `main` from another's. A fork
@@ -86,9 +91,10 @@ jobs:
     # `main` produces a `checks` run whose head branch is `main`, and the filter
     # lets it through. The deploy would then run with every secret because a
     # stranger asked. It would deploy THIS repository's code — the checkout
-    # below takes the default branch and never the pull request's head, which is
-    # the part that keeps it from being code execution — but it would still
-    # reach the production database and spend the TTS key on demand.
+    # below takes the commit the `checks` run passed, which these conditions
+    # make a push to this repository's `main`, and never a pull request's head,
+    # which is the part that keeps it from being code execution — but it would
+    # still reach the production database and spend the TTS key on demand.
     #
     #   green    a push that fails a check never reaches the database.
     #   ours     the `checks` run was on this repository, not on a fork of it.
@@ -99,24 +105,38 @@ jobs:
     # merged nightly pull request is a push to `main` too, and a pull request's
     # own run never matched `branches: [main]` in the first place.
     if: >-
-      github.event_name == 'workflow_dispatch'
-      || (github.event.workflow_run.conclusion == 'success'
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'workflow_run'
+      && github.event.workflow_run.conclusion == 'success'
       && github.event.workflow_run.head_repository.full_name == github.repository
       && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
+    # Migrations, a few hundred upserts and the audio of whatever is new: a
+    # normal run is minutes. An hour is the guard that does not depend on any
+    # step behaving.
+    timeout-minutes: 60
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       BY_HAND: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # Exactly the commit `checks` passed, not whatever `main` is by the time
+      # this starts: a push that lands while the checks are running has not
+      # been checked yet, and gets its own deploy when it has. By hand, the
+      # commit the run was started on, which the condition above makes `main`.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install -e .
-      - uses: supabase/setup-cli@v1
+      # A CLI chosen, not whichever was published this morning: `db push` is
+      # the one step here that changes the production schema.
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         with:
-          version: latest
+          version: 2.118.0
       - name: install psql
         # The runner image ships one; apt is only for the day it stops doing so.
         run: |
@@ -258,7 +278,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit $failed
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: steps.tts.outputs.go == 'true' && always()
         with:
           name: audio
