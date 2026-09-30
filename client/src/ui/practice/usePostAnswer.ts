@@ -12,7 +12,14 @@
 import { useEffect, useState, type Dispatch, type RefObject } from "react";
 import { AppState, Platform, Vibration } from "react-native";
 
-import { flushAnswers, sendAnswer, type AttemptArgs, type FlushResult, type SendOutcome } from "../../lib/answers";
+import {
+  flushAnswers,
+  sendAnswer,
+  sendAnswerAgain,
+  type AttemptArgs,
+  type FlushResult,
+  type SendOutcome,
+} from "../../lib/answers";
 import { clipUrl } from "../../lib/db";
 import { friendlyError } from "../../lib/errors";
 import { useLang } from "../../lib/i18n";
@@ -171,7 +178,7 @@ export function usePostAnswer({
     const { itemId, args } = sendError;
     setSendError({ ...sendError, busy: true });
     applyFlush(await flushAnswers(userId));
-    const outcome = await sendAnswer(userId, args);
+    const outcome = await sendAnswerAgain(userId, args);
     switch (outcome.kind) {
       case "saved":
         dispatch({ type: "synced", itemId, verdict: outcome.graded });

@@ -224,7 +224,20 @@ export function makeOutbox(store: KeyValueStore = AsyncStorage) {
     }
   }
 
-  return { read, enqueue, flush, send };
+  /** Post an answer again, by hand, after the database answered it with an
+   *  error. Asked first whether it landed after all — an error can come back
+   *  from a proxy after the insert committed — and posted only if not. */
+  async function sendAgain(userId: string, args: AttemptArgs, sender: Sender, now: number): Promise<SendOutcome> {
+    try {
+      const found = await sender.find(args);
+      if (found) return { kind: "saved", graded: found };
+    } catch {
+      // Not known: send it, and let what the send meets decide.
+    }
+    return send(userId, args, sender, now);
+  }
+
+  return { read, enqueue, flush, send, sendAgain };
 }
 
 export type Outbox = ReturnType<typeof makeOutbox>;

@@ -199,6 +199,27 @@ describe("flushing the queue", () => {
   });
 });
 
+describe("sending again by hand", () => {
+  it("does not post an answer that landed after all", async () => {
+    const box = makeOutbox(memory());
+    const db = database(() => right, [args("q1")]);
+    expect(await box.sendAgain("u", args("q1"), db.sender, 1)).toEqual({ kind: "saved", graded: right });
+    expect(db.posted).toEqual([]);
+  });
+
+  it("posts one that did not, and queues it if the line is down", async () => {
+    const box = makeOutbox(memory());
+    const up = database(() => right);
+    expect((await box.sendAgain("u", args("q1"), up.sender, 1)).kind).toBe("saved");
+    expect(up.posted).toHaveLength(1);
+    const down = database(() => ({ throws: offline }));
+    down.sender.find = async () => {
+      throw offline;
+    };
+    expect((await box.sendAgain("u", args("q2"), down.sender, 2)).kind).toBe("queued");
+  });
+});
+
 describe("reading a refusal", () => {
   it("goes by the hint, not the wording", () => {
     expect(refusalOf(dayOver)).toBe("day_over");

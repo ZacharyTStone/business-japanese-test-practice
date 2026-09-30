@@ -43,6 +43,12 @@ export function sendAnswer(userId: string, args: AttemptArgs): Promise<SendOutco
   return outbox.send(userId, args, sender, Date.now());
 }
 
+/** Post an answer again after an error the database gave: sent only if the
+ *  learner's own attempts do not already have it. */
+export function sendAnswerAgain(userId: string, args: AttemptArgs): Promise<SendOutcome> {
+  return outbox.sendAgain(userId, args, sender, Date.now());
+}
+
 /** Send whatever is waiting for this learner. Never rejects: a flush that could
  *  not run is a flush that left everything where it was. */
 export async function flushAnswers(userId: string): Promise<FlushResult> {
