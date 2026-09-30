@@ -27,6 +27,10 @@ export const colors = {
   surface: "#FFFFFF",
   surfaceAlt: "#FAFAFE",
   border: "#EAEAF4",
+  /** The edge of something you type into. `border` is a card's hairline at 1.2:1,
+   *  which leaves a field on white with no visible edge; this is 3.4:1, the floor
+   *  for a control's boundary. */
+  inputBorder: "#8A88A3",
   text: "#1B1A2E",
   muted: "#6E6C89",
   /** The edge of a card. A shadow alone reads as a smudge on a bright screen;
