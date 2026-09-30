@@ -45,7 +45,7 @@
  * options. See AdSlot: the placement type has no member for this screen.
  */
 import { clearPreloadedSource, preload } from "expo-audio";
-import { useRouter } from "expo-router";
+import { useRouter, type ErrorBoundaryProps } from "expo-router";
 import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AppState, Image, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 
@@ -177,6 +177,33 @@ function buzz(pattern: number | number[]) {
   } catch {
     // Web without vibration support, or a simulator. Silence is correct.
   }
+}
+
+/**
+ * What this screen shows instead of itself when it throws while drawing.
+ *
+ * expo-router wraps a route that exports one of these, so a malformed item —
+ * a document block nobody anticipated, a chart with no figures — costs the
+ * question on screen and not the app. Every answer already given is in the
+ * database, or in the outbox, so "try again" draws a fresh set from where the
+ * record stands, and home is always one press away.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const router = useRouter();
+  const { t } = useLang();
+  const said = friendlyError(error, t);
+  return (
+    <ScrollView contentContainerStyle={[styles.page, page]}>
+      <Notice
+        title={t("practice_broke")}
+        body={said.message}
+        tone="warn"
+        action={{ label: t("retry"), onPress: () => void retry() }}
+      />
+      {said.detail ? <Text style={[type.mono, styles.hint]}>{said.detail}</Text> : null}
+      <Button label={t("to_home")} tone="secondary" onPress={() => router.replace("/")} />
+    </ScrollView>
+  );
 }
 
 export default function Practice() {

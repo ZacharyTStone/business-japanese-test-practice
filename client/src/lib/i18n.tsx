@@ -378,6 +378,8 @@ const S = {
   // audio that would not play: the words go on the page instead.
   audio_failed: ["音声を再生できませんでした。文字で読んでください。", "The audio couldn't be played. The words are on the page instead."],
   dialogue_as_text: ["会話（文字で）", "Conversation (as text)"],
+  // the practice screen's own error boundary: something threw while drawing.
+  practice_broke: ["この問題を表示できませんでした", "This question couldn't be shown"],
 
   // faces
   mood_happy: ["相手は満足しています", "They're pleased"],
