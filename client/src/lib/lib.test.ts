@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { daysUntil, EXAM_NEAR_DAYS, examIsNear, isIsoDate } from "./exam";
+import { daysUntil, EXAM_NEAR_DAYS, examIsNear, isIsoDate, typedDate } from "./exam";
 import { DISTRACTOR_ROLES } from "./generated";
 import { levelMove, levelsAgree, placedLevel, placedLevels } from "./levels";
 import { budgetSeconds, type TypePace } from "./pace";
@@ -104,6 +104,23 @@ describe("the exam date", () => {
     expect(isIsoDate("2026-12-06")).toBe(true);
     expect(isIsoDate("2026-02-31")).toBe(false);
     expect(isIsoDate("6 Dec")).toBe(false);
+  });
+
+  it("writes the hyphens into digits typed on a number pad", () => {
+    expect(typedDate("20261201")).toBe("2026-12-01");
+    expect(typedDate("2026")).toBe("2026");
+    expect(typedDate("20261")).toBe("2026-1");
+    expect(typedDate("202612")).toBe("2026-12");
+    expect(typedDate("2026121")).toBe("2026-12-1");
+    // What the field already shows comes back through it unchanged, one more
+    // digit or one fewer.
+    expect(typedDate("2026-12-0")).toBe("2026-12-0");
+    expect(typedDate("2026-12")).toBe("2026-12");
+    // Pasted in another shape, and too long.
+    expect(typedDate("2026/12/01")).toBe("2026-12-01");
+    expect(typedDate("2026120199")).toBe("2026-12-01");
+    expect(typedDate("")).toBe("");
+    expect(isIsoDate(typedDate("20261201"))).toBe(true);
   });
 });
 

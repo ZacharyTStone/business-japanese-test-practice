@@ -19,7 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
-import { isIsoDate } from "../lib/exam";
+import { isIsoDate, typedDate } from "../lib/exam";
 import { Icon, type IconName } from "./icons";
 import { usePressScale, useReducedMotion, useTween } from "./motion";
 import { badge, card, colors, motion, radius, shadow, space, tabular, type } from "./theme";
@@ -465,9 +465,12 @@ export function Chip({
  * On the web this is the browser's own date control, because that is the best
  * picker already on the device and it costs nothing to use. Everywhere else it
  * is a plain YYYY-MM-DD field: a wheel picker means a native module, and one
- * date on one screen does not earn a dependency. Either way the value is only
- * handed up once it is a real day, so a half-typed date never reaches the
- * profile.
+ * date on one screen does not earn a dependency. That field takes digits on
+ * the number pad and writes the hyphens itself (`typedDate`), because the pad
+ * has no hyphen key. Either way the value is only handed up once it is a real
+ * day, and not before `min`, so a half-typed date never reaches the profile —
+ * including the years a browser's field passes through while one is typed
+ * into it (0002, 0020, 0202 on the way to 2026).
  */
 export function DateField({
   value,
@@ -494,7 +497,7 @@ export function DateField({
       if (value !== null) onChange(null);
       return;
     }
-    if (isIsoDate(next) && next !== value) onChange(next);
+    if (isIsoDate(next) && next !== value && (!min || next >= min)) onChange(next);
   }
 
   if (Platform.OS === "web") {
@@ -523,13 +526,14 @@ export function DateField({
   return (
     <TextInput
       value={text}
-      onChangeText={commit}
+      onChangeText={(typed) => commit(typedDate(typed))}
       placeholder={placeholder}
       placeholderTextColor={colors.muted}
       accessibilityLabel={accessibilityLabel}
       autoCapitalize="none"
       autoCorrect={false}
       inputMode="numeric"
+      keyboardType="number-pad"
       maxLength={10}
       style={styles.dateInput}
     />
