@@ -40,6 +40,22 @@ begin
 end;
 $$;
 
+-- Fixtures leave the bank the one way a real question never may: deleted. A
+-- question with anything pointing at it cannot be (20260930000600), so the
+-- history these tests wrote against their own fixtures goes first, as the
+-- cascade used to take it. Run as the test's own role.
+create or replace function test.remove_fixture_items(p_ids text[])
+returns void language plpgsql as $$
+begin
+    delete from public.attempts        where item_id = any (p_ids) or stands_for = any (p_ids);
+    delete from public.review_schedule where item_id = any (p_ids);
+    delete from public.review_notes    where item_id = any (p_ids);
+    delete from public.item_feedback   where item_id = any (p_ids);
+    delete from public.item_vetoes     where item_id = any (p_ids);
+    delete from public.items           where id = any (p_ids);
+end;
+$$;
+
 -- ----------------------------------------------------------------- fixtures
 
 -- Publishing runs as the service role, which bypasses RLS — same as the real
@@ -389,12 +405,45 @@ $$;
 
 reset role;
 
+-- --- a question is never deleted --------------------------------------------
+
+-- Not by a client, which has no delete grant on the bank at all, and not by
+-- the owner either while anything points at it: a question leaves the bank by
+-- being unpublished, so that every answer given to it keeps resolving.
+do $$
+declare
+    ok boolean := false;
+begin
+    raise notice 'a question is never deleted';
+    begin
+        delete from public.items where id = 'itm_phone';
+    exception when restrict_violation or foreign_key_violation then
+        ok := true;
+    end;
+    perform test.check(ok, 'a question somebody has answered cannot be deleted, even by the owner');
+
+    ok := false;
+    begin
+        delete from public.bundles where id = 'test_bundle';
+    exception when restrict_violation or foreign_key_violation then
+        ok := true;
+    end;
+    perform test.check(ok, 'nor the bundle it was published in');
+
+    perform test.check(
+        (select count(*) from public.attempts where item_id = 'itm_phone') > 0
+        and exists (select 1 from public.review_schedule where item_id = 'itm_phone')
+        and exists (select 1 from public.item_feedback where item_id = 'itm_phone'),
+        'and the answers, the schedule and the report behind it are all still there');
+end
+$$;
+
 -- These fixtures exist only to prove grading and RLS. Left in place, they sit
 -- in the same J2 pool as the published reference batch, and next_items() picks
 -- among all of it at random — so 20_published_test.sql would intermittently
 -- draw a fixture item instead of real content and fail on its short stem or
 -- missing narration clip. Clean up before that file runs.
-delete from public.items where id in ('itm_phone', 'itm_desk');
+do $$ begin perform test.remove_fixture_items(array['itm_phone', 'itm_desk']); end $$;
 
 -- --- the answer key cannot dangle -------------------------------------------
 
@@ -810,7 +859,7 @@ $$;
 -- the published reference batch, and next_items() draws among all of it at
 -- random. Left in place they would make 20_published_test.sql intermittently
 -- count a fixture as real content.
-delete from public.items where id in ('itm_doc', 'itm_unart');
+do $$ begin perform test.remove_fixture_items(array['itm_doc', 'itm_unart']); end $$;
 delete from public.bundles where id = 'bnd_doc';
 
 do $$
@@ -1121,7 +1170,7 @@ begin
 end
 $$;
 
-delete from public.items where bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3');
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3'))); end $$;
 delete from public.bundles where id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3');
 
 -- ---------------------------------------------------------------------------
@@ -1444,7 +1493,7 @@ $$;
 
 reset role;
 
-delete from public.items where id in ('itm_easy', 'itm_fit', 'itm_known', 'itm_heard');
+do $$ begin perform test.remove_fixture_items(array['itm_easy', 'itm_fit', 'itm_known', 'itm_heard']); end $$;
 delete from public.bundles where id in ('bnd_bank', 'bnd_heard');
 delete from auth.users where id = '44444444-4444-4444-4444-444444444444';
 
@@ -1546,7 +1595,7 @@ $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_pitch';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_pitch')); end $$;
 delete from public.bundles where id = 'bnd_pitch';
 delete from auth.users where id in ('55555555-5555-5555-5555-555555555555',
                                     '66666666-6666-6666-6666-666666666666');
@@ -1691,7 +1740,7 @@ $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_queue';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_queue')); end $$;
 delete from public.bundles where id = 'bnd_queue';
 delete from auth.users where id = '99999999-9999-9999-9999-999999999999';
 
@@ -2175,7 +2224,7 @@ $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_cap';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_cap')); end $$;
 delete from public.bundles where id = 'bnd_cap';
 delete from auth.users where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -2293,7 +2342,7 @@ end
 $$;
 
 reset role;
-delete from public.items where bundle_id in ('bnd_thin', 'bnd_once');
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id in ('bnd_thin', 'bnd_once'))); end $$;
 delete from public.bundles where id in ('bnd_thin', 'bnd_once');
 delete from auth.users where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
@@ -2401,7 +2450,7 @@ end
 $$;
 
 reset role;
-delete from public.items where bundle_id = 'bnd_exam';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_exam')); end $$;
 delete from public.bundles where id = 'bnd_exam';
 delete from auth.users where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
@@ -2600,7 +2649,7 @@ $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_reset';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_reset')); end $$;
 delete from public.bundles where id = 'bnd_reset';
 delete from auth.users where id in ('cccccccc-cccc-cccc-cccc-cccccccccccc',
                                     'dddddddd-dddd-dddd-dddd-dddddddddddd',
@@ -2807,12 +2856,8 @@ $$;
 
 reset role;
 
-begin;
-set local role service_role;
-delete from public.item_vetoes where item_id in ('itm_v1', 'itm_v2');
-delete from public.items where bundle_id = 'bnd_veto';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_veto')); end $$;
 delete from public.bundles where id = 'bnd_veto';
-commit;
 delete from auth.users where id in ('f1111111-1111-1111-1111-111111111111',
                                     'f2222222-2222-2222-2222-222222222222');
 begin;
