@@ -68,7 +68,14 @@ import { friendlyError } from "../src/lib/errors";
 import { examIsNear } from "../src/lib/exam";
 import { useLang, type Key } from "../src/lib/i18n";
 import { budgetSeconds, type TypePace } from "../src/lib/pace";
-import { initialPractice, practiceReducer, settleAnswers, thinkTime, type Stage } from "../src/lib/practice";
+import {
+  initialPractice,
+  practiceReducer,
+  settleAnswers,
+  thinkTime,
+  verdictKind,
+  type Stage,
+} from "../src/lib/practice";
 import { roleInfo, verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
 import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
@@ -699,11 +706,18 @@ export default function Practice() {
   // offended, because nobody said anything.
   const ranOut = role === "timed_out";
   const mood = graded ? moodFor(role, graded.isCorrect) : "happy";
+  // Whether there is a listener's face to show. A misread table, a picture
+  // looked at wrongly, a question the clock took: nobody heard anything, so
+  // nobody is puzzled or pleased, and a face would be a sentence about
+  // manners where the mistake was about reading.
+  const kind = graded ? verdictKind(role, graded.isCorrect) : null;
+  const faceShown = kind === "right" || kind === "manner";
   const explanation = lang === "en" && item.explanation_en ? item.explanation_en : item.explanation_ja;
   // The one line under the verdict. For a right answer it is why that option
   // fits — and the per-option `why` is written in Japanese only, so in English
   // the item's own gloss is the sentence that exists. Wrong answers get the
-  // listener's reaction instead, which is already translated.
+  // listener's reaction instead, which is already translated — or, where there
+  // is no listener to react, the name of the mistake.
   const verdictSub = graded
     ? graded.isCorrect
       ? lang === "en" && item.explanation_en
@@ -711,7 +725,9 @@ export default function Practice() {
         : correctOption?.why
       : ranOut
         ? t("time_up_sub")
-        : moodLabel(mood, lang)
+        : faceShown
+          ? moodLabel(mood, lang)
+          : roleInfo(role, lang).label
     : "";
 
   /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
@@ -920,7 +936,7 @@ export default function Practice() {
             }}
           >
             <View style={styles.verdictRow}>
-              <Face mood={mood} size={68} />
+              {faceShown ? <Face mood={mood} size={68} /> : null}
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[type.h2, graded.isCorrect && { color: colors.correct }]}>
                   {graded.isCorrect

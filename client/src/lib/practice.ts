@@ -15,6 +15,7 @@
  * effect keyed on that value, so it is posted once however many presses there
  * were.
  */
+import { roleInfo } from "./roles";
 import { NO_ANSWER, type AnsweredItem, type QueuedItem } from "./types";
 
 /**
@@ -271,6 +272,23 @@ export function settleAnswers(
       const graded = a.saved === false ? saved.get(a.item.id) : undefined;
       return graded ? { ...a, isCorrect: graded.isCorrect, role: graded.chosenRole, saved: true } : a;
     });
+}
+
+/**
+ * What kind of verdict an answer gets, which decides how it is drawn.
+ *
+ * `manner` — a miss about how words land on a listener: their face, their
+ * reaction, the 失礼度メーター. `reading` — a miss about reading or hearing
+ * correctly (a role marked `manner: false`): nobody heard anything, so there is
+ * no face and the line under the verdict names the mistake instead. `time` —
+ * the clock took it, which is about pace and not about the Japanese at all.
+ */
+export type VerdictKind = "right" | "manner" | "reading" | "time";
+
+export function verdictKind(role: string, isCorrect: boolean): VerdictKind {
+  if (isCorrect) return "right";
+  if (role === "timed_out") return "time";
+  return roleInfo(role).manner ? "manner" : "reading";
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   practiceReducer,
   settleAnswers,
   thinkTime,
+  verdictKind,
   type PracticeAction,
   type PracticeState,
 } from "./practice";
@@ -260,6 +261,16 @@ describe("think time", () => {
 
   it("has none for a listening item read as text", () => {
     expect(thinkTime({ answerFrom: null, shownAt: 1000 }, { at: 40000, stage: "answer" }, unheard)).toBeNull();
+  });
+});
+
+describe("the kind of verdict", () => {
+  it("draws a listener only for a miss about manners", () => {
+    expect(verdictKind("correct", true)).toBe("right");
+    expect(verdictKind("register_too_casual", false)).toBe("manner");
+    // A comprehension role: the row next to the right one, the scene next door.
+    expect(verdictKind("adjacent_setting", false)).toBe("reading");
+    expect(verdictKind("timed_out", false)).toBe("time");
   });
 });
 
