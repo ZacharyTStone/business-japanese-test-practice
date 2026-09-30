@@ -7,7 +7,8 @@
  *
  *   - the page is Japanese (`lang`), so the browser picks Japanese glyph
  *     forms for kanji the CJK scripts share, and hyphenates and wraps as
- *     Japanese;
+ *     Japanese — until the app has started and knows the learner's language,
+ *     when `LangProvider` (lib/i18n.tsx) sets it to that;
  *   - the typeface is the platform's own Japanese face, in a stated order
  *     (see `fontStack` in ui/theme.ts), smoothed the way native text is;
  *   - the page is the app's background colour *before* the bundle arrives,

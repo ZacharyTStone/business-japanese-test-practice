@@ -451,6 +451,14 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
   }, []);
 
+  // The page's own language, on the web: the static HTML says Japanese
+  // (app/+html.tsx), and an English page left marked `ja` is read aloud by a
+  // screen reader in a Japanese voice and hyphenated as Japanese. There is no
+  // document on a phone.
+  useEffect(() => {
+    if (typeof document !== "undefined") document.documentElement.lang = lang;
+  }, [lang]);
+
   const value = useMemo<LangContextValue>(
     () => ({ lang, setLang, t: (key, vars) => tr(lang, key, vars) }),
     [lang, setLang]

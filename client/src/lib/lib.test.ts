@@ -180,6 +180,19 @@ describe("the role table", () => {
     expect(verdictFor("register_too_casual", null, "ja")).toBe("相手には、くだけすぎでした");
   });
 
+  it("keeps Japanese out of the middle of an English sentence", () => {
+    expect(verdictFor("register_too_casual", "部長", "en")).toBe("Too casual for them (部長)");
+    expect(verdictFor("register_too_casual", null, "en")).toBe("Too casual for them");
+    expect(verdictFor("content_mismatch", "取引先の担当者", "en")).toBe(
+      "It didn't answer what they wanted to know (取引先の担当者)"
+    );
+    // A role about reading, not about a listener, names nobody.
+    expect(verdictFor("reads_wrong_row", "部長", "en")).toBe("That was the row next to it");
+    for (const role of [...DISTRACTOR_ROLES, "timed_out", "__unknown__"]) {
+      expect(roleInfo(role, "en").verdict, role).not.toMatch(/[\u3040-\u30ff\u4e00-\u9fff]/);
+    }
+  });
+
   it("finds the trap that caught them most, leaving out the right answers", () => {
     expect(worstTrap(["correct", "reads_wrong_row", "reads_wrong_row", "timed_out"])).toEqual({
       role: "reads_wrong_row",
