@@ -71,7 +71,7 @@ import { budgetSeconds, type TypePace } from "../src/lib/pace";
 import { initialPractice, practiceReducer, settleAnswers, thinkTime, type Stage } from "../src/lib/practice";
 import { roleInfo, verdictFor } from "../src/lib/roles";
 import { setSummary } from "../src/lib/session";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import { NO_ANSWER, type QueuedItem, type SectionLevel } from "../src/lib/types";
 import { AutoPlaylist, DialoguePlayer, MiniPlay, Transcript } from "../src/ui/audio";
 import { QuestionClock } from "../src/ui/clock";
@@ -84,7 +84,7 @@ import { RudenessMeter } from "../src/ui/meters";
 import { FadeIn } from "../src/ui/motion";
 import { ReportQuestion } from "../src/ui/report";
 import { VetoQuestion } from "../src/ui/veto";
-import { colors, radius, shadow, space, tabular, type } from "../src/ui/theme";
+import { colors, page, radius, shadow, space, tabular, type } from "../src/ui/theme";
 
 const NUMBERS = ["1", "2", "3", "4"];
 
@@ -211,7 +211,10 @@ export default function Practice() {
   const sessionClosed = useRef(false);
   const answeredCount = useRef(0);
   answeredCount.current = state.answers.length;
-  const [error, setError] = useState<string | null>(null);
+  /** Why the set could not be loaded, as thrown; drawn through friendlyError. */
+  const [error, setError] = useState<unknown>(null);
+  /** Bumped by "try again", which is what runs the load a second time. */
+  const [attempt, setAttempt] = useState(0);
   /** Today's count when the day's ceiling has been reached; null otherwise. */
   const [blocked, setBlocked] = useState<number | null>(null);
   /** What the exam affords each self-paced type, and whether this learner wants
@@ -332,7 +335,7 @@ export default function Practice() {
         warm(queue, spokenLabels);
         mayVeto().then(setCanVeto).catch(() => setCanVeto(false));
       } catch (e) {
-        if (!cancelled) setError(errorText(e));
+        if (!cancelled) setError(e ?? new Error("load failed"));
       }
     })();
     return () => {
@@ -346,7 +349,7 @@ export default function Practice() {
       }
       warmed.current = [];
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, attempt]);
 
   /** An outbox flush, told to the reducer: an answer that waited and has now
    *  landed takes the database's verdict, one it refused is no longer counted. */
@@ -543,14 +546,26 @@ export default function Practice() {
     );
   }
   if (error) {
+    // Said so a learner can act on it — offline, or signed out — with the
+    // technical text underneath for whoever has to find the bug, and a way to
+    // try again that is not "go home and press start".
+    const said = friendlyError(error, t);
     return (
-      <View style={styles.page}>
+      <View style={[styles.page, page]}>
         <Notice
           title={t("q_load_err")}
-          body={error}
+          body={said.message}
           tone="warn"
-          action={{ label: t("back"), onPress: leave }}
+          action={{
+            label: t("retry"),
+            onPress: () => {
+              setError(null);
+              setAttempt((n) => n + 1);
+            },
+          }}
         />
+        {said.detail ? <Text style={[type.mono, styles.hint]}>{said.detail}</Text> : null}
+        <Button label={t("back")} tone="secondary" onPress={leave} />
       </View>
     );
   }
