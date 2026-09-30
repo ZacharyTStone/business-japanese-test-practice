@@ -487,8 +487,27 @@ rollback;
 reset role;
 
 do $$
+declare
+    writable text;
 begin
     raise notice 'testers only: the shape';
+    -- A view in `public` inherits the schema's default privileges, which give
+    -- the client roles insert, update and delete; a one-table view is
+    -- updatable, and one that runs as its owner writes past RLS. So no view may
+    -- keep any of them, whatever it is today.
+    select string_agg(distinct c.relname, ', ')
+      into writable
+      from pg_class c
+     cross join (values ('anon'), ('authenticated')) as r(role)
+     where c.relnamespace = 'public'::regnamespace
+       and c.relkind in ('v', 'm')
+       and (has_table_privilege(r.role, c.oid, 'insert')
+            or has_table_privilege(r.role, c.oid, 'update')
+            or has_table_privilege(r.role, c.oid, 'delete')
+            or has_table_privilege(r.role, c.oid, 'truncate'));
+    perform test.check(writable is null,
+        'no view in public can be written through by a client'
+        || coalesce(' (writable: ' || writable || ')', ''));
     perform test.check(
         not exists (
             select 1 from pg_policies
@@ -1356,7 +1375,21 @@ begin
     end;
     perform test.check(denied,
         'but the raw counts behind it stay shut: at this scale they are a person');
+
+    -- The view runs as its owner, so a write through it would never meet the
+    -- row-level security on item_stats. It must not be a write path at all.
+    denied := false;
+    begin
+        update public.v_item_difficulty set p_correct = 0.99 where item_id = 'itm_fit';
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied,
+        'and nobody can write a difficulty through the view that publishes it');
     reset role;
+    perform test.check(
+        (select p_correct from public.item_stats where item_id = 'itm_fit') = 0.75,
+        'so the figure every learner is pitched against is still the eight sittings'' own');
 end
 $$;
 
