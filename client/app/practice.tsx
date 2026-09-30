@@ -77,15 +77,18 @@ import {
   startSession,
 } from "../src/lib/db";
 import { friendlyError } from "../src/lib/errors";
+import { setSize } from "../src/lib/day";
 import { examIsNear } from "../src/lib/exam";
 import { useLang, type Key } from "../src/lib/i18n";
+import { CHANNEL_KEY, NUMBERS } from "../src/lib/labels";
 import { budgetSeconds, type TypePace } from "../src/lib/pace";
+import { playlistFor, spokenOptionUrls } from "../src/lib/playlist";
 import {
   initialPractice,
   practiceReducer,
   settleAnswers,
+  questionView,
   thinkTime,
-  verdictKind,
   type Stage,
 } from "../src/lib/practice";
 import { roleInfo, verdictFor } from "../src/lib/roles";
@@ -104,15 +107,6 @@ import { FadeIn, useReducedMotion } from "../src/ui/motion";
 import { ReportQuestion } from "../src/ui/report";
 import { VetoQuestion } from "../src/ui/veto";
 import { colors, MIN_TOUCH, page, radius, shadow, space, tabular, type } from "../src/ui/theme";
-
-const NUMBERS = ["1", "2", "3", "4"];
-
-const CHANNEL_KEY: Record<string, Key> = {
-  in_person: "ch_in_person",
-  phone: "ch_phone",
-  video: "ch_video",
-  written: "ch_written",
-};
 
 /** How the words travel, as a picture. It is the one part of the scene that
  *  changes the right answer without being in the sentence — on the phone you
@@ -139,54 +133,6 @@ const PROMPT_KEY: Record<string, Key> = {
   sougou_choudokkai: "prompt_sougou_choudokkai",
   sougou_dokkai: "prompt_sougou_dokkai",
 };
-
-/** The types whose four options are heard rather than read — which on the exam
- *  is **all of 第1部 聴解**: the screen shows the picture and the bare numerals,
- *  the four candidates are read aloud, and in 総合聴解 there is nothing on the
- *  screen at all. Must agree with TYPE_AUDIO in bjt/tts/plan.py, which is where
- *  the clips come from; an item whose clips do not exist yet falls back to
- *  printed options on its own (see spokenOptionUrls). */
-const SPOKEN_OPTION_TYPES = new Set([
-  "bamen_haaku",
-  "gazou_haaku",
-  "hatsugen_choukai",
-  "sougou_choukai",
-]);
-
-/**
- * The four spoken options of an item, when every one of them has a clip.
- *
- * In the exam these are heard, never read: the answer sheet has four numbers
- * and nothing else. So when the audio exists the options are played after the
- * narration and shown as numbers with a replay button, and the text stays
- * hidden until the answer is in. All four or none — a set where three are
- * spoken and one is printed would mark the odd one out, and the type table in
- * bjt/tts/plan.py is the only reason any other type would have option clips.
- */
-function spokenOptionUrls(item: QueuedItem): string[] | null {
-  if (!SPOKEN_OPTION_TYPES.has(item.item_type)) return null;
-  const urls = [...item.options]
-    .sort((a, b) => a.position - b.position)
-    .map((o) => clipUrl(o.audio_path));
-  return urls.every((u): u is string => Boolean(u)) ? (urls as string[]) : null;
-}
-
-/** Every clip of an item, in the order it is heard: the conversation, then the
- *  question, then — where the options are spoken — the four options, each
- *  behind the number that names it. Turns without a clip yet are skipped, not
- *  waited for, and so are the numbers, which are four clips for the whole
- *  library (fetchOptionLabels). */
-function playlistFor(item: QueuedItem, labels: string[] | null): string[] {
-  const turns = (item.dialogue ?? [])
-    .map((t) => clipUrl(t.audio_path))
-    .filter((u): u is string => Boolean(u));
-  const narration = clipUrl(item.narration_path);
-  const spoken = spokenOptionUrls(item) ?? [];
-  const options = spoken.flatMap((url, i) =>
-    labels?.[i] ? [labels[i], url] : [url]
-  );
-  return [...turns, ...(narration ? [narration] : []), ...options];
-}
 
 /** A tap you can feel. Pattern durations are ignored on iOS, which is fine —
  *  the point is that something happened, not how long it lasted. */
@@ -303,7 +249,7 @@ export default function Practice() {
   function warm(queue: QueuedItem[], spokenLabels: string[] | null) {
     const urls = new Set<string>();
     for (const it of queue) {
-      for (const url of playlistFor(it, spokenLabels)) urls.add(url);
+      for (const url of playlistFor(it, spokenLabels, clipUrl)) urls.add(url);
       const scene = sceneUrl(it.scene_image_path);
       if (scene) Image.prefetch(scene).catch(() => false);
     }
@@ -362,16 +308,10 @@ export default function Practice() {
         // to practise. The account screen says so beside the switch.
         setTimed((profile?.timed_reading ?? false) || examIsNear(profile?.exam_date));
         setLabels(spokenLabels);
-        // The size is what the day has left of its set, or the bonus set once
-        // the set is done: the rest of the allowance, or a full set for an
-        // account whose ceiling is lifted. Zero means the day is over, and the
-        // database would serve nothing anyway — the screen below says so.
-        const remaining =
-          day.answered_today < day.goal
-            ? day.goal - day.answered_today
-            : day.unlimited
-              ? day.goal
-              : (day.left_today ?? 0);
+        // What the day has left of its set, or the bonus set (lib/day.ts). Zero
+        // means the day is over, and the database would serve nothing anyway —
+        // the screen below says so.
+        const remaining = setSize(day);
         answeredAtLoad.current = day.answered_today;
         setBlocked(remaining <= 0 ? day.answered_today : null);
         const queue = remaining > 0 ? await fetchQueue(remaining) : [];
@@ -498,7 +438,7 @@ export default function Practice() {
         selfPaced: Boolean(pace[it.item_type]),
         // Audio that would not play left the item to be read, with no audio to
         // time from: the same as an item with no clips.
-        listenable: playlistFor(it, labels).length > 0 && audioFailedFor !== it.id,
+        listenable: playlistFor(it, labels, clipUrl).length > 0 && audioFailedFor !== it.id,
       }),
       replays: state.replays,
       peeked: state.peeked,
@@ -574,7 +514,6 @@ export default function Practice() {
   const items = state.items;
   const item = items[index];
   const { chosen, graded, showDetails, optionsAsText } = state;
-  const busy = state.pending !== null;
   // A new question starts at the top: the
   // verdict scrolled the last one down to its explanation, and the next
   // question opening there would open on its options with its scene above the
@@ -593,8 +532,8 @@ export default function Practice() {
     () => (item ? [...item.options].sort((a, b) => a.position - b.position) : []),
     [item]
   );
-  const playlist = useMemo(() => (item ? playlistFor(item, labels) : []), [item, labels]);
-  const spokenOptions = useMemo(() => (item ? spokenOptionUrls(item) : null), [item]);
+  const playlist = useMemo(() => (item ? playlistFor(item, labels, clipUrl) : []), [item, labels]);
+  const spokenOptions = useMemo(() => (item ? spokenOptionUrls(item, clipUrl) : null), [item]);
 
   if (!isConfigured) {
     return (
@@ -660,24 +599,19 @@ export default function Practice() {
   // budgetSeconds — and the learner's switch is the only part of it that is
   // about the learner rather than about the question.
   const clockSeconds = timed ? budgetSeconds(item, pace) : 0;
-  const listenable = playlist.length > 0;
-  // A scene is worth a pause of its own when there is something to hear or
-  // something to look at. A bare reading item goes straight to the question.
-  const hasScene = listenable || Boolean(sceneImage);
-  const recorded: Stage = state.stage ?? (hasScene ? "scene" : "answer");
-  // The only way out of "listen" is the playlist finishing, and with nothing
-  // to play there is no playlist: the screen would wait for ever on a hint
-  // about audio that does not exist, with no options and no button.
-  const stage: Stage = recorded === "listen" && !listenable ? "answer" : recorded;
-  const go = (next: Stage) => dispatch({ type: "stage", stage: next, now: Date.now() });
-
-  // Narration that exists only as text — a listening type whose clip has not
-  // been synthesised, or a reading type, where the stem *is* the question.
   const narrationUrl = clipUrl(item.narration_path);
-  // Audio that would not play is the same case: the words go on the page.
   const audioFailed = audioFailedFor === item.id;
-  const stemAsText = !narrationUrl || audioFailed;
-  const dialogueAsText = (item.dialogue?.length ?? 0) > 0 && (!listenable || audioFailed);
+  // Which stage shows what, from the state and the item's media: pure, and
+  // tested, in lib/practice.ts.
+  const view = questionView(state, item, {
+    playable: playlist.length > 0,
+    picture: Boolean(sceneImage),
+    narrated: Boolean(narrationUrl),
+    spokenOptions: spokenOptions !== null,
+    audioFailed,
+  });
+  const { stage, listenable, stemAsText, dialogueAsText, revealed, optionTextHidden, optionsShown, role } = view;
+  const go = (next: Stage) => dispatch({ type: "stage", stage: next, now: Date.now() });
 
   /**
    * Answer the question — or, with `NO_ANSWER`, record that the clock took it.
@@ -709,18 +643,7 @@ export default function Practice() {
   }
   const nextLabel = index + 1 >= items.length ? t("btn_result") : t("btn_next");
 
-  const revealed = stage === "reveal" && graded !== null;
-  // Spoken options are numbers until the answer is in, unless asked for.
-  // ...and printed when they could not be heard, which is not the learner
-  // asking for help, so it is not `peeked`.
-  const optionTextHidden = spokenOptions !== null && !revealed && !optionsAsText && !audioFailed;
-  // Options can be answered while the clips still play, but only when they
-  // show no text: numbers and play buttons give nothing away, a printed
-  // sentence does.
-  const optionsShown = stage === "answer" || stage === "reveal" || (stage === "listen" && optionTextHidden);
-  const chosenOption = chosen !== null ? options[chosen] : null;
   const correctOption = options[item.correct_index];
-  const role = graded?.chosenRole || chosenOption?.role || "";
   // The clock took it. Not a wrong answer about the Japanese, so the screen says
   // something different and the 失礼度メーター stays out of it: nobody was
   // offended, because nobody said anything.
@@ -730,8 +653,7 @@ export default function Practice() {
   // looked at wrongly, a question the clock took: nobody heard anything, so
   // nobody is puzzled or pleased, and a face would be a sentence about
   // manners where the mistake was about reading.
-  const kind = graded ? verdictKind(role, graded.isCorrect) : null;
-  const faceShown = kind === "right" || kind === "manner";
+  const faceShown = view.kind === "right" || view.kind === "manner";
   const explanation = lang === "en" && item.explanation_en ? item.explanation_en : item.explanation_ja;
   // The one line under the verdict. For a right answer it is why that option
   // fits — and the per-option `why` is written in Japanese only, so in English
@@ -765,7 +687,7 @@ export default function Practice() {
 
   /** The four keys that matter, and nothing else. See src/ui/keys.ts. */
   function onKey(key: string): boolean | void {
-    if (!revealed && optionsShown && chosen === null && !busy) {
+    if (!revealed && optionsShown && !view.locked) {
       const pick = optionForKey(key, options.length);
       if (pick >= 0) {
         void choose(pick);
@@ -837,7 +759,7 @@ export default function Practice() {
           // A new question is a new clock, not the last one's leftovers.
           key={item.id}
           seconds={clockSeconds}
-          running={stage === "answer" && chosen === null && !busy}
+          running={view.clockRunning}
           runKey={item.id}
           onExpire={() => void choose(NO_ANSWER)}
         />
@@ -946,7 +868,7 @@ export default function Practice() {
                 revealed={revealed}
                 chosen={chosen === i}
                 answer={i === item.correct_index}
-                locked={busy || chosen !== null}
+                locked={view.locked}
                 onChoose={onChoose}
                 onPlay={onPlayOption}
               />

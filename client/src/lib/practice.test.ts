@@ -6,11 +6,13 @@ import { describe, expect, it } from "vitest";
 import {
   initialPractice,
   practiceReducer,
+  questionView,
   settleAnswers,
   thinkTime,
   verdictKind,
   type PracticeAction,
   type PracticeState,
+  type QuestionContext,
 } from "./practice";
 import type { QueuedItem } from "./types";
 
@@ -261,6 +263,80 @@ describe("think time", () => {
 
   it("has none for a listening item read as text", () => {
     expect(thinkTime({ answerFrom: null, shownAt: 1000 }, { at: 40000, stage: "answer" }, unheard)).toBeNull();
+  });
+});
+
+describe("the question as drawn", () => {
+  const reading: QuestionContext = { playable: false, picture: false, narrated: false, spokenOptions: false, audioFailed: false };
+  const spoken: QuestionContext = { playable: true, picture: true, narrated: true, spokenOptions: true, audioFailed: false };
+
+  it("takes a bare reading item straight to its options, printed, with the clock running", () => {
+    const s = run([loaded(2)]);
+    const v = questionView(s, s.items[0], reading);
+    expect(v.stage).toBe("answer");
+    expect(v.hasScene).toBe(false);
+    expect(v.stemAsText).toBe(true);
+    expect(v.optionsShown).toBe(true);
+    expect(v.optionTextHidden).toBe(false);
+    expect(v.clockRunning).toBe(true);
+  });
+
+  it("opens a listening item on its scene, with nothing to answer yet", () => {
+    const s = run([loaded(2)]);
+    const v = questionView(s, s.items[0], spoken);
+    expect(v.stage).toBe("scene");
+    expect(v.afterScene).toBe("listen");
+    expect(v.optionsShown).toBe(false);
+    expect(v.clockRunning).toBe(false);
+  });
+
+  it("shows spoken options as numbers while the audio plays, and their words after the answer", () => {
+    const listening = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    const during = questionView(listening, listening.items[0], spoken);
+    expect(during.optionsShown).toBe(true);
+    expect(during.optionTextHidden).toBe(true);
+    expect(during.stemAsText).toBe(false);
+
+    const answered = run([
+      loaded(2),
+      { type: "stage", stage: "listen", now: 1500 },
+      { type: "choose", position: 2, stage: "listen", now: 2000 },
+      { type: "graded", verdict: { isCorrect: false, chosenRole: "register_too_casual", saved: true } },
+    ]);
+    const after = questionView(answered, answered.items[0], spoken);
+    expect(after.revealed).toBe(true);
+    expect(after.optionTextHidden).toBe(false);
+    expect(after.kind).toBe("manner");
+  });
+
+  it("keeps printed options back until the audio has finished", () => {
+    const s = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    expect(questionView(s, s.items[0], { ...spoken, spokenOptions: false }).optionsShown).toBe(false);
+  });
+
+  it("puts every word on the page when the audio would not play, without calling it a peek", () => {
+    const s = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    const withTurns = { ...s.items[0], dialogue: [{ speaker_role: "a", text: "一", clip_id: null, audio_path: "t0" }] };
+    const v = questionView(s, withTurns, { ...spoken, audioFailed: true });
+    expect(v.stemAsText).toBe(true);
+    expect(v.dialogueAsText).toBe(true);
+    expect(v.optionTextHidden).toBe(false);
+    expect(s.peeked).toBe(false);
+  });
+
+  it("never waits in the listening stage with nothing to play", () => {
+    const s = run([loaded(2), { type: "stage", stage: "listen", now: 1500 }]);
+    expect(questionView(s, s.items[0], { ...reading, picture: true }).stage).toBe("answer");
+  });
+
+  it("locks the options and stops the clock the moment an answer is given", () => {
+    const s = run([loaded(2), { type: "choose", position: 1, stage: "answer", now: 2000 }]);
+    const v = questionView(s, s.items[0], reading);
+    expect(v.locked).toBe(true);
+    expect(v.clockRunning).toBe(false);
+    // The chosen option's role stands in until the database's arrives.
+    expect(v.role).toBe("register_too_casual");
+    expect(v.kind).toBeNull();
   });
 });
 

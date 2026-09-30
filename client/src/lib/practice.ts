@@ -291,6 +291,100 @@ export function verdictKind(role: string, isCorrect: boolean): VerdictKind {
   return roleInfo(role).manner ? "manner" : "reading";
 }
 
+/** What the screen knows about the question on it besides the reducer's state:
+ *  which of its media exist, and whether its audio has already failed. */
+export type QuestionContext = {
+  /** It has at least one clip to play. */
+  playable: boolean;
+  /** It has a picture. */
+  picture: boolean;
+  /** Its question (the stem) has a clip. */
+  narrated: boolean;
+  /** Its four options are heard: a spoken type with all four clips. */
+  spokenOptions: boolean;
+  /** Its audio was tried and would not play. */
+  audioFailed: boolean;
+};
+
+/** Everything about how the question on screen is drawn that follows from the
+ *  state, worked out in one place. */
+export type QuestionView = {
+  /** The stage being shown — which is not always the one recorded. */
+  stage: Stage;
+  /** There is audio to listen to, and it is not known to be broken... */
+  listenable: boolean;
+  /** ...or a picture to look at: either earns the scene a pause of its own. */
+  hasScene: boolean;
+  /** The stage the scene's button (and Enter) goes to. */
+  afterScene: Stage;
+  /** The question (stem) is printed rather than heard. */
+  stemAsText: boolean;
+  /** The conversation is printed as a script rather than heard. */
+  dialogueAsText: boolean;
+  /** The verdict is in and on screen. */
+  revealed: boolean;
+  /** The options are drawn at all. */
+  optionsShown: boolean;
+  /** The options are numbers with play buttons, not words. */
+  optionTextHidden: boolean;
+  /** An answer is given or on its way: the options take no more presses. */
+  locked: boolean;
+  /** Whether the reading clock is counting. */
+  clockRunning: boolean;
+  /** The graded role — or, while the grade is on its way, the chosen option's. */
+  role: string;
+  /** How the verdict is drawn, once there is one. */
+  kind: VerdictKind | null;
+};
+
+/**
+ * The question on screen, as the screen draws it.
+ *
+ * Pure, so the rules about which stage shows what are tested
+ * (practice.test.ts) rather than spread across a component.
+ */
+export function questionView(state: PracticeState, item: QueuedItem, ctx: QuestionContext): QuestionView {
+  const listenable = ctx.playable;
+  // A scene is worth a pause of its own when there is something to hear or
+  // something to look at. A bare reading item goes straight to the question.
+  const hasScene = listenable || ctx.picture;
+  const recorded: Stage = state.stage ?? (hasScene ? "scene" : "answer");
+  // The only way out of "listen" is the playlist finishing, and with nothing
+  // to play there is no playlist: the screen would wait for ever on a hint
+  // about audio that does not exist, with no options and no button.
+  const stage: Stage = recorded === "listen" && !listenable ? "answer" : recorded;
+  const revealed = stage === "reveal" && state.graded !== null;
+  // Spoken options are numbers until the answer is in, unless asked for — and
+  // printed when they could not be heard, which is not the learner asking for
+  // help, so it is not `peeked`.
+  const optionTextHidden = ctx.spokenOptions && !revealed && !state.optionsAsText && !ctx.audioFailed;
+  const locked = state.pending !== null || state.chosen !== null;
+  const chosenRole =
+    state.chosen !== null ? (item.options.find((o) => o.position === state.chosen)?.role ?? "") : "";
+  const role = state.graded?.chosenRole || chosenRole;
+  return {
+    stage,
+    listenable,
+    hasScene,
+    afterScene: listenable ? "listen" : "answer",
+    // Narration that exists only as text — a listening type whose clip has not
+    // been synthesised, or a reading type, where the stem *is* the question —
+    // and audio that would not play, which is the same case.
+    stemAsText: !ctx.narrated || ctx.audioFailed,
+    dialogueAsText: (item.dialogue?.length ?? 0) > 0 && (!listenable || ctx.audioFailed),
+    revealed,
+    // Options can be answered while the clips still play, but only when they
+    // show no text: numbers and play buttons give nothing away, a printed
+    // sentence does.
+    optionsShown: stage === "answer" || stage === "reveal" || (stage === "listen" && optionTextHidden),
+    optionTextHidden,
+    locked,
+    clockRunning: stage === "answer" && !locked,
+    role,
+    kind: state.graded ? verdictKind(role, state.graded.isCorrect) : null,
+  };
+}
+
 /**
  * How long the learner took once the question could be answered — what the
  * ladder calls slow or not (attempts.think_ms).
