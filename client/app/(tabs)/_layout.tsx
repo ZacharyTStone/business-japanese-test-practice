@@ -20,6 +20,7 @@ import type { ColorValue } from "react-native";
 
 import { useLang } from "../../src/lib/i18n";
 import { Icon, type IconName } from "../../src/ui/icons";
+import { useTabBarHeight } from "../../src/ui/tabbar";
 import { colors, shadow, space } from "../../src/ui/theme";
 
 function tabIcon(name: IconName) {
@@ -30,6 +31,7 @@ function tabIcon(name: IconName) {
 
 export default function TabsLayout() {
   const { t } = useLang();
+  const bar = useTabBarHeight();
   return (
     <Tabs
       screenOptions={{
@@ -50,8 +52,10 @@ export default function TabsLayout() {
           backgroundColor: colors.surface,
           borderTopWidth: 0,
           paddingTop: space.sm,
-          paddingBottom: space.sm,
-          height: 76,
+          // A height given here replaces the one the bar would work out for
+          // itself, safe-area inset included — so the inset goes back in.
+          paddingBottom: space.sm + bar.inset,
+          height: bar.height,
           ...shadow.bar,
         },
         // The icon and its word are one thing; centring them together is what

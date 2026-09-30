@@ -45,9 +45,11 @@ import { DayDone } from "../../src/ui/done";
 import { Icon } from "../../src/ui/icons";
 import { useFreshToday } from "../../src/ui/fresh";
 import { FadeIn } from "../../src/ui/motion";
-import { colors, shadow, space, TAB_CLEARANCE, tabular, type } from "../../src/ui/theme";
+import { useTabClearance } from "../../src/ui/tabbar";
+import { colors, shadow, space, tabular, type } from "../../src/ui/theme";
 
 export default function Home() {
+  const clearance = useTabClearance();
   const router = useRouter();
   const { lang, t } = useLang();
   const { loading: authLoading, error: authError, retry: retryAuth } = useAuth();
@@ -178,7 +180,7 @@ export default function Home() {
           });
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: clearance }]}>
       <ScreenHeader
         title={t("tab_home")}
         subtitle={levelLine}
@@ -273,7 +275,7 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
+  page: { paddingHorizontal: space.lg, gap: space.lg },
   heroRow: { flexDirection: "row", alignItems: "center", gap: space.lg },
   heroLabel: { color: colors.onAccentMuted, fontSize: 13, fontWeight: "700", letterSpacing: 0.6 },
   heroTitle: {

@@ -46,7 +46,8 @@ import {
   ScreenMessage,
   SectionLabel,
 } from "../../src/ui/components";
-import { colors, space, TAB_CLEARANCE, type } from "../../src/ui/theme";
+import { useTabClearance } from "../../src/ui/tabbar";
+import { colors, space, type } from "../../src/ui/theme";
 
 /** The cards a save can fail under, so the failure is said in the card whose
  *  control it came from. */
@@ -59,6 +60,7 @@ type Savers = {
 };
 
 export default function Account() {
+  const clearance = useTabClearance();
   const router = useRouter();
   const { lang, setLang, t } = useLang();
   const {
@@ -230,7 +232,7 @@ export default function Account() {
   const countdown = countdownLine(days, lang);
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: clearance }]}>
       <ScreenHeader title={t("tab_account")} subtitle={email ?? undefined} />
 
       <Card style={{ gap: space.md }}>
@@ -425,7 +427,7 @@ export default function Account() {
 
 const styles = StyleSheet.create({
   levelRow: { flexDirection: "row", alignItems: "center", gap: space.md },
-  page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
+  page: { paddingHorizontal: space.lg, gap: space.lg },
   head: { flexDirection: "row", alignItems: "center", gap: space.md },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
 });

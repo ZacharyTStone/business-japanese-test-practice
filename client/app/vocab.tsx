@@ -21,6 +21,7 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchTermSentence, fetchVocab } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
@@ -31,6 +32,8 @@ import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
 export default function Vocab() {
+  // The list runs to the bottom of the screen, where the home indicator is.
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useLang();
   const [entries, setEntries] = useState<VocabEntry[] | null>(null);
@@ -100,7 +103,7 @@ export default function Vocab() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}>
       <Card style={{ gap: space.sm }}>
         <Text style={type.small}>{t("vocab_head")}</Text>
         <Text style={type.h2}>{t("vocab_count", { n: entries.length })}</Text>
@@ -167,7 +170,7 @@ export default function Vocab() {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  page: { padding: space.lg, gap: space.md },
   row: { flexDirection: "row", gap: space.sm },
   entry: {
     backgroundColor: colors.surface,

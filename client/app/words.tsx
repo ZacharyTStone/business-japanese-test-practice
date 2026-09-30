@@ -14,6 +14,7 @@
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchWordList } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
@@ -31,6 +32,8 @@ const LEVELS: Level[] = ["J1", "J2", "J3"];
 const PAGE = 40;
 
 export default function Words() {
+  // The list runs to the bottom of the screen, where the home indicator is.
+  const insets = useSafeAreaInsets();
   const { t } = useLang();
   const [words, setWords] = useState<WordEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +98,7 @@ export default function Words() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]} keyboardShouldPersistTaps="handled">
       <Card style={{ gap: space.md }}>
         <TextInput
           value={query}
@@ -173,7 +176,7 @@ export default function Words() {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  page: { padding: space.lg, gap: space.md },
   row: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   search: {
     backgroundColor: colors.surfaceAlt,

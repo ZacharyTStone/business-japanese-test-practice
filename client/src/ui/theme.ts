@@ -99,9 +99,14 @@ export type BadgeTone = keyof typeof badge;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
-/** What a tab screen has to leave under its last card so the bar does not sit on
- *  top of it. The bar is 76 tall and floats over the content on web. */
-export const TAB_CLEARANCE = 104;
+/** The tab bar's own height, before the strip under it that a phone's home
+ *  indicator or gesture bar owns — `useTabBarHeight` in ui/tabbar.ts adds
+ *  that, per device. */
+export const TAB_BAR_HEIGHT = 76;
+
+/** What a tab screen leaves under its last card beyond the bar itself, so the
+ *  last card ends on the page rather than on the bar's shadow. */
+export const TAB_BREATHING = 28;
 
 /** The widest a page's content runs. Past this a line of Japanese is too long to
  *  read and a button too wide to be one; a wider window centres the column. */

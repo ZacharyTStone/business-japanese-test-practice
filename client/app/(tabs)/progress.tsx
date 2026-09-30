@@ -52,9 +52,10 @@ import {
 } from "../../src/ui/components";
 import type { IconName } from "../../src/ui/icons";
 import { FadeIn } from "../../src/ui/motion";
+import { useTabClearance } from "../../src/ui/tabbar";
 import { TypeRadar } from "../../src/ui/radar";
 import type { BadgeTone } from "../../src/ui/theme";
-import { colors, space, TAB_CLEARANCE, tabular, type } from "../../src/ui/theme";
+import { colors, space, tabular, type } from "../../src/ui/theme";
 
 const AXIS_KEY: Record<TagStat["axis"], Key> = {
   function: "axis_function",
@@ -94,6 +95,7 @@ function tagLabel(axis: TagStat["axis"], tag: string, t: (key: Key) => string): 
 }
 
 export default function Progress() {
+  const clearance = useTabClearance();
   const router = useRouter();
   const { lang, t } = useLang();
   const [types, setTypes] = useState<TypeStat[] | null>(null);
@@ -200,7 +202,7 @@ export default function Progress() {
   const answered = types.reduce((n, t) => n + t.answered, 0);
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: clearance }]}>
       <ScreenHeader title={t("tab_progress")} />
 
       <FadeIn>
@@ -320,7 +322,7 @@ export default function Progress() {
 }
 
 const styles = StyleSheet.create({
-  page: { paddingHorizontal: space.lg, paddingBottom: TAB_CLEARANCE, gap: space.lg },
+  page: { paddingHorizontal: space.lg, gap: space.lg },
   row: { flexDirection: "row", alignItems: "center", gap: space.sm },
   trapRow: { flexDirection: "row", alignItems: "center", gap: space.md },
 });

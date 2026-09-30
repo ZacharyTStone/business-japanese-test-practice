@@ -28,6 +28,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../src/lib/auth";
 import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
@@ -43,6 +44,8 @@ import { colors, radius, shadow, space, type } from "../src/ui/theme";
 const NUMBERS = ["1", "2", "3", "4"];
 
 export default function History() {
+  // The list runs to the bottom of the screen, where the home indicator is.
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   // The result screen replaces itself with this one, which leaves nothing
   // underneath to go back to. Every way out goes through this, so none of
@@ -138,7 +141,7 @@ export default function History() {
   const wrong = entries.filter((e) => !e.is_correct).length;
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]}>
       <Card style={{ gap: space.sm }}>
         <Text style={type.small}>{t("hist_recent", { n: entries.length })}</Text>
         <Text style={type.h2}>{t("hist_wrong_n", { n: wrong })}</Text>
@@ -352,7 +355,7 @@ function NoteEditor({
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  page: { padding: space.lg, gap: space.md },
   note: {
     backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
