@@ -468,60 +468,78 @@ begin
     perform test.check(ok, 'an item whose correct_index points at no option is rejected');
 end
 $$;
--- --- the definer functions are not an API -----------------------------------
+-- --- the functions in public are an API, and only on purpose ----------------
 
--- They are `security definer` because they write rows the caller has no policy
--- for — or, in refresh_item_stats's case, because it reads every attempt in the
--- database, which is exactly what no client may do. Living in `public` also
--- publishes them at /rest/v1/rpc/<name>, so the grant is revoked where each is
--- defined. Assert both halves of that: the door is shut, and the triggers behind
--- it still fire — which the grading tests above have already demonstrated on
--- this very connection.
+-- A function in `public` is published at /rest/v1/rpc/<name>, and the schema's
+-- default privileges hand EXECUTE on it to the client roles the moment it is
+-- created. Most of them are nothing a client should call: trigger functions,
+-- the definer functions that write rows the caller has no policy for (or, in
+-- refresh_item_stats's case, read every attempt in the database), and helpers
+-- that answer about any learner they are handed. So the grant is taken away
+-- where each is defined, and the triggers behind them still fire — which the
+-- grading tests above have already shown on this very connection.
+--
+-- Swept from the catalogue rather than listed, so the next function added is
+-- covered the moment it exists: it fails here until it is either given to the
+-- app on purpose, in the list below, or has its grant revoked.
 reset role;
 
 do $$
 declare
-    f text;
+    -- The app's API: every function a signed-in client may call, directly or
+    -- through a view that runs as them (v_my_day reads the four about the
+    -- day's size, v_my_levels reads level_evidence). This list is the
+    -- decision; the sweep below holds the database to it.
+    api constant text[] := array[
+        'next_items(integer)', 'my_streak()', 'level_evidence(text)',
+        'reset_my_progress()', 'veto_item(text, text)', 'may_i_veto()',
+        'is_tester()', 'is_unlimited()', 'daily_max()', 'my_daily_max()', 'my_goal_max()'];
+    api_oids oid[];
+    listed   text;
 begin
-    raise notice 'definer functions are not reachable over the API';
-    -- ...and the two helpers only the triggers call: one answers about any
-    -- learner it is handed, and neither is anything a client needs.
-    foreach f in array array['handle_new_user()', 'sync_profile_identity()', 'grade_attempt()',
-                             'schedule_review()', 'refresh_item_stats()',
-                             'keep_the_daily_goal_under_its_ceiling()',
-                             'questions_left(uuid, text, text)', 'pace_max_scale()']
-    loop
-        perform test.check(
-            not has_function_privilege('anon', 'public.' || f, 'execute'),
-            'anon cannot call public.' || f || ' as an RPC');
-        perform test.check(
-            not has_function_privilege('authenticated', 'public.' || f, 'execute'),
-            'authenticated cannot call public.' || f || ' as an RPC');
-    end loop;
+    raise notice 'the functions in public, swept';
+    select array_agg(('public.' || f)::regprocedure::oid) into api_oids from unnest(api) f;
 
-    -- The two read functions ARE the app's API and must stay callable.
-    perform test.check(
-        has_function_privilege('authenticated', 'public.my_streak()', 'execute'),
-        'my_streak stays callable — it is the app''s own RPC');
-    perform test.check(
-        has_function_privilege('authenticated', 'public.next_items(integer)', 'execute'),
-        'next_items stays callable — it is the app''s own RPC');
-    -- v_my_levels reads it as the person looking, and it reads nobody else.
-    perform test.check(
-        has_function_privilege('authenticated', 'public.level_evidence(text)', 'execute')
-        and not has_function_privilege('anon', 'public.level_evidence(text)', 'execute'),
-        'level_evidence is callable by a signed-in user, for their own record only');
+    select string_agg(p.oid::regprocedure::text, ', ' order by p.proname) into listed
+      from pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and has_function_privilege('authenticated', p.oid, 'execute')
+       and not (p.oid = any (api_oids));
+    perform test.check(listed is null,
+        'a signed-in client can call the app''s API and nothing else in public'
+        || coalesce(' (also callable: ' || listed || ')', ''));
 
-    -- ...with a pinned search_path, so a caller cannot shadow what they read.
-    foreach f in array array['my_streak', 'next_items', 'level_evidence']
-    loop
-        perform test.check(
-            (select proconfig is not null
-                and exists (select 1 from unnest(proconfig) c where split_part(c, '=', 1) = 'search_path')
-             from pg_proc
-             where oid = ('public.' || f)::regproc),
-            'public.' || f || ' pins its search_path');
-    end loop;
+    select string_agg(f, ', ') into listed
+      from unnest(api) f
+     where not has_function_privilege('authenticated', ('public.' || f)::regprocedure, 'execute');
+    perform test.check(listed is null,
+        'and every function of that API stays callable'
+        || coalesce(' (not callable: ' || listed || ')', ''));
+
+    select string_agg(p.oid::regprocedure::text, ', ' order by p.proname) into listed
+      from pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and has_function_privilege('anon', p.oid, 'execute');
+    perform test.check(listed is null,
+        'anon can call no function in public at all'
+        || coalesce(' (callable: ' || listed || ')', ''));
+
+    perform test.check(
+        not exists (select 1 from pg_proc p
+                     where p.oid = any (api_oids) and p.prorettype = 'trigger'::regtype),
+        'and no trigger function is part of the API');
+
+    -- ...each with a pinned search_path, so nobody who can create a temporary
+    -- schema can decide what the names inside it mean. Every one, not only the
+    -- callable ones: a definer function run by a trigger is the worse case.
+    select string_agg(p.oid::regprocedure::text, ', ' order by p.proname) into listed
+      from pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c
+                        where split_part(c, '=', 1) = 'search_path');
+    perform test.check(listed is null,
+        'every function in public pins its search_path'
+        || coalesce(' (unpinned: ' || listed || ')', ''));
 end
 $$;
 
@@ -591,11 +609,9 @@ begin
                      where grantee = 'anon' and table_schema = 'public'),
         'anon holds no privilege on any table or view in public');
     perform test.check(
-        not has_function_privilege('anon', 'public.next_items(integer)', 'execute')
-        and not has_function_privilege('anon', 'public.my_streak()', 'execute')
-        and not has_function_privilege('anon', 'public.is_tester()', 'execute')
-        and not has_function_privilege('anon', 'public.my_goal_max()', 'execute')
-        and not has_function_privilege('anon', 'public.my_daily_max()', 'execute'),
+        not exists (select 1 from pg_proc p
+                     where p.pronamespace = 'public'::regnamespace
+                       and has_function_privilege('anon', p.oid, 'execute')),
         'anon cannot call any RPC');
     perform test.check(
         has_function_privilege('authenticated', 'public.is_tester()', 'execute')
