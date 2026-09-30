@@ -34,6 +34,7 @@ import {
 } from "../../src/ui/components";
 import { DayDone } from "../../src/ui/done";
 import { Icon } from "../../src/ui/icons";
+import { useFreshToday } from "../../src/ui/fresh";
 import { FadeIn } from "../../src/ui/motion";
 import { colors, shadow, space, TAB_CLEARANCE, tabular, type } from "../../src/ui/theme";
 
@@ -56,6 +57,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
+  /** When today's numbers were read: what decides whether coming back to the
+   *  app should read them again (ui/fresh.ts). */
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -76,6 +80,7 @@ export default function Home() {
           setDay(d);
           setLevels(lv);
           setDue(load?.due_now ?? 0);
+          setLoadedAt(Date.now());
         } catch (e) {
           // A spinner that never ends looks exactly like an app that has hung.
           if (!cancelled) setError(errorText(e));
@@ -94,6 +99,10 @@ export default function Home() {
     setLoading(true);
     setReloads((n) => n + 1);
   }
+
+  // Past midnight in Japan the day's count starts again. Read quietly, with
+  // what is on screen left there until the new numbers arrive.
+  useFreshToday(loadedAt, () => setReloads((n) => n + 1));
 
   if (!isConfigured) {
     return (
@@ -174,7 +183,12 @@ export default function Home() {
           because it is a bonus, not the job. */}
       {blocked ? (
         <FadeIn>
-          <DayDone answered={answered} streak={streak} countdown={countdown ?? undefined} />
+          <DayDone
+            answered={answered}
+            streak={streak}
+            countdown={countdown ?? undefined}
+            action={{ label: t("review_btn"), onPress: () => router.push("/history") }}
+          />
         </FadeIn>
       ) : done >= goal ? (
         <FadeIn>
