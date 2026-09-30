@@ -27,6 +27,9 @@ def test_normalize_full_shape_passthrough(goi_item):
 def test_generate_and_gate_kept(store, monkeypatch):
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("goi_bunpou"))
+    # A clean proofread, so the item goes on to the gate this test is about.
+    monkeypatch.setattr("bjt.fidelity.sanity.llm.sanity_check",
+                        lambda rendered, rules, model=None: {**{r: False for r in rules}, "notes": ""})
 
     # The gated item is shuffled, so locate the correct option by its text.
     correct_text = next(o["text"] for o in _valid("goi_bunpou")["options"]
@@ -50,6 +53,9 @@ def test_generate_and_gate_kept(store, monkeypatch):
 def test_generate_and_gate_skipped(store, monkeypatch):
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("hyougen"))
+    # Nothing but the generator: no proofreader and no probe to fake.
+    monkeypatch.setattr("bjt.config.SANITY_ENABLED", False)
+    monkeypatch.setattr("bjt.config.DIFFICULTY_ENABLED", False)
     item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "hyougen", "J2", gate=False)
     assert kept
     assert store.get_item(iid)["gate_verdict"] == "skipped"

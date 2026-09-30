@@ -208,6 +208,7 @@ def test_the_time_ceiling_stops_the_next_call(ledger, answers, monkeypatch):
     assert len(answers) == 1 and "time ceiling" in str(err.value)
 
 
+@pytest.mark.unmocked_seams
 def test_the_client_has_a_timeout_and_few_retries(monkeypatch):
     seen = {}
 
