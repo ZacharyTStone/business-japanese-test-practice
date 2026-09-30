@@ -201,13 +201,21 @@ def _next_cell(store, item_type: str, level: str):
     return picked[0]
 
 
-def sample_cells(store, item_type: str, level: str, n: int) -> list:
-    """N unused cells for a run, spread across the axes. Empty list for types
-    that do not use a seed table."""
+#: Cells a shelf draws beyond the items it is asked for. A near-duplicate
+#: spends its cell without keeping an item, and the shelf then needs another;
+#: drawn up front they are spread across the axes with the rest.
+CELL_SURPLUS = 2
+
+
+def sample_cells(store, item_type: str, level: str, n: int, *, surplus: int = 0) -> list:
+    """N unused cells for a run, spread across the axes, and up to `surplus`
+    more when the table has them. Empty list for types that do not use a seed
+    table."""
     if not get_generator(item_type).requires_cell:
         return []
     table = seedtable.load(item_type)
-    cells = table.sample(n, level=level, exclude_ids=_spent_cells(store, item_type))
+    cells = table.sample(n + max(surplus, 0), level=level,
+                         exclude_ids=_spent_cells(store, item_type))
     if len(cells) < n:
         raise LLMError(
             f"only {len(cells)} unused {item_type} cell(s) left at {level}; extend "
@@ -241,7 +249,11 @@ def run_batch(
     raised so the caller ends the run too.
     """
     kept_items: list[dict] = []
-    cells = sample_cells(store, item_type, level, n)
+    cells = sample_cells(store, item_type, level, n, surplus=CELL_SURPLUS)
+    # Cells this shelf has finished with: kept, or spent on a near-duplicate.
+    # A cell is never handed out again once it is in here — a second item on
+    # one cell fails "seed cells distinct" and takes the whole shelf with it.
+    done_cells: set[str] = set()
     attempts = 0
     budget = n * 3
     # Discards in a row. A shelf whose first three drafts all fail the gate is
@@ -265,8 +277,14 @@ def run_batch(
             print(f"  [{len(kept_items)}/{n}] giving up on this shelf: "
                   f"{strikes} discards in a row")
             break
+        cell = None
+        if cells:
+            cell = _cell_at(store, item_type, level, cells, idx, done_cells)
+            if cell is None:
+                print(f"  [{len(kept_items)}/{n}] no unused {item_type} cell left at "
+                      f"{level}; the shelf ends here")
+                break
         attempts += 1
-        cell = cells[idx % len(cells)] if cells else None
         try:
             item, iid, kept, detail, reason = generate_and_gate(
                 store, item_type, level, gate=gate, sanity_check=sanity_check, cell=cell,
@@ -293,11 +311,15 @@ def run_batch(
             print(f"  [{len(kept_items)}/{n}] dropped — near-duplicate "
                   f"of an item already in this batch ({close:.2f})")
             strikes += 1
+            if cell is not None:
+                done_cells.add(cell.id)
             idx += 1
             feedback = ("it was a near-duplicate of another item in this batch "
                         f"({item.get('topic', '')!r}); write a clearly different situation")
             continue
         strikes = 0
+        if cell is not None:
+            done_cells.add(cell.id)
         idx += 1
         feedback = None
         kept_items.append(item)
@@ -307,6 +329,21 @@ def run_batch(
     if stop is not None:
         raise ShelfStopped(stop, path, kept_n) from stop
     return path, kept_n
+
+
+def _cell_at(store, item_type: str, level: str, cells: list, idx: int, done: set):
+    """The shelf's `idx`-th cell: from the cells it drew, and past their end a
+    fresh one from the table. Never a cell in `done`. None when the table has
+    nothing left at this level."""
+    while idx >= len(cells):
+        picked = seedtable.load(item_type).sample(
+            1, level=level, exclude_ids=_spent_cells(store, item_type) | done
+            | {c.id for c in cells})
+        if not picked:
+            return None
+        cells.append(picked[0])
+    cell = cells[idx]
+    return None if cell.id in done else cell
 
 
 def _bundle_shelf(item_type: str, level: str, kept_items: list[dict], *, force: bool,
