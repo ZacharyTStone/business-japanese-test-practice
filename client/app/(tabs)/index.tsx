@@ -30,12 +30,13 @@ import { minutesFor, secondsPerQuestion } from "../../src/lib/estimate";
 import { countdownLine, daysUntil } from "../../src/lib/exam";
 import { useLang } from "../../src/lib/i18n";
 import { levelsAgree, placedLevels, SECTION_SHORT } from "../../src/lib/levels";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
   GradientCard,
   Loading,
+  LoadFailed,
   Notice,
   ProgressRing,
   ScreenHeader,
@@ -64,7 +65,9 @@ export default function Home() {
   // without it the button says the exam's reading pace.
   const [perQuestion, setPerQuestion] = useState(() => secondsPerQuestion([], []));
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** A load that failed, kept whole so it is said in the learner's words and
+   *  language at render time (LoadFailed), not frozen as technical text. */
+  const [error, setError] = useState<unknown>(null);
   const [reloads, setReloads] = useState(0);
   /** When today's numbers were read: what decides whether coming back to the
    *  app should read them again (ui/fresh.ts). */
@@ -100,7 +103,7 @@ export default function Home() {
           setLoadedAt(Date.now());
         } catch (e) {
           // A spinner that never ends looks exactly like an app that has hung.
-          if (!cancelled) setError(errorText(e));
+          if (!cancelled) setError(e ?? "error");
         } finally {
           if (!cancelled) setLoading(false);
         }
@@ -141,15 +144,10 @@ export default function Home() {
       </ScreenMessage>
     );
   }
-  if (error) {
+  if (error != null) {
     return (
       <ScreenMessage>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{ label: t("retry"), onPress: retry }}
-        />
+        <LoadFailed error={error} onRetry={retry} />
       </ScreenMessage>
     );
   }

@@ -35,7 +35,7 @@ import { TAG_LABELS } from "../../src/lib/generated";
 import { useLang, type Key } from "../../src/lib/i18n";
 import { placedLevel } from "../../src/lib/levels";
 import { roleInfo } from "../../src/lib/roles";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { RoleTrap, Section, SectionLevel, TagStat, TypeStat } from "../../src/lib/types";
 import {
   AdSlot,
@@ -43,6 +43,7 @@ import {
   Card,
   IconBadge,
   Loading,
+  LoadFailed,
   Notice,
   ProgressBar,
   ScreenHeader,
@@ -103,7 +104,7 @@ export default function Progress() {
   const [traps, setTraps] = useState<RoleTrap[]>([]);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   const [adFree, setAdFree] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [reloads, setReloads] = useState(0);
 
   useFocusEffect(
@@ -127,7 +128,7 @@ export default function Progress() {
           setLevels(lv);
         } catch (e) {
           // A spinner that never ends looks exactly like an app that has hung.
-          if (!cancelled) setError(errorText(e));
+          if (!cancelled) setError(e ?? "error");
         }
       })();
       return () => {
@@ -143,19 +144,15 @@ export default function Progress() {
       </ScreenMessage>
     );
   }
-  if (error) {
+  if (error != null) {
     return (
       <ScreenMessage>
-        <Notice
+        <LoadFailed
+          error={error}
           title={t("prog_load_err")}
-          body={error}
-          tone="warn"
-          action={{
-            label: t("retry"),
-            onPress: () => {
-              setError(null);
-              setReloads((n) => n + 1);
-            },
+          onRetry={() => {
+            setError(null);
+            setReloads((n) => n + 1);
           }}
         />
       </ScreenMessage>

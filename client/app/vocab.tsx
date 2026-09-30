@@ -25,10 +25,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchTermSentence, fetchVocab } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { TermSentence, VocabEntry } from "../src/lib/types";
 import { MiniPlay } from "../src/ui/audio";
-import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
 import { ScreenCrash } from "../src/ui/crash";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
@@ -41,7 +41,7 @@ export default function Vocab() {
   const router = useRouter();
   const { t } = useLang();
   const [entries, setEntries] = useState<VocabEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [reloads, setReloads] = useState(0);
   /** Readings and meanings hidden until a word is opened: checking yourself. */
   const [hidden, setHidden] = useState(false);
@@ -54,7 +54,7 @@ export default function Vocab() {
     let cancelled = false;
     fetchVocab()
       .then((rows) => !cancelled && setEntries(rows))
-      .catch((e) => !cancelled && setError(errorText(e)));
+      .catch((e) => !cancelled && setError(e ?? "error"));
     return () => {
       cancelled = true;
     };
@@ -79,19 +79,14 @@ export default function Vocab() {
       </View>
     );
   }
-  if (error) {
+  if (error != null) {
     return (
       <View style={styles.page}>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{
-            label: t("retry"),
-            onPress: () => {
-              setError(null);
-              setReloads((n) => n + 1);
-            },
+        <LoadFailed
+          error={error}
+          onRetry={() => {
+            setError(null);
+            setReloads((n) => n + 1);
           }}
         />
       </View>

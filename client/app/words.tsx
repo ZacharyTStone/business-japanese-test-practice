@@ -19,10 +19,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchWordList } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { SECTION_ORDER, SECTION_SHORT } from "../src/lib/levels";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { Level, Section } from "../src/lib/types";
 import { filterWords, furigana, makeAnnotator, type WordEntry } from "../src/lib/words";
-import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
 import { ScreenCrash } from "../src/ui/crash";
 import { RubyText } from "../src/ui/ruby";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
@@ -40,7 +40,7 @@ export default function Words() {
   const insets = useSafeAreaInsets();
   const { t } = useLang();
   const [words, setWords] = useState<WordEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [reloads, setReloads] = useState(0);
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState<Level | null>(null);
@@ -53,7 +53,7 @@ export default function Words() {
     let cancelled = false;
     fetchWordList()
       .then((rows) => !cancelled && setWords(rows))
-      .catch((e) => !cancelled && setError(errorText(e)));
+      .catch((e) => !cancelled && setError(e ?? "error"));
     return () => {
       cancelled = true;
     };
@@ -78,19 +78,14 @@ export default function Words() {
       </View>
     );
   }
-  if (error) {
+  if (error != null) {
     return (
       <View style={styles.page}>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{
-            label: t("retry"),
-            onPress: () => {
-              setError(null);
-              setReloads((n) => n + 1);
-            },
+        <LoadFailed
+          error={error}
+          onRetry={() => {
+            setError(null);
+            setReloads((n) => n + 1);
           }}
         />
       </View>

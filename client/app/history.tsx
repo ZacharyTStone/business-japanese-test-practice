@@ -34,10 +34,10 @@ import { useAuth } from "../src/lib/auth";
 import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { roleInfo } from "../src/lib/roles";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { HistoryEntry, ReviewDetail } from "../src/lib/types";
 import { MiniPlay, Transcript } from "../src/ui/audio";
-import { Button, Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { Button, Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
 import { ScreenCrash } from "../src/ui/crash";
 import { DocumentView } from "../src/ui/document";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
@@ -59,7 +59,8 @@ export default function History() {
   const { lang, t } = useLang();
   const { item: onlyItem } = useLocalSearchParams<{ item?: string }>();
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [reloads, setReloads] = useState(0);
   const [wrongOnly, setWrongOnly] = useState(!onlyItem);
   const [open, setOpen] = useState<string | null>(null);
   /** The rest of each question opened so far, by item: loaded on first
@@ -85,11 +86,11 @@ export default function History() {
           toggle(rows[0]);
         }
       })
-      .catch((e) => !cancelled && setError(errorText(e)));
+      .catch((e) => !cancelled && setError(e ?? "error"));
     return () => {
       cancelled = true;
     };
-  }, [onlyItem]);
+  }, [onlyItem, reloads]);
 
   const shown = useMemo(
     () => (entries ?? []).filter((e) => !wrongOnly || !e.is_correct),
@@ -116,14 +117,16 @@ export default function History() {
       </View>
     );
   }
-  if (error) {
+  if (error != null) {
+    // The way back is the header's; this is the way forward.
     return (
       <View style={styles.page}>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{ label: t("back"), onPress: leave }}
+        <LoadFailed
+          error={error}
+          onRetry={() => {
+            setError(null);
+            setReloads((n) => n + 1);
+          }}
         />
       </View>
     );

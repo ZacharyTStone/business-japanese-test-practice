@@ -19,17 +19,16 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
 import { useLang } from "../lib/i18n";
-import { Button, IconBadge, ScreenMessage } from "./components";
+import { Button, IconBadge, InlineError, ScreenMessage } from "./components";
 import { colors, radius, space, type } from "./theme";
-import { errorText } from "../lib/supabase";
 
 export function SignInScreen() {
   const { t } = useLang();
-  const { signIn, signUp, error: authError } = useAuth();
+  const { signIn, signUp, failure: authFailure } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const ready = email.includes("@") && password.length >= 6;
@@ -41,7 +40,7 @@ export function SignInScreen() {
     try {
       await action();
     } catch (e) {
-      setError(errorText(e));
+      setError(e ?? "error");
     } finally {
       setBusy(false);
     }
@@ -96,9 +95,9 @@ export function SignInScreen() {
         />
         <Text style={type.small}>{t("gate_password_hint")}</Text>
         {notice ? <Text style={[type.small, { color: colors.accent }]}>{notice}</Text> : null}
-        {error ?? authError ? (
-          <Text style={[type.small, { color: colors.wrong }]}>{error ?? authError}</Text>
-        ) : null}
+        {/* A wrong password, an expired sign-in, no connection: each said as
+            what to do, with the technical text in small print for the rest. */}
+        {(error ?? authFailure) != null ? <InlineError error={error ?? authFailure} /> : null}
       </View>
     </ScreenMessage>
   );

@@ -235,6 +235,35 @@ export function Notice({
 }
 
 /**
+ * A screen whose data did not arrive. The sentence is one a learner can act on
+ * — offline, signed out, or "try again in a moment" — in their language, with
+ * the technical text in small print under it rather than instead of it, and
+ * the way to try again: a load error with no retry is a dead end.
+ */
+export function LoadFailed({
+  error,
+  onRetry,
+  title,
+}: {
+  error: unknown;
+  onRetry: () => void;
+  /** Defaults to 「読み込めません」. */
+  title?: string;
+}) {
+  const { t } = useLang();
+  const { message, detail } = friendlyError(error, t);
+  return (
+    <Notice
+      title={title ?? t("cant_load")}
+      body={message}
+      detail={detail}
+      tone="warn"
+      action={{ label: t("retry"), onPress: onRetry }}
+    />
+  );
+}
+
+/**
  * A failure said where it happened: inside the card whose control failed,
  * rather than at the foot of the page where nobody connects it to the press
  * that caused it. The sentence a learner can act on, and small print under it.

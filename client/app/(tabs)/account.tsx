@@ -30,7 +30,7 @@ import { countdownLine, daysUntil, formatExamDate, todayIso } from "../../src/li
 import { LANG_NAME, LANGS, useLang } from "../../src/lib/i18n";
 import { SECTION_NAME, SECTION_ORDER, placedLevel } from "../../src/lib/levels";
 import { settingSaver, type SettingSaver } from "../../src/lib/save";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../../src/lib/supabase";
 import type { DayStatus, Profile, SectionLevel } from "../../src/lib/types";
 import {
   Button,
@@ -40,6 +40,7 @@ import {
   IconBadge,
   InlineError,
   Loading,
+  LoadFailed,
   Notice,
   NumberField,
   ScreenHeader,
@@ -79,7 +80,7 @@ export default function Account() {
   /** Only read for one thing here: whether this account may size its own day,
    *  which is `goal_max` being a number rather than null. */
   const [day, setDay] = useState<DayStatus | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<unknown>(null);
   /** A write that failed, and the card it is said in. */
   const [failed, setFailed] = useState<{ card: SettingCard; error: unknown } | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -153,7 +154,7 @@ export default function Account() {
           }
           setProfile(p);
         })
-        .catch((e) => !cancelled && setProfileError(errorText(e)));
+        .catch((e) => !cancelled && setProfileError(e ?? "error"));
       // Not fatal: with no levels every section reads 「—」, which is what an
       // unplaced section says anyway.
       fetchSectionLevels()
@@ -214,15 +215,10 @@ export default function Account() {
       </ScreenMessage>
     );
   }
-  if (profileError) {
+  if (profileError != null) {
     return (
       <ScreenMessage>
-        <Notice
-          title={t("cant_load")}
-          body={profileError}
-          tone="warn"
-          action={{ label: t("retry"), onPress: retry }}
-        />
+        <LoadFailed error={profileError} onRetry={retry} />
       </ScreenMessage>
     );
   }
