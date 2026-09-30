@@ -47,12 +47,10 @@ from __future__ import annotations
 import json
 import math
 import os
-import urllib.error
-import urllib.request
 from types import SimpleNamespace
 from typing import Optional
 
-from . import config, llm
+from . import config, http, llm
 
 #: The name the one question is sent under, and read back from.
 QUESTION = "answer"
@@ -79,7 +77,7 @@ def request_body(question: str, options: list[str], model: str) -> dict:
         "questions": {QUESTION: {
             "type": "choice",
             "instructions": INSTRUCTIONS,
-            "criteria": dict(zip(keys, options)),
+            "criteria": dict(zip(keys, options, strict=True)),
         }},
     }
 
@@ -109,20 +107,15 @@ def probabilities(reply: dict, n: int) -> list[float]:
 def usage_of(reply: dict, sent: bytes) -> SimpleNamespace:
     """What the ledger prices, in the shape `llm.price_usd` reads."""
     usage = reply.get("usage") if isinstance(reply, dict) else None
-    tokens_in = usage.get("input_tokens") if isinstance(usage, dict) else None
+    if not isinstance(usage, dict):
+        return SimpleNamespace(input_tokens=len(sent), output_tokens=0)
+    tokens_in = usage.get("input_tokens")
     if not isinstance(tokens_in, int) or isinstance(tokens_in, bool) or tokens_in < 0:
         return SimpleNamespace(input_tokens=len(sent), output_tokens=0)
     tokens_out = usage.get("output_tokens")
     if not isinstance(tokens_out, int) or isinstance(tokens_out, bool) or tokens_out < 0:
         tokens_out = 0
     return SimpleNamespace(input_tokens=tokens_in, output_tokens=tokens_out)
-
-
-def _post(url: str, data: bytes, headers: dict[str, str], timeout: float) -> bytes:
-    """One request, the reply's body. The seam the tests replace."""
-    req = urllib.request.Request(url, data=data, method="POST", headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read()
 
 
 def choice_probabilities(question: str, options: list[str],
@@ -134,16 +127,15 @@ def choice_probabilities(question: str, options: list[str],
     key = os.environ.get("TYPESAFE_API_KEY", "")
     if not key:
         raise llm.LLMError("TYPESAFE_API_KEY is not set")
+    llm.spend.begin_request()
     data = json.dumps(request_body(question, options, model), ensure_ascii=False).encode("utf-8")
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     try:
-        body = _post(config.JEV_URL, data, headers, config.API_TIMEOUT_SECONDS)
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", "replace")[:500]
-        if e.code == 402 or any(sign in detail.lower() for sign in llm._BILLING_SIGNS):
-            raise llm.LLMBillingError(f"Jev request failed: HTTP {e.code}: {detail}") from e
-        raise llm.LLMError(f"Jev request failed: HTTP {e.code}: {detail}") from e
-    except (urllib.error.URLError, OSError) as e:
+        body = http.request("POST", config.JEV_URL, data, headers,
+                            timeout=config.API_TIMEOUT_SECONDS)
+    except http.RequestFailed as e:
+        if e.status == 402 or any(sign in e.detail.lower() for sign in llm._BILLING_SIGNS):
+            raise llm.LLMBillingError(f"Jev request failed: {e}") from e
         raise llm.LLMError(f"Jev request failed: {e}") from e
 
     try:

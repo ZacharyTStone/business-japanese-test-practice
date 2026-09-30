@@ -28,7 +28,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { reportItem, type FeedbackReason } from "../lib/db";
 import { useLang, type Key } from "../lib/i18n";
 import { Chip } from "./components";
-import { colors, radius, space, type } from "./theme";
+import { colors, MIN_TOUCH, radius, space, type } from "./theme";
 
 /** The reasons, in the order they are offered. Audio comes last of the real
  *  ones because most items have none; `other` is always last. Must match the
@@ -78,7 +78,7 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
       <Pressable
         accessibilityRole="button"
         onPress={() => setStage("open")}
-        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
       >
         <Text style={[type.small, styles.toggle]}>{t("report_open")}</Text>
       </Pressable>
@@ -132,7 +132,7 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
           accessibilityRole="button"
           onPress={() => setStage("shut")}
           disabled={busy}
-          style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+          style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
         >
           <Text style={[type.small, styles.toggle]}>{t("report_close")}</Text>
         </Pressable>
@@ -161,6 +161,9 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
 
 const styles = StyleSheet.create({
   toggle: { textAlign: "center", textDecorationLine: "underline" },
+  // A line of text that is a button is still a thumb's height: the padding is
+  // the hit area, since hitSlop does nothing on the web.
+  link: { minHeight: MIN_TOUCH, justifyContent: "center" },
   thanks: { textAlign: "center" },
   panel: {
     gap: space.md,
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.inputBorder,
     borderRadius: radius.md,
     paddingHorizontal: space.md,
     paddingVertical: space.md,

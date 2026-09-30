@@ -78,7 +78,9 @@ SANITY_ENABLED = _env("BJT_SANITY", "1").strip().lower() not in ("0", "false", "
 # independent of each other, so that a bug in one of them is caught by the
 # others.
 
-# The most one process may spend, measured from the usage every response
+# The most one process may spend — or one job, when BJT_SPEND_LEDGER names
+# the file its steps share (bjt/llm.py `Spend`); the call and minute ceilings
+# below are shared the same way — measured from the usage every response
 # reports and priced with the table in bjt/llm.py. Checked before each call;
 # reached, the run stops with what it has (LLMSpendLimitError, which the
 # nightly loop treats like an empty account). Two dollars is a normal night
@@ -101,7 +103,9 @@ RUN_MAX_MINUTES = float(_env("BJT_RUN_MAX_MINUTES", "30"))
 
 # How long one API call may take before the SDK gives up on it, and how many
 # times it may retry a transient failure. A call that hangs is paid for in
-# minutes; a call retried many times is paid for in money.
+# minutes; a call retried many times is paid for in money. The retries are
+# made by bjt/llm.py, not the SDK, so each one is counted and checked against
+# the ceilings above before it is sent.
 API_TIMEOUT_SECONDS = float(_env("BJT_API_TIMEOUT_SECONDS", "300"))
 API_MAX_RETRIES = int(_env("BJT_API_MAX_RETRIES", "2"))
 

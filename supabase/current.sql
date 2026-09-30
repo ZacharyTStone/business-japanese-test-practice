@@ -31,7 +31,7 @@ from public.attempts a
 group by 1;
 
 
--- ==== view v_my_day — 20260922000200_a_day_the_owner_sizes.sql
+-- ==== view v_my_day — 20260930000300_the_door_is_on_the_answer.sql
 
 create or replace view public.v_my_day
 with (security_invoker = on) as
@@ -39,8 +39,8 @@ with today as (
     select count(*)::int as answered
       from public.attempts a
      where a.user_id = (select auth.uid())
-       and (a.answered_at at time zone 'Asia/Tokyo')::date
-           = (now() at time zone 'Asia/Tokyo')::date
+       and a.answered_at >= ((now() at time zone 'Asia/Tokyo')::date::timestamp
+                             at time zone 'Asia/Tokyo')
 )
 select
     coalesce((select p.daily_goal from public.profiles p where p.id = (select auth.uid())), 10)
@@ -273,7 +273,7 @@ comment on function public.daily_max is
     'so the app and the queue read the same number.';
 
 
--- ==== function grade_attempt — 20260927000100_a_new_question_not_the_same_one.sql
+-- ==== function grade_attempt — 20260930000400_a_withdrawn_question_takes_no_answers.sql
 
 create or replace function public.grade_attempt()
 returns trigger
@@ -286,21 +286,46 @@ declare
     v_correct_index smallint;
     v_type          text;
     v_function      text;
+    v_day_start     timestamptz :=
+        ((now() at time zone 'Asia/Tokyo')::date::timestamp at time zone 'Asia/Tokyo');
+    v_today         integer;
 begin
     new.user_id := (select auth.uid());
     if new.user_id is null then
         raise exception 'attempts require an authenticated session';
     end if;
 
-    -- The item still has to exist, and its answer key is still read here and
-    -- not taken from the client — a timeout is graded, not merely accepted.
+    -- Only a privileged insert can name this column (see the grant in
+    -- 20260927000100), so for the app it is always now().
+    new.answered_at := coalesce(new.answered_at, now());
+
+    -- The day's door, on the answer itself. Counted under a lock per learner,
+    -- so two devices answering at once are counted one after the other.
+    if new.answered_at >= v_day_start and not (select public.is_unlimited()) then
+        perform pg_advisory_xact_lock(hashtextextended('attempts:' || new.user_id::text, 0));
+        select count(*)::int
+          into v_today
+          from public.attempts a
+         where a.user_id = new.user_id
+           and a.answered_at >= v_day_start;
+        if v_today >= (select public.my_daily_max()) then
+            raise exception 'daily limit reached'
+                using errcode = 'check_violation', hint = 'daily_limit_reached';
+        end if;
+    end if;
+
+    -- The item still has to exist, and still be in the bank: a question that
+    -- was withdrawn or vetoed takes no new answers. Its answer key is read here
+    -- and not taken from the client — a timeout is graded, not merely accepted.
     select i.correct_index, i.item_type, i.function
       into v_correct_index, v_type, v_function
       from public.items i
-     where i.id = new.item_id;
+     where i.id = new.item_id
+       and i.is_published;
 
     if v_correct_index is null then
-        raise exception 'no such item %', new.item_id;
+        raise exception 'no such item %', new.item_id
+            using hint = 'item_unavailable';
     end if;
 
     if new.chosen_index = -1 then
@@ -344,9 +369,6 @@ begin
         new.stands_for := null;
     end if;
 
-    -- Only a privileged insert can name this column (see the grant above), so
-    -- for the app it is always now().
-    new.answered_at := coalesce(new.answered_at, now());
     return new;
 end;
 $$;
@@ -354,7 +376,10 @@ $$;
 comment on function public.grade_attempt is
     'Grades an answer from the item, never from the client. chosen_index -1 means '
     'the question clock ran out: wrong, with the role timed_out. A stands_for that '
-    'the queue could not have served is cleared.';
+    'the queue could not have served is cleared. An answer that would take today '
+    'past my_daily_max() is refused (hint daily_limit_reached), unless the '
+    'tester''s ceiling is lifted, and so is an answer to a question that is not '
+    'published (hint item_unavailable).';
 
 
 -- ==== function grant_entitlement — 20260915000400_entitlement_grants.sql
@@ -458,7 +483,7 @@ comment on function public.is_unlimited() is
     'Answers about the caller alone.';
 
 
--- ==== function keep_the_daily_goal_under_its_ceiling — 20260922000200_a_day_the_owner_sizes.sql
+-- ==== function keep_the_daily_goal_under_its_ceiling — 20260930000200_four_columns_of_a_profile.sql
 
 create or replace function public.keep_the_daily_goal_under_its_ceiling()
 returns trigger
@@ -468,10 +493,11 @@ as $$
 declare
     v_max integer;
 begin
-    -- Only a session writing its own profile — which is to say, the app. A
-    -- migration, a fixture or the owner with the service role has no auth.uid()
-    -- and is not what this is guarding.
-    if (select auth.uid()) is distinct from new.id then
+    -- Only the app: a signed-in request, as PostgREST makes one, writing its
+    -- own profile. A migration, a fixture, a definer function or the owner with
+    -- the service role is none of those and is not what this is guarding.
+    if current_user <> 'authenticated'
+       or (select auth.uid()) is distinct from new.id then
         return new;
     end if;
     -- And only when the goal is what is being written. A row is not re-judged
@@ -482,7 +508,14 @@ begin
     if tg_op = 'UPDATE' and new.daily_goal is not distinct from old.daily_goal then
         return new;
     end if;
-    v_max := (select public.my_daily_max());
+    -- The size of a day is the owner's to give, one account at a time. Without
+    -- a number on this account's tester row it is not the learner's to change
+    -- at all, not even below the fifteen: ten is the product, not a setting.
+    v_max := (select public.my_goal_max());
+    if v_max is null then
+        raise exception 'the size of the day is not this account''s to choose'
+            using errcode = 'insufficient_privilege';
+    end if;
     if new.daily_goal > v_max then
         raise exception 'a daily goal of % is above this account''s ceiling of %',
             new.daily_goal, v_max;
@@ -492,9 +525,10 @@ end;
 $$;
 
 comment on function public.keep_the_daily_goal_under_its_ceiling is
-    'The fifteen, enforced where the client cannot get past it. The check '
-    'constraint on profiles.daily_goal is a hard bound on the column; this is '
-    'the bound on the account, which is a question about the session.';
+    'The size of the day, enforced where the client cannot get past it. A client '
+    'may change profiles.daily_goal only on the account whose tester row carries '
+    'max_daily_goal, and only up to it; everybody else''s goal is not theirs to '
+    'change. Judges a goal being written, never an existing row.';
 
 
 -- ==== function level_evidence — 20260927000100_a_new_question_not_the_same_one.sql
@@ -641,12 +675,13 @@ comment on function public.my_goal_max is
     'this; the trigger on profiles re-checks it rather than trusting it.';
 
 
--- ==== function my_streak — 20260913000300_stats_and_selection.sql
+-- ==== function my_streak — 20260913000300_stats_and_selection.sql, altered by 20260914000100_lock_down_the_api_surface.sql
 
 create or replace function public.my_streak()
 returns integer
 language sql
 stable
+set search_path = ''
 as $$
     with days as (
         select distinct (answered_at at time zone 'Asia/Tokyo')::date as day
@@ -671,9 +706,9 @@ as $$
 $$;
 
 
--- ==== function next_items — 20260927000100_a_new_question_not_the_same_one.sql
+-- ==== function next_items — 20260930000700_the_retest_walk_stops_early.sql
 
-create function public.next_items(p_limit integer default 5)
+create or replace function public.next_items(p_limit integer default 5)
 returns table (
     id                text,
     item_type         text,
@@ -703,6 +738,7 @@ language sql
 stable
 security invoker
 set search_path = ''
+set jit = off
 as $$
     with recursive uid as (
         select (select auth.uid()) as id
@@ -725,8 +761,10 @@ as $$
         where a.user_id = (select id from uid)
         group by a.item_id
     ),
-    -- The door, unchanged: the smaller of what was asked for and what the day
-    -- has left, unless this tester's ceiling is lifted.
+    -- The door: the smaller of what was asked for and what the day has left,
+    -- unless this tester's ceiling is lifted. Today is counted as a range on
+    -- answered_at from midnight in Japan, the form attempts_user_time_idx can
+    -- answer, and the same form grade_attempt() counts with.
     bounds as (
         select case
             when (select public.is_unlimited()) then greatest(p_limit, 0)
@@ -737,8 +775,8 @@ as $$
                     - (select count(*)::int
                          from public.attempts a
                         where a.user_id = (select id from uid)
-                          and (a.answered_at at time zone 'Asia/Tokyo')::date
-                              = (now() at time zone 'Asia/Tokyo')::date),
+                          and a.answered_at >= ((now() at time zone 'Asia/Tokyo')::date::timestamp
+                                                at time zone 'Asia/Tokyo')),
                     0))
         end as n
     ),
@@ -856,46 +894,80 @@ as $$
                or exists (select 1 from public.scenes sc
                            where sc.id = i.scene_id and sc.image_path is not null))
     ),
-    -- A: the lessons that are due, misses first, then the most overdue.
+    -- A: the lessons that are due, misses first, then the most overdue. Only
+    -- the first two hundred: the walk below never goes further, so nothing
+    -- here is built for a lesson it could not reach.
     due_lessons as (
-        select l.item_id, l.trap, i.item_type, i.function,
-               row_number() over (order by l.missed desc, l.due_at, l.item_id) as priority
-        from lessons l
-        join public.items i on i.id = l.item_id
-        where l.is_due
-          and i.is_published
+        select d.*
+        from (
+            select l.item_id, l.trap, i.item_type, i.function,
+                   row_number() over (order by l.missed desc, l.due_at, l.item_id) as priority
+            from lessons l
+            join public.items i on i.id = l.item_id
+            where l.is_due
+              and i.is_published
+        ) d
+        where d.priority <= 200
     ),
-    -- ...and for each, every unseen question that re-tests it, best first. The
-    -- same rule grade_attempt() checks a `stands_for` against. Materialised,
-    -- because the assignment below reads it once per lesson.
+    -- A backlog is served two fifths of a set at a time.
+    due_cap as (
+        select greatest(1, ((select b.n from bounds b) * 2) / 5) as n
+    ),
+    -- Every role a published question offers as a wrong answer, once per
+    -- question: what a lesson's trap is looked up in, as one join rather than
+    -- a search per (lesson, question) pair.
+    wrong_roles as (
+        select distinct o.item_id, o.role
+        from public.item_options o
+        join public.items c on c.id = o.item_id
+        where c.is_published
+          and o.position <> c.correct_index
+    ),
+    -- ...and for each lesson, the unseen questions that re-test it, best
+    -- first. The same rule grade_attempt() checks a `stands_for` against: the
+    -- trap as a wrong answer, or for a lesson that never caught anybody, its
+    -- 機能. Only a lesson's best `due_cap` are kept. The walk below stops once
+    -- it has handed out `due_cap` questions, so when any lesson's turn comes,
+    -- fewer than `due_cap` are taken, and its best free question is always
+    -- among its first `due_cap`. Materialised, because the walk reads it once
+    -- per lesson.
     sibling_options as materialized (
-        select dl.item_id as lesson_id, p.id as sibling_id,
-               row_number() over (partition by dl.item_id
-                                  order by (p.level = p.at_level) desc, p.in_window desc,
-                                           p.weakness, p.id) as pick
-        from due_lessons dl
-        join pool p on p.item_type = dl.item_type and not p.is_seen
-        where case when dl.trap is not null then
-                       exists (select 1
-                                 from public.item_options o
-                                 join public.items c on c.id = o.item_id
-                                where o.item_id = p.id
-                                  and o.role = dl.trap
-                                  and o.position <> c.correct_index)
-                   else dl.function is null or p.function = dl.function
-              end
+        select r.lesson_id, r.sibling_id, r.pick
+        from (
+            select c.lesson_id, c.sibling_id,
+                   row_number() over (partition by c.lesson_id
+                                      order by (c.level = c.at_level) desc, c.in_window desc,
+                                               c.weakness, c.sibling_id) as pick
+            from (
+                select dl.item_id as lesson_id, p.id as sibling_id,
+                       p.level, p.at_level, p.in_window, p.weakness
+                from due_lessons dl
+                join pool p on p.item_type = dl.item_type and not p.is_seen
+                join wrong_roles wr on wr.item_id = p.id and wr.role = dl.trap
+                where dl.trap is not null
+                union all
+                select dl.item_id, p.id, p.level, p.at_level, p.in_window, p.weakness
+                from due_lessons dl
+                join pool p on p.item_type = dl.item_type and not p.is_seen
+                where dl.trap is null
+                  and (dl.function is null or p.function = dl.function)
+            ) c
+        ) r
+        where r.pick <= (select dc.n from due_cap dc)
     ),
     -- One question per lesson, handed out in lesson order: each lesson takes
     -- its best question that no earlier lesson has taken. Two misses on the
     -- same trap — the commonest case there is — are two different questions,
     -- not one question and a lesson left waiting. A lesson whose questions are
-    -- all taken, or which has none, is skipped and waits for a later set.
-    siblings (priority, lesson_id, trap, sibling_id, taken) as (
-        select 0::bigint, null::text, null::text, null::text, array[]::text[]
+    -- all taken, or which has none, is skipped and waits for a later set. The
+    -- walk stops as soon as the set's share of the backlog is handed out.
+    siblings (priority, lesson_id, trap, sibling_id, taken, served) as (
+        select 0::bigint, null::text, null::text, null::text, array[]::text[], 0
         union all
         select dl.priority, dl.item_id, dl.trap, nxt.sibling_id,
                case when nxt.sibling_id is null then sb.taken
-                    else sb.taken || nxt.sibling_id end
+                    else sb.taken || nxt.sibling_id end,
+               sb.served + case when nxt.sibling_id is null then 0 else 1 end
         from siblings sb
         join due_lessons dl on dl.priority = sb.priority + 1
         left join lateral (
@@ -906,9 +978,7 @@ as $$
              order by so.pick
              limit 1
         ) nxt on true
-        -- A backlog is served two fifths of a set at a time; there is no need
-        -- to walk more of it than a large set could ever take.
-        where dl.priority <= 200
+        where sb.served < (select dc.n from due_cap dc)
     ),
     due as (
         select sb.sibling_id as id, 0 as bucket, sb.priority::double precision as rank,
@@ -916,7 +986,7 @@ as $$
         from siblings sb
         where sb.sibling_id is not null
         order by sb.priority
-        limit greatest(1, ((select b.n from bounds b) * 2) / 5)
+        limit (select dc.n from due_cap dc)
     ),
     stretch as (
         select p.id, 2 as bucket, random() as rank,

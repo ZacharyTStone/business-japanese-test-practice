@@ -14,6 +14,13 @@ import time
 from pathlib import Path
 from typing import Optional
 
+
+def _new_id(cur: sqlite3.Cursor) -> int:
+    """The id SQLite gave the row an INSERT just wrote."""
+    if cur.lastrowid is None:  # pragma: no cover - SQLite sets it after every INSERT
+        raise RuntimeError("the insert returned no row id")
+    return cur.lastrowid
+
 from .. import config
 from ..schemas import correct_index
 
@@ -151,7 +158,7 @@ class Store:
             ),
         )
         self.conn.commit()
-        return int(cur.lastrowid)
+        return _new_id(cur)
 
     def get_item(self, item_id: int) -> Optional[dict]:
         row = self.conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
@@ -271,7 +278,7 @@ class Store:
             (item_type, n_generated, n_official, rate, json.dumps(reasons, ensure_ascii=False), time.time()),
         )
         self.conn.commit()
-        return int(cur.lastrowid)
+        return _new_id(cur)
 
     def latest_tells(self, item_type: str, limit: int = 6) -> list[str]:
         """The tells from the most recent discriminator run for this item type —
@@ -307,7 +314,7 @@ class Store:
             (item_type, official_acc, gen_acc, n_off, n_gen, time.time()),
         )
         self.conn.commit()
-        return int(cur.lastrowid)
+        return _new_id(cur)
 
 
 #: Item keys that live in their own columns; everything else an item carries is

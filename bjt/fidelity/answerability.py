@@ -12,6 +12,14 @@ Every item faces two checks before it reaches the study user:
 Each side is run up to config.GATE_TRIALS times and the verdict is by count, so
 a model that gets it right once out of three cold is noise, not leakage.
 
+A trial the judge did not answer — an outage, a refusal, a reply cut off at its
+token ceiling — is not a wrong answer, and the gate does not count it as one.
+Scored as wrong it would read as a clean cold side (and the next side would be
+asked on the strength of it) or an ambiguous full side, and a gate that passes
+an item because its judge could not be reached is no gate. So one unanswered
+trial makes the verdict "unchecked": the draft is not kept, and nothing is said
+about it to the next draft, because nothing was found.
+
 What is withheld depends on the type, and the choice is the type's own claim:
 
   * 発言聴解 — the stimulus is the narrated situation, which the test-taker hears
@@ -66,12 +74,20 @@ class Trial:
     reason: str = ""
 
 
+#: The verdict for a gate that could not get an answer out of its judge for
+#: every trial it asked. Not a "discarded:" verdict: nothing was found wrong
+#: with the item, and no reason goes to the next draft.
+UNCHECKED = "unchecked"
+
+
 @dataclass
 class GateResult:
-    cold_success_rate: float
+    #: None when the gate is unchecked: a rate over trials that were not all
+    #: answered would be a number about the outage, not about the item.
+    cold_success_rate: float | None
     #: None for a leaky item: the full side is not run on what is already out.
     full_success_rate: float | None
-    verdict: str  # "kept" | "discarded:ambiguous" | "discarded:leaky"
+    verdict: str  # "kept" | "discarded:ambiguous" | "discarded:leaky" | "unchecked"
     trials: list[Trial] = field(default_factory=list)
 
     @property
@@ -90,10 +106,11 @@ def run_trials(question: str, options: list[str], answer: int, side: str, *,
 
     Shared with the difficulty probe (bjt/fidelity/difficulty.py), which asks
     the gate's full-view question of a weaker model. A call that fails — outage,
-    refusal, a reply that is not an index — is a trial with `chosen=None`, and
-    it is the caller's business whether that counts as wrong (the gate: yes,
-    consistency is the point) or as not measured (the probe: yes, a fake rate is
-    worse than none).
+    refusal, a reply cut off or not an index — is a trial with `chosen=None`,
+    and the trials stop there: both callers read one unanswered trial as no
+    result at all (the gate: unchecked; the probe: unmeasured), so every call
+    after it would be paid for and thrown away. What stops the run — its own
+    ceiling, an account that cannot pay — is not a failed trial and is raised.
 
     `decided` is the early stop. The gate's verdicts are by count over the
     planned trials, so once the count already settles the verdict — two right
@@ -104,17 +121,27 @@ def run_trials(question: str, options: list[str], answer: int, side: str, *,
     out: list[Trial] = []
     for t in range(trials):
         reason = ""
+        chosen: int | None
         try:
             res = llm.answer_choice(question, options, model=model)
             chosen = int(res.get("choice", -1))
             reason = str(res.get("reason", "") or "")
+        except llm.LLMBillingError:
+            raise  # not an unanswered trial: the run itself has to stop
         except (llm.LLMError, ValueError, TypeError):
             chosen = None
         out.append(Trial(side=side, trial=t, chosen=chosen, correct=chosen == answer,
                          reason=reason))
+        if chosen is None:
+            break
         if decided and decided(sum(x.correct for x in out), len(out), trials):
             break
     return out
+
+
+def unanswered(trials: list[Trial]) -> bool:
+    """True when any trial got no answer — or none was asked at all."""
+    return not trials or any(t.chosen is None for t in trials)
 
 
 def is_leaky(correct: int, planned: int) -> bool:
@@ -272,6 +299,10 @@ def run_gate(item: dict) -> GateResult:
     strong-model calls that cannot change the verdict. Cold-first halves the
     cost of a discard and leaves a kept item exactly as it was: both sides run,
     both rates recorded. A leaky item carries no full rate, not a fake one.
+
+    A side with an unanswered trial ends the gate there, unchecked: an
+    unanswered cold trial scored as a miss is how an item whose judge was
+    down would otherwise walk through.
     """
     options = textutil.option_texts(item)
     answer = correct_index(item["options"])
@@ -280,6 +311,9 @@ def run_gate(item: dict) -> GateResult:
     full_q, cold_q = questions(item)
 
     cold_trials = _run_side(cold_q, options, answer, "cold", cold_decided)
+    if unanswered(cold_trials):
+        return GateResult(cold_success_rate=None, full_success_rate=None,
+                          verdict=UNCHECKED, trials=cold_trials)
     cold_correct = sum(t.correct for t in cold_trials)
     cold_rate = cold_correct / len(cold_trials)
     if is_leaky(cold_correct, planned):
@@ -291,6 +325,9 @@ def run_gate(item: dict) -> GateResult:
         )
 
     full_trials = _run_side(full_q, options, answer, "full", full_decided)
+    if unanswered(full_trials):
+        return GateResult(cold_success_rate=None, full_success_rate=None,
+                          verdict=UNCHECKED, trials=[*full_trials, *cold_trials])
     full_correct = sum(t.correct for t in full_trials)
     full_rate = full_correct / len(full_trials)
     verdict = "discarded:ambiguous" if is_ambiguous(full_correct, planned) else "kept"

@@ -7,7 +7,14 @@ one: "what does the queue do today?" would mean finding the last migration that
 redefined `next_items()` and trusting that no later one touched it. So this
 reads every migration in order, keeps the latest statement for each function,
 view and trigger (and its latest `comment on`), drops the ones a later migration
-dropped, and writes them out:
+dropped, and writes them out.
+
+A later `alter function ... set <parameter>` (or `reset`) is folded into the
+definition it applies to, as the `set` line the function now carries: a pinned
+search_path shown unpinned is a definition somebody will copy, and a copied
+`create or replace` without the line quietly unpins it again. A later `create`
+starts over, as it does in Postgres, where replacing a function replaces its
+settings too.
 
     python supabase/snapshot.py            # rewrite supabase/current.sql
     python supabase/snapshot.py --check    # exit 1 if it is out of date
@@ -90,11 +97,56 @@ DROP = re.compile(
     r"^drop (function|view|trigger) (?:if exists )?(?:public\.)?\"?([a-z_][a-z0-9_]*)\"?"
 )
 COMMENT = re.compile(r"^comment on (function|view) (?:public\.)?([a-z_][a-z0-9_]*)")
+# Matched against the statement on one line but NOT lower-cased, so a setting's
+# value keeps its case.
+ALTER_SET = re.compile(
+    r"^alter function (?:public\.)?\"?([a-z_][a-z0-9_]*)\"?\s*(?:\([^)]*\))?\s*"
+    r"(?:(set)\s+([a-z_][a-z0-9_.]*)\s*(?:=|\bto\b)\s*(.+?)|(reset)\s+([a-z_][a-z0-9_.]*))\s*;?$",
+    re.I,
+)
+# Where a function's body starts: the dollar quote after `as`, on a line of its
+# own in every migration so far, or at the end of a one-line header.
+BODY = re.compile(r"^[ \t]*as\s+\$[A-Za-z_]*\$", re.I | re.M)
+BODY_INLINE = re.compile(r"\bas\s+\$[A-Za-z_]*\$", re.I)
+# One `set name = value` in a function header, a list value included.
+_VALUE = r"(?:'(?:[^']|'')*'|\"[^\"]*\"|[^\s,;]+)"
+SETTING = r"(?<![a-z0-9_])set\s+{name}\s*(?:=|\bto\b)\s*" + _VALUE + r"(?:\s*,\s*" + _VALUE + r")*[ \t]*\n?"
+
+
+def _flat(statement: str) -> str:
+    """The statement without its leading comment lines, on one line."""
+    lines = [ln for ln in statement.splitlines() if not ln.strip().startswith("--")]
+    return " ".join(" ".join(lines).split())
+
+
+def _apply_setting(stmt: str, action: str, param: str, value: str | None) -> str:
+    """The definition as it stands after `alter function ... set/reset param`:
+    the `set param = ...` in its header replaced, added or removed."""
+    body = BODY.search(stmt)
+    if body is not None:
+        header, rest = stmt[:body.start()], stmt[body.start():]
+    else:
+        body = BODY_INLINE.search(stmt)
+        if body is None:
+            return stmt
+        header, rest = stmt[:body.start()].rstrip() + "\n", stmt[body.start():]
+    name = r"[a-z_][a-z0-9_.]*" if param.lower() == "all" else re.escape(param)
+    setting = re.compile(SETTING.format(name=name), re.I)
+    if action == "reset":
+        header = setting.sub("", header)
+    elif setting.search(header):
+        header = setting.sub(lambda _: f"set {param} = {value}\n", header, count=1)
+    else:
+        if header and not header.endswith("\n"):
+            header += "\n"
+        header += f"set {param} = {value}\n"
+    return header + rest
 
 
 def snapshot(migrations_dir: pathlib.Path = MIGRATIONS) -> str:
     objects: dict[tuple[str, str], tuple[str, str]] = {}
     comments: dict[tuple[str, str], str] = {}
+    altered: dict[tuple[str, str], list[str]] = {}
     for path in sorted(migrations_dir.glob("*.sql")):
         for stmt in statements(path.read_text(encoding="utf-8")):
             code = _code(stmt)
@@ -102,12 +154,25 @@ def snapshot(migrations_dir: pathlib.Path = MIGRATIONS) -> str:
                 key = (m.group(1), m.group(2))
                 objects[key] = (path.name, stmt)
                 comments.pop(key, None)
+                altered.pop(key, None)
             elif m := DROP.match(code):
                 key = (m.group(1), m.group(2))
                 objects.pop(key, None)
                 comments.pop(key, None)
+                altered.pop(key, None)
             elif m := COMMENT.match(code):
                 comments[(m.group(1), m.group(2))] = stmt
+            elif (m := ALTER_SET.match(_flat(stmt))) and ("function", m.group(1).lower()) in objects:
+                key = ("function", m.group(1).lower())
+                source, current = objects[key]
+                if m.group(2):
+                    current = _apply_setting(current, "set", m.group(3), m.group(4))
+                else:
+                    current = _apply_setting(current, "reset", m.group(6), None)
+                objects[key] = (source, current)
+                altered.setdefault(key, [])
+                if path.name not in altered[key]:
+                    altered[key].append(path.name)
     order = {"view": 0, "function": 1, "trigger": 2}
     parts = [
         "-- The current definition of every function, view and trigger in",
@@ -119,6 +184,8 @@ def snapshot(migrations_dir: pathlib.Path = MIGRATIONS) -> str:
     for key in sorted(objects, key=lambda k: (order[k[0]], k[1])):
         kind, name = key
         source, stmt = objects[key]
+        if key in altered:
+            source += ", altered by " + ", ".join(altered[key])
         parts += ["", "", f"-- ==== {kind} {name} — {source}", "", _without_leading_comments(stmt)]
         if key in comments:
             parts += ["", _without_leading_comments(comments[key])]

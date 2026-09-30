@@ -29,11 +29,13 @@ learner first heard.
 """
 from __future__ import annotations
 
+import io
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .. import config, publish, scene_art
+from .. import config, publish, scene_art, withdrawn
+from ..files import write_atomic
 from . import channel as channel_mod
 from .providers import Provider, direction_for, get_provider
 
@@ -140,7 +142,7 @@ def synthesise_bundle(
     for clip in manifest:
         # Named for replacement: neither the database's list of live clips nor
         # a copy sitting on this machine stands in the way.
-        named = bool(remake) and clip["clip_id"] in remake
+        named = remake is not None and clip["clip_id"] in remake
         if have and clip["clip_id"] in have and not named:
             report.live.append(clip["clip_id"])
             continue
@@ -148,9 +150,14 @@ def synthesise_bundle(
         dest = out_dir / rel
 
         if dest.exists() and not force and not named:
-            report.reused.append(
-                ClipResult(clip["clip_id"], rel, _duration_of(dest), reused=True)
-            )
+            try:
+                ms = _duration_of(dest)
+            except ValueError as exc:
+                # Not a clip: a write cut short, most likely. Pointing the
+                # database at it would ship a broken or zero-length file.
+                report.failed.append((clip["clip_id"], f"{exc}; delete {dest} to have it made again"))
+                continue
+            report.reused.append(ClipResult(clip["clip_id"], rel, ms, reused=True))
             continue
 
         if limit is not None and made >= limit:
@@ -163,14 +170,13 @@ def synthesise_bundle(
                 instructions=direction_for(clip["voice"]),
             )
             processed = channel_mod.apply_channel(raw, clip["channel"])
-        except Exception as exc:  # noqa: BLE001 - one bad clip must not stop the run
+        except Exception as exc:  # one bad clip must not stop the run
             # A whole batch failing because one clip did would mean paying for
             # the successful ones again on the retry.
             report.failed.append((clip["clip_id"], str(exc)))
             continue
 
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(processed)
+        write_atomic(dest, processed)
         made += 1
         if named and have and clip["clip_id"] in have:
             report.remade.append(clip["clip_id"])
@@ -181,11 +187,84 @@ def synthesise_bundle(
     return report
 
 
+@dataclass
+class SynthRun:
+    """One `bjt synth`: what was made, and what the upload did with it."""
+    report: SynthReport
+    #: None when nothing was uploaded (no bucket, or no clips).
+    uploaded: "scene_art.UploadResult | None" = None
+    #: Clips in the bundle's manifest that only withdrawn items use.
+    skipped: int = 0
+
+
+def run(bundle: dict, *, provider: "Provider | str" = "silent",
+        bucket: "scene_art.Bucket | None" = None, media_dir: Path | None = None,
+        force: bool = False, limit: int | None = None,
+        have: set[str] | None = None, remake: set[str] | None = None) -> SynthRun:
+    """A bundle's audio, start to finish: the live items' clips made (none that
+    `have` says are live but the ones `remake` names), uploaded when a bucket
+    is given, and the report left describing the bucket rather than this
+    machine — a clip the bucket already held is live, a clip that did not
+    arrive is a failure, and neither is in the SQL.
+
+    An upload needs `have` (the database's list of live clips, empty on a
+    fresh project) and a real voice: without the one every clip on an empty
+    machine looks new, and the other would put silence where the app shows
+    the text. Both are refused here, whoever the caller is.
+    """
+    if isinstance(provider, str):
+        provider = get_provider(provider)
+    if bucket is not None and have is None:
+        raise ValueError("an upload needs the list of clips already live (`have`); "
+                         "a live clip is never re-made")
+    if bucket is not None and provider.name == "silent":
+        raise ValueError("an upload of the silent provider would ship silence")
+
+    # Only what is still served: a withdrawn question's lines would be paid
+    # for and never heard. A clip it shares with a live item is still made.
+    live = withdrawn.live_bundle(bundle)
+    skipped = len(bundle.get("audio_manifest", [])) - len(live["audio_manifest"])
+    report = synthesise_bundle(live, provider=provider, out_dir=media_dir, force=force,
+                               limit=limit, have=have, remake=remake)
+    out = SynthRun(report=report, skipped=skipped)
+    if bucket is None or not report.clips:
+        return out
+
+    up = upload_clips(report, bucket, media_dir, remake=remake)
+    out.uploaded = up
+    if up.existing:
+        # Live all along, whatever `have` said: left as they are, and out of
+        # the SQL, which would otherwise describe tonight's recording.
+        found = {Path(p).stem for p in up.existing}
+        report.drop(found)
+        report.live.extend(sorted(found))
+    if up.failed:
+        # The SQL must describe the bucket, not this machine.
+        report.drop({Path(p).stem for p in up.failed_paths})
+        report.failed.extend((Path(p).stem, why) for p, why in up.failed)
+    return out
+
+
 def _duration_of(path: Path) -> int:
+    """How long a clip on disk is. Raises ValueError for a file that is not a
+    whole WAV — unreadable, cut short of the frames its header promises, or
+    empty — rather than calling it zero milliseconds long: a zero here went
+    into the SQL and shipped."""
+    import wave
+
+    data = path.read_bytes()
     try:
-        return channel_mod.duration_ms(path.read_bytes())
-    except Exception:  # noqa: BLE001 - a corrupt file should not stop a report
-        return 0
+        with wave.open(io.BytesIO(data), "rb") as w:
+            declared = w.getnframes()
+            frames = len(w.readframes(declared)) // max(1, w.getsampwidth() * w.getnchannels())
+    except (wave.Error, EOFError) as exc:
+        raise ValueError(f"{path.name} is not a readable WAV ({exc})") from exc
+    if frames < declared:
+        raise ValueError(f"{path.name} is cut short: {frames} of {declared} frames")
+    ms = channel_mod.duration_ms(data)
+    if ms <= 0:
+        raise ValueError(f"{path.name} has no audio in it")
+    return ms
 
 
 def read_have(path: Path) -> set[str]:
@@ -200,16 +279,23 @@ def read_have(path: Path) -> set[str]:
 
 
 def upload_clips(report: SynthReport, bucket: scene_art.Bucket,
-                 media_dir: Path | None = None) -> scene_art.UploadResult:
+                 media_dir: Path | None = None, *,
+                 remake: set[str] | None = None) -> scene_art.UploadResult:
     """Put every clip this run has a file for into the `audio` bucket.
 
-    Idempotent — the bucket upserts, and a clip's path is its content hash — and
-    one failure does not stop the rest, for the reason the scene uploader gives:
-    paying for the successful ones again on a retry. The caller drops the failed
-    ids from the report so the SQL describes the bucket, not this machine.
+    Never over a file that is already there, except a clip named in `remake`:
+    a clip's path is its content hash, so a file at that path is a live clip,
+    and a live clip is never re-made — whether or not the caller's `have`
+    list knew about it. Such a file is left alone and reported in `existing`,
+    and the caller counts it as live, so the SQL does not rewrite its
+    duration from a recording nobody will hear. One failure does not stop the
+    rest, for the reason the scene uploader gives: paying for the successful
+    ones again on a retry. The caller drops the failed ids from the report so
+    the SQL describes the bucket, not this machine.
     """
     root = Path(media_dir or config.MEDIA_DIR) / "audio"
     result = scene_art.UploadResult()
+    remake = remake or set()
     for clip in report.clips:
         local = root / clip.path
         if not local.is_file():
@@ -223,7 +309,11 @@ def upload_clips(report: SynthReport, bucket: scene_art.Bucket,
             ))
             continue
         try:
-            bucket.upload(clip.path, local.read_bytes(), "audio/wav")
+            bucket.upload(clip.path, local.read_bytes(), "audio/wav",
+                          upsert=clip.clip_id in remake)
+        except scene_art.AlreadyExists:
+            result.existing.append(clip.path)
+            continue
         except RuntimeError as exc:
             result.failed.append((clip.path, str(exc)))
             continue
@@ -241,7 +331,7 @@ def to_sql(report: SynthReport) -> str:
     if not report.clips:
         if report.live:
             return (
-                f"-- Every clip of {report.bundle} is already live "
+                f"-- Every clip of {publish.comment(report.bundle)} is already live "
                 f"({len(report.live)} clip(s)).\n-- Nothing to apply.\n"
             )
         return (
@@ -250,7 +340,8 @@ def to_sql(report: SynthReport) -> str:
         )
 
     lines = [
-        f"-- Audio paths for {report.bundle}, synthesised by {report.provider}.",
+        f"-- Audio paths for {publish.comment(report.bundle)}, "
+        f"synthesised by {publish.comment(report.provider)}.",
         f"-- {len(report.written)} synthesised, {len(report.reused)} reused, "
         f"{len(report.live)} already live and left alone.",
         *([f"-- {len(report.remade)} of them replace a clip that was already live, "

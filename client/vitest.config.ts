@@ -1,14 +1,19 @@
 /**
  * Unit tests for the parts of the app that are plain functions: the practice
- * reducer, the reading clock's arithmetic, the exam date, the level helpers
- * and the role table. They run in Node with no device, no bundler and no
- * network — `npm test`, and the `checks` workflow.
+ * reducer, the reading clock's arithmetic, the exam date, the level helpers,
+ * the role table, and the arithmetic inside a few screens' pieces. They run in
+ * Node with no device, no bundler and no network — `npm test`, and the
+ * `checks` workflow.
  *
- * The one module in that set with a React Native dependency is the string
- * table (for AsyncStorage, where the language choice is kept); a stub stands
- * in for it here, because what these tests check never touches storage.
+ * Some of those modules import React Native, or a library built on it, for
+ * what they draw; the test only ever reads their plain half. Stubs stand in
+ * for React Native, react-native-svg and the safe-area library (src/test/),
+ * and for AsyncStorage, where the language choice is kept — enough for the
+ * module to load, nothing that pretends to render.
  */
 import { defineConfig } from "vitest/config";
+
+const stub = (file: string) => new URL(`./src/test/${file}`, import.meta.url).pathname;
 
 export default defineConfig({
   test: {
@@ -16,11 +21,12 @@ export default defineConfig({
     environment: "node",
   },
   resolve: {
-    alias: {
-      "@react-native-async-storage/async-storage": new URL(
-        "./src/test/async-storage-stub.ts",
-        import.meta.url
-      ).pathname,
-    },
+    // Exact names only: "react-native" must not swallow "react-native-svg".
+    alias: [
+      { find: /^@react-native-async-storage\/async-storage$/, replacement: stub("async-storage-stub.ts") },
+      { find: /^react-native$/, replacement: stub("react-native-stub.ts") },
+      { find: /^react-native-svg$/, replacement: stub("native-modules-stub.ts") },
+      { find: /^react-native-safe-area-context$/, replacement: stub("native-modules-stub.ts") },
+    ],
   },
 });

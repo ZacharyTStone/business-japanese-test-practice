@@ -15,6 +15,7 @@
  * effect keyed on that value, so it is posted once however many presses there
  * were.
  */
+import { roleInfo } from "./roles";
 import { NO_ANSWER, type AnsweredItem, type QueuedItem } from "./types";
 
 /**
@@ -29,8 +30,10 @@ const SETTLE_MS = 350;
 
 export type Stage = "scene" | "listen" | "answer" | "reveal";
 
-/** The database's verdict on an answer, or the display-only fallback. */
-export type Verdict = { isCorrect: boolean; chosenRole: string };
+/** The database's verdict on an answer — or, with `saved` false, the phone's
+ *  reading of the answer key while the answer waits to be sent (see
+ *  src/lib/outbox.ts). That reading is drawn on the card and never written. */
+export type Verdict = { isCorrect: boolean; chosenRole: string; saved: boolean };
 
 /** An answer on its way to the database. */
 export type PendingAnswer = {
@@ -63,8 +66,10 @@ export type PracticeState = {
   /** Help the exam does not give: another listen, the options read. */
   replays: number;
   peeked: boolean;
-  /** Where the set ends up: the result screen, or home when a veto emptied it. */
-  done: "result" | "home" | null;
+  /** Where the set ends up: the result screen, home when a veto emptied it,
+   *  or the day's done screen when the database closed the day before this
+   *  set had an answer to show. */
+  done: "result" | "home" | "day" | null;
 };
 
 export type PracticeAction =
@@ -76,7 +81,15 @@ export type PracticeAction =
   | { type: "toggleOptionsText" }
   | { type: "toggleDetails" }
   | { type: "next"; now: number }
-  | { type: "vetoed"; now: number };
+  | { type: "vetoed"; now: number }
+  /** The database refused the pending answer: the question is out of the bank. */
+  | { type: "unavailable"; now: number }
+  /** The database refused the pending answer: the day's ceiling is reached. */
+  | { type: "dayOver" }
+  /** An answer that waited in the outbox has reached the database. */
+  | { type: "synced"; itemId: string; verdict: { isCorrect: boolean; chosenRole: string } }
+  /** An answer that waited was refused when it was sent: it is not counted. */
+  | { type: "dropped"; itemId: string };
 
 export function initialPractice(now: number): PracticeState {
   return {
@@ -112,6 +125,19 @@ function nextQuestion(state: PracticeState, now: number): PracticeState {
     replays: 0,
     peeked: false,
   };
+}
+
+/** Take the question on screen out of the set — a veto, or a question the
+ *  database says is gone — and start the one after it from its first stage. */
+function removeCurrent(state: PracticeState, now: number): PracticeState {
+  const items = state.items.filter((_, i) => i !== state.index);
+  if (items.length === 0) return { ...state, items, pending: null, done: "home" };
+  if (state.index >= items.length) {
+    return { ...state, items, pending: null, done: state.answers.length > 0 ? "result" : "home" };
+  }
+  // `index` stays put, which is now the question after the removed one — and
+  // every per-question field starts again, the stage included.
+  return { ...nextQuestion(state, now), items };
 }
 
 export function practiceReducer(state: PracticeState, action: PracticeAction): PracticeState {
@@ -164,10 +190,38 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
             chosenIndex: pending.position,
             isCorrect: action.verdict.isCorrect,
             role: action.verdict.chosenRole,
+            saved: action.verdict.saved,
           },
         ],
       };
     }
+
+    case "synced": {
+      // The database's verdict replaces the phone's, on the card if the
+      // question is still on screen and in the list the result is built from.
+      const onScreen = state.items[state.index]?.id === action.itemId && state.graded?.saved === false;
+      return {
+        ...state,
+        answers: settleAnswers(state.answers, { saved: [{ itemId: action.itemId, graded: action.verdict }] }),
+        graded: onScreen ? { ...action.verdict, saved: true } : state.graded,
+      };
+    }
+
+    case "dropped":
+      return { ...state, answers: settleAnswers(state.answers, { dropped: [{ itemId: action.itemId }] }) };
+
+    case "unavailable":
+      // The database would not take the answer because the question has left
+      // the bank since the set was built. Nothing was recorded, so nothing is
+      // counted: it goes the way a veto does.
+      if (!state.pending) return state;
+      return removeCurrent(state, action.now);
+
+    case "dayOver":
+      // The ceiling was reached — on another device, most likely — and the
+      // pending answer was refused. The set stops where it is: the result of
+      // what was answered, or the day's done screen if nothing was.
+      return { ...state, pending: null, done: state.answers.length > 0 ? "result" : "day" };
 
     case "replayed":
       return state.chosen === null ? { ...state, replays: state.replays + 1 } : state;
@@ -189,17 +243,146 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
       if (state.index + 1 >= state.items.length) return { ...state, done: "result" };
       return { ...nextQuestion(state, action.now), index: state.index + 1 };
 
-    case "vetoed": {
+    case "vetoed":
       // Instead of answering, never after: nothing is recorded for a veto.
       if (state.chosen !== null) return state;
-      const items = state.items.filter((_, i) => i !== state.index);
-      if (items.length === 0) return { ...state, items, done: "home" };
-      if (state.index >= items.length) return { ...state, items, done: "result" };
-      // `index` stays put, which is now the question after the vetoed one —
-      // and every per-question field starts again, the stage included.
-      return { ...nextQuestion(state, action.now), items };
-    }
+      return removeCurrent(state, action.now);
   }
+}
+
+/**
+ * The set's answers with an outbox flush's news applied: one that has reached
+ * the database carries the database's verdict, one it refused is no longer
+ * counted. Only unsent answers are touched — a set asks a question once, so the
+ * item is enough to find it. The screen runs this on the way to the result, so
+ * the list handed over is the one the database now agrees with.
+ */
+export function settleAnswers(
+  answers: AnsweredItem[],
+  news: {
+    saved?: { itemId: string; graded: { isCorrect: boolean; chosenRole: string } }[];
+    dropped?: { itemId: string }[];
+  }
+): AnsweredItem[] {
+  const saved = new Map((news.saved ?? []).map((s) => [s.itemId, s.graded]));
+  const dropped = new Set((news.dropped ?? []).map((d) => d.itemId));
+  return answers
+    .filter((a) => !(a.saved === false && dropped.has(a.item.id)))
+    .map((a) => {
+      const graded = a.saved === false ? saved.get(a.item.id) : undefined;
+      return graded ? { ...a, isCorrect: graded.isCorrect, role: graded.chosenRole, saved: true } : a;
+    });
+}
+
+/**
+ * What kind of verdict an answer gets, which decides how it is drawn.
+ *
+ * `manner` — a miss about how words land on a listener: their face, their
+ * reaction, the 失礼度メーター. `reading` — a miss about reading or hearing
+ * correctly (a role marked `manner: false`): nobody heard anything, so there is
+ * no face and the line under the verdict names the mistake instead. `time` —
+ * the clock took it, which is about pace and not about the Japanese at all.
+ */
+export type VerdictKind = "right" | "manner" | "reading" | "time";
+
+export function verdictKind(role: string, isCorrect: boolean): VerdictKind {
+  if (isCorrect) return "right";
+  if (role === "timed_out") return "time";
+  return roleInfo(role).manner ? "manner" : "reading";
+}
+
+/** What the screen knows about the question on it besides the reducer's state:
+ *  which of its media exist, and whether its audio has already failed. */
+export type QuestionContext = {
+  /** It has at least one clip to play. */
+  playable: boolean;
+  /** It has a picture. */
+  picture: boolean;
+  /** Its question (the stem) has a clip. */
+  narrated: boolean;
+  /** Its four options are heard: a spoken type with all four clips. */
+  spokenOptions: boolean;
+  /** Its audio was tried and would not play. */
+  audioFailed: boolean;
+};
+
+/** Everything about how the question on screen is drawn that follows from the
+ *  state, worked out in one place. */
+export type QuestionView = {
+  /** The stage being shown — which is not always the one recorded. */
+  stage: Stage;
+  /** There is audio to listen to, and it is not known to be broken... */
+  listenable: boolean;
+  /** ...or a picture to look at: either earns the scene a pause of its own. */
+  hasScene: boolean;
+  /** The stage the scene's button (and Enter) goes to. */
+  afterScene: Stage;
+  /** The question (stem) is printed rather than heard. */
+  stemAsText: boolean;
+  /** The conversation is printed as a script rather than heard. */
+  dialogueAsText: boolean;
+  /** The verdict is in and on screen. */
+  revealed: boolean;
+  /** The options are drawn at all. */
+  optionsShown: boolean;
+  /** The options are numbers with play buttons, not words. */
+  optionTextHidden: boolean;
+  /** An answer is given or on its way: the options take no more presses. */
+  locked: boolean;
+  /** Whether the reading clock is counting. */
+  clockRunning: boolean;
+  /** The graded role — or, while the grade is on its way, the chosen option's. */
+  role: string;
+  /** How the verdict is drawn, once there is one. */
+  kind: VerdictKind | null;
+};
+
+/**
+ * The question on screen, as the screen draws it.
+ *
+ * Pure, so the rules about which stage shows what are tested
+ * (practice.test.ts) rather than spread across a component.
+ */
+export function questionView(state: PracticeState, item: QueuedItem, ctx: QuestionContext): QuestionView {
+  const listenable = ctx.playable;
+  // A scene is worth a pause of its own when there is something to hear or
+  // something to look at. A bare reading item goes straight to the question.
+  const hasScene = listenable || ctx.picture;
+  const recorded: Stage = state.stage ?? (hasScene ? "scene" : "answer");
+  // The only way out of "listen" is the playlist finishing, and with nothing
+  // to play there is no playlist: the screen would wait for ever on a hint
+  // about audio that does not exist, with no options and no button.
+  const stage: Stage = recorded === "listen" && !listenable ? "answer" : recorded;
+  const revealed = stage === "reveal" && state.graded !== null;
+  // Spoken options are numbers until the answer is in, unless asked for — and
+  // printed when they could not be heard, which is not the learner asking for
+  // help, so it is not `peeked`.
+  const optionTextHidden = ctx.spokenOptions && !revealed && !state.optionsAsText && !ctx.audioFailed;
+  const locked = state.pending !== null || state.chosen !== null;
+  const chosenRole =
+    state.chosen !== null ? (item.options.find((o) => o.position === state.chosen)?.role ?? "") : "";
+  const role = state.graded?.chosenRole || chosenRole;
+  return {
+    stage,
+    listenable,
+    hasScene,
+    afterScene: listenable ? "listen" : "answer",
+    // Narration that exists only as text — a listening type whose clip has not
+    // been synthesised, or a reading type, where the stem *is* the question —
+    // and audio that would not play, which is the same case.
+    stemAsText: !ctx.narrated || ctx.audioFailed,
+    dialogueAsText: (item.dialogue?.length ?? 0) > 0 && (!listenable || ctx.audioFailed),
+    revealed,
+    // Options can be answered while the clips still play, but only when they
+    // show no text: numbers and play buttons give nothing away, a printed
+    // sentence does.
+    optionsShown: stage === "answer" || stage === "reveal" || (stage === "listen" && optionTextHidden),
+    optionTextHidden,
+    locked,
+    clockRunning: stage === "answer" && !locked,
+    role,
+    kind: state.graded ? verdictKind(role, state.graded.isCorrect) : null,
+  };
 }
 
 /**

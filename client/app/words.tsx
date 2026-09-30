@@ -1,8 +1,8 @@
 /**
  * Every word the questions carry notes for, each with a sentence it is used in.
  *
- * The companion to ことばメモ: that screen keeps the words of the questions
- * that caught you; this one keeps the words of every question you have
+ * The companion to 「まちがえた問題のことば」 (vocab.tsx): that screen keeps the
+ * words of the questions that caught you; this one keeps the words of every question you have
  * answered, searchable, with a level and a section to narrow it by and
  * furigana to switch on. Nothing on it is written for it — the words, readings
  * and meanings are the notes each question shipped with, and the example is a
@@ -14,14 +14,16 @@
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchWordList } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { SECTION_ORDER, SECTION_SHORT } from "../src/lib/levels";
-import { errorText, isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
 import type { Level, Section } from "../src/lib/types";
-import { annotate, filterWords, furigana, type WordEntry } from "../src/lib/words";
-import { Card, Chip, Loading, Notice, Tag } from "../src/ui/components";
+import { filterWords, furigana, makeAnnotator, type WordEntry } from "../src/lib/words";
+import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
+import { ScreenGate } from "../src/ui/screen";
+import { ScreenCrash } from "../src/ui/crash";
 import { RubyText } from "../src/ui/ruby";
 import { colors, radius, shadow, space, type } from "../src/ui/theme";
 
@@ -30,10 +32,24 @@ const LEVELS: Level[] = ["J1", "J2", "J3"];
  *  few hundred of those at once is a slow first paint on a phone. */
 const PAGE = 40;
 
-export default function Words() {
+/** A throw while drawing stays on this screen (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
+
+/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+export default function WordsScreen() {
+  return (
+    <ScreenGate underHeader>
+      <Words />
+    </ScreenGate>
+  );
+}
+
+function Words() {
+  // The list runs to the bottom of the screen, where the home indicator is.
+  const insets = useSafeAreaInsets();
   const { t } = useLang();
   const [words, setWords] = useState<WordEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [reloads, setReloads] = useState(0);
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState<Level | null>(null);
@@ -42,11 +58,10 @@ export default function Words() {
   const [shown, setShown] = useState(PAGE);
 
   useEffect(() => {
-    if (!isConfigured) return;
     let cancelled = false;
     fetchWordList()
       .then((rows) => !cancelled && setWords(rows))
-      .catch((e) => !cancelled && setError(errorText(e)));
+      .catch((e) => !cancelled && setError(e ?? "error"));
     return () => {
       cancelled = true;
     };
@@ -59,27 +74,19 @@ export default function Words() {
     () => (words ? filterWords(words, { query, level, section }) : []),
     [words, query, level, section]
   );
+  // Prepared once per list, not once per entry per keystroke: every example
+  // sentence is read against every word the list holds, and a search redraws
+  // forty of them each time a character is typed.
+  const annotate = useMemo(() => makeAnnotator(words ?? []), [words]);
 
-  if (!isConfigured) {
+  if (error != null) {
     return (
       <View style={styles.page}>
-        <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </View>
-    );
-  }
-  if (error) {
-    return (
-      <View style={styles.page}>
-        <Notice
-          title={t("cant_load")}
-          body={error}
-          tone="warn"
-          action={{
-            label: t("retry"),
-            onPress: () => {
-              setError(null);
-              setReloads((n) => n + 1);
-            },
+        <LoadFailed
+          error={error}
+          onRetry={() => {
+            setError(null);
+            setReloads((n) => n + 1);
           }}
         />
       </View>
@@ -95,7 +102,7 @@ export default function Words() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={[styles.page, { paddingBottom: space.xxl + insets.bottom }]} keyboardShouldPersistTaps="handled">
       <Card style={{ gap: space.md }}>
         <TextInput
           value={query}
@@ -151,7 +158,7 @@ export default function Words() {
           <View style={styles.example}>
             <Text style={type.label}>{t("words_example")}</Text>
             {w.sentence ? (
-              <RubyText segments={annotate(w.sentence, words)} show={showFurigana} style={type.body} />
+              <RubyText segments={annotate(w.sentence)} show={showFurigana} style={type.body} />
             ) : (
               <Text style={type.small}>{t("words_no_example")}</Text>
             )}
@@ -173,11 +180,11 @@ export default function Words() {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.md, paddingBottom: space.xxl },
+  page: { padding: space.lg, gap: space.md },
   row: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   search: {
     backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+    borderColor: colors.inputBorder,
     borderWidth: 1,
     borderRadius: radius.md,
     paddingHorizontal: space.md,

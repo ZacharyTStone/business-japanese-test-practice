@@ -151,7 +151,7 @@ def test_uploading_sends_every_clip_and_a_failure_keeps_it_out_of_the_sql(bundle
         name = "audio"
         configured = True
 
-        def upload(self, path, data, content_type):
+        def upload(self, path, data, content_type, upsert=False):
             assert content_type == "audio/wav"
             if path == bad:
                 raise RuntimeError("413 too large")
@@ -564,15 +564,15 @@ def test_the_app_shows_numbers_for_exactly_the_types_that_speak_their_options():
     whether the clips those numbers point at ever get synthesised. A type in
     one set and not the other is either options nobody hears introduced, or a
     number with nothing behind it — so the two lists have to name the same
-    types. Read out of client/app/practice.tsx, the same source the app
+    types. Read out of client/src/lib/playlist.ts, the same source the app
     imports, so a drift here is caught here rather than in the app."""
     import pathlib
     import re
     from bjt.tts import plan as tts_plan
     practice = (pathlib.Path(__file__).resolve().parents[1]
-                / "client" / "app" / "practice.tsx").read_text(encoding="utf-8")
+                / "client" / "src" / "lib" / "playlist.ts").read_text(encoding="utf-8")
     block = re.search(r"const SPOKEN_OPTION_TYPES = new Set\(\[(.*?)\]\);", practice, re.S)
-    assert block, "practice.tsx no longer declares SPOKEN_OPTION_TYPES as expected"
+    assert block, "playlist.ts no longer declares SPOKEN_OPTION_TYPES as expected"
     app_types = set(re.findall(r'"([^"]+)"', block.group(1)))
     plan_types = {t for t, policy in tts_plan.TYPE_AUDIO.items() if policy["options"]}
     assert app_types == plan_types

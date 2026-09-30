@@ -256,6 +256,11 @@ export type AnsweredItem = {
    *  the clock took. Carried rather than looked up from `chosenIndex`, because
    *  a timeout has no option to look up. */
   role: string;
+  /** False while the answer waits in the outbox (src/lib/outbox.ts) because the
+   *  database could not be reached; absent or true once the database has it.
+   *  `isCorrect` and `role` are then the phone's reading of the answer key, for
+   *  the screen only, until the database's own verdict replaces them. */
+  saved?: boolean;
 };
 
 /** What `chosen_index` is for a question nobody answered: the clock ran out.

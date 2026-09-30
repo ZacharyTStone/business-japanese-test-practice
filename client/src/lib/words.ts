@@ -117,14 +117,55 @@ function needlesOf(term: string): Needle[] {
   return [{ find, inflected: false }, ...(stem ? [{ find: stem, inflected: true }] : [])];
 }
 
+type Candidate = { needle: Needle; segments: RubySegment[] };
+
 /**
  * A sentence cut into ruby segments, annotating every word the bank has a
  * reading for. Longest term first, so 引き継ぎ書 is not read as 引き継ぎ + 書.
  * A verb is also found by its stem when a kana ending follows it (すり合わせる
  * in すり合わせてまいりました, 伺う in 伺っております).
+ *
+ * One sentence against one list. The word list annotates forty sentences
+ * against the same thousand notes on every keystroke of a search, so it keeps
+ * an annotator (`makeAnnotator`) instead, which does the preparation once.
  */
 export function annotate(sentence: string, notes: VocabNote[]): RubySegment[] {
-  const candidates: { needle: Needle; segments: RubySegment[] }[] = [];
+  return makeAnnotator(notes)(sentence);
+}
+
+/**
+ * `annotate`, with the notes prepared once and each sentence's answer kept.
+ *
+ * Preparing is the expensive half: a candidate per term and per verb stem,
+ * sorted longest first. It is done here once per list. The candidates are
+ * then filed by their first character, since a word can only start where the
+ * sentence has that character — so each position in a sentence asks the
+ * handful that could match rather than all of them, in the same longest-first
+ * order, and gets the same answer. A sentence already annotated is answered
+ * from memory: the list redraws on every keystroke, the sentences do not
+ * change.
+ */
+export function makeAnnotator(notes: VocabNote[]): (sentence: string) => RubySegment[] {
+  const byFirst = new Map<string, Candidate[]>();
+  for (const c of candidatesOf(notes)) {
+    const first = c.needle.find[0];
+    const list = byFirst.get(first);
+    if (list) list.push(c);
+    else byFirst.set(first, [c]);
+  }
+  const memo = new Map<string, RubySegment[]>();
+  return (sentence) => {
+    const known = memo.get(sentence);
+    if (known) return known;
+    const out = segmentsOf(sentence, byFirst);
+    memo.set(sentence, out);
+    return out;
+  };
+}
+
+/** Every term and verb stem worth looking for, longest first. */
+function candidatesOf(notes: VocabNote[]): Candidate[] {
+  const candidates: Candidate[] = [];
   const seen = new Set<string>();
   for (const note of notes) {
     const term = bare(note.term);
@@ -150,12 +191,17 @@ export function annotate(sentence: string, notes: VocabNote[]): RubySegment[] {
     }
   }
   candidates.sort((a, b) => b.needle.find.length - a.needle.find.length);
+  return candidates;
+}
 
+/** The walk along one sentence, asking at each position only the candidates
+ *  that start with the character there. */
+function segmentsOf(sentence: string, byFirst: Map<string, Candidate[]>): RubySegment[] {
   const out: RubySegment[] = [];
   let plain = "";
   let i = 0;
   outer: while (i < sentence.length) {
-    for (const c of candidates) {
+    for (const c of byFirst.get(sentence[i]) ?? []) {
       if (matchesAt(sentence, i, c.needle)) {
         if (plain) out.push({ text: plain });
         plain = "";

@@ -18,7 +18,7 @@ import { clipUrl } from "../lib/db";
 import { useLang } from "../lib/i18n";
 import type { DialogueTurn } from "../lib/types";
 import { Icon } from "./icons";
-import { colors, radius, space, type } from "./theme";
+import { colors, MIN_TOUCH, radius, space, type } from "./theme";
 
 /**
  * One voice at a time.
@@ -52,9 +52,11 @@ function releaseVoice(owner: object) {
 
 /**
  * A play button with nothing but an icon — for an option that is heard rather
- * than read. Sits inside the option's own Pressable; a press here plays, a press
- * anywhere else on the option answers, which is the same split as a number and
- * a speaker button on the exam room's answer sheet.
+ * than read, or a line of a script. Beside an option it sits next to the
+ * option's own button, never inside it: a press here plays and a press on the
+ * option answers, which is the same split as a number and a speaker button on
+ * the exam room's answer sheet — and a screen reader can only reach a button
+ * that is not inside another.
  */
 export function MiniPlay({
   url,
@@ -176,6 +178,8 @@ const styles = StyleSheet.create({
     gap: space.md,
   },
   toggle: { textDecorationLine: "underline" },
+  // A text link's hit area is its padding: hitSlop does nothing on the web.
+  link: { minHeight: MIN_TOUCH, justifyContent: "center" },
   listening: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.lg,
@@ -202,6 +206,19 @@ const styles = StyleSheet.create({
  */
 const STATUS_INTERVAL_MS = 250;
 
+/**
+ * How long a clip may sit without its position moving before it is given up
+ * on. A clip that 404s, a phone that lost its connection between two turns, a
+ * browser that refused to start sound without a tap: each of them leaves a
+ * player that never finishes, and a queue that advances only on a finish
+ * would sit at 「聞いています…」 and 0% for ever. Eight seconds is well past a
+ * slow start on a train and well short of somebody giving up on the screen.
+ * The watch counts its own looks rather than the clock on the wall, so a phone
+ * that put the app to sleep does not wake up to find every clip overdue.
+ */
+const STALL_MS = 8000;
+const WATCH_MS = 1000;
+
 /** What a component gets back from `useClipQueue`. */
 type ClipQueue = {
   /** Which clip is playing, as an index into `urls`. */
@@ -213,6 +230,18 @@ type ClipQueue = {
   /** Stop and rewind to the beginning. Does not report the run as finished. */
   stop: () => void;
 };
+
+/** Start a player, and never let it throw into a render. On the web the
+ *  browser's own `play()` promise is out of reach inside expo-audio; a refusal
+ *  there shows up as a clip that never moves, which the watch catches. */
+function startPlayer(player: { seekTo: (s: number) => Promise<void> | void; play: () => void }) {
+  try {
+    void Promise.resolve(player.seekTo(0)).catch(() => undefined);
+    player.play();
+  } catch {
+    // A player that cannot start is a clip that never moves: see STALL_MS.
+  }
+}
 
 /**
  * One player, walked along a list of clips.
@@ -236,7 +265,10 @@ type ClipQueue = {
  * pause that follows. One advance per player is what makes that one step.
  *
  * A clip with no audio yet is stepped over rather than waited for: a
- * half-synthesised item should still play the parts that exist.
+ * half-synthesised item should still play the parts that exist. So is a clip
+ * that reports an error or does not move for STALL_MS — and the run then
+ * finishes saying that something was not heard (`onFinished(true)`), so the
+ * screen can put the words on the page instead.
  *
  * The run holds the one voice (`takeVoice`) while it plays. Another player
  * starting stops it, exactly as the learner pressing stop would, and then
@@ -248,7 +280,12 @@ function useClipQueue(
     autoplay = false,
     onFinished,
     onInterrupted,
-  }: { autoplay?: boolean; onFinished?: () => void; onInterrupted?: () => void } = {}
+  }: {
+    autoplay?: boolean;
+    /** `failed` is true when a clip of the run could not be played. */
+    onFinished?: (failed: boolean) => void;
+    onInterrupted?: () => void;
+  } = {}
 ): ClipQueue {
   const firstPlayable = () => Math.max(0, urls.findIndex(Boolean));
   const [at, setAt] = React.useState(firstPlayable);
@@ -262,15 +299,18 @@ function useClipQueue(
   // usually written inline, and neither should re-subscribe the listener.
   const live = React.useRef({ urls, onFinished, onInterrupted });
   live.current = { urls, onFinished, onInterrupted };
+  /** Whether any clip of this run was given up on. */
+  const missed = React.useRef(false);
 
   React.useEffect(() => {
     if (!running) return undefined;
     // One advance per clip. Declared here rather than in a ref so that it
     // resets with the listener — on the next clip, and on a replay of this one.
     let handled = false;
-    const sub = player.addListener("playbackStatusUpdate", (s) => {
-      if (handled || !s.didJustFinish) return;
+    const advance = (failed: boolean) => {
+      if (handled) return;
       handled = true;
+      if (failed) missed.current = true;
       const list = live.current.urls;
       let next = at + 1;
       while (next < list.length && !list[next]) next += 1;
@@ -281,16 +321,61 @@ function useClipQueue(
       setRunning(false);
       setAt(0);
       releaseVoice(owner);
-      live.current.onFinished?.();
+      const anyMissed = missed.current;
+      missed.current = false;
+      live.current.onFinished?.(anyMissed);
+    };
+    const sub = player.addListener("playbackStatusUpdate", (s) => {
+      if (s.error) advance(true);
+      else if (s.didJustFinish) advance(false);
     });
-    return () => sub.remove();
+    // The watch: a position that has not changed in STALL_MS is a clip that is
+    // not coming. Any change counts as life, backwards included — a replay
+    // starts again from zero.
+    let last: number | null = null;
+    let still = 0;
+    const watch = setInterval(() => {
+      let now: number | null = null;
+      try {
+        now = player.currentTime;
+      } catch {
+        // A released player reads as a stalled one.
+      }
+      if (now !== null && (last === null || Math.abs(now - last) > 0.01)) {
+        last = now;
+        still = 0;
+        return;
+      }
+      still += 1;
+      // Standing at its own end for two looks is a clip that finished without
+      // saying so — the browser that reports the end on neither the last time
+      // update nor the pause — and it moves the run on, as heard. (Two, not
+      // one: a replay's seek back to zero may not have landed at the first.)
+      let duration = 0;
+      try {
+        duration = player.duration;
+      } catch {
+        // Unknown: only the stall rule applies.
+      }
+      if (still >= 2 && now !== null && duration > 0 && now >= duration - 0.25) advance(false);
+      else if (still * WATCH_MS >= STALL_MS) advance(true);
+    }, WATCH_MS);
+    return () => {
+      sub.remove();
+      clearInterval(watch);
+    };
     // `at` is a dependency so that two identical clips in a row — which share
     // one player, because the source is what builds it — still get a listener
-    // each.
-  }, [player, running, at]);
+    // each. `owner` is a ref's value, the same for the life of the player.
+  }, [player, running, at, owner]);
 
   const stop = React.useCallback(() => {
-    player.pause();
+    try {
+      player.pause();
+    } catch {
+      // Already released: nothing is sounding.
+    }
+    missed.current = false;
     setRunning(false);
     setAt(Math.max(0, live.current.urls.findIndex(Boolean)));
     releaseVoice(owner);
@@ -301,14 +386,15 @@ function useClipQueue(
   stopLatest.current = stop;
 
   React.useEffect(() => {
-    if (!running || !urls[at]) return;
+    // The list is read through `live`, like `stop` reads it: a parent that
+    // rebuilds the same list each render must not restart the clip.
+    if (!running || !live.current.urls[at]) return;
     takeVoice(owner, () => {
       stopLatest.current();
       live.current.onInterrupted?.();
     });
-    player.seekTo(0);
-    player.play();
-  }, [player, running, at]);
+    startPlayer(player);
+  }, [player, running, at, owner]);
 
   React.useEffect(() => () => releaseVoice(owner), [owner]);
 
@@ -323,98 +409,36 @@ function useClipQueue(
 }
 
 /**
- * A heard conversation.
+ * A heard conversation that cannot be heard: the script on the page.
  *
- * Turns play one after another rather than as a single file, for a reason that
- * outlives this component: clip ids are content hashes, so 「承知しました。」 is
- * synthesised once and shared by every item that contains it. Concatenating a
- * conversation server-side would throw that away and make one file per item.
- *
- * The transcript is hidden until the learner asks for it. 総合聴解 is a listening
- * item — a transcript on screen from the start turns it into a reading item with
- * an audio track — but refusing to show it at all would be worse: practice is
- * not the exam, and the fourth listen is where you finally hear that it was
- * 伺います and not 参ります.
+ * This is how every item with a conversation works before its turns are
+ * synthesised, and — once they are — how it works when they will not play.
+ * While the turns can be heard they are part of the listening run
+ * (AutoPlaylist), with the rest of the item's clips, and the script waits for
+ * the answer (Transcript): a script on the page from the start would turn a
+ * listening item into a reading one.
  */
-export function DialoguePlayer({ turns }: { turns: DialogueTurn[] }) {
+export function DialoguePlayer({
+  turns,
+  unplayable = false,
+}: {
+  turns: DialogueTurn[];
+  /** The clips exist but would not play, rather than not existing yet. */
+  unplayable?: boolean;
+}) {
   const { t } = useLang();
-  const [showText, setShowText] = React.useState(false);
-  const paths = turns.map((turn) => clipUrl(turn.audio_path));
-  const playable = paths.filter(Boolean).length;
-
-  // Nothing synthesised yet: the whole exchange is a script on the page, which
-  // is how every item works before its audio exists.
-  if (playable === 0) {
-    return (
-      <View style={styles.transcript}>
-        <Text style={type.small}>{t("dialogue_pending")}</Text>
-        {turns.map((turn, i) => (
-          <Turn key={i} turn={turn} />
-        ))}
-      </View>
-    );
-  }
-
   return (
-    <View style={{ gap: space.sm }}>
-      <DialogueTrack turns={turns} paths={paths} />
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => setShowText((v) => !v)}
-        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
-      >
-        <Text style={[type.small, styles.toggle]}>
-          {showText ? t("hide_text") : t("show_text")}
-        </Text>
-      </Pressable>
-      {showText ? (
-        <View style={styles.transcript}>
-          {turns.map((turn, i) => (
-            <Turn key={i} turn={turn} />
-          ))}
+    <View style={styles.transcript}>
+      <Text style={type.small}>{t(unplayable ? "dialogue_as_text" : "dialogue_pending")}</Text>
+      {turns.map((turn, i) => (
+        <View key={i} style={{ gap: 2 }}>
+          <Text style={type.small}>{turn.speaker_role}</Text>
+          <Text style={type.body}>{turn.text}</Text>
         </View>
-      ) : null}
+      ))}
     </View>
   );
 }
-
-function Turn({ turn }: { turn: DialogueTurn }) {
-  return (
-    <View style={{ gap: 2 }}>
-      <Text style={type.small}>{turn.speaker_role}</Text>
-      <Text style={type.body}>{turn.text}</Text>
-    </View>
-  );
-}
-
-/** Plays each turn in order, advancing when one finishes. */
-function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string | null)[] }) {
-  const { t } = useLang();
-  const queue = useClipQueue(paths);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={queue.running ? t("stop_dialogue") : t("listen_dialogue")}
-      onPress={() => (queue.running ? queue.stop() : queue.start())}
-      style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
-    >
-      <View style={styles.playIcon}>
-        <Icon
-          name={queue.running ? "stop" : "play"}
-          size={18}
-          color={colors.onAccent}
-          strokeWidth={2}
-        />
-      </View>
-      <Text style={[type.body, { flex: 1 }]}>{t("listen_dialogue")}</Text>
-      <Text style={type.small}>
-        {queue.at + 1} / {turns.length}
-      </Text>
-    </Pressable>
-  );
-}
-
 
 /**
  * The listening stage.
@@ -435,17 +459,22 @@ export function AutoPlaylist({
   urls,
   autoplay,
   onFinished,
+  onFailed,
   onReplay,
 }: {
   urls: string[];
   autoplay: boolean;
   onFinished?: () => void;
+  /** Told when a clip could not be played, so the screen can show its words:
+   *  a listening item that cannot be heard is still a usable reading item. */
+  onFailed?: () => void;
   /** Told each time "listen again" is pressed. The exam plays once, so the
    *  practice screen records a replay with the answer (attempts.replays). */
   onReplay?: () => void;
 }) {
   const { t } = useLang();
   const [finished, setFinished] = React.useState(!autoplay || urls.length === 0);
+  const [failed, setFailed] = React.useState(false);
   const reported = React.useRef(false);
   const report = () => {
     setFinished(true);
@@ -455,7 +484,15 @@ export function AutoPlaylist({
   };
   const queue = useClipQueue(urls, {
     autoplay: autoplay && urls.length > 0,
-    onFinished: report,
+    onFinished: (missed) => {
+      // Said once it happens, and kept: a replay that plays is good news, but
+      // the words are already on the page and taking them away would be worse.
+      if (missed) {
+        setFailed(true);
+        onFailed?.();
+      }
+      report();
+    },
     // An option's own play button cut the run short: a skip, like the link
     // below, so the options stay answerable and the replay button appears.
     onInterrupted: report,
@@ -465,22 +502,31 @@ export function AutoPlaylist({
 
   if (!queue.running && finished) {
     // Always replayable: the exam plays a clip once, but practice is not the
-    // exam.
+    // exam. After a failure the same button is the way to try again — and on
+    // a browser that would not start sound by itself, the tap it was waiting
+    // for.
     return (
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t("listen_again")}
-        onPress={() => {
-          onReplay?.();
-          queue.start();
-        }}
-        style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
-      >
-        <View style={styles.playIcon}>
-          <Icon name="play" size={18} color={colors.onAccent} strokeWidth={2} />
-        </View>
-        <Text style={type.body}>{t("listen_again")}</Text>
-      </Pressable>
+      <View style={{ gap: space.sm }}>
+        {failed ? (
+          <Text style={[type.small, { color: colors.wrong }]} accessibilityLiveRegion="polite">
+            {t("audio_failed")}
+          </Text>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("listen_again")}
+          onPress={() => {
+            onReplay?.();
+            queue.start();
+          }}
+          style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
+        >
+          <View style={styles.playIcon}>
+            <Icon name="play" size={18} color={colors.onAccent} strokeWidth={2} />
+          </View>
+          <Text style={type.body}>{t("listen_again")}</Text>
+        </Pressable>
+      </View>
     );
   }
 
@@ -488,7 +534,12 @@ export function AutoPlaylist({
   const fraction =
     status.duration && status.duration > 0 ? Math.min(1, status.currentTime / status.duration) : 0;
   return (
-    <View style={styles.listening} accessibilityLiveRegion="polite">
+    // Not a live region. The counter below changes with every clip, and a
+    // screen reader reading "3 / 8" over the conversation it is meant to be
+    // listening to is the one thing this stage cannot afford. The stage says
+    // what it is when it is reached; a clip that will not play is the one
+    // status worth interrupting for, and that line is a live region.
+    <View style={styles.listening}>
       <View style={styles.listeningRow}>
         <View style={styles.playIcon}>
           <Icon name="headphones" size={18} color={colors.onAccent} strokeWidth={2} />
@@ -511,7 +562,9 @@ export function AutoPlaylist({
           queue.stop();
           report();
         }}
-        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
+        // The only way out of a run that has stalled before the watch gives up
+        // on it, so it is a full thumb's height, not a line of small print.
+        style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
       >
         <Text style={[type.small, styles.toggle]}>{t("skip")}</Text>
       </Pressable>

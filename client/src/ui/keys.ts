@@ -40,6 +40,13 @@ export function useKeys(handler: (key: string) => boolean | void, enabled = true
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+      // Enter and Space on a focused control are that control's: pressing
+      // Enter on "show the explanation" should show it, not also move to the
+      // next question — and when the control is Next itself, it would move
+      // twice, the second time starting the question after it.
+      const role = target?.getAttribute?.("role");
+      const control = tag === "button" || tag === "a" || role === "button" || role === "link";
+      if (control && (event.key === "Enter" || event.key === " ")) return;
       if (latest.current(event.key) !== false) event.preventDefault();
     };
 

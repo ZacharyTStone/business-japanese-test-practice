@@ -39,6 +39,23 @@ export function isIsoDate(value: string): boolean {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+/**
+ * What has been typed into the date field, as YYYY-MM-DD so far.
+ *
+ * A phone's number pad has no hyphen — iOS's has nothing but digits — so the
+ * field takes digits and puts the hyphens in itself: 「20261201」 is
+ * 2026-12-01, and 「202612」 on its way there is 2026-12. Anything else typed or
+ * pasted is dropped, so a pasted 2026/12/01 comes out right too. A hyphen is
+ * only written once a digit follows it, so deleting backwards never meets one
+ * the field keeps putting back.
+ */
+export function typedDate(input: string): string {
+  const d = input.replace(/\D/g, "").slice(0, 8);
+  if (d.length > 6) return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
+  if (d.length > 4) return `${d.slice(0, 4)}-${d.slice(4)}`;
+  return d;
+}
+
 /** 「12月1日」 / "1 Dec" — the exam date as a person would say it. */
 export function formatExamDate(examDate: string, lang: Lang = "ja"): string {
   const [, m, d] = examDate.split("-").map(Number);

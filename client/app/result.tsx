@@ -9,11 +9,15 @@
  */
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { flushAnswers } from "../src/lib/answers";
+import { useAuth } from "../src/lib/auth";
 import { fetchSectionLevels, hasAdFree } from "../src/lib/db";
 import { useLang } from "../src/lib/i18n";
 import { levelMove, SECTION_NAME } from "../src/lib/levels";
+import { settleAnswers } from "../src/lib/practice";
 import { roleInfo, worstTrap } from "../src/lib/roles";
 import { clearSummary, takeSummary } from "../src/lib/session";
 import type { SectionLevel } from "../src/lib/types";
@@ -28,12 +32,21 @@ import {
   SectionLabel,
 } from "../src/ui/components";
 import { FadeIn } from "../src/ui/motion";
-import { colors, space, tabular, type } from "../src/ui/theme";
+import { Icon } from "../src/ui/icons";
+import { colors, MIN_TOUCH, page, space, tabular, type } from "../src/ui/theme";
 
 export default function Result() {
   const router = useRouter();
   const { lang, t } = useLang();
   const [summary] = useState(() => takeSummary());
+  const userId = useAuth().session?.user?.id ?? null;
+  // The last button sits above the home indicator, not under it.
+  const insets = useSafeAreaInsets();
+  // The set's answers, as the database now has them. An answer that could not
+  // be sent is listed as unsent until the outbox gets it through — which may
+  // well happen while this screen is up, since it is the moment the phone is
+  // put down.
+  const [answers, setAnswers] = useState(() => summary?.answers ?? []);
   const [adFree, setAdFree] = useState(true); // assume paid until told otherwise
   const [levelsNow, setLevelsNow] = useState<SectionLevel[]>([]);
 
@@ -49,22 +62,36 @@ export default function Result() {
     return () => clearSummary();
   }, []);
 
+  useEffect(() => {
+    if (!userId || !answers.some((a) => a.saved === false)) return;
+    const retry = () =>
+      void flushAnswers(userId).then((flushed) => setAnswers((now) => settleAnswers(now, flushed)));
+    retry();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") retry();
+    });
+    return () => sub.remove();
+    // Once per screen, and again when the app comes back to the front; a list
+    // that settles does not need to start it over.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   if (!summary) {
     return (
-      <View style={styles.page}>
+      <View style={[styles.page, page]}>
         <Notice title={t("no_result_title")} body={t("no_result_body")} />
         <Button label={t("to_home")} onPress={() => router.replace("/")} />
       </View>
     );
   }
 
-  const total = summary.answers.length;
-  const correct = summary.answers.filter((a) => a.isCorrect).length;
+  const total = answers.length;
+  const correct = answers.filter((a) => a.isCorrect).length;
   const minutes = Math.max(1, Math.round((summary.finishedAt - summary.startedAt) / 60000));
   // The graded role, as the database wrote it — including `timed_out`, which no
   // option carries and which is worth naming: on a timed set, "you ran out of
   // time four times" is the most actionable thing this screen can say.
-  const trap = worstTrap(summary.answers.filter((a) => !a.isCorrect).map((a) => a.role));
+  const trap = worstTrap(answers.filter((a) => !a.isCorrect).map((a) => a.role));
 
   // Which SECTION moved, not merely that something did. "聴解のレベルが上がりま
   // した" is a fact somebody can act on; "レベルが上がりました" leaves them
@@ -79,7 +106,7 @@ export default function Result() {
   const step = () => (beat += 70);
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={[styles.page, page, { paddingBottom: space.xxl + insets.bottom }]}>
       {move && move.direction > 0 ? (
         <Card style={{ backgroundColor: colors.correctSoft, gap: space.md }}>
           <View style={styles.trapHead}>
@@ -155,24 +182,46 @@ export default function Result() {
 
       <FadeIn delay={step()} style={{ gap: space.sm }}>
         <SectionLabel>{t("breakdown")}</SectionLabel>
-        <Card style={{ gap: space.md }}>
-          {summary.answers.map((a, i) => (
-            <View key={a.item.id} style={styles.row}>
-              <Text
-                style={[
-                  styles.rowMark,
-                  { color: a.isCorrect ? colors.correct : colors.wrong },
-                ]}
+        <Card style={{ gap: space.xs }}>
+          {answers.map((a, i) => {
+            // An answer that is not in the record yet has nothing on the review
+            // screen to open, so it is a line and not a link.
+            const saved = a.saved !== false;
+            const mark = a.isCorrect ? t("mark_correct") : t("mark_wrong");
+            return (
+              <Pressable
+                key={a.item.id}
+                accessibilityRole={saved ? "button" : undefined}
+                accessibilityLabel={`${i + 1}. ${a.item.topic} — ${mark}`}
+                disabled={!saved}
+                // The question itself, alone, with its explanation: a row that
+                // says × and goes nowhere is a list of things to feel bad about.
+                onPress={() => router.push({ pathname: "/history", params: { item: a.item.id } })}
+                style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
               >
-                {/* A clock rather than a cross for the ones time took: both are
-                    wrong, and only one of them is about the Japanese. */}
-                {a.isCorrect ? "○" : a.role === "timed_out" ? "⏱" : "×"}
-              </Text>
-              <Text style={[type.small, { flex: 1 }]}>
-                {i + 1}. {a.item.topic}
-              </Text>
-            </View>
-          ))}
+                <Text
+                  style={[
+                    styles.rowMark,
+                    { color: a.isCorrect ? colors.correct : colors.wrong },
+                  ]}
+                >
+                  {/* A clock rather than a cross for the ones time took: both are
+                      wrong, and only one of them is about the Japanese. */}
+                  {a.isCorrect ? "○" : a.role === "timed_out" ? "⏱" : "×"}
+                </Text>
+                <Text style={[type.small, { flex: 1 }]}>
+                  {i + 1}. {a.item.topic}
+                </Text>
+                {/* Not in the record yet: the mark beside it is the phone's own
+                    reading of the key until the database has it. */}
+                {saved ? (
+                  <Icon name="chevron" size={16} color={colors.muted} strokeWidth={2} />
+                ) : (
+                  <Text style={[type.small, { fontWeight: "700" }]}>{t("unsent_short")}</Text>
+                )}
+              </Pressable>
+            );
+          })}
           {correct < total ? (
             // The promise the daily set keeps: a trap that caught them comes back
             // after a night, in a new question. See next_items, bucket 0.
@@ -211,6 +260,7 @@ const styles = StyleSheet.create({
   },
   heroSub: { color: colors.onAccentMuted, fontSize: 13, ...tabular },
   trapHead: { flexDirection: "row", alignItems: "center", gap: space.md },
-  row: { flexDirection: "row", gap: space.sm, alignItems: "flex-start" },
+  // A thumb's height each, since each one opens its question.
+  row: { flexDirection: "row", gap: space.sm, alignItems: "center", minHeight: MIN_TOUCH },
   rowMark: { width: 18, fontSize: 14, fontWeight: "700" },
 });

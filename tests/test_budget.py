@@ -8,6 +8,8 @@ caches, at the effort the bill can afford.
 """
 import copy
 
+import anthropic
+import httpx2
 import pytest
 
 from bjt import config, fixtures, llm, pipeline
@@ -20,6 +22,13 @@ def quiet(monkeypatch):
     monkeypatch.setattr("bjt.config.SANITY_ENABLED", False)
     monkeypatch.setattr("bjt.config.DIFFICULTY_ENABLED", False)
     monkeypatch.setattr("bjt.config.GATE_TRIALS", 3)
+
+
+def _status(code: int, message: str) -> anthropic.APIStatusError:
+    """What the SDK raises for a status the server sent."""
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    return anthropic.APIStatusError(message, body=None,
+                                    response=httpx2.Response(code, request=request))
 
 
 def _always(item_type="goi_bunpou"):
@@ -87,7 +96,7 @@ def test_a_billing_refusal_is_told_apart_from_other_failures(monkeypatch):
         class messages:
             @staticmethod
             def create(**kw):
-                raise RuntimeError("Error code: 400 - Your credit balance is too low to access the Anthropic API.")
+                raise _status(400, "Error code: 400 - Your credit balance is too low to access the Anthropic API.")
 
     monkeypatch.setattr(llm, "_get_client", lambda: Boom())
     with pytest.raises(llm.LLMBillingError):
@@ -97,7 +106,7 @@ def test_a_billing_refusal_is_told_apart_from_other_failures(monkeypatch):
         class messages:
             @staticmethod
             def create(**kw):
-                raise RuntimeError("Error code: 529 - overloaded")
+                raise _status(529, "Error code: 529 - overloaded")
 
     monkeypatch.setattr(llm, "_get_client", lambda: Down())
     with pytest.raises(llm.LLMError) as err:
@@ -113,7 +122,7 @@ def test_the_generator_prompt_is_cacheable_and_at_the_configured_effort(monkeypa
             @staticmethod
             def create(**kw):
                 seen.update(kw)
-                raise RuntimeError("stop here")
+                raise _status(400, "stop here")
 
     monkeypatch.setattr(llm, "_get_client", lambda: Client())
     monkeypatch.setattr("bjt.config.GEN_EFFORT", "medium")

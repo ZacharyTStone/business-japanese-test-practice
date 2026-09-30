@@ -26,7 +26,9 @@ export function RubyText({
   const plain = segments.map((s) => s.text).join("");
   if (!show || !segments.some((s) => s.ruby)) return <Text style={style}>{plain}</Text>;
 
-  const size = Math.max(9, Math.round((style.fontSize ?? 16) * 0.5));
+  // Half the text's size, but never below 11: a reading is there to be read,
+  // and at 9 a kana's strokes run together.
+  const size = Math.max(11, Math.round((style.fontSize ?? 16) * 0.5));
   const rubyStyle = [styles.ruby, { fontSize: size, lineHeight: size + 3 }];
   const cells: React.ReactNode[] = [];
   segments.forEach((seg, i) => {
@@ -58,6 +60,8 @@ export function RubyText({
 const styles = StyleSheet.create({
   line: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-end" },
   cell: { alignItems: "center" },
-  ruby: { color: colors.muted },
+  // In the text's own colour: the grey used for small print loses too much
+  // contrast at this size.
+  ruby: { color: colors.text },
   tight: { marginTop: -2 },
 });

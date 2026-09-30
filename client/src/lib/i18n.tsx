@@ -26,6 +26,54 @@ const S = {
   config_needed: ["設定が必要です", "Setup needed"],
   cant_connect: ["接続できません", "Can't connect"],
   cant_load: ["読み込めません", "Couldn't load"],
+  // What went wrong, said so a learner can act on it (lib/errors.ts).
+  err_offline: [
+    "インターネットに接続できません。接続を確かめて、もう一度お試しください。",
+    "You're offline. Check your connection and try again.",
+  ],
+  err_session_expired: [
+    "ログインの有効期限が切れました。もう一度ログインしてください。",
+    "Your sign-in has expired. Please sign in again.",
+  ],
+  err_wrong_password: ["メールアドレスかパスワードが違います。", "The email address or password is wrong."],
+  err_other: ["問題が起きました。しばらくしてから、もう一度お試しください。", "Something went wrong. Please try again in a moment."],
+
+  // ---- The client shell's additions, kept together in this one block. ----
+  // When the day's count starts again, for a phone not on Japan's clock: the
+  // day is closed at midnight in Japan whatever the device says.
+  day_done_next_away: [
+    "次の問題は、日本時間の0時（あなたの時刻で{time}）から出ます",
+    "New questions from midnight in Japan ({time} your time)",
+  ],
+  // A screen that threw while drawing (ui/crash.tsx).
+  crash_title: ["この画面を表示できませんでした", "This screen couldn't be shown"],
+  crash_again: ["もう一度表示する", "Show it again"],
+  // The radar, said aloud (ui/radar.tsx): every type and its share.
+  radar_a11y: ["種類ごとの正答率。{list}", "Accuracy by type. {list}"],
+  radar_untried: ["まだ解いていません", "not tried yet"],
+  list_sep: ["、", ", "],
+  // A forgotten password: a link by mail, and the screen it opens.
+  gate_forgot: ["パスワードを忘れた", "Forgot your password?"],
+  gate_reset_need_email: [
+    "メールアドレスを入れてから押してください。そのアドレスに、パスワードを決め直すためのリンクを送ります。",
+    "Enter your email address first, and we'll send a link to it for choosing a new password.",
+  ],
+  gate_reset_sent: [
+    "パスワードを決め直すためのリンクを送りました。メールを開いて、リンクを押してください。",
+    "We've sent a link for choosing a new password. Open the email and follow the link.",
+  ],
+  gate_link_expired: [
+    "リンクの有効期限が切れているか、すでに使われています。もう一度「パスワードを忘れた」を押してください。",
+    "That link has expired or has already been used. Press “Forgot your password?” again.",
+  ],
+  reset_title: ["新しいパスワードを決めてください", "Choose a new password"],
+  reset_body: [
+    "6文字以上です。決めると、そのままログインした状態で始まります。",
+    "At least 6 characters. Once it's set, you carry on signed in.",
+  ],
+  reset_password: ["新しいパスワード", "New password"],
+  reset_save: ["パスワードを変える", "Set the password"],
+  reset_busy: ["変えています…", "Setting it…"],
   loading: ["読み込み中…", "Loading…"],
   tab_home: ["ホーム", "Home"],
   tab_progress: ["記録", "Progress"],
@@ -33,7 +81,7 @@ const S = {
   title_practice: ["練習", "Practice"],
   title_result: ["結果", "Result"],
   title_history: ["解いた問題", "Answered"],
-  title_vocab: ["ことばメモ", "Vocabulary"],
+  title_vocab: ["まちがえた問題のことば", "Words from missed questions"],
   sec_choukai: ["聴解", "Listening"],
   sec_choudokkai: ["聴読解", "Listening & reading"],
   sec_dokkai: ["読解", "Reading"],
@@ -56,7 +104,7 @@ const S = {
   wel_p2_title: ["弱いところを、狙って出します", "It aims at your weak spots"],
   wel_p2_body: ["正誤だけでなく、どのまちがえ方をしたかまで見ます。ひっかかったわなは一晩おいて、同じわなを持つ別の問題でもう一度確かめます。できたら三日後、一週間後と間をあけていきます。新しい問題が残っているかぎり、同じ問題はくり返しません。", "Not just right or wrong — which way you went wrong. A trap that caught you comes back after a night's sleep, in a new question that sets the same trap; get it right and the next one comes in three days, then a week, then longer. You won't meet the same question twice while there are new ones left."],
   wel_p3_title: ["あなたがすることは、答えるだけ", "Your part is to answer"],
-  wel_p3_body: ["1日10問、6分ほど。読解の問題には本番と同じだけの時間をはかります（設定で外せます）。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about six minutes. Reading questions are timed at exam pace — you can turn that off in settings. The longer you keep at it, the better the questions fit you."],
+  wel_p3_body: ["1日10問、10分ほど。読解の問題には本番と同じだけの時間をはかります（設定で外せます）。本番の音声は一回きりなので、聞き直したり、選択肢を文字で読んだりして答えた問題は、レベルを動かす材料にしません。続けるほど、出る問題があなたに合っていきます。", "Ten questions a day, about ten minutes. Reading questions are timed at exam pace — you can turn that off in settings. The exam plays each recording once, so an answer given after listening again, or after reading the options as text, doesn't count toward moving your level. The longer you keep at it, the better the questions fit you."],
   wel_start: ["始める", "Get started"],
   wel_testers_note: ["いまはテスト中です。登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   wel_honesty: ["問題はすべて独自に作ったものです。過去問は使っていません。点数の予測は出しません。", "Every question is an original composition — no past papers. The app never predicts a score."],
@@ -86,7 +134,7 @@ const S = {
   gate_body: ["いまはテスト中のため、登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
   gate_email: ["メールアドレス", "Email"],
   gate_password: ["パスワード", "Password"],
-  gate_password_hint: ["パスワードは6文字以上。登録済みのメールアドレスであれば、初めての方は「アカウントを作る」を押してください。", "Password of at least 6 characters. If your address is already registered, press “Create account” the first time."],
+  gate_password_hint: ["パスワードは6文字以上です。テスト参加者として登録されたアドレスで初めて使うときは、「アカウントを作る」を押してください。", "At least 6 characters. The first time you use an address registered as a tester, press “Create account”."],
   gate_sign_in: ["ログイン", "Sign in"],
   gate_create: ["アカウントを作る", "Create account"],
   gate_busy: ["確認しています…", "Checking…"],
@@ -192,7 +240,7 @@ const S = {
   ch_phone: ["電話", "Phone"],
   ch_video: ["オンライン", "Video call"],
   ch_written: ["文書", "Written"],
-  scene_hint_listen: ["準備ができたら、聞いてください。一回だけ流れます。", "When you're ready, listen. It plays once."],
+  scene_hint_listen: ["準備ができたら、聞いてください。自動で一回流れます。", "When you're ready, listen. It plays once by itself."],
   scene_hint_read: ["準備ができたら、問題へ。", "When you're ready, go to the question."],
   btn_listen: ["聞く", "Listen"],
   btn_to_q: ["問題へ", "To the question"],
@@ -293,7 +341,6 @@ const S = {
   vocab_count: ["{n}語", "{n} word|{n} words"],
   vocab_head: ["まちがえた問題に出てきたことば", "From the questions you missed"],
   vocab_hide: ["読み方と意味をかくす", "Hide readings and meanings"],
-  vocab_show: ["読み方と意味を表示", "Show readings and meanings"],
   vocab_tap: ["タップして思い出せたか確かめる", "Tap to check yourself"],
   vocab_in_context: ["出てきた問題を見る", "See the question"],
   vocab_sentence: ["出てきた文", "Where it appeared"],
@@ -318,15 +365,11 @@ const S = {
 
   // audio
   dialogue_pending: ["会話（音声は準備中）", "Conversation (audio coming soon)"],
-  show_text: ["本文を見る", "Show text"],
-  hide_text: ["本文を隠す", "Hide text"],
-  listen_dialogue: ["会話を聞く", "Play the conversation"],
-  stop_dialogue: ["会話を止める", "Stop"],
   listen_again: ["もう一回聞く", "Listen again"],
   listening: ["聞いています…", "Listening…"],
   skip: ["とばして選択肢へ", "Skip to the options"],
   play_option: ["{label}をもう一回聞く", "Play {label} again"],
-  option_spoken: ["{label}（音声）", "{label} (spoken)"],
+  option_spoken: ["{label}番で答える", "Answer {label}"],
   show_options_text: ["選択肢を文字で見る", "Show the options as text"],
   hide_options_text: ["選択肢の文字を隠す", "Hide the text"],
   // the script, line by line, once the answer is in
@@ -357,6 +400,22 @@ const S = {
   chart_bar: ["棒グラフ", "Bar chart"],
   chart_line: ["折れ線グラフ", "Line chart"],
   chart_unit: ["単位", "unit"],
+
+  // practice and result, once the answer is in: an answer the database has not
+  // got yet (lib/outbox.ts), and the ways out of a failure.
+  unsent_offline: ["未送信：接続が戻ったら送ります", "Not sent yet: it goes when you're back online"],
+  unsent_short: ["未送信", "Not sent"],
+  send_failed: ["答えを記録できませんでした", "Your answer wasn't recorded"],
+  send_retry: ["もう一度送る", "Send again"],
+  // on the verdict card after a miss: the marked options are above, off screen.
+  correct_is: ["正解は {n}", "The answer was {n}"],
+  // while a spoken-option item plays: its numbers can already be pressed.
+  listen_hint_spoken: ["番号を押せば、聞きながら答えられます。", "Press a number to answer while you listen."],
+  // audio that would not play: the words go on the page instead.
+  audio_failed: ["音声を再生できませんでした。文字で読んでください。", "The audio couldn't be played. The words are on the page instead."],
+  dialogue_as_text: ["会話（文字で）", "Conversation (as text)"],
+  // the practice screen's own error boundary: something threw while drawing.
+  practice_broke: ["この問題を表示できませんでした", "This question couldn't be shown"],
 
   // faces
   mood_happy: ["相手は満足しています", "They're pleased"],
@@ -431,6 +490,14 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
     setLangState(next);
     AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
   }, []);
+
+  // The page's own language, on the web: the static HTML says Japanese
+  // (app/+html.tsx), and an English page left marked `ja` is read aloud by a
+  // screen reader in a Japanese voice and hyphenated as Japanese. There is no
+  // document on a phone.
+  useEffect(() => {
+    if (typeof document !== "undefined") document.documentElement.lang = lang;
+  }, [lang]);
 
   const value = useMemo<LangContextValue>(
     () => ({ lang, setLang, t: (key, vars) => tr(lang, key, vars) }),

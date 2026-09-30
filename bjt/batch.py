@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import config, schemas, seedtable, withdrawn
+from .files import write_atomic
 from .fidelity import dedupe, naturalness, roles
 from .render import document, numerals
 from .tts import plan as tts_plan
@@ -233,7 +234,7 @@ def to_bundle_item(item: dict) -> dict:
 
 def build_bundle(item_type: str, level: str, items: list[dict], model: str) -> dict:
     bundle_items = [to_bundle_item(it) for it in items]
-    manifest = tts_plan.manifest([(bi["id"], raw) for bi, raw in zip(bundle_items, items)])
+    manifest = tts_plan.manifest([(bi["id"], raw) for bi, raw in zip(bundle_items, items, strict=True)])
     scenes = sorted({bi["scene_id"] for bi in bundle_items if bi.get("scene_id")})
     return {
         "bundle_version": BUNDLE_VERSION,
@@ -249,9 +250,7 @@ def build_bundle(item_type: str, level: str, items: list[dict], model: str) -> d
 
 def save(bundle: dict, path: Optional[Path] = None) -> Path:
     path = path or default_path(bundle["item_type"], bundle["level"])
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(bundle, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return path
+    return write_atomic(path, json.dumps(bundle, ensure_ascii=False, indent=2) + "\n")
 
 
 def load(path: Path) -> dict:
@@ -289,13 +288,18 @@ def spent_cell_ids(item_type: str) -> set[str]:
     The bundles are the thing that actually ships, so they are the ledger. The
     database is still consulted as well (it holds cells spent on items that have
     not been bundled yet); the two are unioned at the call sites.
+
+    A bundle that cannot be read is an error, not a bundle with nothing in it:
+    skipped, its cells would look free, and the next item written on one of
+    them would take over a live question's id.
     """
     spent: set[str] = set()
     for path in bundles(item_type):
         try:
             bundle = load(path)
-        except (OSError, json.JSONDecodeError):
-            continue
+        except (OSError, json.JSONDecodeError) as e:
+            raise ValueError(f"{path} cannot be read, so the seed cells it spends are "
+                             f"unknown: {e}") from e
         if bundle.get("item_type") != item_type:
             continue
         for item in bundle.get("items", []):
@@ -370,7 +374,7 @@ def check_bundle(
     items = bundle.get("items", [])
     item_type = bundle.get("item_type", "")
     report = BundleReport()
-    add = lambda name, status, detail: report.checks.append(Check(name, status, detail))  # noqa: E731
+    add = lambda name, status, detail: report.checks.append(Check(name, status, detail))
 
     if not items:
         add("non-empty", "fail", "bundle contains no items")

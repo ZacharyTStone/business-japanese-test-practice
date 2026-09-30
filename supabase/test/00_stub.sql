@@ -91,13 +91,16 @@ grant usage on schema auth, public to supabase_auth_admin;
 grant insert, select on auth.users to supabase_auth_admin;
 grant select on storage.buckets, storage.objects to anon, authenticated;
 grant all on storage.buckets, storage.objects to service_role;
+-- Supabase's default privileges on `public`, as its initial schema sets them
+-- for the role migrations run as: everything, to all three client-facing
+-- roles, on every table, view, sequence and function created there later.
+-- Copied as they are rather than as we would like them, because the schema has
+-- to be safe against these, and a stub more careful than the real project
+-- would hide exactly the grants a migration forgot to take back. Run as the
+-- same role that then applies the migrations (postgres), as in Supabase.
 alter default privileges in schema public
-    grant select on tables to anon, authenticated;
+    grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public
-    grant insert, update, delete on tables to authenticated;
+    grant all on sequences to anon, authenticated, service_role;
 alter default privileges in schema public
-    grant all on tables to service_role;
-alter default privileges in schema public
-    grant all on sequences to authenticated, service_role;
-alter default privileges in schema public
-    grant execute on functions to anon, authenticated, service_role;
+    grant all on functions to anon, authenticated, service_role;

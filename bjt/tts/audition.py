@@ -87,7 +87,7 @@ def run(providers: list[str] | None = None, *, media_dir: Path | None = None,
     report = AuditionReport(root=root, providers=list(names))
 
     if voices:
-        provider = OpenAIProvider()
+        openai = OpenAIProvider()
         for candidate in OpenAIProvider.CANDIDATE_VOICES:
             dest = root / "openai-voices" / f"{candidate}.wav"
             if dest.exists() and not force:
@@ -96,10 +96,10 @@ def run(providers: list[str] | None = None, *, media_dir: Path | None = None,
             try:
                 # Every candidate is asked for as staff_mid_m so the direction is
                 # the same; only the voice id differs.
-                raw = provider.synthesize(VOICES_LINE, "staff_mid_m",
+                raw = openai.synthesize(VOICES_LINE, "staff_mid_m",
                                           instructions=direction_for("staff_mid_m"),
                                           provider_voice=candidate)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # a vendor error is a result, not a crash
                 report.failed.append(("openai-voices", candidate, str(exc)))
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -116,7 +116,7 @@ def run(providers: list[str] | None = None, *, media_dir: Path | None = None,
             try:
                 raw = provider.synthesize(text, voice, instructions=direction_for(voice))
                 processed = channel_mod.apply_channel(raw, channel)
-            except Exception as exc:  # noqa: BLE001 - one provider's outage must not hide the others
+            except Exception as exc:  # one provider's outage must not hide the others
                 report.failed.append((provider.name, voice, str(exc)))
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)

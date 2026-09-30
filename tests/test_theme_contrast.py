@@ -12,13 +12,9 @@ drifts drifts here too — and asserts the pairings the app actually draws.
 What this cannot see is *which* fill a screen chooses: that rule ("an accent fill
 that carries text is `accentDeep` or darker") is stated at the top of theme.ts
 and kept by a reader. What it can see is that the fills declared for text, and
-the text colours declared for them, are legible together.
-
-One pairing is deliberately not asserted here: `badge`, whose five tints are
-2.6:1 to 4.2:1 against their own backgrounds. They are fine as `IconBadge`, where
-the tint is a 3:1 graphic, and short of 4.5:1 as `Tag`, where it is 13px text.
-Fixing that is a decision about the palette rather than a bug in it, so it is
-written down rather than silently held to a bar it does not meet.
+the text colours declared for them, are legible together — including `badge`,
+whose tint is 13px text in a `Tag` as well as an icon in an `IconBadge`, and so
+is held to the text bar rather than the graphic one.
 """
 import pathlib
 import re
@@ -29,8 +25,9 @@ THEME = (pathlib.Path(__file__).resolve().parents[1]
          / "client" / "src" / "ui" / "theme.ts")
 
 #: WCAG 2.1 AA. 4.5:1 for body text; 3:1 for text at 24px, or 18.66px bold, and
-#: for a graphic that carries meaning. Everything measured here is small text.
+#: for a graphic that carries meaning — a control's edge, a bar that runs out.
 AA_SMALL_TEXT = 4.5
+AA_GRAPHIC = 3.0
 
 
 def _tokens() -> dict[str, str]:
@@ -40,6 +37,18 @@ def _tokens() -> dict[str, str]:
     assert body, "theme.ts no longer exports a `colors` object shaped as expected"
     return {m[1]: m[2].upper() for m in re.finditer(
         r"^\s{2}(\w+):\s*\"(#[0-9A-Fa-f]{6})\"", body.group(1), re.M)}
+
+
+def _badges() -> dict[str, tuple[str, str]]:
+    """The `badge` object, as tone → (fg, bg)."""
+    source = THEME.read_text(encoding="utf-8")
+    body = re.search(r"export const badge = \{(.*?)\n\} as const;", source, re.S)
+    assert body, "theme.ts no longer exports a `badge` object shaped as expected"
+    tones = {m[1]: (m[2].upper(), m[3].upper()) for m in re.finditer(
+        r'^\s{2}(\w+):\s*\{\s*fg:\s*"(#[0-9A-Fa-f]{6})",\s*bg:\s*"(#[0-9A-Fa-f]{6})"\s*\}',
+        body.group(1), re.M)}
+    assert len(tones) == 5, f"expected five badge tones, found {sorted(tones)}"
+    return tones
 
 
 def _relative_luminance(hex_colour: str) -> float:
@@ -185,3 +194,55 @@ def test_the_verdict_colours_are_still_the_colours_they_mean():
     assert g > r and g > b, f"correct ({colours['correct']}) is not green"
     r, g, b = rgb(colours["wrong"])
     assert r > g and r > b, f"wrong ({colours['wrong']}) is not red"
+
+
+@pytest.mark.parametrize("fill", ["correctSoft", "wrongSoft", "accentSoft"])
+def test_the_second_line_is_readable_on_the_soft_fills(fill):
+    """`muted` is not only on white. The verdict card writes its second line on
+    `correctSoft` / `wrongSoft`, the rudeness meter its advice on the same, and a
+    `Tag` with no tone is `muted` on `accentSoft`."""
+    colours = _tokens()
+    ratio = contrast(colours["muted"], colours[fill])
+    assert ratio >= AA_SMALL_TEXT, f"muted on {fill} is {ratio:.2f}:1"
+
+
+@pytest.mark.parametrize("tone", ["violet", "teal", "pink", "amber", "blue"])
+def test_a_tag_is_readable_in_its_own_tint(tone):
+    """`Tag` writes 13px bold text in a badge's `fg` on its `bg`, so the pair is
+    text, not only the 3:1 graphic an `IconBadge` would need."""
+    fg, bg = _badges()[tone]
+    ratio = contrast(fg, bg)
+    assert ratio >= AA_SMALL_TEXT, f"badge {tone} ({fg} on {bg}) is {ratio:.2f}:1"
+
+
+@pytest.mark.parametrize("surface", ["surface", "surfaceAlt", "bg"])
+def test_a_field_has_an_edge(surface):
+    """Something you type into has a visible boundary: 3:1 against whatever it
+    sits on. `border`, the card hairline, is 1.2:1 and is not for this."""
+    colours = _tokens()
+    ratio = contrast(colours["inputBorder"], colours[surface])
+    assert ratio >= AA_GRAPHIC, f"inputBorder on {surface} is {ratio:.2f}:1"
+
+
+@pytest.mark.parametrize("fill", ["surface", "wrongSoft"])
+def test_the_warning_amber_is_visible_where_it_is_drawn(fill):
+    """`warn` is a shape: the reading clock's bar on white as it runs low, and
+    the 場面ちがい meter on the red verdict card."""
+    colours = _tokens()
+    ratio = contrast(colours["warn"], colours[fill])
+    assert ratio >= AA_GRAPHIC, f"warn on {fill} is {ratio:.2f}:1"
+
+
+def test_the_one_danger_button_is_readable():
+    """White on `wrong`: the button that erases the record, once asked for."""
+    colours = _tokens()
+    ratio = contrast(colours["onAccent"], colours["wrong"])
+    assert ratio >= AA_SMALL_TEXT, f"onAccent on wrong is {ratio:.2f}:1"
+
+
+def test_a_secondary_button_is_readable():
+    """`accentDeep` on `accentSoft`: the label of every secondary button — back,
+    try again, the second choice on a card. `accent` there was 4.2:1."""
+    colours = _tokens()
+    ratio = contrast(colours["accentDeep"], colours["accentSoft"])
+    assert ratio >= AA_SMALL_TEXT, f"accentDeep on accentSoft is {ratio:.2f}:1"

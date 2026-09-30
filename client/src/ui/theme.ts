@@ -27,8 +27,15 @@ export const colors = {
   surface: "#FFFFFF",
   surfaceAlt: "#FAFAFE",
   border: "#EAEAF4",
+  /** The edge of something you type into. `border` is a card's hairline at 1.2:1,
+   *  which leaves a field on white with no visible edge; this is 3.4:1, the floor
+   *  for a control's boundary. */
+  inputBorder: "#8A88A3",
   text: "#1B1A2E",
-  muted: "#6E6C89",
+  /** The second line. Dark enough to be read on every soft fill it sits on —
+   *  the verdict card's green and red, the violet of a default tag — and not
+   *  only on white: #6E6C89 was 4.4:1 on those, this is 5.1–5.3 (5.9 on white). */
+  muted: "#636180",
   /** The edge of a card. A shadow alone reads as a smudge on a bright screen;
    *  a hairline under it is what makes the edge a decision. Kept translucent
    *  so it is the same tint on white and on the soft violet. */
@@ -52,7 +59,11 @@ export const colors = {
   correctSoft: "#E3F6EF",
   wrong: "#C62B3C",
   wrongSoft: "#FDEBEE",
-  warn: "#E0952A",
+  /** The one amber that warns — the reading clock running low, the 場面ちがい
+   *  meter, a notice's alert. It is drawn as a shape, not as text, so the bar
+   *  is 3:1: 4.4 on white, 3.9 on `wrongSoft`. The lighter amber it replaces
+   *  was 2.5 and 2.2, a clock bar that faded into the card as it ran out. */
+  warn: "#A86A10",
 } as const;
 
 /**
@@ -82,22 +93,42 @@ export const ink = {
  * The tints a counted thing can wear. Assigned per card, not per value — the
  * colour says *which* statistic this is so the eye can come back to the same one
  * tomorrow, and it never encodes whether the number is good.
+ *
+ * `fg` is text as well as an icon: `Tag` writes 13px bold in it on `bg`, so
+ * each pair clears 4.5:1 (5.2–5.6), not just the 3:1 an icon would need.
  */
 export const badge = {
-  violet: { fg: "#6C5CE7", bg: "#EFEDFF" },
-  teal: { fg: "#0E9A9A", bg: "#E0F5F5" },
-  pink: { fg: "#DB4E9B", bg: "#FCE9F3" },
-  amber: { fg: "#CE8A1E", bg: "#FBF1DF" },
-  blue: { fg: "#3A76E0", bg: "#E7F0FD" },
+  violet: { fg: "#5646D6", bg: "#EFEDFF" },
+  teal: { fg: "#0A6F6F", bg: "#E0F5F5" },
+  pink: { fg: "#B0306F", bg: "#FCE9F3" },
+  amber: { fg: "#8A5A0E", bg: "#FBF1DF" },
+  blue: { fg: "#2A5FC0", bg: "#E7F0FD" },
 } as const;
 
 export type BadgeTone = keyof typeof badge;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
-/** What a tab screen has to leave under its last card so the bar does not sit on
- *  top of it. The bar is 76 tall and floats over the content on web. */
-export const TAB_CLEARANCE = 104;
+/** The tab bar's own height, before the strip under it that a phone's home
+ *  indicator or gesture bar owns — `useTabBarHeight` in ui/tabbar.ts adds
+ *  that, per device. */
+export const TAB_BAR_HEIGHT = 76;
+
+/** What a tab screen leaves under its last card beyond the bar itself, so the
+ *  last card ends on the page rather than on the bar's shadow. */
+export const TAB_BREATHING = 28;
+
+/** The widest a page's content runs. Past this a line of Japanese is too long to
+ *  read and a button too wide to be one; a wider window centres the column. */
+export const PAGE_MAX_WIDTH = 720;
+
+/** A page's content column: the full width on a phone, centred and capped on a
+ *  desktop or tablet. Spread into a `contentContainerStyle`. */
+export const page: ViewStyle = { width: "100%", maxWidth: PAGE_MAX_WIDTH, alignSelf: "center" };
+
+/** The smallest thing a thumb is asked to hit, per both platforms' guidelines.
+ *  A text link reaches it with vertical padding, not `hitSlop`, which web ignores. */
+export const MIN_TOUCH = 44;
 
 export const radius = { sm: 10, md: 16, lg: 22, xl: 28, pill: 999 } as const;
 

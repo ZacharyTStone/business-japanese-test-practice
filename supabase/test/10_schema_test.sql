@@ -40,6 +40,27 @@ begin
 end;
 $$;
 
+-- Fixtures leave the bank the one way a real question never may: deleted. A
+-- question with anything pointing at it cannot be (20260930000600), so the
+-- history these tests wrote against their own fixtures goes first, as the
+-- cascade used to take it. Run as the test's own role.
+create or replace function test.remove_fixture_items(p_ids text[])
+returns void language plpgsql as $$
+begin
+    delete from public.attempts        where item_id = any (p_ids) or stands_for = any (p_ids);
+    delete from public.review_schedule where item_id = any (p_ids);
+    delete from public.review_notes    where item_id = any (p_ids);
+    delete from public.item_feedback   where item_id = any (p_ids);
+    delete from public.item_vetoes     where item_id = any (p_ids);
+    delete from public.items           where id = any (p_ids);
+end;
+$$;
+
+-- The tests call these from sessions acting as the client roles. A function
+-- created after 20260930000900 gives PUBLIC no EXECUTE by default, these
+-- included, so the test's own helpers are handed out here, on purpose.
+grant execute on all functions in schema test to public;
+
 -- ----------------------------------------------------------------- fixtures
 
 -- Publishing runs as the service role, which bypasses RLS — same as the real
@@ -84,13 +105,15 @@ commit;
 -- Two users. A starts anonymous and links an identity below; B is already
 -- linked. Both are on the tester list, because while the app is in testing
 -- nobody else can read anything at all — and the isolation tests below are
--- about what one *tester* can see of another.
+-- about what one *tester* can see of another. A's ceiling is lifted: the level
+-- tests below answer well over a day's fifteen as A, and the door is tested on
+-- its own further down.
 insert into auth.users (id, email, is_anonymous) values
     ('11111111-1111-1111-1111-111111111111', null, true),
     ('22222222-2222-2222-2222-222222222222', 'b@example.com', false);
-insert into public.testers (email, note) values
-    ('zach@example.com', 'test fixture: user A, once linked'),
-    ('b@example.com',    'test fixture: user B');
+insert into public.testers (email, note, unlimited) values
+    ('zach@example.com', 'test fixture: user A, once linked', true),
+    ('b@example.com',    'test fixture: user B',              false);
 
 -- ------------------------------------------------------------------- tests
 
@@ -387,12 +410,45 @@ $$;
 
 reset role;
 
+-- --- a question is never deleted --------------------------------------------
+
+-- Not by a client, which has no delete grant on the bank at all, and not by
+-- the owner either while anything points at it: a question leaves the bank by
+-- being unpublished, so that every answer given to it keeps resolving.
+do $$
+declare
+    ok boolean := false;
+begin
+    raise notice 'a question is never deleted';
+    begin
+        delete from public.items where id = 'itm_phone';
+    exception when restrict_violation or foreign_key_violation then
+        ok := true;
+    end;
+    perform test.check(ok, 'a question somebody has answered cannot be deleted, even by the owner');
+
+    ok := false;
+    begin
+        delete from public.bundles where id = 'test_bundle';
+    exception when restrict_violation or foreign_key_violation then
+        ok := true;
+    end;
+    perform test.check(ok, 'nor the bundle it was published in');
+
+    perform test.check(
+        (select count(*) from public.attempts where item_id = 'itm_phone') > 0
+        and exists (select 1 from public.review_schedule where item_id = 'itm_phone')
+        and exists (select 1 from public.item_feedback where item_id = 'itm_phone'),
+        'and the answers, the schedule and the report behind it are all still there');
+end
+$$;
+
 -- These fixtures exist only to prove grading and RLS. Left in place, they sit
 -- in the same J2 pool as the published reference batch, and next_items() picks
 -- among all of it at random — so 20_published_test.sql would intermittently
 -- draw a fixture item instead of real content and fail on its short stem or
 -- missing narration clip. Clean up before that file runs.
-delete from public.items where id in ('itm_phone', 'itm_desk');
+do $$ begin perform test.remove_fixture_items(array['itm_phone', 'itm_desk']); end $$;
 
 -- --- the answer key cannot dangle -------------------------------------------
 
@@ -417,60 +473,78 @@ begin
     perform test.check(ok, 'an item whose correct_index points at no option is rejected');
 end
 $$;
--- --- the definer functions are not an API -----------------------------------
+-- --- the functions in public are an API, and only on purpose ----------------
 
--- They are `security definer` because they write rows the caller has no policy
--- for — or, in refresh_item_stats's case, because it reads every attempt in the
--- database, which is exactly what no client may do. Living in `public` also
--- publishes them at /rest/v1/rpc/<name>, so the grant is revoked where each is
--- defined. Assert both halves of that: the door is shut, and the triggers behind
--- it still fire — which the grading tests above have already demonstrated on
--- this very connection.
+-- A function in `public` is published at /rest/v1/rpc/<name>, and the schema's
+-- default privileges hand EXECUTE on it to the client roles the moment it is
+-- created. Most of them are nothing a client should call: trigger functions,
+-- the definer functions that write rows the caller has no policy for (or, in
+-- refresh_item_stats's case, read every attempt in the database), and helpers
+-- that answer about any learner they are handed. So the grant is taken away
+-- where each is defined, and the triggers behind them still fire — which the
+-- grading tests above have already shown on this very connection.
+--
+-- Swept from the catalogue rather than listed, so the next function added is
+-- covered the moment it exists: it fails here until it is either given to the
+-- app on purpose, in the list below, or has its grant revoked.
 reset role;
 
 do $$
 declare
-    f text;
+    -- The app's API: every function a signed-in client may call, directly or
+    -- through a view that runs as them (v_my_day reads the four about the
+    -- day's size, v_my_levels reads level_evidence). This list is the
+    -- decision; the sweep below holds the database to it.
+    api constant text[] := array[
+        'next_items(integer)', 'my_streak()', 'level_evidence(text)',
+        'reset_my_progress()', 'veto_item(text, text)', 'may_i_veto()',
+        'is_tester()', 'is_unlimited()', 'daily_max()', 'my_daily_max()', 'my_goal_max()'];
+    api_oids oid[];
+    listed   text;
 begin
-    raise notice 'definer functions are not reachable over the API';
-    -- ...and the two helpers only the triggers call: one answers about any
-    -- learner it is handed, and neither is anything a client needs.
-    foreach f in array array['handle_new_user()', 'sync_profile_identity()', 'grade_attempt()',
-                             'schedule_review()', 'refresh_item_stats()',
-                             'keep_the_daily_goal_under_its_ceiling()',
-                             'questions_left(uuid, text, text)', 'pace_max_scale()']
-    loop
-        perform test.check(
-            not has_function_privilege('anon', 'public.' || f, 'execute'),
-            'anon cannot call public.' || f || ' as an RPC');
-        perform test.check(
-            not has_function_privilege('authenticated', 'public.' || f, 'execute'),
-            'authenticated cannot call public.' || f || ' as an RPC');
-    end loop;
+    raise notice 'the functions in public, swept';
+    select array_agg(('public.' || f)::regprocedure::oid) into api_oids from unnest(api) f;
 
-    -- The two read functions ARE the app's API and must stay callable.
-    perform test.check(
-        has_function_privilege('authenticated', 'public.my_streak()', 'execute'),
-        'my_streak stays callable — it is the app''s own RPC');
-    perform test.check(
-        has_function_privilege('authenticated', 'public.next_items(integer)', 'execute'),
-        'next_items stays callable — it is the app''s own RPC');
-    -- v_my_levels reads it as the person looking, and it reads nobody else.
-    perform test.check(
-        has_function_privilege('authenticated', 'public.level_evidence(text)', 'execute')
-        and not has_function_privilege('anon', 'public.level_evidence(text)', 'execute'),
-        'level_evidence is callable by a signed-in user, for their own record only');
+    select string_agg(p.oid::regprocedure::text, ', ' order by p.proname) into listed
+      from pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and has_function_privilege('authenticated', p.oid, 'execute')
+       and not (p.oid = any (api_oids));
+    perform test.check(listed is null,
+        'a signed-in client can call the app''s API and nothing else in public'
+        || coalesce(' (also callable: ' || listed || ')', ''));
 
-    -- ...with a pinned search_path, so a caller cannot shadow what they read.
-    foreach f in array array['my_streak', 'next_items', 'level_evidence']
-    loop
-        perform test.check(
-            (select proconfig is not null
-                and exists (select 1 from unnest(proconfig) c where split_part(c, '=', 1) = 'search_path')
-             from pg_proc
-             where oid = ('public.' || f)::regproc),
-            'public.' || f || ' pins its search_path');
-    end loop;
+    select string_agg(f, ', ') into listed
+      from unnest(api) f
+     where not has_function_privilege('authenticated', ('public.' || f)::regprocedure, 'execute');
+    perform test.check(listed is null,
+        'and every function of that API stays callable'
+        || coalesce(' (not callable: ' || listed || ')', ''));
+
+    select string_agg(p.oid::regprocedure::text, ', ' order by p.proname) into listed
+      from pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and has_function_privilege('anon', p.oid, 'execute');
+    perform test.check(listed is null,
+        'anon can call no function in public at all'
+        || coalesce(' (callable: ' || listed || ')', ''));
+
+    perform test.check(
+        not exists (select 1 from pg_proc p
+                     where p.oid = any (api_oids) and p.prorettype = 'trigger'::regtype),
+        'and no trigger function is part of the API');
+
+    -- ...each with a pinned search_path, so nobody who can create a temporary
+    -- schema can decide what the names inside it mean. Every one, not only the
+    -- callable ones: a definer function run by a trigger is the worse case.
+    select string_agg(p.oid::regprocedure::text, ', ' order by p.proname) into listed
+      from pg_proc p
+     where p.pronamespace = 'public'::regnamespace
+       and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c
+                        where split_part(c, '=', 1) = 'search_path');
+    perform test.check(listed is null,
+        'every function in public pins its search_path'
+        || coalesce(' (unpinned: ' || listed || ')', ''));
 end
 $$;
 
@@ -487,8 +561,27 @@ rollback;
 reset role;
 
 do $$
+declare
+    writable text;
 begin
     raise notice 'testers only: the shape';
+    -- A view in `public` inherits the schema's default privileges, which give
+    -- the client roles insert, update and delete; a one-table view is
+    -- updatable, and one that runs as its owner writes past RLS. So no view may
+    -- keep any of them, whatever it is today.
+    select string_agg(distinct c.relname, ', ')
+      into writable
+      from pg_class c
+     cross join (values ('anon'), ('authenticated')) as r(role)
+     where c.relnamespace = 'public'::regnamespace
+       and c.relkind in ('v', 'm')
+       and (has_table_privilege(r.role, c.oid, 'insert')
+            or has_table_privilege(r.role, c.oid, 'update')
+            or has_table_privilege(r.role, c.oid, 'delete')
+            or has_table_privilege(r.role, c.oid, 'truncate'));
+    perform test.check(writable is null,
+        'no view in public can be written through by a client'
+        || coalesce(' (writable: ' || writable || ')', ''));
     perform test.check(
         not exists (
             select 1 from pg_policies
@@ -500,16 +593,30 @@ begin
         not exists (select 1 from pg_policies
                      where schemaname = 'public' and 'anon'::name = any(roles)),
         'no policy in public names the anon role');
+    -- The media buckets are public-read at each file's address, which needs no
+    -- policy at all; a policy on storage.objects is a listing of the bank. The
+    -- same door as `public`, then: none for anon or everybody, and any policy
+    -- there is for testers.
+    perform test.check(
+        not exists (select 1 from pg_policies
+                     where schemaname = 'storage'
+                       and ('anon'::name = any(roles) or 'public'::name = any(roles))),
+        'no policy in storage names anon or everybody');
+    perform test.check(
+        not exists (
+            select 1 from pg_policies
+             where schemaname = 'storage'
+               and coalesce(qual, '') not like '%is_tester()%'
+               and coalesce(with_check, '') not like '%is_tester()%'),
+        'every policy in storage requires is_tester()');
     perform test.check(
         not exists (select 1 from information_schema.role_table_grants
                      where grantee = 'anon' and table_schema = 'public'),
         'anon holds no privilege on any table or view in public');
     perform test.check(
-        not has_function_privilege('anon', 'public.next_items(integer)', 'execute')
-        and not has_function_privilege('anon', 'public.my_streak()', 'execute')
-        and not has_function_privilege('anon', 'public.is_tester()', 'execute')
-        and not has_function_privilege('anon', 'public.my_goal_max()', 'execute')
-        and not has_function_privilege('anon', 'public.my_daily_max()', 'execute'),
+        not exists (select 1 from pg_proc p
+                     where p.pronamespace = 'public'::regnamespace
+                       and has_function_privilege('anon', p.oid, 'execute')),
         'anon cannot call any RPC');
     perform test.check(
         has_function_privilege('authenticated', 'public.is_tester()', 'execute')
@@ -517,6 +624,44 @@ begin
         'a signed-in user may ask whether they are a tester, and nothing more');
 end
 $$;
+
+-- ...and for whatever the next migration creates. Made here as the role the
+-- migrations ran as, against the stub's copy of Supabase's default privileges,
+-- and rolled back.
+begin;
+create table public.zz_next_table (id integer primary key);
+create view public.zz_next_view as select id from public.zz_next_table;
+create sequence public.zz_next_seq;
+create function public.zz_next_fn() returns integer language sql as $$ select 1 $$;
+create schema zz_next_schema;
+create function zz_next_schema.fn() returns integer language sql as $$ select 1 $$;
+
+do $$
+begin
+    raise notice 'testers only: nothing new for anon';
+    perform test.check(
+        not exists (select 1 from information_schema.role_table_grants
+                     where grantee = 'anon'
+                       and table_name in ('zz_next_table', 'zz_next_view')),
+        'a table or view created from now on gives anon nothing');
+    perform test.check(
+        not has_sequence_privilege('anon', 'public.zz_next_seq', 'usage')
+        and not has_sequence_privilege('anon', 'public.zz_next_seq', 'select'),
+        'nor a sequence');
+    perform test.check(
+        not has_function_privilege('anon', 'public.zz_next_fn()', 'execute'),
+        'nor a function in public, not even through PUBLIC');
+    perform test.check(
+        not has_function_privilege('anon', 'zz_next_schema.fn()', 'execute')
+        and not has_function_privilege('authenticated', 'zz_next_schema.fn()', 'execute'),
+        'and a function anywhere else is callable only by whoever it is granted to');
+    perform test.check(
+        has_table_privilege('authenticated', 'public.zz_next_table', 'select')
+        and has_table_privilege('service_role', 'public.zz_next_table', 'insert'),
+        'while a new table still works for the app and the pipeline, behind its policies');
+end
+$$;
+rollback;
 
 insert into auth.users (id, email, is_anonymous) values
     ('77777777-7777-7777-7777-777777777777', null, true),
@@ -773,7 +918,7 @@ $$;
 -- the published reference batch, and next_items() draws among all of it at
 -- random. Left in place they would make 20_published_test.sql intermittently
 -- count a fixture as real content.
-delete from public.items where id in ('itm_doc', 'itm_unart');
+do $$ begin perform test.remove_fixture_items(array['itm_doc', 'itm_unart']); end $$;
 delete from public.bundles where id = 'bnd_doc';
 
 do $$
@@ -1057,11 +1202,34 @@ begin
         denied := true;
     end;
     perform test.check(denied, 'nor write a new one');
+
+    -- Nor the summary on the profile, which is what the first answer after a
+    -- reset seeds all three sections from: writable, it was a level picker
+    -- with two extra steps.
+    denied := false;
+    begin
+        update public.profiles set target_level = 'J1' where id = (select auth.uid());
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied, 'nor the level summary the first answer seeds all three from');
     reset role;
+
+    perform test.check(
+        (select array_agg(a.attname::text order by a.attname)
+           from pg_attribute a
+          where a.attrelid = 'public.profiles'::regclass
+            and a.attnum > 0 and not a.attisdropped
+            and has_column_privilege('authenticated', a.attrelid, a.attnum, 'update'))
+        = array['daily_goal', 'display_name', 'exam_date', 'timed_reading'],
+        'a client may update four columns of its profile, and only those four');
+    perform test.check(
+        not has_table_privilege('authenticated', 'public.profiles', 'insert'),
+        'and may not insert one: a profile is made with the account');
 end
 $$;
 
-delete from public.items where bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3');
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3'))); end $$;
 delete from public.bundles where id in ('bnd_lvl', 'bnd_dok', 'bnd_cdk', 'bnd_lv1', 'bnd_dk3');
 
 -- ---------------------------------------------------------------------------
@@ -1305,6 +1473,14 @@ begin
     select * into q from public.next_items(1);
     perform test.check(q.id = 'itm_known' and q.stands_for is null and q.times_seen = 1,
         'the due lesson, as itself, once there is nothing unseen to ask instead');
+
+    -- This tester's row is `unlimited`, and the door on the answer reads it the
+    -- way the door on the set does.
+    perform test.check(
+        (select count(*) from public.attempts
+          where answered_at >= ((now() at time zone 'Asia/Tokyo')::date::timestamp
+                                at time zone 'Asia/Tokyo')) > 15,
+        'a tester whose ceiling is lifted answers past fifteen in a day');
     reset role;
 end
 $$;
@@ -1356,13 +1532,27 @@ begin
     end;
     perform test.check(denied,
         'but the raw counts behind it stay shut: at this scale they are a person');
+
+    -- The view runs as its owner, so a write through it would never meet the
+    -- row-level security on item_stats. It must not be a write path at all.
+    denied := false;
+    begin
+        update public.v_item_difficulty set p_correct = 0.99 where item_id = 'itm_fit';
+    exception when insufficient_privilege then
+        denied := true;
+    end;
+    perform test.check(denied,
+        'and nobody can write a difficulty through the view that publishes it');
     reset role;
+    perform test.check(
+        (select p_correct from public.item_stats where item_id = 'itm_fit') = 0.75,
+        'so the figure every learner is pitched against is still the eight sittings'' own');
 end
 $$;
 
 reset role;
 
-delete from public.items where id in ('itm_easy', 'itm_fit', 'itm_known', 'itm_heard');
+do $$ begin perform test.remove_fixture_items(array['itm_easy', 'itm_fit', 'itm_known', 'itm_heard']); end $$;
 delete from public.bundles where id in ('bnd_bank', 'bnd_heard');
 delete from auth.users where id = '44444444-4444-4444-4444-444444444444';
 
@@ -1464,7 +1654,7 @@ $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_pitch';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_pitch')); end $$;
 delete from public.bundles where id = 'bnd_pitch';
 delete from auth.users where id in ('55555555-5555-5555-5555-555555555555',
                                     '66666666-6666-6666-6666-666666666666');
@@ -1609,7 +1799,7 @@ $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_queue';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_queue')); end $$;
 delete from public.bundles where id = 'bnd_queue';
 delete from auth.users where id = '99999999-9999-9999-9999-999999999999';
 
@@ -1708,8 +1898,18 @@ begin
         (select count(distinct q.stands_for) from public.next_items(5) q) = 2
         and (select count(*) from public.next_items(5) q where q.times_seen > 0) = 0,
         'each re-tested by a question of its own, and not one of the five has been met before');
+    -- The second lesson takes the second-best question of the same ten: the
+    -- walk keeps only each lesson's best two (the set's share), and this is
+    -- the case where the second is the one it needs.
+    perform test.check(
+        (select count(distinct q.id) from public.next_items(5) q where q.stands_for is not null) = 2,
+        'two lessons on the same trap get two different questions, at the edge of what the walk keeps');
     perform test.check((select count(*) from public.next_items(50)) = 14,
         'and while the day is open a set of fifty is the whole window: fourteen items');
+    perform test.check(
+        (select 'jit=off' = any (proconfig) from pg_proc
+          where oid = 'public.next_items(integer)'::regprocedure),
+        'and the queue does not pay for a JIT compile on every call');
 
     -- Two answered today. Thirteen are then left, which is one more than the
     -- rest of the window — enough for the ordering test below to see every
@@ -1791,8 +1991,10 @@ $$;
 
 do $$
 declare
-    d record;
-    i integer;
+    d      record;
+    i      integer;
+    ok     boolean;
+    v_hint text;
 begin
     raise notice 'at fifteen the door shuts';
     -- Twelve more answers, all repeats of one item: the cheapest way to spend
@@ -1806,6 +2008,18 @@ begin
     perform test.check((select count(*) from public.next_items(5)) = 1,
         'a set of five is served as a set of one');
 
+    -- Two answers in one statement, with room for one: the second is counted
+    -- against the first, and the statement is refused whole.
+    begin
+        insert into public.attempts (item_id, chosen_index)
+        values ('itm_c_t1', 0), ('itm_c_t1', 0);
+        ok := false;
+    exception when check_violation then
+        ok := true;
+    end;
+    perform test.check(ok and (select answered_today from public.v_my_day) = 14,
+        'two answers sent together with room for one are refused, and nothing is counted');
+
     insert into public.attempts (item_id, chosen_index) values ('itm_c_t1', 0);
     select * into d from public.v_my_day;
     perform test.check(d.answered_today = 15 and d.left_today = 0,
@@ -1816,13 +2030,28 @@ begin
     perform test.check(
         (select level from public.v_my_levels where section = 'dokkai') = 'J2',
         'thirteen repeats of one item moved nothing');
+
+    -- The door is on the answer too, not only on the set: a client posting
+    -- straight to the table, or a second device holding a set fetched before
+    -- the first one finished, is refused at sixteen.
+    ok := false;
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_c_u1', 0);
+    exception when check_violation then
+        get stacked diagnostics v_hint = pg_exception_hint;
+        ok := v_hint = 'daily_limit_reached';
+    end;
+    perform test.check(ok, 'a sixteenth answer is refused, with a hint the app can read');
+    perform test.check((select answered_today from public.v_my_day) = 15,
+        'and today still counts fifteen');
 end
 $$;
 
 -- The fifteen is a ceiling on the account, not a number the client agrees to.
 -- The check constraint on profiles.daily_goal says only that a day is at least
--- one question; what stops a tester PATCHing their way to a forty-question day
--- is the trigger, which asks whose row this is.
+-- one question; what stops a tester PATCHing their way to a forty-question day,
+-- or to any size of day at all, is the trigger, which asks whose row this is
+-- and whether the owner gave that account a number of its own.
 do $$
 declare
     ok boolean;
@@ -1846,12 +2075,28 @@ begin
           where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa') = 10,
         'so the goal is still ten');
 
-    -- A ceiling, not a freeze: everything up to it is still theirs to set.
-    update public.profiles set daily_goal = 15
+    -- Nor below it. The size of a day is the product, and changing it belongs
+    -- to the one account the owner gave a number of its own (below).
+    ok := false;
+    begin
+        update public.profiles set daily_goal = 12
+         where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    exception when insufficient_privilege then
+        ok := true;
+    end;
+    perform test.check(ok, 'an ordinary tester cannot change the size of the day at all');
+    perform test.check((select goal from public.v_my_day) = 10,
+        'so it is ten, as it is for everybody');
+
+    -- A goal is judged when it is written, not whenever the row is: sending
+    -- the number back unchanged, with a setting that is theirs, still saves.
+    update public.profiles set daily_goal = 10, timed_reading = false
      where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-    perform test.check((select goal from public.v_my_day) = 15,
-        'and fifteen is still theirs to set');
-    update public.profiles set daily_goal = 10
+    perform test.check(
+        not (select timed_reading from public.profiles
+              where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+        'while the settings that are theirs still save, goal and all');
+    update public.profiles set timed_reading = true
      where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 end
 $$;
@@ -2048,7 +2293,7 @@ $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_cap';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_cap')); end $$;
 delete from public.bundles where id = 'bnd_cap';
 delete from auth.users where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -2166,7 +2411,7 @@ end
 $$;
 
 reset role;
-delete from public.items where bundle_id in ('bnd_thin', 'bnd_once');
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id in ('bnd_thin', 'bnd_once'))); end $$;
 delete from public.bundles where id in ('bnd_thin', 'bnd_once');
 delete from auth.users where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
@@ -2274,7 +2519,7 @@ end
 $$;
 
 reset role;
-delete from public.items where bundle_id = 'bnd_exam';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_exam')); end $$;
 delete from public.bundles where id = 'bnd_exam';
 delete from auth.users where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
@@ -2468,12 +2713,21 @@ begin
             and exists (select 1 from unnest(proconfig) c where split_part(c, '=', 1) = 'search_path')
            from pg_proc where oid = 'public.reset_my_progress()'::regprocedure),
         'and its search_path is pinned');
+    -- Deleting a session nulls every answer that names it, and without an
+    -- index that is a pass over everybody's answers for each session reset.
+    perform test.check(
+        exists (select 1 from pg_index x
+                 where x.indrelid = 'public.attempts'::regclass
+                   and x.indkey[0] = (select attnum from pg_attribute
+                                       where attrelid = 'public.attempts'::regclass
+                                         and attname = 'session_id')),
+        'and the answers a deleted session is looked up in are indexed by session');
 end
 $$;
 
 reset role;
 
-delete from public.items where bundle_id = 'bnd_reset';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_reset')); end $$;
 delete from public.bundles where id = 'bnd_reset';
 delete from auth.users where id in ('cccccccc-cccc-cccc-cccc-cccccccccccc',
                                     'dddddddd-dddd-dddd-dddd-dddddddddddd',
@@ -2636,6 +2890,9 @@ do $$ begin perform test.become('f2222222-2222-2222-2222-222222222222'); end $$;
 set role authenticated;
 
 do $$
+declare
+    ok     boolean := false;
+    v_hint text;
 begin
     perform test.check(
         not exists (select 1 from public.items where id = 'itm_v1'),
@@ -2644,17 +2901,41 @@ begin
     perform test.check(
         exists (select 1 from public.items where id = 'itm_v2'),
         'while the rest of the bank is untouched');
+
+    -- Nor answer it. grade_attempt() reads the key as the definer, past the
+    -- select policy, so it has to ask about is_published itself: a set fetched
+    -- a moment before the veto still names the question.
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_v1', 0);
+    exception when others then
+        get stacked diagnostics v_hint = pg_exception_hint;
+        ok := v_hint = 'item_unavailable';
+    end;
+    perform test.check(ok,
+        'an answer to a vetoed question is refused, with a hint the app can read');
+    perform test.check(not exists (select 1 from public.attempts where item_id = 'itm_v1'),
+        'and nothing is recorded against it');
+
+    ok := false;
+    begin
+        insert into public.attempts (item_id, chosen_index) values ('itm_nowhere', 0);
+    exception when others then
+        get stacked diagnostics v_hint = pg_exception_hint;
+        ok := v_hint = 'item_unavailable';
+    end;
+    perform test.check(ok, 'and so is an answer to a question that never existed');
+
+    insert into public.attempts (item_id, chosen_index) values ('itm_v2', 0);
+    perform test.check(
+        (select is_correct from public.attempts where item_id = 'itm_v2'),
+        'while the question beside it takes its answer as ever');
 end
 $$;
 
 reset role;
 
-begin;
-set local role service_role;
-delete from public.item_vetoes where item_id in ('itm_v1', 'itm_v2');
-delete from public.items where bundle_id = 'bnd_veto';
+do $$ begin perform test.remove_fixture_items(array(select id from public.items where bundle_id = 'bnd_veto')); end $$;
 delete from public.bundles where id = 'bnd_veto';
-commit;
 delete from auth.users where id in ('f1111111-1111-1111-1111-111111111111',
                                     'f2222222-2222-2222-2222-222222222222');
 begin;

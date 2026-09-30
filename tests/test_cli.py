@@ -27,6 +27,9 @@ def test_normalize_full_shape_passthrough(goi_item):
 def test_generate_and_gate_kept(store, monkeypatch):
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("goi_bunpou"))
+    # A clean proofread, so the item goes on to the gate this test is about.
+    monkeypatch.setattr("bjt.fidelity.sanity.llm.sanity_check",
+                        lambda rendered, rules, model=None: {**{r: False for r in rules}, "notes": ""})
 
     # The gated item is shuffled, so locate the correct option by its text.
     correct_text = next(o["text"] for o in _valid("goi_bunpou")["options"]
@@ -50,6 +53,9 @@ def test_generate_and_gate_kept(store, monkeypatch):
 def test_generate_and_gate_skipped(store, monkeypatch):
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("hyougen"))
+    # Nothing but the generator: no proofreader and no probe to fake.
+    monkeypatch.setattr("bjt.config.SANITY_ENABLED", False)
+    monkeypatch.setattr("bjt.config.DIFFICULTY_ENABLED", False)
     item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "hyougen", "J2", gate=False)
     assert kept
     assert store.get_item(iid)["gate_verdict"] == "skipped"
@@ -79,7 +85,7 @@ def test_tester_unlimited_lifts_the_ceiling_and_is_off_by_default(capsys):
     out = capsys.readouterr().out
     assert "insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)" in out
     assert "'z@example.com', '', false" in out
-    assert "unlimited = excluded.unlimited" in out
+    assert "unlimited = excluded.unlimited" not in out, "an unnamed flag is left alone"
 
     assert cli.main(["tester", "z@example.com", "--unlimited"]) == 0
     out = capsys.readouterr().out
@@ -187,3 +193,12 @@ def test_probe_leaves_the_bundle_alone_when_nothing_could_be_measured(capsys, mo
                         lambda item, **k: difficulty.DifficultyResult(measured=False))
     assert cli.main(["probe", str(dst)]) == 1
     assert dst.read_text(encoding="utf-8") == before
+
+
+def test_a_failing_selftest_says_so_rather_than_crashing(monkeypatch, capsys):
+    """An empty accuracy report made `db_ok` a list, and `ok &= []` a
+    TypeError on the one path that exists to report a failure."""
+    from bjt.db import Store
+    monkeypatch.setattr(Store, "accuracy_by_type", lambda self: [])
+    assert cli.main(["selftest"]) == 1
+    assert "Self-test FAILED" in capsys.readouterr().out

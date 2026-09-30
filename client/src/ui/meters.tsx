@@ -69,8 +69,10 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   barRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  barLabel: { width: 72 },
-  barValue: { width: 32, textAlign: "right" },
+  // Floors rather than widths, so a larger text setting widens the column
+  // instead of wrapping 失礼度 onto two lines.
+  barLabel: { minWidth: 72 },
+  barValue: { minWidth: 32, textAlign: "right" },
   segments: { flex: 1, flexDirection: "row", gap: 4 },
   segment: { flex: 1, height: 8, borderRadius: 4 },
 });

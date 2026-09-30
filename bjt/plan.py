@@ -244,8 +244,8 @@ def work_order(
         have = s.have + assigned.get((s.item_type, s.level), 0)
         return have / schemas.EXAM_QUESTIONS.get(s.item_type, 10)
 
-    def place(n: int, candidates: list[Shelf]) -> int:
-        placed = 0
+    def place(n: int, candidates: list[Shelf]) -> list[tuple[str, str]]:
+        placed: list[tuple[str, str]] = []
         for _ in range(n):
             eligible = [
                 s
@@ -265,12 +265,12 @@ def work_order(
             )
             key = (target.item_type, target.level)
             assigned[key] = assigned.get(key, 0) + 1
-            placed += 1
+            placed.append(key)
         return placed
 
     reading = [s for s in shelves if s.item_type in schemas.READING_TYPES]
-    placed = place(min(max(reading_min, 0), budget), reading)
-    place(budget - placed, shelves)
+    floor = place(min(max(reading_min, 0), budget), reading)
+    place(budget - len(floor), shelves)
 
     by_key = {(s.item_type, s.level): s for s in shelves}
     return [
@@ -281,11 +281,16 @@ def work_order(
             have=by_key[(item_type, level)].have,
             cells_left=by_key[(item_type, level)].cells_left,
         )
-        # Furthest behind first in the output too, so a truncated run still does
-        # the most useful work.
+        # The reading floor first, then furthest behind first. The night runs
+        # the order top to bottom and its ceilings can end it anywhere, so the
+        # order is a promise about what a truncated night still wrote: the
+        # reading item a night must never come back without, and after it the
+        # most useful of the rest. A shelf the floor and the main rule both
+        # reached is one line, at the floor's place.
         for (item_type, level), n in sorted(
             assigned.items(),
             key=lambda kv: (
+                kv[0] not in floor,
                 by_key[kv[0]].have / schemas.EXAM_QUESTIONS.get(kv[0][0], 10),
                 kv[0],
             ),

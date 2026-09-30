@@ -10,6 +10,10 @@
  * lead to. What it does say is when there will be: midnight in Japan, which
  * is when the streak counts a new day too.
  *
+ * Nor is it a dead end. On home its one button leads back over the questions
+ * already answered — a review, not another question — and on any other route
+ * it leads home.
+ *
  * Shown on home once the ceiling is reached, and on the practice route if it
  * is opened past it — a deep link, a stale tab — so the door is the same
  * whichever way somebody walks up to it.
@@ -17,6 +21,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { localClock, nextJstMidnight, onJapanTime } from "../lib/day";
 import { useLang } from "../lib/i18n";
 import { Button, Card } from "./components";
 import { Face } from "./face";
@@ -29,6 +34,7 @@ export function DayDone({
   streak,
   countdown,
   onHome,
+  action,
 }: {
   /** How many were answered today; the number this screen is closing on. */
   answered: number;
@@ -37,6 +43,8 @@ export function DayDone({
   countdown?: string;
   /** Only on routes that are not home: a way back, and nothing else. */
   onHome?: () => void;
+  /** Somewhere to go that is not a question: on home, the answers already given. */
+  action?: { label: string; onPress: () => void };
 }) {
   const { t } = useLang();
   return (
@@ -50,7 +58,14 @@ export function DayDone({
       <View style={styles.facts}>
         <View style={styles.fact}>
           <Icon name="check" size={16} color={colors.correct} strokeWidth={2.4} />
-          <Text style={type.small}>{t("day_done_next")}</Text>
+          <Text style={type.small}>
+            {/* Midnight where the database counts the day. On a phone that
+                keeps another clock, "midnight" alone would be the wrong one,
+                so the hour is given on theirs as well. */}
+            {onJapanTime()
+              ? t("day_done_next")
+              : t("day_done_next_away", { time: localClock(nextJstMidnight(Date.now())) })}
+          </Text>
         </View>
         {streak > 0 ? (
           <View style={styles.fact}>
@@ -66,7 +81,12 @@ export function DayDone({
         ) : null}
       </View>
 
-      {onHome ? <Button label={t("to_home")} tone="secondary" onPress={onHome} /> : null}
+      {action || onHome ? (
+        <View style={styles.actions}>
+          {action ? <Button label={action.label} tone="secondary" onPress={action.onPress} /> : null}
+          {onHome ? <Button label={t("to_home")} tone="secondary" onPress={onHome} /> : null}
+        </View>
+      ) : null}
     </Card>
   );
 }
@@ -91,4 +111,5 @@ const styles = StyleSheet.create({
   centre: { textAlign: "center" },
   facts: { alignSelf: "stretch", gap: space.sm, alignItems: "center" },
   fact: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  actions: { alignSelf: "stretch", gap: space.md },
 });

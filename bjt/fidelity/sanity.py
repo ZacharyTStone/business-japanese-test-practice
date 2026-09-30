@@ -165,6 +165,8 @@ def run_check(item: dict, *, model: str | None = None) -> SanityResult:
         return SanityResult(checked=False, notes="sanity check disabled")
     try:
         verdict = llm.sanity_check(render_for_sanity(item), RULES, model=model)
+    except llm.LLMBillingError:
+        raise  # the run's ceiling, or an empty account: the run stops, not the item
     except llm.LLMError as e:
         return SanityResult(checked=False, notes=f"sanity check did not run: {e}")
 

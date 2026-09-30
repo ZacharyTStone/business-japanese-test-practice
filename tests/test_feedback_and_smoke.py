@@ -44,6 +44,7 @@ def _fake_kept_answer(question, options, model=None):
 
 def test_smoke_passes(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("bjt.config.DB_PATH", tmp_path / "smoke.db")
+    monkeypatch.setattr("bjt.config.SANITY_ENABLED", False)
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("goi_bunpou"))
     monkeypatch.setattr("bjt.fidelity.answerability.llm.answer_choice", _fake_kept_answer)
@@ -68,6 +69,7 @@ def test_smoke_fails_on_crash(tmp_path, monkeypatch, capsys):
 
 def test_gen_json_emits_valid_item(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("bjt.config.DB_PATH", tmp_path / "gen.db")
+    monkeypatch.setattr("bjt.config.DIFFICULTY_ENABLED", False)
     monkeypatch.setattr("bjt.generators.base.llm.generate_structured",
                         lambda *a, **k: _valid("hyougen"))
     rc = cli.cmd_gen(
