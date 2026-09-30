@@ -17,7 +17,7 @@
  */
 import type { Session } from "@supabase/supabase-js";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import { isConfigured, supabase } from "./supabase";
 
@@ -78,15 +78,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Supabase's auto-refresh timer does not run while the app is backgrounded;
     // without this, coming back after a long pause can mean a dead token.
-    const appState = AppState.addEventListener("change", (state) => {
-      if (state === "active") supabase.auth.startAutoRefresh();
-      else supabase.auth.stopAutoRefresh();
-    });
+    // Native only: in a browser supabase-js already follows the tab's
+    // visibility itself, and either call here would remove the handler it
+    // does that with — leaving a tab that was hidden and shown again with no
+    // refresh at all.
+    const appState =
+      Platform.OS === "web"
+        ? null
+        : AppState.addEventListener("change", (state) => {
+            if (state === "active") supabase.auth.startAutoRefresh();
+            else supabase.auth.stopAutoRefresh();
+          });
 
     return () => {
       cancelled = true;
       sub.subscription.unsubscribe();
-      appState.remove();
+      appState?.remove();
     };
   }, [attempt]);
 
