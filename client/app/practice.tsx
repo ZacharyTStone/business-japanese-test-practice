@@ -315,6 +315,8 @@ export default function Practice() {
   // fires again when the explanation is unfolded, and without this the screen
   // would snap back to the top just as somebody started reading it.
   const scrolledFor = useRef<string | null>(null);
+  /** How tall the sticky counter is, so a scroll to the verdict clears it. */
+  const headerHeight = useRef(0);
   const reduced = useReducedMotion();
   // The last button sits above the home indicator, not under it.
   const insets = useSafeAreaInsets();
@@ -691,6 +693,7 @@ export default function Practice() {
   function next() {
     dispatch({ type: "next", now: Date.now() });
   }
+  const nextLabel = index + 1 >= items.length ? t("btn_result") : t("btn_next");
 
   const revealed = stage === "reveal" && graded !== null;
   // Spoken options are numbers until the answer is in, unless asked for.
@@ -756,15 +759,26 @@ export default function Practice() {
   }
 
   return (
-    <ScrollView
-      ref={scroller}
-      // The column is capped and centred on a wide window: a line of Japanese
-      // past about 720 points is too long to read, and an answer card that
-      // wide is not something a pointer finds.
-      contentContainerStyle={[styles.page, page, { paddingBottom: space.xxl + insets.bottom }]}
-      keyboardShouldPersistTaps="handled"
-    >
+    <>
       <Keys onKey={onKey} />
+      <ScrollView
+        ref={scroller}
+        // The column is capped and centred on a wide window: a line of Japanese
+        // past about 720 points is too long to read, and an answer card that
+        // wide is not something a pointer finds.
+        contentContainerStyle={[styles.page, page, { paddingBottom: space.xxl + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+        // The counter and the clock stay at the top while a long passage
+        // scrolls under them: a clock that has scrolled away is not pacing
+        // anybody.
+        stickyHeaderIndices={[0]}
+      >
+      <View
+        style={styles.header}
+        onLayout={(e) => {
+          headerHeight.current = e.nativeEvent.layout.height;
+        }}
+      >
       <View
         style={styles.progressRow}
         accessible
@@ -787,10 +801,10 @@ export default function Practice() {
       </View>
 
       {/* The clock, on the reading questions only, directly under the counter:
-          both of them answer "where am I", and a learner scrolling a long
-          passage scrolls back to one place rather than two. It keeps running
-          until the answer is in and then freezes at what was left, which is the
-          number worth seeing on the way to the next question. */}
+          both of them answer "where am I", and both stay in view while the
+          passage scrolls. It keeps running until the answer is in and then
+          freezes at what was left, which is the number worth seeing on the way
+          to the next question. */}
       {clockSeconds > 0 ? (
         <QuestionClock
           // A new question is a new clock, not the last one's leftovers.
@@ -801,6 +815,7 @@ export default function Practice() {
           onExpire={() => void choose(NO_ANSWER)}
         />
       ) : null}
+      </View>
 
       <SceneStrip item={item} big={stage === "scene"} />
 
@@ -930,10 +945,12 @@ export default function Practice() {
           onLayout={(e) => {
             if (scrolledFor.current === item.id) return;
             scrolledFor.current = item.id;
-            const y = e.nativeEvent.layout.y;
+            // Clear of the sticky counter, which would otherwise sit on top of
+            // the verdict's first line.
+            const y = e.nativeEvent.layout.y - headerHeight.current;
             // Jumped rather than glided for somebody who has asked the OS for
             // less motion.
-            scroller.current?.scrollTo({ y: Math.max(0, y - space.lg), animated: !reduced });
+            scroller.current?.scrollTo({ y: Math.max(0, y - space.sm), animated: !reduced });
           }}
         >
           <Card
@@ -993,6 +1010,18 @@ export default function Practice() {
               </Text>
             ) : null}
           </Card>
+
+          {/* The way on, right under the verdict: most answers need no more
+              than the verdict, and the explanation below can be long. The one
+              at the bottom is for whoever read all of it. */}
+          <Button
+            label={nextLabel}
+            // The other half of the keyboard hint, where the key it names is
+            // the one that does something.
+            sub={HAS_KEYBOARD ? t("key_hint_next") : undefined}
+            icon="chevron"
+            onPress={next}
+          />
 
           <Pressable
             accessibilityRole="button"
@@ -1071,17 +1100,11 @@ export default function Practice() {
               still in view, and worth nobody's attention before then. */}
           <ReportQuestion key={`${item.id}-report`} itemId={item.id} />
 
-          <Button
-            label={index + 1 >= items.length ? t("btn_result") : t("btn_next")}
-            // The other half of the keyboard hint, where the key it names is
-            // the one that does something.
-            sub={HAS_KEYBOARD ? t("key_hint_next") : undefined}
-            icon="chevron"
-            onPress={next}
-          />
+          <Button label={nextLabel} icon="chevron" onPress={next} />
         </FadeIn>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
@@ -1241,6 +1264,17 @@ function SceneImage({ uri }: { uri: string }) {
 
 const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.lg, paddingBottom: space.xxl },
+  // The counter and the clock, stuck to the top of the scroll. Its own
+  // background, out to the page's edges, so a passage scrolling under it does
+  // not show through.
+  header: {
+    backgroundColor: colors.bg,
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    marginVertical: -space.sm,
+    gap: space.sm,
+  },
   progressRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   strip: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   stripPill: {
