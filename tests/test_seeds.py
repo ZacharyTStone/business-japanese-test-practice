@@ -80,3 +80,44 @@ def test_the_cli_bootstraps_and_reports(tmp_path, monkeypatch, capsys):
     assert cli.main(["seeds", "--bootstrap"]) == 0
     out = capsys.readouterr().out
     assert "Built" in out and "bootstrapped from batches/" in out
+
+
+# ----- only what a learner still meets is an example -------------------------
+
+def _source_ids(examples: dict) -> set:
+    """The ids an example was taken from (ids are stripped; stems are not)."""
+    from bjt import batch
+    by_stem = {it["stem"]: it["id"] for path in batch.bundles()
+               for it in batch.load(path)["items"]}
+    return {by_stem[ex["stem"]] for items in examples.values() for ex in items}
+
+
+def test_no_bootstrapped_example_is_a_withdrawn_question():
+    from bjt import withdrawn
+    gone = withdrawn.ids()
+    assert gone, "the ledger has lines, so this test means something"
+    assert not _source_ids(seeds.examples_from_batches()) & gone
+
+
+def _bundle(path, item_type, items):
+    path.write_text(json.dumps({"item_type": item_type, "level": "J2", "items": items},
+                               ensure_ascii=False), encoding="utf-8")
+
+
+def test_a_withdrawn_or_regate_failed_question_is_never_an_example(tmp_path):
+    from bjt import backfill, withdrawn
+
+    items = [{"id": f"id{i}", "stem": f"stem {i}", "options": [], "explanation_ja": "x"}
+             for i in range(4)]
+    _bundle(tmp_path / "goi_bunpou_J2_001.json", "goi_bunpou", items)
+    (tmp_path / withdrawn.LEDGER_NAME).write_text(
+        "id0  unnatural     Invented keigo nobody says.\n", encoding="utf-8")
+    ledger = tmp_path / backfill.REGATE_LEDGER_NAME
+    backfill.record_regated(backfill.Regated("id1", "discarded:sanity", "2026-09-30",
+                                             "unnatural", "flagged"), ledger)
+    backfill.record_regated(backfill.Regated("id2", "overruled", "2026-09-30",
+                                             "unnatural", "the owner keeps it"), ledger)
+    backfill.record_regated(backfill.Regated("id3", "kept", "2026-09-30", "-", "clean"), ledger)
+
+    stems = [ex["stem"] for ex in seeds.examples_from_batches(tmp_path)["goi_bunpou"]]
+    assert stems == ["stem 2", "stem 3"], "overruled and kept stay; withdrawn and failed go"
