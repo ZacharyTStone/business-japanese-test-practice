@@ -44,6 +44,7 @@
  * **No ads here, ever.** Not in a break, not between the narration and the
  * options. See AdSlot: the placement type has no member for this screen.
  */
+import { clearPreloadedSource, preload } from "expo-audio";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { AppState, Image, Platform, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
@@ -232,9 +233,42 @@ export default function Practice() {
     busy: boolean;
   } | null>(null);
   const userId = session?.user?.id ?? null;
+  /** The question whose audio would not play, if the one on screen is it: its
+   *  words go on the page, as they do for an item with no clips yet. */
+  const [audioFailedFor, setAudioFailedFor] = useState<string | null>(null);
   /** Today's count as the day stood when the set was built, for the day's done
    *  screen if the database closes the day part-way through. */
   const answeredAtLoad = useRef(0);
+
+  /** Every clip the set will play, fetched as soon as the set is known, and let
+   *  go when the screen is. */
+  const warmed = useRef<string[]>([]);
+
+  /**
+   * The set's sound and pictures, fetched while the first question is read.
+   *
+   * Each clip is its own player, made when the one before it ends, so a clip
+   * that is only fetched then leaves a gap between two turns of a conversation
+   * as long as the connection is slow — and on a train, a gap that never ends.
+   * The whole set was fetched up front so that a tunnel does not lose it; this
+   * is the same promise kept for what it plays and shows.
+   */
+  function warm(queue: QueuedItem[], spokenLabels: string[] | null) {
+    const urls = new Set<string>();
+    for (const it of queue) {
+      for (const url of playlistFor(it, spokenLabels)) urls.add(url);
+      const scene = sceneUrl(it.scene_image_path);
+      if (scene) Image.prefetch(scene).catch(() => false);
+    }
+    for (const url of urls) {
+      try {
+        void Promise.resolve(preload(url)).catch(() => undefined);
+        warmed.current.push(url);
+      } catch {
+        // No preloading here: the clip is fetched when it plays, as before.
+      }
+    }
+  }
 
   const startedAt = useRef(Date.now());
   const levelsBefore = useRef<SectionLevel[]>([]);
@@ -295,6 +329,7 @@ export default function Practice() {
         }
         dispatch({ type: "loaded", items: queue, now: Date.now() });
         setLoaded(true);
+        warm(queue, spokenLabels);
         mayVeto().then(setCanVeto).catch(() => setCanVeto(false));
       } catch (e) {
         if (!cancelled) setError(errorText(e));
@@ -302,6 +337,14 @@ export default function Practice() {
     })();
     return () => {
       cancelled = true;
+      for (const url of warmed.current) {
+        try {
+          void Promise.resolve(clearPreloadedSource(url)).catch(() => undefined);
+        } catch {
+          // Nothing held for it.
+        }
+      }
+      warmed.current = [];
     };
   }, [session?.user?.id]);
 
@@ -398,7 +441,9 @@ export default function Practice() {
       elapsedMs: pending.at - state.shownAt,
       thinkMs: thinkTime(state, pending, {
         selfPaced: Boolean(pace[it.item_type]),
-        listenable: playlistFor(it, labels).length > 0,
+        // Audio that would not play left the item to be read, with no audio to
+        // time from: the same as an item with no clips.
+        listenable: playlistFor(it, labels).length > 0 && audioFailedFor !== it.id,
       }),
       replays: state.replays,
       peeked: state.peeked,
@@ -556,8 +601,10 @@ export default function Practice() {
   // Narration that exists only as text — a listening type whose clip has not
   // been synthesised, or a reading type, where the stem *is* the question.
   const narrationUrl = clipUrl(item.narration_path);
-  const stemAsText = !narrationUrl;
-  const dialogueAsText = (item.dialogue?.length ?? 0) > 0 && !listenable;
+  // Audio that would not play is the same case: the words go on the page.
+  const audioFailed = audioFailedFor === item.id;
+  const stemAsText = !narrationUrl || audioFailed;
+  const dialogueAsText = (item.dialogue?.length ?? 0) > 0 && (!listenable || audioFailed);
 
   /**
    * Answer the question — or, with `NO_ANSWER`, record that the clock took it.
@@ -589,7 +636,9 @@ export default function Practice() {
 
   const revealed = stage === "reveal" && graded !== null;
   // Spoken options are numbers until the answer is in, unless asked for.
-  const optionTextHidden = spokenOptions !== null && !revealed && !optionsAsText;
+  // ...and printed when they could not be heard, which is not the learner
+  // asking for help, so it is not `peeked`.
+  const optionTextHidden = spokenOptions !== null && !revealed && !optionsAsText && !audioFailed;
   // Options can be answered while the clips still play, but only when they
   // show no text: numbers and play buttons give nothing away, a printed
   // sentence does.
@@ -719,7 +768,7 @@ export default function Practice() {
               <DocumentView key={`${item.id}-doc-${i}`} doc={doc} />
             ))}
 
-            {dialogueAsText ? <DialoguePlayer turns={item.dialogue} /> : null}
+            {dialogueAsText ? <DialoguePlayer turns={item.dialogue} unplayable={audioFailed} /> : null}
 
             {listenable ? (
               <AutoPlaylist
@@ -727,6 +776,7 @@ export default function Practice() {
                 urls={playlist}
                 autoplay={stage === "listen"}
                 onFinished={() => go("answer")}
+                onFailed={() => setAudioFailedFor(item.id)}
                 onReplay={() => dispatch({ type: "replayed" })}
               />
             ) : null}
@@ -976,7 +1026,7 @@ export default function Practice() {
                   on the card above, and a dialogue with no clips is already
                   there as a script, so neither is repeated here. */}
               <Transcript
-                turns={listenable ? (item.dialogue ?? []) : []}
+                turns={dialogueAsText ? [] : (item.dialogue ?? [])}
                 narration={stemAsText ? null : { text: item.stem, url: narrationUrl }}
               />
             </Card>
