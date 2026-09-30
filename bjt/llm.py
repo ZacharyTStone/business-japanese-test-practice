@@ -19,7 +19,6 @@ import json
 import math
 import os
 import random
-import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,6 +26,7 @@ from types import SimpleNamespace
 from typing import Any, Optional
 
 from . import config
+from .files import write_atomic
 
 _client = None
 
@@ -202,17 +202,9 @@ class Spend:
         """Write the totals to the shared ledger, whole or not at all."""
         if self.ledger is None or self.ledger_error is not None:
             return
-        body = json.dumps({"usd": self.usd, "calls": self.calls,
-                           "attempts": self.attempts, "started_at": self.started})
-        self.ledger.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(prefix=self.ledger.name + ".", dir=self.ledger.parent)
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                fh.write(body + "\n")
-            os.replace(tmp, self.ledger)
-        except BaseException:
-            Path(tmp).unlink(missing_ok=True)
-            raise
+        write_atomic(self.ledger, json.dumps({
+            "usd": self.usd, "calls": self.calls,
+            "attempts": self.attempts, "started_at": self.started}) + "\n")
 
     @property
     def minutes(self) -> float:

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from . import seedtable, withdrawn
+from .files import write_atomic
 
 
 def lit(value: Any) -> str:
@@ -231,6 +232,5 @@ def publish_bundle(path: Path, out: Optional[Path] = None) -> tuple[Path, dict]:
     bundle_id = Path(path).stem
     sql = bundle_sql(bundle, bundle_id)
     out = out or Path(path).with_suffix(".sql")
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(sql, encoding="utf-8")
+    write_atomic(out, sql)
     return out, bundle

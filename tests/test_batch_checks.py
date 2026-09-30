@@ -443,16 +443,20 @@ def test_source_files_are_not_counted_as_bundles(tmp_path, monkeypatch):
     assert batch.spent_cell_ids("t") == {"a+b+c@J2"}
 
 
-def test_a_damaged_bundle_does_not_take_the_ledger_down(tmp_path, monkeypatch):
-    """One unreadable file must not make every other cell look free — that is
-    the failure mode this whole ledger exists to prevent."""
+def test_a_damaged_bundle_stops_the_ledger_rather_than_freeing_its_cells(tmp_path, monkeypatch):
+    """An unreadable file must not make any cell look free — that is the
+    failure mode this whole ledger exists to prevent. Skipped, the damaged
+    bundle's own cells would be handed out again and the new items would
+    take over its questions' ids; so the ledger refuses to answer and names
+    the file."""
     monkeypatch.setattr(config, "BATCH_DIR", tmp_path)
     (tmp_path / "t_J2_001.json").write_text(
         json.dumps({"item_type": "t", "level": "J2", "items": [{"seed_cell": {"id": "x@J2"}}]}),
         encoding="utf-8",
     )
     (tmp_path / "t_J2_002.json").write_text("{ not json", encoding="utf-8")
-    assert batch.spent_cell_ids("t") == {"x@J2"}
+    with pytest.raises(ValueError, match="t_J2_002.json"):
+        batch.spent_cell_ids("t")
 
 
 def test_a_small_batch_that_always_answers_a_is_caught(bundle):

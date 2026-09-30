@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Callable, Protocol
 
 from . import config, llm, scenes
+from .files import write_atomic
 
 # ----- image providers ------------------------------------------------------
 
@@ -389,7 +390,9 @@ def draw(
                 record.error = str(exc)
                 break
             if verdict.approved:
-                (out_dir / f"{scene.scene_id}{provider.suffix}").write_bytes(image)
+                # Whole or not at all: the survey counts any file here as the
+                # scene's artwork, and the upload sends it.
+                write_atomic(out_dir / f"{scene.scene_id}{provider.suffix}", image)
                 rel = scenes.storage_path(scene.scene_id, provider.suffix)
                 record.path = rel if provider.real else f"placeholder/{rel}"
                 break
@@ -433,18 +436,32 @@ class Bucket:
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.key}", "apikey": self.key}
 
+    #: Rows per listing request; the storage API returns at most this many,
+    #: so a longer folder is read a page at a time.
+    PAGE = 1000
+
     def list(self, prefix: str = "") -> set[str]:
         """Names of the files at the bucket root — the artwork already shipped.
 
-        With a prefix, the names under that folder (without the folder)."""
+        With a prefix, the names under that folder (without the folder). Every
+        page of them: the refusals ledger grows by a file per refused draft,
+        and a ledger read only to its thousandth file would forget the rest and
+        draw given-up pictures again."""
         if not self.configured:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
-        rows = _json_request(
-            "POST", f"{self.url}/storage/v1/object/list/{self.name}",
-            {"prefix": prefix, "limit": 1000, "offset": 0,
-             "sortBy": {"column": "name", "order": "asc"}},
-            headers=self._headers(),
-        )
+        rows: list = []
+        while True:
+            page = _json_request(
+                "POST", f"{self.url}/storage/v1/object/list/{self.name}",
+                {"prefix": prefix, "limit": self.PAGE, "offset": len(rows),
+                 "sortBy": {"column": "name", "order": "asc"}},
+                headers=self._headers(),
+            )
+            if not isinstance(page, list):
+                raise RuntimeError(f"listing the `{self.name}` bucket returned {type(page).__name__}")
+            rows += page
+            if len(page) < self.PAGE:
+                break
         names = {row["name"] for row in rows if row.get("id") is not None}  # folders have no id
         if prefix:
             return names

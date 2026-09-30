@@ -34,6 +34,7 @@ from . import (
 from . import llm as llmmod
 from .llm import LLMBillingError, LLMError
 from .db import Store
+from .files import write_atomic
 from .fidelity import difficulty, discriminator, roles, vocab
 from .generators import GENERATORS, get_generator
 
@@ -1156,7 +1157,7 @@ def cmd_synth(args) -> int:
     out = pathlib.Path(args.out) if args.out else path.with_name(
         path.stem + ".audio.sql"
     )
-    out.write_text(synth.to_sql(result), encoding="utf-8")
+    write_atomic(out, synth.to_sql(result))
     print(f"\nWrote {out}")
 
     record = (args.media_dir or config.MEDIA_DIR) / "reports" / f"{path.stem}.json"
@@ -1323,7 +1324,7 @@ def cmd_scenes(args) -> int:
 
     if args.sql:
         out = pathlib.Path(args.out) if args.out else config.ROOT / "batches" / "scenes.sql"
-        out.write_text(scenemod.to_sql(survey), encoding="utf-8")
+        write_atomic(out, scenemod.to_sql(survey))
         borrowed = [(s, scenemod.stand_in_for(s, survey)) for s in survey]
         borrowed = [(s, o) for s, o in borrowed if o is not None]
         print(f"Wrote {out}  ({len(have)} scene(s) with artwork"

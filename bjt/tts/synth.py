@@ -29,11 +29,13 @@ learner first heard.
 """
 from __future__ import annotations
 
+import io
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .. import config, publish, scene_art
+from ..files import write_atomic
 from . import channel as channel_mod
 from .providers import Provider, direction_for, get_provider
 
@@ -148,9 +150,14 @@ def synthesise_bundle(
         dest = out_dir / rel
 
         if dest.exists() and not force and not named:
-            report.reused.append(
-                ClipResult(clip["clip_id"], rel, _duration_of(dest), reused=True)
-            )
+            try:
+                ms = _duration_of(dest)
+            except ValueError as exc:
+                # Not a clip: a write cut short, most likely. Pointing the
+                # database at it would ship a broken or zero-length file.
+                report.failed.append((clip["clip_id"], f"{exc}; delete {dest} to have it made again"))
+                continue
+            report.reused.append(ClipResult(clip["clip_id"], rel, ms, reused=True))
             continue
 
         if limit is not None and made >= limit:
@@ -169,8 +176,7 @@ def synthesise_bundle(
             report.failed.append((clip["clip_id"], str(exc)))
             continue
 
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(processed)
+        write_atomic(dest, processed)
         made += 1
         if named and have and clip["clip_id"] in have:
             report.remade.append(clip["clip_id"])
@@ -182,10 +188,25 @@ def synthesise_bundle(
 
 
 def _duration_of(path: Path) -> int:
+    """How long a clip on disk is. Raises ValueError for a file that is not a
+    whole WAV — unreadable, cut short of the frames its header promises, or
+    empty — rather than calling it zero milliseconds long: a zero here went
+    into the SQL and shipped."""
+    import wave
+
+    data = path.read_bytes()
     try:
-        return channel_mod.duration_ms(path.read_bytes())
-    except Exception:  # noqa: BLE001 - a corrupt file should not stop a report
-        return 0
+        with wave.open(io.BytesIO(data), "rb") as w:
+            declared = w.getnframes()
+            frames = len(w.readframes(declared)) // max(1, w.getsampwidth() * w.getnchannels())
+    except (wave.Error, EOFError) as exc:
+        raise ValueError(f"{path.name} is not a readable WAV ({exc})") from exc
+    if frames < declared:
+        raise ValueError(f"{path.name} is cut short: {frames} of {declared} frames")
+    ms = channel_mod.duration_ms(data)
+    if ms <= 0:
+        raise ValueError(f"{path.name} has no audio in it")
+    return ms
 
 
 def read_have(path: Path) -> set[str]:
