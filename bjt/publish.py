@@ -25,6 +25,8 @@ Two things this must get right:
 from __future__ import annotations
 
 import json
+import math
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -36,23 +38,46 @@ def lit(value: Any) -> str:
     """A SQL literal for anything we put in a bundle.
 
     Dicts and lists become jsonb. Everything else becomes a quoted string with
-    embedded quotes doubled, or NULL.
+    embedded quotes doubled, or NULL. A float that is not a number (nan, inf)
+    is refused: written bare it is an identifier Postgres does not know, and
+    quoted it would be a value nobody measured. So is a NUL, which a Postgres
+    text value cannot hold.
     """
     if value is None:
         return "null"
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f"{value!r} is not a number SQL can store")
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, (dict, list)):
-        return _quote(json.dumps(value, ensure_ascii=False)) + "::jsonb"
+        # allow_nan=False: JSON has no NaN either, and jsonb would refuse it.
+        return _quote(json.dumps(value, ensure_ascii=False, allow_nan=False)) + "::jsonb"
     return _quote(str(value))
 
 
 def _quote(s: str) -> str:
     # Backslashes are literal in standard_conforming_strings, which Postgres has
     # had on by default for fifteen years; only the quote needs doubling.
+    if "\x00" in s:
+        raise ValueError("a NUL cannot be stored in a Postgres text value")
     return "'" + s.replace("'", "''") + "'"
+
+
+#: What ends a `--` comment line, or hides where one ends: a line break of any
+#: kind, and every other control character.
+_NOT_IN_A_COMMENT = re.compile(r"[\x00-\x1f\x7f\x85\u2028\u2029]+")
+
+
+def comment(value: Any) -> str:
+    """A value made safe to write inside a `-- ...` SQL comment line.
+
+    The comment ends at the line break, so a newline in a value put into one —
+    a model name, a date, an address typed into a form — would start a line of
+    SQL that runs. Every line break and control character becomes one space.
+    """
+    return _NOT_IN_A_COMMENT.sub(" ", str(value))
 
 
 def _upsert(table: str, columns: list[str], rows: list[list[Any]], key: list[str]) -> str:
@@ -97,8 +122,9 @@ def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] =
     gone = withdrawn.ids() if withdrawn_ids is None else set(withdrawn_ids)
 
     parts: list[str] = [
-        f"-- {bundle_id}: {len(items)} × {item_type} ({bundle['level']})",
-        f"-- generated {bundle.get('generated_at', '')} by {bundle.get('generator_model', '')}",
+        f"-- {comment(bundle_id)}: {len(items)} × {comment(item_type)} ({comment(bundle['level'])})",
+        f"-- generated {comment(bundle.get('generated_at', ''))} "
+        f"by {comment(bundle.get('generator_model', ''))}",
         "-- Produced by `bjt publish`. Idempotent: re-running replaces these rows.",
         "",
         "begin;",

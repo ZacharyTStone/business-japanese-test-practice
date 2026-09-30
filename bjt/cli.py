@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 import textwrap
 
@@ -1394,6 +1395,16 @@ def cmd_render(args) -> int:
     return 0
 
 
+#: A user id as Supabase writes one.
+_UUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+#: One @, something before it, a dotted domain after it, and no space or
+#: control character anywhere: an address the sign-in form accepts, and one
+#: that cannot end the comment line it is printed in. Quotes are allowed
+#: (o'brien@…) — `publish.lit` doubles them.
+_EMAIL = re.compile(r"^[^@\s\x00-\x1f\x7f]+@[^@\s\x00-\x1f\x7f]+\.[^@\s\x00-\x1f\x7f.]+$")
+
+
 def cmd_grant(args) -> int:
     """SQL granting (or withdrawing) the ad-free unlock for one user.
 
@@ -1401,6 +1412,9 @@ def cmd_grant(args) -> int:
     reaches the database is a file somebody can read first. It also means no key
     that can write entitlements has to live anywhere near this process.
     """
+    if not _UUID.match(args.user):
+        print(f"not a user id (a uuid): {args.user!r}", file=sys.stderr)
+        return 2
     fn = "revoke_entitlement" if args.revoke else "grant_entitlement"
     call = (
         f"select * from public.{fn}({publish.lit(args.user)}, {publish.lit(args.product)}"
@@ -1413,7 +1427,8 @@ def cmd_grant(args) -> int:
         )
         + ");"
     )
-    print(f"-- {'Revoke' if args.revoke else 'Grant'} {args.product} for {args.user}.")
+    print(f"-- {'Revoke' if args.revoke else 'Grant'} {publish.comment(args.product)} "
+          f"for {args.user}.")
     print("-- Runs as the service role; a client cannot call either function.")
     if not args.revoke:
         print("-- Idempotent: a replayed purchase updates the row it already wrote.")
@@ -1432,7 +1447,7 @@ def cmd_tester(args) -> int:
     that can write it has to live near this process.
     """
     email = args.email.strip().lower()
-    if "@" not in email:
+    if not _EMAIL.match(email) or len(email) > 254:
         print(f"not an email address: {args.email!r}", file=sys.stderr)
         return 2
     if args.remove:

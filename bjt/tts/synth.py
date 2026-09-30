@@ -273,7 +273,7 @@ def to_sql(report: SynthReport) -> str:
     if not report.clips:
         if report.live:
             return (
-                f"-- Every clip of {report.bundle} is already live "
+                f"-- Every clip of {publish.comment(report.bundle)} is already live "
                 f"({len(report.live)} clip(s)).\n-- Nothing to apply.\n"
             )
         return (
@@ -282,7 +282,8 @@ def to_sql(report: SynthReport) -> str:
         )
 
     lines = [
-        f"-- Audio paths for {report.bundle}, synthesised by {report.provider}.",
+        f"-- Audio paths for {publish.comment(report.bundle)}, "
+        f"synthesised by {publish.comment(report.provider)}.",
         f"-- {len(report.written)} synthesised, {len(report.reused)} reused, "
         f"{len(report.live)} already live and left alone.",
         *([f"-- {len(report.remade)} of them replace a clip that was already live, "
