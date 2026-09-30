@@ -64,9 +64,48 @@ def test_cache_writes_and_reads_are_priced_as_the_list_has_them():
     assert llm.price_usd("claude-sonnet-5", u) == pytest.approx(2.70)
 
 
-def test_an_unknown_model_is_priced_as_the_dearest_known():
+@pytest.mark.parametrize("model, dollars", [
+    # A million in and a million out, at each family's list price.
+    ("claude-fable-5-1", 60.0),
+    ("claude-fable-5", 60.0),
+    ("claude-opus-5-5", 24.0),
+    ("claude-opus-5", 30.0),
+    ("claude-opus-4-8", 30.0),
+    ("claude-opus-4-7", 30.0),
+    ("claude-opus-4-6", 30.0),
+    ("claude-sonnet-5-5", 12.0),
+    ("claude-sonnet-5", 12.0),
+    ("claude-sonnet-4-6", 18.0),
+    ("claude-haiku-4-5", 6.0),
+])
+def test_every_model_in_use_is_priced_at_its_list_price(model, dollars):
     u = _usage(input_tokens=1_000_000, output_tokens=1_000_000)
-    assert llm.price_usd("claude-something-new", u) == pytest.approx(30.0)
+    assert llm.price_usd(model, u) == pytest.approx(dollars)
+
+
+def test_the_longest_prefix_wins():
+    """Sonnet 4.6 is dearer than the Sonnet 5 family, and Opus 5.5 cheaper
+    than Opus 5: a shorter prefix matching first priced both wrongly."""
+    assert llm.rates_for("claude-sonnet-4-6") == (3.0, 15.0)
+    assert llm.rates_for("claude-opus-5-5") == (4.0, 20.0)
+    assert llm.rates_for("claude-fable-5-1") == (10.0, 50.0)
+
+
+def test_an_unknown_model_is_priced_above_every_known_one():
+    u = _usage(input_tokens=1_000_000, output_tokens=1_000_000)
+    assert llm.price_usd("claude-something-new", u) == pytest.approx(90.0)
+    assert llm.price_usd("claude-opus", u) == pytest.approx(90.0), "a family name is not a model"
+    rows = llm.PRICES_USD_PER_MTOK.values()
+    assert llm.UNKNOWN_MODEL_USD_PER_MTOK[0] > max(r[0] for r in rows)
+    assert llm.UNKNOWN_MODEL_USD_PER_MTOK[1] > max(r[1] for r in rows)
+
+
+def test_the_configured_models_are_all_in_the_table():
+    """A default that falls through to the unknown price would make every
+    night look five times dearer than it is and stop it early."""
+    for model in (config.GEN_MODEL, config.JUDGE_MODEL, config.SANITY_MODEL,
+                  config.DIFFICULTY_MODEL):
+        assert llm.rates_for(model) != llm.UNKNOWN_MODEL_USD_PER_MTOK, model
 
 
 def test_a_usage_with_missing_fields_still_prices():

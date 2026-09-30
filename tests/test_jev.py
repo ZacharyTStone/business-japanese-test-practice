@@ -149,7 +149,8 @@ def test_jev_bills_input_only_at_typesafes_rate():
 
 def test_jev_does_not_change_what_an_unknown_model_is_priced_as():
     u = SimpleNamespace(input_tokens=1_000_000, output_tokens=1_000_000)
-    assert llm.price_usd("claude-something-new", u) == llm.price_usd("claude-opus-5", u)
+    assert llm.rates_for("claude-something-new") == llm.UNKNOWN_MODEL_USD_PER_MTOK
+    assert llm.price_usd("claude-something-new", u) > llm.price_usd("claude-fable-5-1", u)
 
 
 def test_a_reply_without_usage_is_priced_on_the_request_size(ledger, keyed, wire):

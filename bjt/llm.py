@@ -64,27 +64,46 @@ class LLMSpendLimitError(LLMBillingError):
 # ----- the spend ledger --------------------------------------------------
 #
 # Dollars per million tokens (input, output), by model name prefix, as each
-# provider's price list has them. Cache writes cost a quarter more than plain
-# input and cache reads a tenth of it. A model not in the table is priced as
-# the dearest one there — the ledger exists to stop a run, and a guess that is
-# too low is the one kind of wrong it must not be.
+# provider's price list has them; the longest prefix that matches wins, so
+# `claude-opus-5-5` is not priced as `claude-opus-5` and `claude-sonnet-4-6`
+# is not priced as the Sonnet 5 family. Cache writes cost a quarter more than
+# plain input and cache reads a tenth of it (a few newer models read the cache
+# for less; a tenth over-prices them, which is the safe side). A model not in
+# the table is priced at UNKNOWN_MODEL_USD_PER_MTOK, dearer than anything in
+# it: the ledger exists to stop a run, and a guess that is too low is the one
+# kind of wrong it must not be.
 PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
-    "claude-opus": (5.0, 25.0),
-    "claude-sonnet": (2.0, 10.0),
-    "claude-haiku": (1.0, 5.0),
+    "claude-fable-5-1": (10.0, 50.0),
+    "claude-fable-5": (10.0, 50.0),
+    "claude-opus-5-5": (4.0, 20.0),
+    "claude-opus-5": (5.0, 25.0),
+    "claude-opus-4-8": (5.0, 25.0),
+    "claude-opus-4-7": (5.0, 25.0),
+    "claude-opus-4-6": (5.0, 25.0),
+    "claude-sonnet-5-5": (2.0, 10.0),
+    "claude-sonnet-5": (2.0, 10.0),
+    "claude-sonnet-4-6": (3.0, 15.0),
+    "claude-haiku-4-5": (1.0, 5.0),
     "jev": (0.042, 0.0),  # TypeSafe AI bills input only (bjt/jev.py)
 }
+#: For a model the table does not name. Deliberately above every row.
+UNKNOWN_MODEL_USD_PER_MTOK: tuple[float, float] = (15.0, 75.0)
 CACHE_WRITE_MULTIPLIER = 1.25
 CACHE_READ_MULTIPLIER = 0.10
 
 
+def rates_for(model: str) -> tuple[float, float]:
+    """(input, output) dollars per million tokens: the longest matching
+    prefix's row, or the unknown-model price."""
+    matches = [prefix for prefix in PRICES_USD_PER_MTOK if model.startswith(prefix)]
+    if not matches:
+        return UNKNOWN_MODEL_USD_PER_MTOK
+    return PRICES_USD_PER_MTOK[max(matches, key=len)]
+
+
 def price_usd(model: str, usage: Any) -> float:
     """What one response cost, from the usage the API reports on it."""
-    rates = next((r for prefix, r in PRICES_USD_PER_MTOK.items()
-                  if model.startswith(prefix)), None)
-    if rates is None:
-        rates = max(PRICES_USD_PER_MTOK.values(), key=lambda r: r[1])
-    per_in, per_out = rates
+    per_in, per_out = rates_for(model)
     get = lambda name: int(getattr(usage, name, None) or 0)  # noqa: E731
     plain = get("input_tokens")
     written = get("cache_creation_input_tokens")
