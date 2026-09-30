@@ -19,6 +19,7 @@ ruff check .                            # bugs only: undefined names, unused var
 supabase/test/run.sh                    # schema + RLS + publish, on a throwaway Postgres
 cd client && npm run typecheck          # the app
 cd client && npm test                   # the app's pure parts: the practice reducer, the clock, the roles
+cd client && npm run lint               # the rules of hooks
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json   # the reference batch
 ```
 
@@ -29,7 +30,10 @@ tag names, from `bjt/` and `seedtable/`) and `python supabase/snapshot.py`
 -m bjt plan` (not a check) to see whether the bank is still the shape the queue
 needs. `supabase/test/run.sh` starts its own Postgres if `PGHOST` is unset, and
 fails if a table, view, column or function named by a query in `client/src/lib`
-does not exist — the check that catches a schema change the app has missed.
+does not exist, if the app writes a column the signed-in role may not, or if
+`client/src/lib/database.types.ts` no longer matches the schema
+(`BJT_TYPEGEN_WRITE=1 supabase/test/run.sh` regenerates it) — the checks that
+catch a schema change the app has missed.
 
 ## Invariants worth not breaking
 
@@ -46,9 +50,11 @@ accident is not.
   `nightly.yml`, both pinned at or below 0.5 by `tests/test_ceilings.py`). A
   manual run can ask for the difficulty probe (`bjt probe --all`) instead. The
   nightly job opens a pull request and never publishes: that branch is the
-  review gate and the one exception to main-only. Merging it is the
-  decision to ship — once `checks` is green on `main`, the **deploy database**
-  workflow runs by itself and publishes the items and their audio together.
+  review gate and, with Dependabot's weekly pull request of pinned-action
+  updates, the only exception to main-only. Merging it is the decision to
+  ship — once `checks` is green on `main`, the **deploy database** workflow
+  runs by itself, deploys exactly the commit `checks` passed, and publishes the
+  items and their audio together; by hand it runs only from `main`.
 - **A run's ceilings are checked before the call, not after.** `bjt/llm.py`
   prices each response from its reported usage and refuses the next call once
   the process has spent `BJT_RUN_BUDGET_USD` (default $2), made
@@ -171,7 +177,7 @@ accident is not.
 - **第1部 speaks its options.** All three 聴解 types read their four candidates
   aloud instead of printing them, as the exam does (the picture and bare
   numerals; in 総合聴解, nothing). `TYPE_AUDIO` in `bjt/tts/plan.py` and
-  `SPOKEN_OPTION_TYPES` in the practice screen must agree. An item without its
+  `SPOKEN_OPTION_TYPES` in `client/src/lib/playlist.ts` must agree. An item without its
   option clips yet falls back to printed options, so this ships progressively.
 - **A spoken option is introduced by its number.** 「いち」「に」「さん」「よん」 play before
   the four candidates: only the badges are on screen, and four unlabelled
@@ -282,7 +288,9 @@ accident is not.
 - **Ten a day, fifteen at most, and the database counts.** The daily set is
   `profiles.daily_goal` (default 10, never above 15, never chosen in the app);
   one bonus set follows; at fifteen answers in a Japanese calendar day
-  `next_items()` returns nothing and the app shows the done screen
+  `next_items()` returns nothing, `grade_attempt()` refuses a sixteenth answer
+  (hint `daily_limit_reached`, counted under a per-learner lock so a second
+  device cannot slip past), and the app shows the done screen
   (`client/src/ui/done.tsx`); `v_my_day` is the one row both read. A tester row
   with `unlimited = true` (`bjt tester <email> --unlimited`) lifts the ceiling
   for that account alone, for exercising the app, not for studying. **One
@@ -294,8 +302,10 @@ accident is not.
   `v_my_day.goal_max` (null for everybody else) draws the field on the account
   screen, so no screen copies the fifteen. The `daily_goal` check constraint
   says only that a day is at least one question; the per-account bound is a
-  trigger on `profiles`, because a constraint cannot see who is writing and
-  without it any tester could PATCH their own row past the ceiling. The trigger
+  trigger on `profiles`, because a constraint cannot see who is writing: it
+  refuses a client's change of `daily_goal` on every account whose tester row
+  has no `max_daily_goal`, and one above that number on the account that has
+  it. The trigger
   judges a goal being *written*, never an existing row, so lowering the number
   later does not freeze the rest of the profile. **There is no invented ceiling
   on that number** beyond the `smallint` both columns are declared as:
@@ -323,7 +333,9 @@ accident is not.
   entitlements and item reports are not progress and are left alone. A client
   may insert only `item_id`, `chosen_index`, `session_id`, `elapsed_ms`,
   `think_ms`, `replays`, `peeked`, `stands_for` — not `answered_at`, which the
-  day's door and the ladder both read.
+  day's door and the ladder both read. Of its own profile it may update only
+  `display_name`, `daily_goal`, `exam_date` and `timed_reading` (column
+  grants); `target_level` is the database's to write.
 - **`item_stats` is not readable by a client, and `review_schedule` is not
   writable by one.** Raw per-item counts over a handful of users are a statement
   about a person (`v_item_difficulty` is the k-anonymous surface, floor of
@@ -339,8 +351,9 @@ accident is not.
 - **Testers only, for now, and the database is the door.** `public.testers`
   lists who may use the app by sign-in email (email and password today; Google
   later, matched on the same email); `is_tester()` reads the JWT; every
-  row-level policy in `public` requires it (a schema test fails CI on one that
-  does not) and the anon role holds nothing. The client's gate screens only say
+  row-level policy in `public` and `storage` requires it (a schema test fails
+  CI on one that does not) and the anon role holds nothing, including on
+  objects created later (the default privileges leave it out). The client's gate screens only say
   so politely. Opening the app later is one migration that drops the conjunct,
   with the anonymous-first client path back in front of the door. Never add a
   policy, view or RPC that answers a non-tester while this holds. A second lock
@@ -373,7 +386,8 @@ accident is not.
   instead of answering: no `attempts` row, and the day's ten is not spent.
   `public.item_vetoes` keeps who and when.
 - **A question leaves the bank through `batches/withdrawn.txt`, never by
-  deletion** — the veto made from the repository. One line per item (id, a
+  deletion** — the veto made from the repository. Every reference to an item
+  is `on delete restrict`, so the database refuses a delete outright. One line per item (id, a
   reason from the closed set `item_feedback` uses, a sentence); `bjt publish`
   writes `is_published = false` into its bundle's SQL, so the merge is the
   decision. The item stays in its bundle: its row keeps answers resolving, and

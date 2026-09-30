@@ -74,6 +74,15 @@ its id and secret in Supabase → Authentication → Providers → Google, the
 `bizjadrill` scheme allowed under URL Configuration, and a button beside the
 email form that calls `signInWithOAuth({ provider: "google" })`.
 
+**Two dashboard settings the sign-in already depends on.** Supabase →
+Authentication → URL Configuration → Redirect URLs must list
+`https://<site>/reset-password` and `bizjadrill://reset-password` (plus the Expo
+Go `exp://…/--/reset-password` URL for development), or 「パスワードを忘れた」
+mails a link that goes nowhere. And Authentication → Providers → Email should
+require confirmation: with auto-confirm on, anybody who knows a listed address
+that has no account yet can create that account without owning the mailbox —
+`is_tester()` cannot tell, because auto-confirm stamps the address as confirmed.
+
 After any change to sign-in, on the deployed URL:
 
 - A fresh browser shows the sign-in screen, and nothing behind it.
@@ -85,6 +94,8 @@ After any change to sign-in, on the deployed URL:
 - Signing out returns to the sign-in screen, with nothing readable.
 - A wrong password and a missing build variable each fail in a way the app
   explains.
+- 「パスワードを忘れた」 mails a link that opens the new-password screen, on the
+  web and in the app.
 
 ## 5. No store builds
 
@@ -110,7 +121,11 @@ create and approve pull requests"; when it is off, the run summary says so and
 links the branch.
 
 **Next step.** Tick the setting if a run summary reports it, and read each
-night's pull request item by item before merging it — merging deploys.
+night's pull request item by item before merging it — merging deploys. The
+checkout no longer keeps the token; only the pull-request step is given git
+credentials (`gh auth setup-git` with `GH_TOKEN`). That cannot be exercised
+offline, so watch the first night's push; if it fails, the fallback is a
+one-off `http.extraheader` on that push.
 
 ---
 

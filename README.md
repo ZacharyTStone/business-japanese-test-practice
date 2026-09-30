@@ -101,7 +101,7 @@ Three programs that only meet in the database:
 | Morning | The owner reads and merges it. **Merging is the decision to ship.** |
 | Minutes later | **checks** runs on `main`; when green, **deploy database** applies migrations, runs every bundle's SQL, and makes missing audio. |
 | Any time | A learner presses the button; the database builds a set of 10 and grades each answer. |
-| 15 answers | The database serves nothing more until midnight in Japan. |
+| 15 answers | The database serves and accepts nothing more until midnight in Japan. |
 
 **Hosting:** the web app is static files on **Cloudflare Workers**; data, sign-in
 and media on **Supabase**; jobs on **GitHub Actions**. Paid APIs: **Anthropic**
@@ -142,7 +142,8 @@ question has four moments:
 3. **Answer** — pick one of four. **Replay** and **show options as text** are
    available but mean the answer doesn't count as "known".
 4. **Reveal** — graded by the database, then:
-   * a drawn **face** of the listener reacting (ruder = worse);
+   * a drawn **face** of the listener reacting (ruder = worse), where the
+     mistake was about manners;
    * **one sentence** naming the trap that caught you;
    * for manners mistakes, the **失礼度メーター**: two bars, *rude* and *wrong for
      the situation*;
@@ -165,7 +166,7 @@ whose level moved. No score.
   types, recent traps and weak topics (last 30 days).
 * **解いた問題** — past answers, wrong ones first, each reopenable in full, with
   a **復習ノート** for your own note.
-* **ことばメモ** — key words from questions you missed, with self-test.
+* **まちがえた問題のことば** — key words from questions you missed, with self-test.
 * **ことば一覧** — every noted word from questions you've answered, searchable.
 * **アカウント** — levels (shown, not chosen), exam date, reading clock,
   language (UI in Japanese or English; questions always Japanese), and a full
@@ -354,14 +355,16 @@ queue.
 
 **Workflows:**
 
-* **nightly** (03:00 JST, or manual) — survey the bank, recount question
+* **nightly** (03:00 JST, or by hand from `main`) — survey the bank, recount question
   difficulty from all answers, write up to 3 questions, draw needed pictures,
   open a PR. Manual options: **probe** (measure unrated questions) or
   **compare_jev** (Jev vs the default probe; writes nothing). Work is saved as an
   artifact before any push. **It never publishes.**
-* **checks** (every push/PR) — pytest, ruff, schema tests, app typecheck and
+* **checks** (every push to `main`, every PR) — pytest, ruff, mypy, schema
+  tests (and the app's generated database types), app typecheck, lint and
   tests, checkbatch.
-* **deploy database** (after green `checks` on `main`, or manual) — migrations,
+* **deploy database** (after green `checks` on a push to `main`, deploying
+  that commit; or by hand from `main`) — migrations,
   every bundle's SQL, missing audio. Idempotent. Manual runs can add a tester
   (email masked in the public log).
 * **Web app** — Cloudflare rebuilds `client/` from the repo.
@@ -431,7 +434,7 @@ nightly. Clients see only `v_item_difficulty`, and only after 8 different people
 have answered. Until then the queue uses `model_p_correct`.
 
 **Limits and settings.** The day's set is `daily_goal` (10); at 15 answers per
-Japanese day, nothing more is served. Testers can be granted unlimited use or a
+Japanese day, nothing more is served or accepted. Testers can be granted unlimited use or a
 custom size. Reading time per question: 語彙・文法 30 s, 表現読解 45 s, 総合読解
 105 s (scaled 0.6–1.6× by length); time-outs record `chosen_index = -1`.
 Learners can set only *how* they practise (clock, exam date, language), never
