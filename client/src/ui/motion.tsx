@@ -16,19 +16,32 @@ import { AccessibilityInfo, Animated, Easing, Platform, type ViewProps } from "r
 
 import { motion } from "./theme";
 
+/**
+ * The last answer the OS gave, for every component that asks after the first.
+ *
+ * The question is asynchronous, so a component that asked it afresh would
+ * start at "move" and learn otherwise a moment later — by which time an
+ * entrance or a scroll has already played for somebody who asked for none.
+ * Asked once per app, the answer is there from the first frame everywhere
+ * after that.
+ */
+let known: boolean | null = null;
+
 /** Whether the OS has been asked for less motion. Read once, then followed. */
 export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(known ?? false);
   useEffect(() => {
     let live = true;
+    const follow = (on: boolean) => {
+      known = on;
+      if (live) setReduced(on);
+    };
     AccessibilityInfo.isReduceMotionEnabled()
-      .then((on) => {
-        if (live) setReduced(on);
-      })
+      .then(follow)
       .catch(() => {
         // Unknown means "move": the default the person has not changed.
       });
-    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduced);
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", follow);
     return () => {
       live = false;
       sub.remove();

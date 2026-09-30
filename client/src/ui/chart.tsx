@@ -19,7 +19,7 @@
  * unit and every figure beside its label: what a sighted reader takes off the
  * bars, rather than a tour of rectangles.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View, type LayoutChangeEvent, type TextStyle } from "react-native";
 import Svg, { Circle, Line, Polygon, Polyline, Rect, Text as SvgText } from "react-native-svg";
 
@@ -108,7 +108,18 @@ export function ChartView({ block, face }: { block: DocBlock; face: TextStyle })
   // The plot is laid out for the width it is given, which is only known once
   // the sheet has been measured; until then it holds its place.
   const [width, setWidth] = useState(0);
-  const chart = readChart(block);
+  // Worked out once per block and width, not per render: the screen around a
+  // chart redraws on every tick of an audio player and every answer, and
+  // laying a chart out is the most arithmetic anything on it does.
+  const chart = useMemo(() => readChart(block), [block]);
+  const laid = useMemo(() => (chart && width > 0 ? plot(chart, width) : null), [chart, width]);
+  const summary = useMemo(
+    () =>
+      chart
+        ? chartSummary(chart, { kind: t(chart.kind === "line" ? "chart_line" : "chart_bar"), unit: t("chart_unit") })
+        : "",
+    [chart, t]
+  );
   if (!chart) {
     // Nothing to draw. The title still says a chart was meant to be here, and
     // a learner in the middle of a question keeps the rest of the page.
@@ -119,11 +130,6 @@ export function ChartView({ block, face }: { block: DocBlock; face: TextStyle })
     const measured = Math.floor(e.nativeEvent.layout.width);
     if (measured !== width) setWidth(measured);
   };
-  const laid = width > 0 ? plot(chart, width) : null;
-  const summary = chartSummary(chart, {
-    kind: t(chart.kind === "line" ? "chart_line" : "chart_bar"),
-    unit: t("chart_unit"),
-  });
 
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={summary} style={styles.chart}>

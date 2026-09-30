@@ -81,7 +81,7 @@ import { DocumentView } from "../src/ui/document";
 import { Face, moodFor, moodLabel } from "../src/ui/face";
 import { HAS_KEYBOARD, optionForKey, useKeys } from "../src/ui/keys";
 import { RudenessMeter } from "../src/ui/meters";
-import { FadeIn } from "../src/ui/motion";
+import { FadeIn, useReducedMotion } from "../src/ui/motion";
 import { ReportQuestion } from "../src/ui/report";
 import { VetoQuestion } from "../src/ui/veto";
 import { colors, MIN_TOUCH, page, radius, shadow, space, tabular, type } from "../src/ui/theme";
@@ -307,6 +307,7 @@ export default function Practice() {
   // fires again when the explanation is unfolded, and without this the screen
   // would snap back to the top just as somebody started reading it.
   const scrolledFor = useRef<string | null>(null);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (!isConfigured || !session?.user) return;
@@ -904,7 +905,9 @@ export default function Practice() {
             if (scrolledFor.current === item.id) return;
             scrolledFor.current = item.id;
             const y = e.nativeEvent.layout.y;
-            scroller.current?.scrollTo({ y: Math.max(0, y - space.lg), animated: true });
+            // Jumped rather than glided for somebody who has asked the OS for
+            // less motion.
+            scroller.current?.scrollTo({ y: Math.max(0, y - space.lg), animated: !reduced });
           }}
         >
           <Card
