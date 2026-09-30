@@ -181,7 +181,10 @@ function buzz(pattern: number | number[]) {
 export default function Practice() {
   const router = useRouter();
   const { lang, t } = useLang();
-  const { session, loading: authLoading, error: authError } = useAuth();
+  // The navigator admits nobody to this screen until the session has loaded
+  // and the database has said they are a tester, so there is no loading or
+  // refused state to draw here.
+  const { session } = useAuth();
   // A direct load of /practice — a deep link, a refresh — has nothing behind
   // it to go back to, and "back" from here always has to land somewhere.
   const leave = () => (router.canGoBack() ? router.back() : router.replace("/"));
@@ -491,19 +494,6 @@ export default function Practice() {
     return (
       <View style={styles.page}>
         <Notice title={t("config_needed")} body={MISSING_CONFIG_MESSAGE} tone="warn" />
-      </View>
-    );
-  }
-  if (authLoading) return <Loading label={t("preparing")} />;
-  if (authError) {
-    return (
-      <View style={styles.page}>
-        <Notice
-          title={t("cant_connect")}
-          body={authError}
-          tone="warn"
-          action={{ label: t("back"), onPress: leave }}
-        />
       </View>
     );
   }

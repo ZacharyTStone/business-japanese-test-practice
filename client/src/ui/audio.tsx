@@ -323,98 +323,29 @@ function useClipQueue(
 }
 
 /**
- * A heard conversation.
+ * A heard conversation that cannot be heard: the script on the page.
  *
- * Turns play one after another rather than as a single file, for a reason that
- * outlives this component: clip ids are content hashes, so 「承知しました。」 is
- * synthesised once and shared by every item that contains it. Concatenating a
- * conversation server-side would throw that away and make one file per item.
- *
- * The transcript is hidden until the learner asks for it. 総合聴解 is a listening
- * item — a transcript on screen from the start turns it into a reading item with
- * an audio track — but refusing to show it at all would be worse: practice is
- * not the exam, and the fourth listen is where you finally hear that it was
- * 伺います and not 参ります.
+ * This is how every item with a conversation works before its turns are
+ * synthesised, and — once they are — how it works when they will not play.
+ * While the turns can be heard they are part of the listening run
+ * (AutoPlaylist), with the rest of the item's clips, and the script waits for
+ * the answer (Transcript): a script on the page from the start would turn a
+ * listening item into a reading one.
  */
 export function DialoguePlayer({ turns }: { turns: DialogueTurn[] }) {
   const { t } = useLang();
-  const [showText, setShowText] = React.useState(false);
-  const paths = turns.map((turn) => clipUrl(turn.audio_path));
-  const playable = paths.filter(Boolean).length;
-
-  // Nothing synthesised yet: the whole exchange is a script on the page, which
-  // is how every item works before its audio exists.
-  if (playable === 0) {
-    return (
-      <View style={styles.transcript}>
-        <Text style={type.small}>{t("dialogue_pending")}</Text>
-        {turns.map((turn, i) => (
-          <Turn key={i} turn={turn} />
-        ))}
-      </View>
-    );
-  }
-
   return (
-    <View style={{ gap: space.sm }}>
-      <DialogueTrack turns={turns} paths={paths} />
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => setShowText((v) => !v)}
-        style={({ pressed }) => [pressed && { opacity: 0.85 }]}
-      >
-        <Text style={[type.small, styles.toggle]}>
-          {showText ? t("hide_text") : t("show_text")}
-        </Text>
-      </Pressable>
-      {showText ? (
-        <View style={styles.transcript}>
-          {turns.map((turn, i) => (
-            <Turn key={i} turn={turn} />
-          ))}
+    <View style={styles.transcript}>
+      <Text style={type.small}>{t("dialogue_pending")}</Text>
+      {turns.map((turn, i) => (
+        <View key={i} style={{ gap: 2 }}>
+          <Text style={type.small}>{turn.speaker_role}</Text>
+          <Text style={type.body}>{turn.text}</Text>
         </View>
-      ) : null}
+      ))}
     </View>
   );
 }
-
-function Turn({ turn }: { turn: DialogueTurn }) {
-  return (
-    <View style={{ gap: 2 }}>
-      <Text style={type.small}>{turn.speaker_role}</Text>
-      <Text style={type.body}>{turn.text}</Text>
-    </View>
-  );
-}
-
-/** Plays each turn in order, advancing when one finishes. */
-function DialogueTrack({ turns, paths }: { turns: DialogueTurn[]; paths: (string | null)[] }) {
-  const { t } = useLang();
-  const queue = useClipQueue(paths);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={queue.running ? t("stop_dialogue") : t("listen_dialogue")}
-      onPress={() => (queue.running ? queue.stop() : queue.start())}
-      style={({ pressed }) => [styles.play, pressed && { opacity: 0.85 }]}
-    >
-      <View style={styles.playIcon}>
-        <Icon
-          name={queue.running ? "stop" : "play"}
-          size={18}
-          color={colors.onAccent}
-          strokeWidth={2}
-        />
-      </View>
-      <Text style={[type.body, { flex: 1 }]}>{t("listen_dialogue")}</Text>
-      <Text style={type.small}>
-        {queue.at + 1} / {turns.length}
-      </Text>
-    </Pressable>
-  );
-}
-
 
 /**
  * The listening stage.
