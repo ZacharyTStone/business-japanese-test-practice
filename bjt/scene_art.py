@@ -24,17 +24,14 @@ over a bank whose contents are committed.
 from __future__ import annotations
 
 import base64
-import json
 import os
 import struct
-import urllib.error
-import urllib.request
 import zlib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Protocol
 
-from . import config, llm, scenes
+from . import config, http, llm, scenes
 from .files import write_atomic
 
 # ----- image providers ------------------------------------------------------
@@ -126,9 +123,9 @@ class OpenAIImageProvider:
             "output_compression": config.IMAGE_COMPRESSION,
         }
         try:
-            data = _json_request(
+            data = http.json_request(
                 "POST", self.ENDPOINT, body,
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                {"Authorization": f"Bearer {self.api_key}"},
             )
         except RuntimeError as exc:
             # An account that cannot pay refuses every picture after this one
@@ -506,11 +503,13 @@ class Bucket:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
         rows: list = []
         while True:
-            page = _json_request(
+            # A listing is safe to ask for twice, and an overloaded storage
+            # server drops one now and then: a few tries before a night gives up.
+            page = http.json_request(
                 "POST", f"{self.url}/storage/v1/object/list/{self.name}",
                 {"prefix": prefix, "limit": self.PAGE, "offset": len(rows),
                  "sortBy": {"column": "name", "order": "asc"}},
-                headers=self._headers(),
+                self._headers(), retries=2,
             )
             if not isinstance(page, list):
                 raise RuntimeError(f"listing the `{self.name}` bucket returned {type(page).__name__}")
@@ -551,7 +550,7 @@ class Bucket:
         headers = {**self._headers(), "Content-Type": content_type,
                    "x-upsert": "true" if upsert else "false"}
         try:
-            _request("POST", f"{self.url}/storage/v1/object/{self.name}/{path}", data, headers)
+            http.request("POST", f"{self.url}/storage/v1/object/{self.name}/{path}", data, headers)
         except RequestFailed as exc:
             if not upsert and _is_duplicate(exc):
                 raise AlreadyExists(f"{path} is already in the `{self.name}` bucket") from exc
@@ -656,35 +655,6 @@ def without(survey: list[scenes.Scene], paths: set[str]) -> list[scenes.Scene]:
     return [replace(s, path=None) if s.path in paths else s for s in survey]
 
 
-# ----- HTTP, kept small on purpose -----------------------------------------
-
-
-class RequestFailed(RuntimeError):
-    """A request the server answered with an error status."""
-
-    def __init__(self, message: str, *, status: int, detail: str):
-        super().__init__(message)
-        self.status = status
-        self.detail = detail
-
-
-def _request(method: str, url: str, body: bytes | None, headers: dict[str, str]) -> bytes:
-    req = urllib.request.Request(url, data=body, method=method, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=180) as resp:
-            return resp.read()
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:500]
-        raise RequestFailed(f"{method} {url} → HTTP {exc.code}: {detail}",
-                            status=exc.code, detail=detail) from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"{method} {url} failed: {exc.reason}") from exc
-
-
-def _json_request(method: str, url: str, body: dict, headers: dict[str, str]):
-    raw = _request(method, url, json.dumps(body).encode("utf-8"),
-                   {**headers, "Content-Type": "application/json"})
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"{url} returned something that is not JSON") from exc
+#: A request the server refused (bjt/http.py). Named here too because the
+#: bucket's callers read its status: an upload onto a file that exists.
+RequestFailed = http.RequestFailed

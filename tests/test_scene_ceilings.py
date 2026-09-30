@@ -8,7 +8,7 @@ and a 画像把握 item is never served.
 """
 import pytest
 
-from bjt import cli, config, llm, scene_art, scenes
+from bjt import cli, config, http, llm, scene_art, scenes
 
 
 class _Real:
@@ -75,7 +75,7 @@ def test_an_empty_image_account_stops_the_drawing(tmp_path, monkeypatch):
         raise RuntimeError("POST https://api.openai.com/v1/images/generations → HTTP 400: "
                            "billing_hard_limit_reached")
 
-    monkeypatch.setattr(scene_art, "_json_request", refuse)
+    monkeypatch.setattr(http, "json_request", refuse)
     with pytest.raises(scene_art.DrawStopped):
         scene_art.draw(scenes.survey(tmp_path)[:3], provider=scene_art.OpenAIImageProvider(),
                        review=lambda *a: scene_art.Verdict(True), media_dir=tmp_path)

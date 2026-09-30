@@ -1,21 +1,19 @@
 """Jev as the difficulty probe's instrument (bjt/jev.py), and `bjt probe --compare`.
 
-Nothing here reaches TypeSafe: the one HTTP seam, `jev._post`, is replaced.
+Nothing here reaches TypeSafe: the one HTTP seam, `bjt.http.request`, is replaced.
 What is under test is what this repository owes any model it calls — the
 ceilings before the call, the bill after it, an unreadable reply that becomes
 "unmeasured" and never a rate — and that a comparison writes nothing.
 """
 import copy
-import io
 import json
 import math
 import pathlib
-import urllib.error
 from types import SimpleNamespace
 
 import pytest
 
-from bjt import backfill, batch, cli, fixtures, jev, llm, pipeline, withdrawn
+from bjt import backfill, batch, cli, fixtures, http, jev, llm, pipeline, withdrawn
 from bjt.fidelity import answerability, difficulty, roles
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -52,13 +50,13 @@ def wire(monkeypatch):
                                                   {"input_tokens": 300, "output_tokens": 30}),
                             error=None)
 
-    def post(url, data, headers, timeout):
+    def post(method, url, data=None, headers=None, **kw):
         state.sent.append((url, json.loads(data.decode("utf-8")), headers))
         if state.error is not None:
             raise state.error
         return state.reply
 
-    monkeypatch.setattr(jev, "_post", post)
+    monkeypatch.setattr(http, "request", post)
     return state
 
 
@@ -170,7 +168,8 @@ def test_a_reply_that_is_not_json_is_billed_and_then_an_error(ledger, keyed, wir
 
 
 def _http_error(code, body):
-    return urllib.error.HTTPError("https://x", code, "err", hdrs=None, fp=io.BytesIO(body))
+    detail = body.decode("utf-8")
+    return http.RequestFailed(f"POST https://x → HTTP {code}: {detail}", status=code, detail=detail)
 
 
 def test_an_account_that_cannot_pay_stops_the_run(ledger, keyed, wire):
@@ -184,7 +183,8 @@ def test_any_other_failure_is_an_ordinary_error(ledger, keyed, wire):
     with pytest.raises(llm.LLMError) as e:
         jev.choice_probabilities("q", ["a", "b"], model=JEV)
     assert not isinstance(e.value, llm.LLMBillingError)
-    wire.error = urllib.error.URLError("egress blocked")
+    wire.error = http.RequestFailed("POST https://x failed: egress blocked",
+                                    status=None, detail="egress blocked")
     with pytest.raises(llm.LLMError):
         jev.choice_probabilities("q", ["a", "b"], model=JEV)
 

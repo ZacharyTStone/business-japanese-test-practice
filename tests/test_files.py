@@ -12,7 +12,7 @@ import wave
 
 import pytest
 
-from bjt import batch, fixtures, publish, scene_art
+from bjt import batch, fixtures, http, publish, scene_art
 from bjt.files import write_atomic
 from bjt.tts import channel, synth
 
@@ -94,11 +94,11 @@ def test_the_bucket_listing_reads_every_page(monkeypatch):
              [{"name": f"r/{i}.txt", "id": i} for i in range(1000, 1005)]]
     asked = []
 
-    def listing(method, url, body, headers):
+    def listing(method, url, body, headers, **kw):
         asked.append(body["offset"])
         return pages[len(asked) - 1]
 
-    monkeypatch.setattr(scene_art, "_json_request", listing)
+    monkeypatch.setattr(http, "json_request", listing)
     bucket = scene_art.Bucket(url="https://x.supabase.co", key="k")
     assert len(bucket.list("rejected/")) == 1005
     assert asked == [0, 1000]

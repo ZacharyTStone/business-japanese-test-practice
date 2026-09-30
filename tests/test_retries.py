@@ -12,7 +12,7 @@ import anthropic
 import httpx2
 import pytest
 
-from bjt import config, jev, llm
+from bjt import config, http, jev, llm
 
 _REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
 
@@ -142,7 +142,7 @@ def test_the_servers_retry_after_is_honoured_when_short(ledger, waits, monkeypat
 
 def test_a_jev_request_is_counted_before_it_is_sent(ledger, monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "k")
-    monkeypatch.setattr(jev, "_post", lambda *a, **k: (_ for _ in ()).throw(OSError("down")))
+    monkeypatch.setattr(http, "_open", lambda *a, **k: (_ for _ in ()).throw(OSError("down")))
     with pytest.raises(llm.LLMError):
         jev.choice_probabilities("q", ["a", "b"], model="jev-latest")
     assert ledger.attempts == 1 and ledger.calls == 0

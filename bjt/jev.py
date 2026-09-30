@@ -47,12 +47,10 @@ from __future__ import annotations
 import json
 import math
 import os
-import urllib.error
-import urllib.request
 from types import SimpleNamespace
 from typing import Optional
 
-from . import config, llm
+from . import config, http, llm
 
 #: The name the one question is sent under, and read back from.
 QUESTION = "answer"
@@ -120,13 +118,6 @@ def usage_of(reply: dict, sent: bytes) -> SimpleNamespace:
     return SimpleNamespace(input_tokens=tokens_in, output_tokens=tokens_out)
 
 
-def _post(url: str, data: bytes, headers: dict[str, str], timeout: float) -> bytes:
-    """One request, the reply's body. The seam the tests replace."""
-    req = urllib.request.Request(url, data=data, method="POST", headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read()
-
-
 def choice_probabilities(question: str, options: list[str],
                          model: Optional[str] = None) -> list[float]:
     """Ask Jev which option is right; its probability for each, in order."""
@@ -140,13 +131,11 @@ def choice_probabilities(question: str, options: list[str],
     data = json.dumps(request_body(question, options, model), ensure_ascii=False).encode("utf-8")
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     try:
-        body = _post(config.JEV_URL, data, headers, config.API_TIMEOUT_SECONDS)
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8", "replace")[:500]
-        if e.code == 402 or any(sign in detail.lower() for sign in llm._BILLING_SIGNS):
-            raise llm.LLMBillingError(f"Jev request failed: HTTP {e.code}: {detail}") from e
-        raise llm.LLMError(f"Jev request failed: HTTP {e.code}: {detail}") from e
-    except (urllib.error.URLError, OSError) as e:
+        body = http.request("POST", config.JEV_URL, data, headers,
+                            timeout=config.API_TIMEOUT_SECONDS)
+    except http.RequestFailed as e:
+        if e.status == 402 or any(sign in e.detail.lower() for sign in llm._BILLING_SIGNS):
+            raise llm.LLMBillingError(f"Jev request failed: {e}") from e
         raise llm.LLMError(f"Jev request failed: {e}") from e
 
     try:

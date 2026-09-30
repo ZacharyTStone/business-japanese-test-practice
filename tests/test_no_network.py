@@ -8,7 +8,7 @@ import os
 
 import pytest
 
-from bjt import jev, llm, scene_art
+from bjt import http, jev, llm, scene_art
 from bjt.tts import providers
 
 from conftest import UnmockedCall
@@ -22,11 +22,13 @@ def test_no_credential_reaches_a_test(monkeypatch):
 
 @pytest.mark.parametrize("call", [
     lambda: llm.answer_choice("q", ["a", "b"]),
-    lambda: jev._post("https://example.invalid", b"{}", {}, 1.0),
+    lambda: http.request("GET", "https://example.invalid"),
     lambda: providers._post("https://example.invalid", {}, {}),
-    lambda: scene_art._request("GET", "https://example.invalid", None, {}),
+    lambda: scene_art.Bucket(url="https://example.invalid", key="k").list(),
+    lambda: jev.choice_probabilities("q", ["a", "b"], model="jev-latest"),
 ])
-def test_an_unfaked_call_fails_the_test_rather_than_the_item(call):
+def test_an_unfaked_call_fails_the_test_rather_than_the_item(call, monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "k")  # so Jev gets as far as the wire
     """An AssertionError, not an LLMError: a tolerant call site would turn the
     latter into "did not run" and the test would pass on it."""
     with pytest.raises(UnmockedCall):

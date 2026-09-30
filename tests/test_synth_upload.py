@@ -12,7 +12,7 @@ import urllib.request
 
 import pytest
 
-from bjt import batch, cli, config, fixtures, scene_art
+from bjt import batch, cli, config, fixtures, http, scene_art
 from bjt.tts import providers, synth
 
 REFERENCE = str(config.ROOT / "batches" / "hatsugen_choukai_J2_001.json")
@@ -35,11 +35,11 @@ def _bucket_seeing(monkeypatch, answer):
     """A configured bucket whose server answers each upload with `answer`."""
     seen = []
 
-    def request(method, url, body, headers):
+    def request(method, url, body, headers, **kw):
         seen.append(headers)
         return answer(url, headers)
 
-    monkeypatch.setattr(scene_art, "_request", request)
+    monkeypatch.setattr(http, "request", request)
     return scene_art.Bucket(name="audio", url="https://x.supabase.co", key="k"), seen
 
 
@@ -50,10 +50,6 @@ def test_the_bucket_is_asked_not_to_replace(monkeypatch):
     assert [h["x-upsert"] for h in seen] == ["false", "true"]
 
 
-#: The real seam, taken at import: the autouse guard replaces it in every test.
-_REAL_REQUEST = scene_art._request
-
-
 @pytest.mark.parametrize("status, body", [
     (409, '{"error": "Duplicate"}'),
     (400, '{"statusCode":"409","error":"Duplicate","message":"The resource already exists"}'),
@@ -62,8 +58,7 @@ def test_a_file_already_there_is_said_so(monkeypatch, status, body):
     def refuse(req, timeout=None):
         raise urllib.error.HTTPError(req.full_url, status, "x", {}, io.BytesIO(body.encode()))
 
-    monkeypatch.setattr(urllib.request, "urlopen", refuse)
-    monkeypatch.setattr(scene_art, "_request", _REAL_REQUEST)
+    monkeypatch.setattr(http, "_open", refuse)
     bucket = scene_art.Bucket(name="audio", url="https://x.supabase.co", key="k")
     with pytest.raises(scene_art.AlreadyExists):
         bucket.upload("openai/ab/abc.wav", b"RIFF", "audio/wav", upsert=False)

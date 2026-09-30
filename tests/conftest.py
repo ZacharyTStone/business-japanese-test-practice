@@ -3,9 +3,8 @@ import os
 
 import pytest
 
-from bjt import fixtures, jev, llm, scene_art, seedtable
+from bjt import fixtures, http, llm, seedtable
 from bjt.db import Store
-from bjt.tts import providers
 
 #: Environment variables that hold a credential or point at a live service.
 #: `bjt.config` loads `.env` at import, and a developer's shell or a CI job may
@@ -53,11 +52,11 @@ def no_network(request, monkeypatch):
             raise UnmockedCall(f"{what} was called for real; fake it in the test")
         return seam
 
+    # Two seams reach the network: the Anthropic SDK, and bjt/http.py's one
+    # connection, which Jev, the voices, the image model and the buckets share.
     monkeypatch.setattr(llm, "_client", None)
     monkeypatch.setattr(llm, "_get_client", refuse("llm._get_client (the Anthropic API)"))
-    monkeypatch.setattr(jev, "_post", refuse("jev._post (TypeSafe)"))
-    monkeypatch.setattr(providers, "_post", refuse("tts.providers._post (a TTS vendor)"))
-    monkeypatch.setattr(scene_art, "_request", refuse("scene_art._request (OpenAI images / storage)"))
+    monkeypatch.setattr(http, "_open", refuse("http._open (Jev, TTS, images, storage)"))
 
 
 @pytest.fixture

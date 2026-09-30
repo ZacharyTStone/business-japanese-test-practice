@@ -8,7 +8,7 @@ rejects, and never lets a stand-in be mistaken for artwork.
 
 import pytest
 
-from bjt import config, scene_art, scenes
+from bjt import config, http, scene_art, scenes
 
 
 def _png_is_valid(data: bytes) -> bool:
@@ -172,18 +172,18 @@ def test_the_bucket_refuses_without_its_two_variables(monkeypatch):
 def test_artwork_already_in_the_bucket_counts_and_is_not_resent(tmp_path, monkeypatch):
     requests = []
 
-    def fake_json(method, url, body, headers):
+    def fake_json(method, url, body, headers, **kw):
         requests.append((method, url))
         return [{"name": "scene_corridor.webp", "id": "1"},
                 {"name": "rejected", "id": None},
                 {"name": "notes.txt", "id": "2"}]
 
-    def fake_raw(method, url, body, headers):
+    def fake_raw(method, url, body, headers, **kw):
         requests.append((method, url, headers["Content-Type"], headers["x-upsert"]))
         return b""
 
-    monkeypatch.setattr(scene_art, "_json_request", fake_json)
-    monkeypatch.setattr(scene_art, "_request", fake_raw)
+    monkeypatch.setattr(http, "json_request", fake_json)
+    monkeypatch.setattr(http, "request", fake_raw)
     bucket = scene_art.Bucket(url="https://p.supabase.co/", key="service")
     assert bucket.configured
     assert bucket.list() == {"scene_corridor.webp"}
@@ -214,13 +214,13 @@ def test_one_bad_upload_does_not_stop_the_rest(tmp_path, monkeypatch):
     still goes."""
     uploaded = []
 
-    def fake_raw(method, url, body, headers):
+    def fake_raw(method, url, body, headers, **kw):
         if url.endswith("scene_corridor.webp"):
             raise RuntimeError(f"POST {url} → HTTP 400: EntityTooLarge")
         uploaded.append(url.rsplit("/", 1)[1])
         return b""
 
-    monkeypatch.setattr(scene_art, "_request", fake_raw)
+    monkeypatch.setattr(http, "request", fake_raw)
     monkeypatch.setattr(config, "SCENE_MAX_BYTES", 10)
     (tmp_path / "scenes").mkdir()
     (tmp_path / "scenes" / "scene_phone_desk.webp").write_bytes(b"x" * 11)   # too big
@@ -278,11 +278,11 @@ def test_the_openai_provider_asks_for_webp_at_three_by_two(monkeypatch):
 
     captured = {}
 
-    def fake_json(method, url, body, headers):
+    def fake_json(method, url, body, headers, **kw):
         captured.update(url=url, body=body, auth=headers["Authorization"])
         return {"data": [{"b64_json": base64.b64encode(b"webp-bytes").decode()}]}
 
-    monkeypatch.setattr(scene_art, "_json_request", fake_json)
+    monkeypatch.setattr(http, "json_request", fake_json)
     out = scene_art.OpenAIImageProvider(api_key="k").generate("draw")
     assert out == b"webp-bytes"
     assert captured["auth"] == "Bearer k"
@@ -367,7 +367,7 @@ def test_every_stand_in_is_a_bank_scene_with_a_brief():
 def test_the_ledger_counts_refusals_and_records_new_ones(monkeypatch):
     requests = []
 
-    def fake_json(method, url, body, headers):
+    def fake_json(method, url, body, headers, **kw):
         requests.append(body["prefix"])
         return [{"name": "scene_phone_mobile_outside-1.txt", "id": "1"},
                 {"name": "scene_phone_mobile_outside-3.txt", "id": "2"},
@@ -375,9 +375,9 @@ def test_the_ledger_counts_refusals_and_records_new_ones(monkeypatch):
                 {"name": "junk", "id": "4"}]
 
     sent = []
-    monkeypatch.setattr(scene_art, "_json_request", fake_json)
-    monkeypatch.setattr(scene_art, "_request",
-                        lambda m, url, body, headers: sent.append((url, body, headers["Content-Type"])) or b"")
+    monkeypatch.setattr(http, "json_request", fake_json)
+    monkeypatch.setattr(http, "request",
+                        lambda m, url, body, headers, **kw: sent.append((url, body, headers["Content-Type"])) or b"")
     bucket = scene_art.Bucket(url="https://p.supabase.co", key="k")
     assert bucket.refusals() == {"scene_phone_mobile_outside": 3, "scene_corridor": 2}
     assert requests == ["rejected/"]

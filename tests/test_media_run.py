@@ -6,7 +6,7 @@ synthesis sequence (`synth.run`) used to live inside `cmd_scenes` and
 """
 import pytest
 
-from bjt import batch, fixtures, scene_art, scenes
+from bjt import batch, fixtures, http, scene_art, scenes
 from bjt.tts import synth
 
 
@@ -50,7 +50,7 @@ def test_an_unreadable_ledger_is_a_warning(monkeypatch):
     def down(*a, **k):
         raise RuntimeError("HTTP 503")
 
-    monkeypatch.setattr(scene_art, "_json_request", down)
+    monkeypatch.setattr(http, "json_request", down)
     prior, on_reject, warning = scene_art.lifetime_ledger(bucket, record=True)
     assert prior == {} and on_reject is not None and "HTTP 503" in warning
 

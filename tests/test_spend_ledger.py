@@ -14,7 +14,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from bjt import config, jev, llm
+from bjt import config, http, jev, llm
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -110,7 +110,7 @@ def test_jev_is_held_to_the_shared_ledger(shared, monkeypatch):
     monkeypatch.setattr(llm, "spend", llm.Spend.from_environment())
     monkeypatch.setenv("TYPESAFE_API_KEY", "k")
     posted = []
-    monkeypatch.setattr(jev, "_post", lambda *a, **k: posted.append(a) or b"{}")
+    monkeypatch.setattr(http, "request", lambda *a, **k: posted.append(a) or b"{}")
     with pytest.raises(llm.LLMSpendLimitError):
         jev.choice_probabilities("q", ["a", "b"], model="jev-latest")
     assert posted == []
