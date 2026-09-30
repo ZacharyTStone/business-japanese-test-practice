@@ -14,12 +14,19 @@ checkbatch) run with neither the package nor an API key present.
 """
 from __future__ import annotations
 
+import atexit
 import json
+import math
+import os
+import random
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Optional
 
 from . import config
+from .files import write_atomic
 
 _client = None
 
@@ -33,11 +40,25 @@ class LLMBillingError(LLMError):
 
     A run that meets this should stop, not carry on through forty more slots
     of the same refusal. Raised as its own class so the callers that tolerate
-    a failed call (one shelf, one probe) can let this one through.
+    a failed call (one shelf, one probe) can let this one through — and they
+    must: it is an `LLMError`, so a bare `except LLMError` swallows it. Every
+    tolerant catch site puts `except LLMBillingError: raise` first.
     """
 
 
 _BILLING_SIGNS = ("credit balance", "insufficient_quota", "billing")
+
+
+class LLMTruncatedError(LLMError):
+    """The reply stopped at its token ceiling (or the model's context) before
+    it was finished. Paid for, and not an answer: a judge's reply cut off
+    mid-thought is a trial that got no answer, never a wrong one, and a draft
+    cut off mid-item is a generation that failed. Its own class so the log
+    says which, and so the ceiling that caused it can be looked at."""
+
+
+#: stop_reason values that mean the reply was cut off rather than finished.
+_TRUNCATED = ("max_tokens", "model_context_window_exceeded")
 
 
 class LLMSpendLimitError(LLMBillingError):
@@ -50,28 +71,47 @@ class LLMSpendLimitError(LLMBillingError):
 # ----- the spend ledger --------------------------------------------------
 #
 # Dollars per million tokens (input, output), by model name prefix, as each
-# provider's price list has them. Cache writes cost a quarter more than plain
-# input and cache reads a tenth of it. A model not in the table is priced as
-# the dearest one there — the ledger exists to stop a run, and a guess that is
-# too low is the one kind of wrong it must not be.
+# provider's price list has them; the longest prefix that matches wins, so
+# `claude-opus-5-5` is not priced as `claude-opus-5` and `claude-sonnet-4-6`
+# is not priced as the Sonnet 5 family. Cache writes cost a quarter more than
+# plain input and cache reads a tenth of it (a few newer models read the cache
+# for less; a tenth over-prices them, which is the safe side). A model not in
+# the table is priced at UNKNOWN_MODEL_USD_PER_MTOK, dearer than anything in
+# it: the ledger exists to stop a run, and a guess that is too low is the one
+# kind of wrong it must not be.
 PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
-    "claude-opus": (5.0, 25.0),
-    "claude-sonnet": (2.0, 10.0),
-    "claude-haiku": (1.0, 5.0),
+    "claude-fable-5-1": (10.0, 50.0),
+    "claude-fable-5": (10.0, 50.0),
+    "claude-opus-5-5": (4.0, 20.0),
+    "claude-opus-5": (5.0, 25.0),
+    "claude-opus-4-8": (5.0, 25.0),
+    "claude-opus-4-7": (5.0, 25.0),
+    "claude-opus-4-6": (5.0, 25.0),
+    "claude-sonnet-5-5": (2.0, 10.0),
+    "claude-sonnet-5": (2.0, 10.0),
+    "claude-sonnet-4-6": (3.0, 15.0),
+    "claude-haiku-4-5": (1.0, 5.0),
     "jev": (0.042, 0.0),  # TypeSafe AI bills input only (bjt/jev.py)
 }
+#: For a model the table does not name. Deliberately above every row.
+UNKNOWN_MODEL_USD_PER_MTOK: tuple[float, float] = (15.0, 75.0)
 CACHE_WRITE_MULTIPLIER = 1.25
 CACHE_READ_MULTIPLIER = 0.10
 
 
+def rates_for(model: str) -> tuple[float, float]:
+    """(input, output) dollars per million tokens: the longest matching
+    prefix's row, or the unknown-model price."""
+    matches = [prefix for prefix in PRICES_USD_PER_MTOK if model.startswith(prefix)]
+    if not matches:
+        return UNKNOWN_MODEL_USD_PER_MTOK
+    return PRICES_USD_PER_MTOK[max(matches, key=len)]
+
+
 def price_usd(model: str, usage: Any) -> float:
     """What one response cost, from the usage the API reports on it."""
-    rates = next((r for prefix, r in PRICES_USD_PER_MTOK.items()
-                  if model.startswith(prefix)), None)
-    if rates is None:
-        rates = max(PRICES_USD_PER_MTOK.values(), key=lambda r: r[1])
-    per_in, per_out = rates
-    get = lambda name: int(getattr(usage, name, None) or 0)  # noqa: E731
+    per_in, per_out = rates_for(model)
+    get = lambda name: int(getattr(usage, name, None) or 0)
     plain = get("input_tokens")
     written = get("cache_creation_input_tokens")
     read = get("cache_read_input_tokens")
@@ -91,8 +131,27 @@ class Spend:
     One per process (`spend`, below). Anything that wants the bill for a run
     — the nightly summary, `bjt batch`'s last line — reads it; the ceilings in
     config are enforced against it before every call.
+
+    Two counts, because they differ exactly when something goes wrong:
+    `attempts` is every request sent, counted before it is sent — a retry, a
+    request that timed out, one that failed — and it is what the call ceiling
+    holds; `calls` is every response priced.
+
+    **One job, one budget.** The nightly job runs `bjt nightly` and then `bjt
+    scenes` as two processes, and each used to start with a fresh allowance
+    and a fresh clock: two fifty-cent ceilings and two half-hours for one
+    fifty-cent night. With `BJT_SPEND_LEDGER` naming a file, the process
+    starts from what the file says was spent (dollars, calls, requests) and
+    when (the clock's start), and writes its totals back after every request
+    and every priced response and when it exits — atomically, so the next
+    step never reads half a file. Everything that spends reads this one
+    object (`llm.spend`): the Anthropic calls, Jev, and the picture job's
+    image requests, so they share it too. A file that cannot be read is not
+    an empty ledger: nothing is spent until it is fixed. Unset, a process has
+    its own ceilings, as it always had.
     """
     calls: int = 0
+    attempts: int = 0
     input_tokens: int = 0
     cache_write_tokens: int = 0
     cache_read_tokens: int = 0
@@ -100,15 +159,60 @@ class Spend:
     usd: float = 0.0
     usd_by_model: dict[str, float] = field(default_factory=dict)
     calls_by_model: dict[str, int] = field(default_factory=dict)
-    started: float = field(default_factory=time.monotonic)
+    #: When the run's clock started, in epoch seconds: this process's start,
+    #: or the first step of the job's when a ledger carries it.
+    started: float = field(default_factory=time.time)
+    #: The shared ledger file, or None for a process on its own.
+    ledger: Optional[Path] = None
+    #: What earlier steps of the job had spent when this one started.
+    carried_usd: float = 0.0
+    carried_calls: int = 0
+    #: Why the ledger could not be read, when it could not. Checked before
+    #: every request: an unreadable ledger spends nothing.
+    ledger_error: Optional[str] = None
+
+    @classmethod
+    def from_environment(cls) -> "Spend":
+        """The process's ledger: shared through `BJT_SPEND_LEDGER` when set."""
+        raw = os.environ.get(LEDGER_ENV, "").strip()
+        out = cls(ledger=Path(raw) if raw else None)
+        out.load()
+        return out
+
+    def load(self) -> None:
+        """Start from the shared ledger, if there is one and it exists."""
+        if self.ledger is None or not self.ledger.exists():
+            return
+        try:
+            data = json.loads(self.ledger.read_text(encoding="utf-8"))
+            usd, calls = float(data["usd"]), int(data["calls"])
+            attempts, started = int(data["attempts"]), float(data["started_at"])
+            if not all(math.isfinite(x) and x >= 0 for x in (usd, calls, attempts, started)):
+                raise ValueError("a negative or non-finite number")
+        except (OSError, ValueError, TypeError, KeyError) as e:
+            self.ledger_error = f"the spend ledger {self.ledger} cannot be read ({e!r})"
+            return
+        self.usd += usd
+        self.calls += calls
+        self.attempts += attempts
+        self.started = min(self.started, started)
+        self.carried_usd, self.carried_calls = usd, calls
+
+    def save(self) -> None:
+        """Write the totals to the shared ledger, whole or not at all."""
+        if self.ledger is None or self.ledger_error is not None:
+            return
+        write_atomic(self.ledger, json.dumps({
+            "usd": self.usd, "calls": self.calls,
+            "attempts": self.attempts, "started_at": self.started}) + "\n")
 
     @property
     def minutes(self) -> float:
-        return (time.monotonic() - self.started) / 60
+        return (time.time() - self.started) / 60
 
     def add(self, model: str, usage: Any) -> float:
         cost = price_usd(model, usage)
-        get = lambda name: int(getattr(usage, name, None) or 0)  # noqa: E731
+        get = lambda name: int(getattr(usage, name, None) or 0)
         self.calls += 1
         self.input_tokens += get("input_tokens")
         self.cache_write_tokens += get("cache_creation_input_tokens")
@@ -117,13 +221,26 @@ class Spend:
         self.usd += cost
         self.usd_by_model[model] = self.usd_by_model.get(model, 0.0) + cost
         self.calls_by_model[model] = self.calls_by_model.get(model, 0) + 1
+        self.save()
         return cost
+
+    def begin_request(self) -> None:
+        """The ceilings, then one more request on the count. Called before
+        every request any vendor is sent — each retry included — so the call
+        ceiling counts what was asked for, not what came back."""
+        self.check_ceilings()
+        self.attempts += 1
+        self.save()
 
     def check_ceilings(self) -> None:
         """Raise if the next call would be one too many. Called before it."""
-        if self.calls >= config.RUN_MAX_CALLS:
+        if self.ledger_error is not None:
             raise LLMSpendLimitError(
-                f"call ceiling reached: {self.calls} calls this run "
+                f"{self.ledger_error}; nothing is spent without knowing what was "
+                f"spent ({LEDGER_ENV})")
+        if self.attempts >= config.RUN_MAX_CALLS:
+            raise LLMSpendLimitError(
+                f"call ceiling reached: {self.attempts} requests this run "
                 f"(BJT_RUN_MAX_CALLS={config.RUN_MAX_CALLS}); ${self.usd:.2f} spent")
         if self.usd >= config.RUN_BUDGET_USD:
             raise LLMSpendLimitError(
@@ -140,18 +257,32 @@ class Spend:
         """The bill, as a few lines for a summary."""
         lines = [
             f"Spent ${self.usd:.2f} of the ${config.RUN_BUDGET_USD:.2f} ceiling in "
-            f"{self.calls} call(s) over {self.minutes:.0f} minute(s): "
+            f"{self.calls} call(s) ({self.attempts} request(s) sent) over "
+            f"{self.minutes:.0f} minute(s): "
             f"{self.input_tokens:,} input, "
             f"{self.cache_write_tokens:,} cache-write, {self.cache_read_tokens:,} "
             f"cache-read, {self.output_tokens:,} output token(s).",
         ]
-        for model in sorted(self.usd_by_model, key=self.usd_by_model.get, reverse=True):
+        if self.carried_calls or self.carried_usd:
+            lines.append(f"- earlier steps of this job ({LEDGER_ENV}): "
+                         f"${self.carried_usd:.2f} in {self.carried_calls} call(s)")
+        for model in sorted(self.usd_by_model, key=lambda m: self.usd_by_model[m], reverse=True):
             lines.append(f"- {model}: ${self.usd_by_model[model]:.2f} "
                          f"in {self.calls_by_model[model]} call(s)")
         return "\n".join(lines)
 
 
-spend = Spend()
+#: Names the JSON file one job's processes share their spend through.
+LEDGER_ENV = "BJT_SPEND_LEDGER"
+
+spend = Spend.from_environment()
+
+
+@atexit.register
+def _save_on_exit() -> None:
+    # Whatever `spend` is by then; a process that made no request still
+    # passes on when the job's clock started.
+    spend.save()
 
 
 _EFFORTS = ("low", "medium", "high", "xhigh", "max")
@@ -168,15 +299,110 @@ def _get_client():
     global _client
     if _client is None:
         try:
-            import anthropic  # noqa: WPS433 (lazy import is deliberate)
+            import anthropic  # lazy on purpose: the offline commands run without it
         except ImportError as e:  # pragma: no cover
             raise LLMError(
                 "The 'anthropic' package is required for generation. "
                 "Install it with: pip install anthropic"
             ) from e
-        _client = anthropic.Anthropic(timeout=config.API_TIMEOUT_SECONDS,
-                                      max_retries=config.API_MAX_RETRIES)
+        # No retries in the SDK: a retry it makes is a request nobody counts
+        # and nobody checks a ceiling before. `_structured` retries instead,
+        # the same number of times, each one through `spend.begin_request`.
+        _client = anthropic.Anthropic(timeout=config.API_TIMEOUT_SECONDS, max_retries=0)
     return _client
+
+
+# ----- retries ---------------------------------------------------------------
+
+#: The statuses the SDK itself would retry: a timeout, a conflict, a rate
+#: limit, and anything the server got wrong.
+_RETRY_STATUSES = (408, 409, 429)
+
+#: The wait before a retry, in seconds: doubling from the first, never more
+#: than the last, or what the server's retry-after asks when that is shorter
+#: than a minute. `_sleep` is the seam the tests replace.
+_BACKOFF_FIRST, _BACKOFF_MAX = 0.5, 8.0
+_sleep = time.sleep
+
+
+def _status_of(exc: BaseException) -> Optional[int]:
+    code = getattr(exc, "status_code", None)
+    return code if isinstance(code, int) else None
+
+
+def _is_api_failure(exc: BaseException) -> bool:
+    """An error from the API or the SDK's transport: an outage, a refusal, a
+    status the server sent, a connection that failed — and no credentials,
+    which the SDK reports as a TypeError when it resolves them. These are the
+    failures a caller may tolerate. Anything else (a keyword this SDK does not
+    know, a bug of ours) is a crash, and is raised as itself: wrapped as an
+    `LLMError` it would read as an outage, and every tolerant call site would
+    turn a broken run into a quiet one."""
+    try:
+        import anthropic
+    except ImportError:  # pragma: no cover
+        return False
+    if isinstance(exc, anthropic.AnthropicError):
+        return True
+    return isinstance(exc, TypeError) and "authentication method" in str(exc)
+
+
+def _is_connection_error(exc: BaseException) -> bool:
+    """No reply at all: the connection failed or the request timed out."""
+    try:
+        import anthropic
+    except ImportError:  # pragma: no cover
+        return False
+    return isinstance(exc, anthropic.APIConnectionError)
+
+
+def _is_timeout(exc: BaseException) -> bool:
+    try:
+        import anthropic
+    except ImportError:  # pragma: no cover
+        return False
+    return isinstance(exc, anthropic.APITimeoutError)
+
+
+def _retryable(exc: BaseException) -> bool:
+    status = _status_of(exc)
+    if status is not None:
+        return status in _RETRY_STATUSES or status >= 500
+    return _is_connection_error(exc)
+
+
+def _backoff(retry: int, exc: BaseException) -> float:
+    wait = min(_BACKOFF_MAX, _BACKOFF_FIRST * 2 ** retry) * (0.75 + random.random() / 4)
+    headers = getattr(getattr(exc, "response", None), "headers", None) or {}
+    try:
+        asked = float(headers.get("retry-after", ""))
+    except (TypeError, ValueError):
+        asked = None
+    if asked is not None and 0 <= asked <= 60:
+        wait = asked
+    return wait
+
+
+def _worst_case_usage(system: str, user: "str | list", max_tokens: int) -> SimpleNamespace:
+    """What a request that timed out may have cost: its whole output ceiling,
+    and an input counted a token per character (more than Japanese or English
+    takes) with a picture at the most a picture is. The server may well have
+    finished it and billed it; a ledger that priced it at nothing would let a
+    run of timeouts spend without limit."""
+    chars = len(system)
+    blocks = user if isinstance(user, list) else [{"type": "text", "text": user}]
+    for block in blocks:
+        if isinstance(block, dict) and block.get("type") == "image":
+            chars += _IMAGE_TOKENS_MAX
+        elif isinstance(block, dict):
+            chars += len(str(block.get("text", "")))
+        else:
+            chars += len(str(block))
+    return SimpleNamespace(input_tokens=chars, output_tokens=max_tokens)
+
+
+#: The most input tokens one picture can be, at the API's largest image size.
+_IMAGE_TOKENS_MAX = 5000
 
 
 def request_params(
@@ -231,18 +457,36 @@ def _structured(
     max_tokens: int = 8000,
     effort: str = "high",
 ) -> dict:
-    """One structured-output request. Returns the parsed JSON object."""
+    """One structured-output request. Returns the parsed JSON object.
+
+    A transient failure (a timeout, a dropped connection, a rate limit, an
+    overloaded server) is retried here, up to config.API_MAX_RETRIES times,
+    and every attempt goes through the ceilings and onto the count first.
+    """
     # The ceilings are checked before the call, never after: a run that is
     # over its budget makes no further request, not one more.
     spend.check_ceilings()
     client = _get_client()
-    try:
-        resp = client.messages.create(**request_params(
-            model, system, user, schema, max_tokens=max_tokens, effort=effort))
-    except Exception as e:  # surface API errors with context
-        if any(sign in str(e).lower() for sign in _BILLING_SIGNS):
-            raise LLMBillingError(f"API request failed: {e}") from e
-        raise LLMError(f"API request failed: {e}") from e
+    params = request_params(model, system, user, schema, max_tokens=max_tokens, effort=effort)
+    retry = 0
+    while True:
+        spend.begin_request()
+        try:
+            resp = client.messages.create(**params)
+            break
+        except Exception as e:  # surface API errors with context
+            if not _is_api_failure(e):
+                raise
+            if _is_timeout(e):
+                # Sent, and perhaps finished and billed with nobody listening.
+                spend.add(model, _worst_case_usage(system, user, params["max_tokens"]))
+            if _retryable(e) and retry < config.API_MAX_RETRIES:
+                _sleep(_backoff(retry, e))
+                retry += 1
+                continue
+            if any(sign in str(e).lower() for sign in _BILLING_SIGNS):
+                raise LLMBillingError(f"API request failed: {e}") from e
+            raise LLMError(f"API request failed: {e}") from e
 
     # Priced from what the API says it used, before anything else can fail:
     # a refusal or a malformed reply was paid for too.
@@ -250,6 +494,10 @@ def _structured(
 
     if resp.stop_reason == "refusal":
         raise LLMError(f"model refused the request ({resp.stop_details})")
+    if resp.stop_reason in _TRUNCATED:
+        raise LLMTruncatedError(
+            f"reply cut off ({resp.stop_reason}) at a ceiling of "
+            f"{min(max_tokens, config.MAX_TOKENS_CEILING)} output tokens")
 
     text = next((b.text for b in resp.content if getattr(b, "type", None) == "text"), None)
     if not text:

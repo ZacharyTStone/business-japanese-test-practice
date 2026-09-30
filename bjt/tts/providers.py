@@ -33,10 +33,9 @@ from __future__ import annotations
 import base64
 import json
 import os
-import urllib.error
-import urllib.request
 from typing import Protocol
 
+from .. import http
 from . import channel
 
 
@@ -441,17 +440,7 @@ def get_provider(name: str) -> Provider:
 
 
 def _post(url: str, body: dict, headers: dict[str, str]) -> bytes:
-    """One JSON request, the response body as bytes, and an error that names
-    the status and the first few hundred characters of what came back — the
-    part of a vendor error that actually says what was wrong."""
-    req = urllib.request.Request(
-        url, data=json.dumps(body).encode("utf-8"), method="POST", headers=headers
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=180) as resp:
-            return resp.read()
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:500]
-        raise RuntimeError(f"POST {url} → HTTP {exc.code}: {detail}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"POST {url} failed: {exc.reason}") from exc
+    """One JSON request to a voice vendor, the response body as bytes. A
+    failure is `http.RequestFailed`, whose message names the status and the
+    first few hundred characters of what came back."""
+    return http.request("POST", url, json.dumps(body).encode("utf-8"), headers)

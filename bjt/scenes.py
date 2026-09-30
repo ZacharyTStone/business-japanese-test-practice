@@ -440,8 +440,8 @@ def to_sql(scenes: list[Scene]) -> str:
     nothing about that is an error.
     """
     with_art = [s for s in scenes if s.has_art]
-    borrowed = [(s, stand_in_for(s, scenes)) for s in scenes]
-    borrowed = [(s, other) for s, other in borrowed if other is not None]
+    stand_ins = [(s, stand_in_for(s, scenes)) for s in scenes]
+    borrowed = [(s, other) for s, other in stand_ins if other is not None]
     if not with_art:
         return (
             "-- No approved scene artwork found. Nothing to apply.\n"
@@ -458,8 +458,8 @@ def to_sql(scenes: list[Scene]) -> str:
     )
     notes = [f"-- Artwork for {len(with_art)} scene(s)."]
     for s, other in sorted(borrowed, key=lambda pair: pair[0].scene_id):
-        notes.append(f"-- {s.scene_id} has no picture of its own and borrows "
-                     f"{other.scene_id}'s until it does.")
+        notes.append(f"-- {publish.comment(s.scene_id)} has no picture of its own and borrows "
+                     f"{publish.comment(other.scene_id)}'s until it does.")
     return "\n".join([
         *notes,
         "-- Produced by `bjt scenes --sql`. Idempotent: re-running sets the same values.",

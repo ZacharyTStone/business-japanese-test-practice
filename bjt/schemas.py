@@ -14,6 +14,8 @@ scene image, spoken by a named role over a named channel.
 """
 from __future__ import annotations
 
+from typing import Any
+
 from . import render
 from .fidelity import roles
 from .levels import LEVELS
@@ -308,7 +310,7 @@ def build_item_schema(item_type: str) -> dict:
     role_values = roles.role_enum(item_type)
     extras = TYPE_EXTRAS.get(item_type, {})
 
-    schema = {
+    schema: dict[str, Any] = {
         "type": "object",
         "additionalProperties": False,
         "required": [
@@ -477,7 +479,7 @@ def _document_errors(item_type: str, item: dict) -> list[str]:
             return [f"{len(value)} documents; at most {MAX_DOCUMENTS} fit on a phone screen"]
         docs = value
 
-    errors = []
+    errors: list[str] = []
     for i, doc in enumerate(docs):
         prefix = f"{field}" if field == "document" else f"{field}[{i}]"
         errors.extend(f"{prefix}: {e}" for e in render.validate_document(doc))

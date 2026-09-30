@@ -132,6 +132,8 @@ def test_a_clean_item_goes_on_to_the_gate(tmp_path, monkeypatch, store):
                         lambda *a, **k: copy.deepcopy(fixtures.FIXTURES["hyougen"]))
     monkeypatch.setattr(sanity.llm, "sanity_check", _clean())
     monkeypatch.setattr("bjt.fidelity.answerability.run_gate", fake_gate)
+    # The probe off, so the prior below is the gate's own full-view rate.
+    monkeypatch.setattr("bjt.config.DIFFICULTY_ENABLED", False)
 
     item, iid, kept, detail, _ = pipeline.generate_and_gate(store, "hyougen", "J2", gate=True)
 

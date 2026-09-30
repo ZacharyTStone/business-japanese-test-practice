@@ -20,6 +20,15 @@ set, so it is left absent and the gate stays permissive and says so), and the
 level descriptors (the neutral built-in wording is used). A `BOOTSTRAPPED`
 file is left in the directory saying all this, so nobody mistakes it for the
 real thing, and the licensed material always wins when it is present.
+
+Only questions still in front of learners are examples. A withdrawn one
+(`batches/withdrawn.txt`) is in its bundle as the record of what must not be
+written — invented keigo, a key that cannot be right — and a few-shot example
+is what the generator copies most faithfully, so it is read through
+`withdrawn.live_items` like everything else that counts the library. A question
+the regate failed (`batches/regated.txt`) and nobody has overruled is left out
+too: it is on its way to the ledger, and the diff that puts it there may not
+be merged yet.
 """
 from __future__ import annotations
 
@@ -27,7 +36,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import config
+from . import config, regate, withdrawn
 
 #: Fields of a published item that are about the bundle or the bank rather
 #: than the item as an example: identity, provenance, media, the answer key
@@ -76,9 +85,15 @@ def examples_from_batches(batch_dir: Path | None = None) -> dict[str, list[dict]
     """Up to PER_TYPE items per type, spread across the levels the bank has.
 
     Spread rather than the first five, so a type with items at three levels
-    shows the model all three registers instead of five J3s.
+    shows the model all three registers instead of five J3s. Live questions
+    only, and none the regate failed (see the module docstring); both ledgers
+    are read from `batch_dir`, beside the bundles they speak for.
     """
     batch_dir = Path(batch_dir or config.BATCH_DIR)
+    gone = withdrawn.ids(batch_dir / withdrawn.LEDGER_NAME)
+    failed = {item_id for item_id, entry in
+              regate.load_regated(batch_dir / regate.REGATE_LEDGER_NAME).items()
+              if entry.failed}
     by_type: dict[str, dict[str, list[dict]]] = {}
     for path in sorted(batch_dir.glob("*.json")):
         if path.name.endswith(".source.json"):
@@ -87,9 +102,9 @@ def examples_from_batches(batch_dir: Path | None = None) -> dict[str, list[dict]
             bundle = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             continue
-        items = bundle.get("items")
-        if not isinstance(items, list) or not bundle.get("item_type"):
+        if not isinstance(bundle.get("items"), list) or not bundle.get("item_type"):
             continue
+        items = withdrawn.live_items(bundle, gone | failed)
         shelf = by_type.setdefault(bundle["item_type"], {}).setdefault(bundle.get("level", "?"), [])
         shelf.extend(items)
 

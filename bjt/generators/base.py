@@ -268,7 +268,7 @@ class Generator:
                 f"{self.item_type} requires a seed-table cell; variety for this type "
                 "comes from the table, not from the prompt (see bjt/seedtable.py)"
             )
-        if not schemas.valid_level(level or ""):
+        if level is None or not schemas.valid_level(level):
             raise ValueError(f"invalid level {level!r}")
 
         avoid = []

@@ -151,7 +151,7 @@ def test_uploading_sends_every_clip_and_a_failure_keeps_it_out_of_the_sql(bundle
         name = "audio"
         configured = True
 
-        def upload(self, path, data, content_type):
+        def upload(self, path, data, content_type, upsert=False):
             assert content_type == "audio/wav"
             if path == bad:
                 raise RuntimeError("413 too large")

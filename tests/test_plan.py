@@ -178,6 +178,45 @@ def test_reading_items_are_written_every_night_even_when_deeper():
     assert by_type["joukyou_haaku"] == 1
 
 
+def test_the_reading_floor_is_executed_first():
+    """The night runs the order top to bottom and its ceiling can end it after
+    any line, so "reading first" has to be the order's, not just the count's:
+    the emptier listening shelves come after the floor, never before it."""
+    order = plan.work_order(_mixed_survey(), budget=8, per_slot=3, reading_min=3)
+    kinds = [w.item_type in schemas.READING_TYPES for w in order]
+    assert kinds == sorted(kinds, reverse=True), [w.item_type for w in order]
+    # Among the floor's lines, and among the rest, furthest behind first.
+    assert [w.item_type for w in order] == [
+        "hyougen", "goi_bunpou", "bamen_haaku", "sougou_choukai", "joukyou_haaku"]
+
+
+def test_a_nights_first_line_is_reading_even_beside_an_empty_listening_shelf():
+    """The shape of the default night: one reading item and two others, where
+    the others are the emptiest shelves in the bank. The reading one is first,
+    so a night the fifty-cent ceiling ends after one shelf still has it."""
+    order = plan.work_order(
+        _survey(("gazou_haaku", "J1", 0, 100), ("sougou_choudokkai", "J1", 1, 100),
+                ("hyougen", "J3", 2, 100)),
+        budget=plan.DEFAULT_BUDGET, per_slot=plan.DEFAULT_PER_SLOT,
+        reading_min=plan.DEFAULT_READING_MIN)
+    assert order[0].item_type == "hyougen"
+    assert [w.item_type for w in order[1:]] == ["gazou_haaku", "sougou_choudokkai"]
+
+
+def test_a_shelf_both_passes_reached_is_one_line_at_the_floors_place():
+    order = plan.work_order(
+        _survey(("goi_bunpou", "J2", 0, 100), ("bamen_haaku", "J2", 0, 100)),
+        budget=3, per_slot=2, reading_min=1)
+    assert [(w.item_type, w.n) for w in order] == [("goi_bunpou", 2), ("bamen_haaku", 1)]
+
+
+def test_the_committed_bank_plans_reading_first():
+    order = plan.work_order(plan.survey(), budget=plan.DEFAULT_BUDGET,
+                            per_slot=plan.DEFAULT_PER_SLOT,
+                            reading_min=plan.DEFAULT_READING_MIN)
+    assert order and order[0].item_type in schemas.READING_TYPES
+
+
 def test_the_floor_yields_what_it_cannot_place():
     order = plan.work_order(
         _survey(("bamen_haaku", "J2", 0, 100), ("goi_bunpou", "J2", 0, 1)),

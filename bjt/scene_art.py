@@ -24,17 +24,15 @@ over a bank whose contents are committed.
 from __future__ import annotations
 
 import base64
-import json
 import os
 import struct
-import urllib.error
-import urllib.request
 import zlib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Protocol
 
-from . import config, scenes
+from . import config, http, llm, scenes
+from .files import write_atomic
 
 # ----- image providers ------------------------------------------------------
 
@@ -124,10 +122,17 @@ class OpenAIImageProvider:
             # the bucket's 2 MiB limit; see config.IMAGE_COMPRESSION.
             "output_compression": config.IMAGE_COMPRESSION,
         }
-        data = _json_request(
-            "POST", self.ENDPOINT, body,
-            headers={"Authorization": f"Bearer {self.api_key}"},
-        )
+        try:
+            data = http.json_request(
+                "POST", self.ENDPOINT, body,
+                {"Authorization": f"Bearer {self.api_key}"},
+            )
+        except RuntimeError as exc:
+            # An account that cannot pay refuses every picture after this one
+            # the same way: the drawing stops rather than trying them all.
+            if any(sign in str(exc).lower() for sign in llm._BILLING_SIGNS):
+                raise llm.LLMBillingError(f"image request failed: {exc}") from exc
+            raise
         try:
             return base64.b64decode(data["data"][0]["b64_json"])
         except (KeyError, IndexError, TypeError) as exc:
@@ -195,19 +200,22 @@ def review_with_model(image: bytes, media_type: str, scene: scenes.Scene) -> Ver
     picture's answerability gate — the text gate cannot see it — and it is
     strict on purpose: the pictures must be clear and not generic, and a
     picture two readers describe differently is neither.
-    """
-    from . import config, llm
 
+    A reader that gave no answer — an outage, a refusal, a reply that is not
+    an index — is an error, raised, never a refusal of the picture: a refusal
+    goes into the bucket's lifetime ledger, and a picture refused for its
+    judge's outages would be given up on and its item never served.
+    """
     if scene.is_picture:
         flags = llm.review_scene_image(image, media_type, scenes.prompt_for(scene), PICTURE_RULES)
         broken = [PICTURE_RULES[rule] for rule in PICTURE_RULES if flags.get(rule)]
         if not broken and scene.options and scene.answer is not None:
             for _ in range(config.GATE_TRIALS):
+                res = llm.answer_from_image(image, media_type, scene.question, list(scene.options))
                 try:
-                    res = llm.answer_from_image(image, media_type, scene.question, list(scene.options))
                     chosen = int(res.get("choice", -1))
-                except (llm.LLMError, ValueError, TypeError):
-                    chosen = -1
+                except (ValueError, TypeError, AttributeError) as exc:
+                    raise llm.LLMError(f"the picture's reader gave no answer: {res!r}") from exc
                 if chosen != scene.answer:
                     picked = scene.options[chosen] if 0 <= chosen < len(scene.options) else "nothing"
                     broken.append(f"a reader shown the picture chose {chosen} ({picked}) "
@@ -216,8 +224,8 @@ def review_with_model(image: bytes, media_type: str, scene: scenes.Scene) -> Ver
         return Verdict(approved=not broken, reasons=tuple(broken))
 
     flags = llm.review_scene_image(image, media_type, scenes.prompt_for(scene), RULES)
-    broken = tuple(RULES[rule] for rule in RULES if flags.get(rule))
-    return Verdict(approved=not broken, reasons=broken)
+    faults = tuple(RULES[rule] for rule in RULES if flags.get(rule))
+    return Verdict(approved=not faults, reasons=faults)
 
 
 def approve_everything(image: bytes, media_type: str, scene: scenes.Scene) -> Verdict:
@@ -253,6 +261,9 @@ class Drawn:
 class DrawResult:
     drawn: list[Drawn]
     provider: str
+    #: Why the job ended before its list did: the run's ceiling, or an
+    #: account that cannot pay. None when every wanted scene was tried.
+    stopped: str | None = None
 
     @property
     def approved(self) -> list[Drawn]:
@@ -279,10 +290,27 @@ class DrawResult:
             if d.given_up:
                 result = "given up: lifetime allowance of refused drafts spent"
             else:
-                result = d.path if d.ok else (f"error: {d.error}" if d.error else "no draft passed")
+                result = (d.path or "") if d.ok else (
+                    f"error: {d.error}" if d.error else "no draft passed")
             why = "; ".join(" / ".join(r) for r in d.rejected) or "—"
             lines.append(f"| {d.scene_id} | {result} | {d.attempts} ({d.prior}) | {why} |")
+        if self.stopped:
+            lines += ["", f"**Stopped before the end:** {self.stopped}. The scenes not "
+                          "listed were not tried; the next run draws them."]
         return "\n".join(lines)
+
+
+class DrawStopped(llm.LLMBillingError):
+    """The run's ceiling (or an empty account) ended the drawing part-way.
+
+    Raised by `draw` with what it had drawn by then (`result`), so the caller
+    can still upload the pictures already approved and paid for — and must
+    not draw another: the next draft would be an image bought over the
+    ceiling."""
+
+    def __init__(self, cause: llm.LLMBillingError, result: DrawResult):
+        super().__init__(str(cause))
+        self.result = result
 
 
 #: Told about each refused draft: (scene_id, lifetime attempt number, reasons).
@@ -313,6 +341,12 @@ def draw(
     (the bucket's ledger); a scene at or over `lifetime` is not drawn again,
     and says so. `on_reject` is called for every refused draft with its
     lifetime number, which is how the ledger grows.
+
+    The run's ceilings (bjt/llm.py `spend`, the ledger the whole job shares)
+    are checked before every image a real provider is asked for, as before
+    every model call. Reached — or an account that cannot pay, from the image
+    vendor or the judge — the drawing stops at once with `DrawStopped`; any
+    other failure is that scene's error and the job goes on to the next.
     """
     attempts = attempts or config.SCENE_ATTEMPTS
     lifetime = lifetime or config.SCENE_LIFETIME_ATTEMPTS
@@ -337,15 +371,26 @@ def draw(
         # one, whichever comes first.
         tonight = min(attempts, lifetime - before) if provider.real else attempts
         for n in range(1, tonight + 1):
-            record.attempts = n
             try:
+                if provider.real:
+                    # An image is bought here: the ceilings first, as before
+                    # any request, and the request on the count.
+                    llm.spend.begin_request()
+                record.attempts = n
                 image = provider.generate(prompt)
                 verdict = review(image, provider.media_type, scene)
+            except llm.LLMBillingError as exc:
+                record.error = f"stopped: {exc}"
+                drawn.append(record)
+                raise DrawStopped(exc, DrawResult(drawn=drawn, provider=provider.name,
+                                                  stopped=str(exc))) from exc
             except Exception as exc:  # a vendor error is a result, not a crash
                 record.error = str(exc)
                 break
             if verdict.approved:
-                (out_dir / f"{scene.scene_id}{provider.suffix}").write_bytes(image)
+                # Whole or not at all: the survey counts any file here as the
+                # scene's artwork, and the upload sends it.
+                write_atomic(out_dir / f"{scene.scene_id}{provider.suffix}", image)
                 rel = scenes.storage_path(scene.scene_id, provider.suffix)
                 record.path = rel if provider.real else f"placeholder/{rel}"
                 break
@@ -362,6 +407,60 @@ def draw(
                     record.error = f"could not record the refusal: {exc}"
         drawn.append(record)
     return DrawResult(drawn=drawn, provider=provider.name)
+
+
+# ----- what a run draws ------------------------------------------------------
+
+
+def select(survey: list[scenes.Scene], names: list[str] | None = None, *,
+           force: bool = False, only: str | None = None,
+           max_pictures: int | None = None) -> list[scenes.Scene]:
+    """The scenes a run draws, in the order it draws them.
+
+    `names` narrows it to those scenes (an unknown one is a ValueError, named);
+    without `force` a scene that has art is left alone; `only` is "bank" or
+    "pictures". The shared bank comes first, then at most `max_pictures`
+    per-item pictures (config.NIGHT_MAX_PICTURES): each is an image call and
+    several vision calls per draft, and the tree may hold more new 画像把握
+    items than one night should pay for.
+    """
+    if names:
+        unknown = sorted(set(names) - {s.scene_id for s in survey})
+        if unknown:
+            raise ValueError(f"no such scene(s): {', '.join(unknown)}")
+        wanted = [s for s in survey if s.scene_id in names]
+    else:
+        wanted = list(survey)
+    if not force:
+        wanted = [s for s in wanted if not s.has_art]
+    if only == "bank":
+        wanted = [s for s in wanted if not s.is_picture]
+    elif only == "pictures":
+        wanted = [s for s in wanted if s.is_picture]
+    cap = config.NIGHT_MAX_PICTURES if max_pictures is None else max_pictures
+    pictures = [s for s in wanted if s.is_picture][:cap]
+    return [s for s in wanted if not s.is_picture] + pictures
+
+
+def lifetime_ledger(bucket: "Bucket", *, record: bool
+                    ) -> tuple[dict[str, int], OnReject | None, str | None]:
+    """What the bucket remembers refusing, so a scene at its lifetime allowance
+    is not drawn again; and, with `record`, the callback that grows the ledger
+    as tonight refuses. Returns (prior refusals, on_reject, a warning or None).
+
+    An unconfigured bucket remembers nothing and records nothing. A ledger
+    that cannot be read is a warning, not a stop: the lifetime cap then does
+    not hold tonight, and the run's own ceilings still do.
+    """
+    if not bucket.configured:
+        return {}, None, None
+    prior: dict[str, int] = {}
+    warning = None
+    try:
+        prior = bucket.refusals()
+    except RuntimeError as exc:
+        warning = f"could not read the refusals ledger: {exc}"
+    return prior, (bucket.record_refusal if record else None), warning
 
 
 # ----- the bucket -----------------------------------------------------------
@@ -389,18 +488,34 @@ class Bucket:
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.key}", "apikey": self.key}
 
+    #: Rows per listing request; the storage API returns at most this many,
+    #: so a longer folder is read a page at a time.
+    PAGE = 1000
+
     def list(self, prefix: str = "") -> set[str]:
         """Names of the files at the bucket root — the artwork already shipped.
 
-        With a prefix, the names under that folder (without the folder)."""
+        With a prefix, the names under that folder (without the folder). Every
+        page of them: the refusals ledger grows by a file per refused draft,
+        and a ledger read only to its thousandth file would forget the rest and
+        draw given-up pictures again."""
         if not self.configured:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
-        rows = _json_request(
-            "POST", f"{self.url}/storage/v1/object/list/{self.name}",
-            {"prefix": prefix, "limit": 1000, "offset": 0,
-             "sortBy": {"column": "name", "order": "asc"}},
-            headers=self._headers(),
-        )
+        rows: list = []
+        while True:
+            # A listing is safe to ask for twice, and an overloaded storage
+            # server drops one now and then: a few tries before a night gives up.
+            page = http.json_request(
+                "POST", f"{self.url}/storage/v1/object/list/{self.name}",
+                {"prefix": prefix, "limit": self.PAGE, "offset": len(rows),
+                 "sortBy": {"column": "name", "order": "asc"}},
+                self._headers(), retries=2,
+            )
+            if not isinstance(page, list):
+                raise RuntimeError(f"listing the `{self.name}` bucket returned {type(page).__name__}")
+            rows += page
+            if len(page) < self.PAGE:
+                break
         names = {row["name"] for row in rows if row.get("id") is not None}  # folders have no id
         if prefix:
             return names
@@ -426,12 +541,31 @@ class Bucket:
         body = ("\n".join(reasons) + "\n").encode("utf-8")
         self.upload(f"{self.LEDGER}{scene_id}-{n}.txt", body, "text/plain; charset=utf-8")
 
-    def upload(self, path: str, data: bytes, content_type: str) -> None:
-        """Put one file at `path`, replacing whatever is there."""
+    def upload(self, path: str, data: bytes, content_type: str, *, upsert: bool = True) -> None:
+        """Put one file at `path`. With `upsert` it replaces whatever is
+        there; without, a file already there is left alone and
+        `AlreadyExists` says so."""
         if not self.configured:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
-        headers = {**self._headers(), "Content-Type": content_type, "x-upsert": "true"}
-        _request("POST", f"{self.url}/storage/v1/object/{self.name}/{path}", data, headers)
+        headers = {**self._headers(), "Content-Type": content_type,
+                   "x-upsert": "true" if upsert else "false"}
+        try:
+            http.request("POST", f"{self.url}/storage/v1/object/{self.name}/{path}", data, headers)
+        except RequestFailed as exc:
+            if not upsert and _is_duplicate(exc):
+                raise AlreadyExists(f"{path} is already in the `{self.name}` bucket") from exc
+            raise
+
+
+class AlreadyExists(RuntimeError):
+    """The bucket already holds a file at that path, and it was not replaced."""
+
+
+def _is_duplicate(exc: "RequestFailed") -> bool:
+    """Storage's answer to an upload without upsert onto a file that exists:
+    a 409, or (older servers) a 400 whose body says 409 / Duplicate."""
+    detail = exc.detail.lower()
+    return exc.status == 409 or "already exists" in detail or "duplicate" in detail
 
 
 _MEDIA_TYPES = {
@@ -449,6 +583,8 @@ class UploadResult:
     sent: list[str] = field(default_factory=list)
     #: (storage path, why) for every local file that did not get there.
     failed: list[tuple[str, str]] = field(default_factory=list)
+    #: Storage paths the bucket already held and this call left alone.
+    existing: list[str] = field(default_factory=list)
 
     @property
     def failed_paths(self) -> set[str]:
@@ -519,25 +655,6 @@ def without(survey: list[scenes.Scene], paths: set[str]) -> list[scenes.Scene]:
     return [replace(s, path=None) if s.path in paths else s for s in survey]
 
 
-# ----- HTTP, kept small on purpose -----------------------------------------
-
-
-def _request(method: str, url: str, body: bytes | None, headers: dict[str, str]) -> bytes:
-    req = urllib.request.Request(url, data=body, method=method, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=180) as resp:
-            return resp.read()
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:500]
-        raise RuntimeError(f"{method} {url} → HTTP {exc.code}: {detail}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"{method} {url} failed: {exc.reason}") from exc
-
-
-def _json_request(method: str, url: str, body: dict, headers: dict[str, str]):
-    raw = _request(method, url, json.dumps(body).encode("utf-8"),
-                   {**headers, "Content-Type": "application/json"})
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"{url} returned something that is not JSON") from exc
+#: A request the server refused (bjt/http.py). Named here too because the
+#: bucket's callers read its status: an upload onto a file that exists.
+RequestFailed = http.RequestFailed
