@@ -207,6 +207,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
+    // The account, not the session: a refreshed token is the same person, and
+    // asking again every hour would be a round trip that cannot change the answer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, attempt]);
 
   const value = useMemo<AuthState>(() => {

@@ -98,6 +98,9 @@ function History() {
     return () => {
       cancelled = true;
     };
+    // Not `toggle`: it is remade every render, and this opens the one entry
+    // once, on arrival — not again whenever the screen redraws.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyItem, reloads]);
 
   const shown = useMemo(
