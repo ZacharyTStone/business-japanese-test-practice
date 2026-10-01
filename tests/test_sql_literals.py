@@ -43,14 +43,14 @@ def test_any_string_comes_back_as_itself(seed):
 def test_any_json_comes_back_as_itself(seed):
     for s in _strings(seed, 100):
         value = {"text": s, "list": [s, 1, 2.5, None, True], s: [s]}
-        literal = publish.lit(value)
-        assert literal.endswith("::jsonb")
-        assert json.loads(_unquote(literal[:-len("::jsonb")])) == value
+        # JSON text, which the schema checks with json_valid().
+        assert json.loads(_unquote(publish.lit(value))) == value
 
 
 def test_numbers_and_the_rest():
     assert publish.lit(None) == "null"
-    assert publish.lit(True) == "true" and publish.lit(False) == "false"
+    # A SQLite boolean is an integer, and the schema checks it is 0 or 1.
+    assert publish.lit(True) == "1" and publish.lit(False) == "0"
     assert publish.lit(3) == "3" and publish.lit(-2) == "-2"
     assert publish.lit(0.75) == "0.75"
     assert float(publish.lit(2 / 3)) == pytest.approx(2 / 3)
@@ -64,7 +64,7 @@ def test_a_number_that_is_not_one_is_refused(bad):
         publish.lit({"model_p_correct": bad})
 
 
-def test_a_nul_is_refused_rather_than_cut_off_by_postgres():
+def test_a_nul_is_refused_rather_than_cut_off():
     with pytest.raises(ValueError):
         publish.lit("before\x00after")
 
@@ -84,12 +84,12 @@ def _code_lines(sql: str) -> list[str]:
 
 def test_a_bundle_cannot_smuggle_a_statement_through_its_header():
     bundle = {"item_type": "goi_bunpou", "level": "J2", "items": [],
-              "generated_at": "2026-09-30\ndelete from public.items; --",
-              "generator_model": "claude\r\ndrop table public.attempts;"}
+              "generated_at": "2026-09-30\ndelete from items; --",
+              "generator_model": "claude\r\ndrop table attempts;"}
     sql = publish.bundle_sql(bundle, "goi_bunpou_J2_999", withdrawn_ids=set())
     for line in _code_lines(sql):
-        assert not line.lstrip().startswith(("delete from public.items;", "drop table")), line
-    assert "-- generated 2026-09-30 delete from public.items; -- by claude drop table" in sql
+        assert not line.lstrip().startswith(("delete from items;", "drop table")), line
+    assert "-- generated 2026-09-30 delete from items; -- by claude drop table" in sql
 
 
 def test_the_grant_refuses_what_is_not_a_user_id(capsys):
@@ -100,7 +100,7 @@ def test_the_grant_refuses_what_is_not_a_user_id(capsys):
 
 def test_the_grants_product_stays_in_its_comment(capsys):
     assert cli.main(["grant", "3f2b8c1e-9d4a-4e6b-8a7f-1c2d3e4f5a6b",
-                     "--product", "ads_free\ndelete from public.entitlements;"]) == 0
+                     "--product", "ads_free\ndelete from entitlements;"]) == 0
     out = capsys.readouterr().out
     assert not any(line.startswith("delete") for line in _code_lines(out))
 

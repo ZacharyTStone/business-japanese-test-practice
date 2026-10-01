@@ -354,8 +354,8 @@ def cmd_publish(args) -> int:
               "and are unpublished by this file")
     print()
     print("Apply it with either:")
-    print(f"  psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f {out}")
-    print("  or paste it into the Supabase SQL editor")
+    print(f"  (cd client && npx wrangler d1 execute business-japanese-drill --remote --file ../{out})")
+    print("  or paste it into the D1 console in the Cloudflare dashboard")
     print()
     print("Re-running it is safe — every statement is an upsert.")
     return 0

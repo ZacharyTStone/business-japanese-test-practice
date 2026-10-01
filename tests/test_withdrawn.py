@@ -17,7 +17,7 @@ from bjt import batch, plan, publish, withdrawn
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BATCHES = ROOT / "batches"
 REFERENCE = BATCHES / "hatsugen_choukai_J2_001.json"
-FEEDBACK_MIGRATION = ROOT / "supabase" / "migrations" / "20260919000400_report_a_bad_question.sql"
+FEEDBACK_MIGRATION = ROOT / "d1" / "migrations" / "0001_initial.sql"
 
 
 def _library_ids() -> set[str]:
@@ -102,17 +102,18 @@ def test_publish_unpublishes_exactly_the_withdrawn_items():
     bundle = batch.load(REFERENCE)
     victim = bundle["items"][0]["id"]
     sql = publish.bundle_sql(bundle, "ref", withdrawn_ids={victim})
-    update = sql.split("update public.items set is_published = false", 1)[1].split(";", 1)[0]
+    update = sql.split("update items set is_published = 0", 1)[1].split(";", 1)[0]
     assert re.findall(r"'([0-9a-f]{10})'", update) == [victim]
-    # Inside the transaction, after the rows exist.
-    assert sql.index("insert into public.items") < sql.index("is_published = false") < sql.index("commit;")
+    # After the rows exist: the file is applied as one all-or-nothing unit.
+    assert sql.index("insert into items") < sql.index("is_published = 0")
 
 
 def test_publish_never_sets_anything_back_to_published():
     """An owner's veto from the app must survive every later deploy."""
     bundle = batch.load(REFERENCE)
     for ids in (set(), {bundle["items"][0]["id"]}):
-        assert "is_published = true" not in publish.bundle_sql(bundle, "ref", withdrawn_ids=ids)
+        sql = publish.bundle_sql(bundle, "ref", withdrawn_ids=ids)
+        assert "is_published = true" not in sql and "is_published = 1" not in sql
 
 
 def test_a_bundle_with_nothing_withdrawn_says_nothing_about_it():

@@ -8,27 +8,22 @@
  * `run_worker_first` in wrangler.jsonc sends only /api/* and /media/* here;
  * every other request is served from the assets without running this code.
  * Cloudflare Access sits in front of all of it, so nothing on this origin is
- * reachable without signing in — the testers-only door, at the edge, with the
- * database's own `is_tester()` still behind it.
+ * reachable without signing in; behind it, the tester list in D1 is the door
+ * every query passes (core/caller.ts).
  *
  * Same origin, so there is no CORS to configure and the Access cookie rides
  * along with every request the app makes.
  */
-import postgres from "postgres";
-
-import { asCaller, toApiError } from "./db";
-import { claimsFor, isRefusal, parseUserMap, resolveCaller } from "./identity";
+import { resolveLearner } from "./core/caller";
+import { toApiError } from "./core/errors";
+import { isRefusal, notATester, signedInEmail, type Refusal } from "./identity";
 import { serveMedia } from "./media";
 import { queries } from "./queries";
 
 export interface Env {
   ASSETS: Fetcher;
-  HYPERDRIVE: Hyperdrive;
+  DB: D1Database;
   MEDIA: R2Bucket;
-  /** `{"you@example.com": "<auth.users id>"}` — a secret. See identity.ts. */
-  ACCESS_USERS?: string;
-  /** The Supabase project URL, for media R2 does not have yet. Optional. */
-  SUPABASE_URL?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -37,19 +32,41 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 }
 
-async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const name = new URL(request.url).pathname.replace(/^\/api\/q\//, "");
-  if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "POST only" } }, 405);
+function refuse(r: Refusal): Response {
+  return json({ error: { code: r.code, message: r.message, details: r.email ?? null, hint: null } }, r.status);
+}
+
+/** One named query, as `email`. Exported for the tests, which run it against
+ *  a local D1 without an Access in front. */
+export async function runQuery(
+  db: D1Database,
+  email: string,
+  name: string,
+  args: Record<string, unknown>,
+  now = Date.now(),
+  random: (id: string) => number = Math.random
+): Promise<Response> {
   if (!Object.prototype.hasOwnProperty.call(queries, name)) {
     return json({ error: { code: "unknown_query", message: `no query named ${name}` } }, 404);
   }
+  try {
+    const learner = await resolveLearner(db, email);
+    if (!learner.isTester) return refuse(notATester(email));
+    const data = await queries[name]({ db, learner, now, random }, args);
+    return json({ data: data ?? null });
+  } catch (e) {
+    const { status, error } = toApiError(e);
+    return json({ error }, status);
+  }
+}
+
+async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const name = new URL(request.url).pathname.replace(/^\/api\/q\//, "");
+  if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "POST only" } }, 405);
 
   const identity = ctx.access ? await ctx.access.getIdentity() : undefined;
-  const caller = resolveCaller(Boolean(ctx.access), identity?.email, parseUserMap(env.ACCESS_USERS));
-  if (isRefusal(caller)) {
-    const error = { code: caller.code, message: caller.message, details: caller.email ?? null, hint: null };
-    return json({ error }, caller.status);
-  }
+  const email = signedInEmail(Boolean(ctx.access), identity?.email);
+  if (isRefusal(email)) return refuse(email);
 
   let args: Record<string, unknown> = {};
   try {
@@ -61,26 +78,14 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     // No body, or not JSON: the query is asked with no arguments, and one that
     // needs them says which.
   }
-
-  // A client per request, as Hyperdrive asks: it pools the real connections,
-  // and a client held across requests would outlive the request it came from.
-  const sql = postgres(env.HYPERDRIVE.connectionString, { max: 5, fetch_types: false });
-  try {
-    const data = await asCaller(sql, claimsFor(caller), (tx) => queries[name](tx, args));
-    return json({ data: data ?? null });
-  } catch (e) {
-    const { status, error } = toApiError(e);
-    return json({ error }, status);
-  } finally {
-    ctx.waitUntil(sql.end());
-  }
+  return runQuery(env.DB, email, name, args);
 }
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname.startsWith("/api/q/")) return handleApi(request, env, ctx);
-    if (pathname.startsWith("/media/")) return serveMedia(request, env, ctx);
+    if (pathname.startsWith("/media/")) return serveMedia(request, env);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

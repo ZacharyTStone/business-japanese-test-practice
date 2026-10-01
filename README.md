@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/status-private%20beta%20(testers%20only)-orange?style=flat-square" alt="Status: private beta" />
   <img src="https://img.shields.io/badge/Python-item%20pipeline-3776AB?logo=python&logoColor=white&style=flat-square" alt="Python" />
   <img src="https://img.shields.io/badge/Claude%20API-structured%20output-D97757?logo=anthropic&logoColor=white&style=flat-square" alt="Claude API" />
-  <img src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3FCF8E?logo=supabase&logoColor=white&style=flat-square" alt="Supabase" />
+  <img src="https://img.shields.io/badge/Cloudflare-D1%20%C2%B7%20R2-F38020?logo=cloudflare&logoColor=white&style=flat-square" alt="Cloudflare D1 and R2" />
   <img src="https://img.shields.io/badge/Expo-iOS%20%C2%B7%20Android%20%C2%B7%20Web-000020?logo=expo&logoColor=white&style=flat-square" alt="Expo" />
   <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white&style=flat-square" alt="Cloudflare Workers" />
 </p>
@@ -75,9 +75,10 @@ flowchart LR
         CHK --> PR["pull request: JSON + SQL"]
     end
     PR -->|"a person merges"| DEP["deploy: SQL, audio, pictures"]
-    DEP --> DB[("Supabase<br/>Postgres · auth · storage")]
-    DB -->|"next_items() · grading trigger"| APP["Expo app<br/>web · iOS · Android"]
-    APP -->|"which option was touched"| DB
+    DEP --> DB[("Cloudflare<br/>D1 · R2")]
+    DB --- W["Worker<br/>queue · grading"]
+    W -->|"a set of questions"| APP["Expo app<br/>web"]
+    APP -->|"which option was touched"| W
 ```
 
 Three programs that only meet in the database:
@@ -85,10 +86,11 @@ Three programs that only meet in the database:
 1. **The pipeline** (`bjt/`, Python) writes questions, checks them, makes their
    audio and pictures, and outputs **bundles** (JSON) plus the **SQL** that
    publishes them. Runs locally or in GitHub Actions — never behind the app.
-2. **The database** (`supabase/`, Postgres on Supabase) holds the bank and every
-   answer, and does the thinking at practice time: building each set
-   (`next_items()`), grading answers (a trigger), moving levels and reviews, and
-   locking out everyone but testers (row-level security).
+2. **The database and its Worker** (`d1/`, `client/worker/`) — Cloudflare D1
+   holds the bank and every answer; the Worker in front of it does the thinking
+   at practice time: building each set (`core/queue.ts`), grading answers
+   (inside the INSERT, with triggers refusing anything else), moving levels and
+   reviews, and turning away everyone but testers.
 3. **The app** (`client/`, Expo / React Native) signs in, fetches a set, plays
    the audio, shows the question, sends back the chosen option, and shows the
    feedback. It has no grading or selection logic of its own.
@@ -100,11 +102,12 @@ Three programs that only meet in the database:
 | 03:00 JST | The **nightly** workflow writes up to 3 questions (≤ $0.50) and opens a pull request. |
 | Morning | The owner reads and merges it. **Merging is the decision to ship.** |
 | Minutes later | **checks** runs on `main`; when green, **deploy database** applies migrations, runs every bundle's SQL, and makes missing audio. |
-| Any time | A learner presses the button; the database builds a set of 10 and grades each answer. |
-| 15 answers | The database serves and accepts nothing more until midnight in Japan. |
+| Any time | A learner presses the button; the Worker builds a set of 10 and the database grades each answer. |
+| 15 answers | Nothing more is served, and the database accepts nothing more, until midnight in Japan. |
 
-**Hosting:** the web app is static files on **Cloudflare Workers**; data, sign-in
-and media on **Supabase**; jobs on **GitHub Actions**. Paid APIs: **Anthropic**
+**Hosting:** everything the app touches is on **Cloudflare**: the web app and
+its API on **Workers**, the data in **D1**, the clips and pictures in **R2**,
+sign-in by **Access**; jobs on **GitHub Actions**. Paid APIs: **Anthropic**
 (writing and review), **OpenAI** (voices, pictures), and optionally **TypeSafe
 AI** (Jev, a difficulty-probe prototype).
 
@@ -114,7 +117,7 @@ time (30 min) — plus per-call output caps. Hitting one stops the run and keeps
 what it wrote.
 
 ```
-bjt/        the pipeline (Python)          supabase/   schema, security, tests (SQL)
+bjt/        the pipeline (Python)          d1/         the schema (SQLite migrations)
 seedtable/  variety axes (data)            client/     the app (Expo)
 batches/    published bundles + SQL        tests/      pipeline tests
 ```
@@ -124,9 +127,10 @@ batches/    published bundles + SQL        tests/      pipeline tests
 ## 3. The app
 
 **Getting in.** First launch shows one explanation screen (your answers set your
-level; questions aim at your mistakes; your part is to answer), then email
-sign-in. Only listed testers get in; others see "not open yet". The database
-enforces this — the screens only explain it.
+level; questions aim at your mistakes; your part is to answer). Sign-in is
+Cloudflare Access, in front of the whole site. Only listed testers get in;
+others see "not open yet". The Worker enforces this — the screens only explain
+it.
 
 **Home.** One button, a ring for today's progress, a streak, and an exam
 countdown if a date is set. After the day's limit it becomes a "done for today"
@@ -370,42 +374,47 @@ queue.
 * **Web app** — Cloudflare rebuilds `client/` from the repo.
 
 **Secrets** (each read only by the step that needs it): `ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`, `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (storage uploads),
-`SUPABASE_DB_URL`, `SEEDS_TAR_B64` (licensed examples), `TYPESAFE_API_KEY`. The
-repository **variable** `BJT_DIFFICULTY_MODEL` picks the probe model (unset =
-Haiku; `jev-latest` = Jev). The service-role key never goes near the app.
+`OPENAI_API_KEY`, `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (D1),
+`R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY` (media uploads), `SEEDS_TAR_B64`
+(licensed examples), `TYPESAFE_API_KEY`. The repository **variable**
+`BJT_DIFFICULTY_MODEL` picks the probe model (unset = Haiku; `jev-latest` =
+Jev). None of them goes near the app.
 
 ---
 
 ## 7. The database
 
-`supabase/migrations/` is the schema; `supabase/current.sql` is a generated,
-readable snapshot of every function and view.
+`d1/migrations/` is the schema (SQLite, on D1); the logic that used to be SQL
+functions is TypeScript in `client/worker/core/`, one file per job.
 
 | Group | Tables |
 |---|---|
 | Bank | `items`, `item_options`, `item_types`, `bundles`, `scenes`, `audio_clips` |
 | Learner | `profiles`, `section_levels`, `practice_sessions`, `attempts`, `review_schedule`, `review_notes` |
-| Shared stats | `item_stats` (not client-readable) |
+| Shared stats | `item_stats` (read only by the queue) |
+| Who | `users` (one per signed-in address) |
 | Access | `testers`, `entitlements` (ad-free unlock) |
 | Quality | `item_feedback`, `item_vetoes` |
 
-**Access.** Every row-level policy requires `is_tester()`; the anonymous role
-reads nothing; `refuse_unlisted_signup()` blocks accounts for unlisted emails.
-Content is written only by the service role; personal rows only by their owner.
+**Access.** Cloudflare Access signs everybody in; the Worker turns away every
+query from an address not in `testers`, and makes no account for one
+(`core/caller.ts`). The app can only name a query (`worker/queries.ts`), never
+send SQL, and every query reads and writes only the caller's own rows. Content
+is written only by the deploy workflow.
 
-**Grading.** The app inserts `item_id`, `chosen_index` and how it was answered
-(timings, replays, `peeked`, `stands_for`). The trigger `grade_attempt()` fills
-in correctness and the **role** that caught the learner, then updates reviews
-and levels. Answers can't be edited or deleted; `reset_my_progress()` erases
-everything or nothing.
+**Grading.** The app sends `item_id`, `chosen_index` and how it was answered
+(timings, replays, `peeked`, `stands_for`). The INSERT fills in correctness and
+the **role** that caught the learner from the item itself, and a trigger refuses
+any other grade; reviews and levels move in the same all-or-nothing batch
+(`core/grade.ts`). Answers can't be edited (a trigger) or deleted;
+`resetProgress` erases everything or nothing.
 
-**Levels (per section).** `adjust_level()` looks at the last 10 first attempts at
+**Levels (per section).** `core/levels.ts` looks at the last 10 first attempts at
 the current level (20 once there's history; never fewer than 5): **≥ 80% right →
 up, ≤ 40% → down.** No move into a level with under 5 unseen questions left.
 Answers after a replay or with options shown as text don't count.
 
-**`next_items()` builds a set** (size is its only input):
+**The queue builds a set** (`core/queue.ts`; size is its only input):
 
 | Order | Source |
 |---|---|
@@ -430,8 +439,9 @@ at 3 days. Slow or helped answers hold their rung. Reviews due near the exam dat
 are pulled before it. Fixed, not a fitted curve.
 
 **Difficulty.** `item_stats` counts first answers across everyone, recounted
-nightly. Clients see only `v_item_difficulty`, and only after 8 different people
-have answered. Until then the queue uses `model_p_correct`.
+nightly (`d1/refresh_item_stats.sql`). The queue uses it only after 8 different
+people have answered, and no screen shows it. Until then the queue uses
+`model_p_correct`.
 
 **Limits and settings.** The day's set is `daily_goal` (10); at 15 answers per
 Japanese day, nothing more is served or accepted. Testers can be granted unlimited use or a
@@ -441,19 +451,22 @@ Learners can set only *how* they practise (clock, exam date, language), never
 *what* is served.
 
 **Reports and vetoes.** `item_feedback` stores one report per person per
-question; nothing acts on it automatically. `veto_item()` (for accounts with
+question; nothing acts on it automatically. A veto (for accounts with
 `may_veto`) unpublishes immediately; no answer is recorded.
 
-**Tested** by `supabase/test/run.sh` on a throwaway Postgres: privacy between
-users, testers-only access, clients can't grade or promote themselves, bundles
-apply twice cleanly, ladder and level behaviour, and that every table and column
-the app queries exists.
+**Tested** by `npm run test:db` on a local D1 (Miniflare) built the way the
+deploy builds the real one: every query the app makes, as a tester; privacy
+between users; testers-only access; the database refusing a grade it did not
+compute; bundles applying twice cleanly; the day's ceiling, vetoes and starting
+again. Before the move from Postgres, the TypeScript queue, grading, ladder and
+levels were replayed step by step against the old SQL functions over thousands
+of simulated answers, with no difference.
 
 ---
 
 ## 8. Working on it
 
-**Offline** (no keys, no Supabase):
+**Offline** (no keys, no Cloudflare account):
 
 ```bash
 pip install -e ".[dev]"
@@ -466,25 +479,28 @@ python -m bjt plan
 ```bash
 pytest
 ruff check .
-supabase/test/run.sh
-cd client && npm install && npm run typecheck && npm test
+cd client && npm install && npm run typecheck && npm test && npm run test:db
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json
 ```
 
 `pytest` also fails if a generated file is stale: regenerate with `python -m
-bjt.client_constants` and `python supabase/snapshot.py`. `CLAUDE.md` lists the
-decisions not to undo by accident.
+bjt.client_constants`. `CLAUDE.md` lists the decisions not to undo by accident.
 
-**Running the app** needs a Postgres with the schema (a Supabase project today)
-and the Cloudflare Worker in front of it: Hyperdrive to the database, an R2
-bucket for the media, and Cloudflare Access as the sign-in. List yourself as a
-tester first:
+**Running the app** needs a D1 database with the schema, an R2 bucket for the
+media, and Cloudflare Access as the sign-in, all bound to the Worker in
+`client/wrangler.jsonc`. The deploy workflow does the database part; by hand,
+from `client/`, listing yourself as a tester first:
 
 ```bash
-supabase db push --db-url "$SUPABASE_DB_URL"
-for f in batches/*.sql; do psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"; done
-python -m bjt tester you@example.com | psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f -
+npx wrangler d1 migrations apply business-japanese-drill --remote
+npx wrangler d1 execute business-japanese-drill --remote --file ../batches/scenes.sql
+for f in ../batches/*.sql; do npx wrangler d1 execute business-japanese-drill --remote --yes --file "$f"; done
+python -m bjt tester you@example.com > tester.sql
+npx wrangler d1 execute business-japanese-drill --remote --file tester.sql
 ```
+
+Locally, `npx wrangler dev` runs the Worker against a local D1 (`--local` on
+the commands above).
 
 The Cloudflare side, step by step, is in `cloudflare-migration.md`; the app's
 structure and local development are in `client/README.md`.
@@ -556,7 +572,8 @@ bjt/
   render/      document templates, charts, numerals
   tts/         audio planning, synthesis, phone channel, voices
   scenes.py · scene_art.py        pictures
-supabase/  migrations/ · current.sql · test/
+  r2.py        the media bucket, over R2's S3 API
+d1/        migrations/ · refresh_item_stats.sql
 client/    the app (see client/README.md)
 tests/     pipeline tests and library-wide sweeps
 ```

@@ -46,7 +46,7 @@ from typing import Iterable, Optional
 from . import config
 
 #: Why an item was withdrawn. The same closed set as `public.item_feedback.reason`
-#: (supabase/migrations/20260919000400_report_a_bad_question.sql), so a tester's
+#: (d1/migrations/0001_initial.sql), so a tester's
 #: report and the decision it leads to are counted in one vocabulary. A test
 #: holds the two equal.
 REASONS: tuple[str, ...] = ("unnatural", "wrong_answer", "ambiguous", "unclear", "audio", "other")

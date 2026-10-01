@@ -8,7 +8,7 @@ import os
 
 import pytest
 
-from bjt import http, jev, llm, scene_art
+from bjt import http, jev, llm, r2, scene_art
 from bjt.tts import providers
 
 from conftest import UnmockedCall
@@ -16,7 +16,7 @@ from conftest import UnmockedCall
 
 def test_no_credential_reaches_a_test(monkeypatch):
     live = [k for k in os.environ
-            if k.startswith(("ANTHROPIC_", "OPENAI_", "TYPESAFE_", "SUPABASE_"))]
+            if k.startswith(("ANTHROPIC_", "OPENAI_", "TYPESAFE_", "R2_", "CLOUDFLARE_"))]
     assert live == []
 
 
@@ -24,7 +24,7 @@ def test_no_credential_reaches_a_test(monkeypatch):
     lambda: llm.answer_choice("q", ["a", "b"]),
     lambda: http.request("GET", "https://example.invalid"),
     lambda: providers._post("https://example.invalid", {}, {}),
-    lambda: scene_art.Bucket(url="https://example.invalid", key="k").list(),
+    lambda: scene_art.Bucket(creds=r2.Credentials("acct", "k", "s")).list(),
     lambda: jev.choice_probabilities("q", ["a", "b"], model="jev-latest"),
 ])
 def test_an_unfaked_call_fails_the_test_rather_than_the_item(call, monkeypatch):

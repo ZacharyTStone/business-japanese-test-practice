@@ -126,7 +126,7 @@ def generate_and_gate(store, item_type: str, level: str, *, gate: bool, sanity_c
     # for an item nobody has answered yet. It is the probe's rate when the probe
     # ran, and the gate's full-view rate otherwise — a coarser number, but still
     # an honest one. It is a property of the question and is never shown to
-    # anybody (supabase/migrations/20260916000500).
+    # anybody (items.model_p_correct in d1/migrations/0001_initial.sql).
     if dres.measured:
         item["model_p_correct"] = dres.rate
     elif full is not None:

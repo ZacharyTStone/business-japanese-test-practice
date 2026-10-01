@@ -11,33 +11,32 @@ run the checks below before every push, not just when a change looks risky.
 
 ## Before pushing
 
-All of these run offline — no API key, no Supabase project, no network:
+All of these run offline — no API key, no Cloudflare account, no network:
 
 ```bash
 pytest                                  # the item pipeline
 ruff check .                            # bugs only: undefined names, unused variables, bad comparisons
-supabase/test/run.sh                    # schema + RLS + publish, on a throwaway Postgres
-cd client && npm run typecheck          # the app
-cd client && npm test                   # the app's pure parts: the practice reducer, the clock, the roles
+cd client && npm run typecheck          # the app, the Worker, its tests
+cd client && npm test                   # the pure parts: the practice reducer, the clock, the roles, the Worker's
+cd client && npm run test:db            # every Worker query + the schema's promises, on a local D1 with the bank
 cd client && npm run lint               # the rules of hooks
 mypy bjt                                # types: a None where a value is needed, a list where a bool is
 python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json   # the reference batch
 ```
 
-`pytest` fails until two generated files are regenerated with the change that
-stales them: `python -m bjt.client_constants` (the app's distractor roles and
-tag names, from `bjt/` and `seedtable/`) and `python supabase/snapshot.py`
-(`supabase/current.sql`). After anything that touches the library, run `python
--m bjt plan` (not a check) to see whether the bank is still the shape the queue
-needs. `supabase/test/run.sh` starts its own Postgres if `PGHOST` is unset
-(and needs `npm ci` run once in `client/`), and runs every query the Worker
-serves the app (`client/worker/queries.ts`) as a tester against the schema
-(`client/worker/queries.db.test.ts`): it fails if a table, view, column or
-function a query names does not exist, if the app writes a column the
-signed-in role may not, if a policy hides a row it should show or shows one it
-should hide, if a query has no case, or if `client/src/lib/database.types.ts`
-no longer matches the schema (`BJT_TYPEGEN_WRITE=1 supabase/test/run.sh`
-regenerates it) — the checks that catch a schema change the app has missed.
+`pytest` fails until a generated file is regenerated with the change that
+stales it: `python -m bjt.client_constants` (the app's distractor roles and
+tag names, from `bjt/` and `seedtable/`). After anything that touches the
+library, run `python -m bjt plan` (not a check) to see whether the bank is
+still the shape the queue needs. `npm run test:db` builds a local D1
+(Miniflare, the same SQLite D1 runs) the way the deploy builds the real one —
+every migration in `d1/migrations`, then every `batches/*.sql`, twice — and
+runs every query the Worker serves the app (`client/worker/queries.ts`) as a
+tester (`client/worker/test/queries.db.test.ts`) and the schema's promises
+(`schema.db.test.ts`): it fails if a table or column a query names does not
+exist, if a write the schema refuses is attempted, if one learner can see
+another's rows, if a bundle does not apply twice, or if a query has no case —
+the checks that catch a schema change the app has missed.
 
 ## Invariants worth not breaking
 
@@ -169,7 +168,7 @@ accident is not.
   scene job draws one picture per item under `pic_<item id>` and refuses it
   unless a reviewer shown the picture and the four descriptions picks the marked
   one every time (`bjt/scene_art.py`). `item_types.needs_picture` makes
-  `next_items()` hold the item back until `scenes.image_path` is set; every
+  the queue hold the item back until `scenes.image_path` is set; every
   other type ships without a picture. A picture refused
   `BJT_SCENE_LIFETIME_ATTEMPTS` times over its life (the bucket's `rejected/`
   ledger remembers; a reader that gave no answer is an error, never a refusal,
@@ -205,31 +204,32 @@ accident is not.
 ### The practice queue
 
 - **One bank, shared by everybody; fixed SQL does the sorting.** Only the order
-  is personal, decided by arithmetic in `next_items()` that a person can read
+  is personal, decided by arithmetic in the queue (`client/worker/core/queue.ts`) that a person can read
   and check. The model's contribution (the seed cell's tags, the distractor
   roles, `model_p_correct`) is attached *before* the item ships, and never
   consulted at practice time or per learner.
 - **The database grades answers, not the app.** The client posts `item_id` and
-  `chosen_index`; a trigger fills in who, whether it was right, and which
-  distractor role caught them. Never add client-side grading that writes.
+  `chosen_index`; the Worker's INSERT fills in who, whether it was right, and
+  which distractor role caught them, from the item, and a trigger refuses any
+  other grade. Never add client-side grading that writes.
 - **The learner chooses nothing about the questions.** No level, section,
   problem-type, difficulty, mode or mock picker, anywhere in the UI: the
   thinking happens behind the scenes, and the app's job is to raise a score, not
-  to offer a study menu. `next_items()` takes a size and reads everything else
-  from the record; `adjust_level()` moves the level on the evidence of the
+  to offer a study menu. The queue takes a size and reads everything else
+  from the record; `nextLevel()` (`core/levels.ts`) moves the level on the evidence of the
   answers; the set slips in one item from the level above. A setting about *how
   you practise* is allowed; anything that would change *which item comes next*
   is not. The two allowed: `profiles.timed_reading` (whether reading questions
-  are counted down; `next_items()` has never heard of it) and
+  are counted down; the queue has never heard of it) and
   `profiles.daily_goal` on the one account whose `testers.max_daily_goal` says
-  the size is theirs (how long a sitting is; `next_items()` takes it only as a
+  the size is theirs (how long a sitting is; the queue takes it only as a
   size). `profiles.exam_date` is a fact about the learner, not a choice, and the
   record reads it: every due date is brought in ahead of it, and in its last two
   weeks the set follows the exam's section mix strictly (a full point per item
   beyond a section's share rather than a quarter) and the reading clock runs
   whatever `timed_reading` says.
 - **The level is per exam section: three levels, not one.** `section_levels`
-  holds 聴解 / 聴読解 / 読解; `adjust_level()` moves the one an answer belongs to, on a
+  holds 聴解 / 聴読解 / 読解; `nextLevel()` moves the one an answer belongs to, on a
   window counted inside that section, so a learner can be 読解 J1 and 聴解 J3 at
   once (most people are). `profiles.target_level` is only the one-line summary
   (the middle of the three) and must never decide what is served. The window is
@@ -238,8 +238,8 @@ accident is not.
   fewer than five; nobody moves into a level with fewer than five questions left
   to meet (most shelves hold fewer than ten, and a learner must be able to leave
   one). An answer after a replay or with the spoken options read counts for
-  neither direction: the exam plays once. `level_evidence()` is the one
-  definition `adjust_level()` and `v_my_levels` share.
+  neither direction: the exam plays once. `levelEvidence()` is the one
+  definition `nextLevel()` and `myLevels()` share.
 - **Good at something means harder questions in it, and vice versa.** Inside a
   level the queue aims at
   `target = 0.85 − (accuracy at this problem type) × 0.35`, held in [0.50,
@@ -260,9 +260,9 @@ accident is not.
 - **The set is shaped like the exam, and so is the bank.** The exam's 80
   questions: 聴解 25 (場面把握 5 / 発言聴解 10 / 総合聴解 10), 聴読解 25 (状況把握 5 / 資料聴読解 10 /
   総合聴読解 10), 読解 30 (語彙・文法 10 / 表現読解 10 / 総合読解 10), held in
-  `public.item_types.exam_questions` and `bjt.schemas.EXAM_QUESTIONS`, which a
+  `item_types.exam_questions` (d1/migrations) and `bjt.schemas.EXAM_QUESTIONS`, which a
   test holds equal. The nightly planner fills the shelf furthest behind its
-  **share**, not the one with fewest items, and `next_items()` carries a section
+  **share**, not the one with fewest items, and the queue carries a section
   term so a set of ten leans 3 / 3 / 4.
 - **A due review is a new question, never the same one while a new one exists.**
   The same four sentences test whether the learner remembers "it was 3"; the
@@ -270,8 +270,8 @@ accident is not.
   schedules the *lesson* an item taught. A due lesson is re-tested by an unseen
   question of the same type that carries the trap which caught the learner as a
   wrong option (or, for a lesson learnt without being caught, shares its 機能): a
-  類題, served by `next_items()` with `stands_for` naming the lesson. The answer
-  moves that lesson's rung and starts no lesson of its own; `grade_attempt()`
+  類題, served by the queue with `stands_for` naming the lesson. The answer
+  moves that lesson's rung and starts no lesson of its own; `validStandsFor()` (`core/grade.ts`)
   clears a `stands_for` the queue could not have served. Misses are served
   first, each lesson taking the best question no earlier lesson took. Every
   unseen question, at any level, comes before any repeat.
@@ -280,7 +280,7 @@ accident is not.
   remembers the trap. A question known at first sight (right, in time, unaided)
   starts on the three-day rung. A right answer holds its rung when slow — timed
   from when it could be answered (`attempts.think_ms`), over the reading clock's
-  own maximum for a reading type (`pace_max_scale()`, which a test holds equal
+  own maximum for a reading type (`PACE_MAX_SCALE` in `core/grade.ts`, which a test holds equal
   to `MAX_SCALE` in `pace.ts`) or thirty seconds after the audio ended for a
   listening one — or when helped by a replay or the spoken options. With an exam
   date set, a due date on or after the last two days before it is brought into
@@ -300,28 +300,27 @@ accident is not.
 - **Ten a day, fifteen at most, and the database counts.** The daily set is
   `profiles.daily_goal` (default 10, never above 15, never chosen in the app);
   one bonus set follows; at fifteen answers in a Japanese calendar day
-  `next_items()` returns nothing, `grade_attempt()` refuses a sixteenth answer
-  (hint `daily_limit_reached`, counted under a per-learner lock so a second
-  device cannot slip past), and the app shows the done screen
-  (`client/src/ui/done.tsx`); `v_my_day` is the one row both read. A tester row
+  the queue returns nothing, a trigger on `attempts` refuses a sixteenth answer
+  (hint `daily_limit_reached`; D1 runs one write at a time, so a second device
+  cannot slip past), and the app shows the done screen
+  (`client/src/ui/done.tsx`); `day()` in `core/record.ts` is what the app reads. A tester row
   with `unlimited = true` (`bjt tester <email> --unlimited`) lifts the ceiling
   for that account alone, for exercising the app, not for studying. **One
   account may size its own day**, with one number rather than a second ceiling:
   `testers.max_daily_goal` (null on every row but the owner's;
   `bjt tester <email> --max-goal 60`) is that account's own fifteen — the
-  largest set it may choose *and* where its day stops. `my_daily_max()` is the
-  number `v_my_day` and `next_items()` read, so the door is per account;
-  `v_my_day.goal_max` (null for everybody else) draws the field on the account
+  largest set it may choose *and* where its day stops. `dailyMax()` is the
+  number `day()`, the queue and the trigger read, so the door is per account;
+  `day().goal_max` (null for everybody else) draws the field on the account
   screen, so no screen copies the fifteen. The `daily_goal` check constraint
-  says only that a day is at least one question; the per-account bound is a
-  trigger on `profiles`, because a constraint cannot see who is writing: it
-  refuses a client's change of `daily_goal` on every account whose tester row
-  has no `max_daily_goal`, and one above that number on the account that has
-  it. The trigger
-  judges a goal being *written*, never an existing row, so lowering the number
-  later does not freeze the rest of the profile. **There is no invented ceiling
-  on that number** beyond the `smallint` both columns are declared as:
-  `next_items()` serves only what the published bank has in the learner's level
+  says only that a day is at least one question; the per-account bound is
+  `updateProfile()` (`core/profile.ts`), because a constraint cannot see who is
+  writing: it refuses a change of `daily_goal` on every account whose tester
+  row has no `max_daily_goal`, and one above that number on the account that
+  has it. It judges a goal being *written*, never an existing row, so lowering
+  the number later does not freeze the rest of the profile. **There is no
+  invented ceiling on that number** beyond the 16-bit range the Worker reads it
+  in: the queue serves only what the published bank has in the learner's level
   window, so a goal of five hundred fetches everything there is, not five
   hundred rows; the bank is the real limit.
 - **Every distractor role has its own feedback, and the app's list of roles is
@@ -337,85 +336,78 @@ accident is not.
 
 ### Data and access
 
-- **`attempts` has no update or delete policy**: an answer given is history, and
-  a policy would open the door to "delete the ones I got wrong". The one removal
-  is `reset_my_progress()`, shaped so it cannot be that: no arguments, the user
-  read from the session, the whole history or none of it — answers, sessions,
-  the spacing schedule, the review notes and the three section levels. Settings,
-  entitlements and item reports are not progress and are left alone. A client
-  may insert only `item_id`, `chosen_index`, `session_id`, `elapsed_ms`,
-  `think_ms`, `replays`, `peeked`, `stands_for` — not `answered_at`, which the
-  day's door and the ladder both read. Of its own profile it may update only
-  `display_name`, `daily_goal`, `exam_date` and `timed_reading` (column
-  grants); `target_level` is the database's to write.
-- **`item_stats` is not readable by a client, and `review_schedule` is not
-  writable by one.** Raw per-item counts over a handful of users are a statement
-  about a person (`v_item_difficulty` is the k-anonymous surface, floor of
-  eight); `review_schedule` for the same reason `attempts` has no update policy.
-  `refresh_item_stats()` counts each person's first answer to each question,
-  timeouts left out, recounting from nothing, so the floor of eight is eight
-  people and a reset history leaves no count behind.
-- **`supabase/current.sql` is the schema made readable, and generated** by
-  `python supabase/snapshot.py`: the latest definition of every function, view
-  and trigger from the migrations, comments included. Read it to see what the
-  queue does today; never apply it — the migrations are the schema. A test fails
-  when it is stale.
+- **An answer given is history.** A trigger on `attempts` refuses every update,
+  and no query deletes one: a way to delete would open the door to "delete the
+  ones I got wrong". The one removal is `resetProgress()` (`core/profile.ts`),
+  shaped so it cannot be that: no arguments, the learner read from the session,
+  the whole history or none of it — answers, sessions, the spacing schedule,
+  the review notes and the three section levels. Settings, entitlements and
+  item reports are not progress and are left alone. An answer carries only
+  `item_id`, `chosen_index`, `session_id`, `elapsed_ms`, `think_ms`,
+  `replays`, `peeked`, `stands_for` from the app — not `answered_at`, which the
+  day's door and the ladder both read and the Worker's clock writes. Of its own
+  profile the app may change only `display_name`, `daily_goal`, `exam_date` and
+  `timed_reading` (`queries.ts` refuses any other field); `target_level` is the
+  database's to write.
+- **The grade is the item's.** The INSERT computes `is_correct` and
+  `chosen_role` from the item and its options (`core/grade.ts`), and the
+  `attempts_need_a_live_question` trigger refuses any row whose grade is not
+  that, or whose question is not live. The ladder and the level move in the
+  same all-or-nothing batch as the answer, so a refused answer moves nothing.
+- **`item_stats` is read only by the queue, and `review_schedule` is written
+  only by an answer.** Raw per-item counts over a handful of users are a
+  statement about a person: no query returns them, and the queue uses a count
+  only over eight people or more. `d1/refresh_item_stats.sql` (nightly) counts
+  each person's first answer to each question, timeouts left out, recounting
+  from nothing, so the floor of eight is eight people and a reset history
+  leaves no count behind.
+- **`d1/migrations/` is the schema; the logic is TypeScript.** What were SQL
+  functions and views are `client/worker/core/`, one file per job, and they
+  were checked step by step against the SQL they replaced before the move. A
+  new migration is a new numbered file, never an edit to one that has been
+  applied.
 - **The app reaches the database only through the Worker, as the learner.**
   `client/worker/` serves the web build, `/api/q/<name>` and `/media/*` on one
   origin. The app names a query in `client/worker/queries.ts` and passes its
   arguments; it never sends SQL, a table or a column list, and a new screen's
-  query is a new entry there (with its case in `queries.db.test.ts`). The
-  Worker logs in as `bjt_worker` (`supabase/worker_role.sql`: `noinherit`, a
-  member of `authenticated` and of nothing else, owns nothing) and turns each
-  request into one transaction that says `set local role authenticated` and
-  sets the caller's claims, so row-level security, the column grants and every
-  trigger decide exactly what they decided under PostgREST. Never connect it as
-  a role that bypasses RLS (`postgres`, `service_role`), never skip the `set
-  local role`, and keep Hyperdrive's query cache off for it: the cache keys on
-  query text, which does not carry the claims, so it could serve one learner's
-  rows to another. Who the caller is comes from Cloudflare Access
-  (`ctx.access.getIdentity()`, never a header the client could forge), mapped
-  to the existing user id by the `ACCESS_USERS` secret; no `ctx.access` is a
-  401, not a pass. The clips and pictures are R2 objects under the paths the
-  database already holds, read through from Supabase Storage until the
-  pipeline uploads to R2 itself (`client/worker/media.ts`).
-- **Testers only, for now, and the database is the door.** `public.testers`
-  lists who may use the app by sign-in email (Cloudflare Access in front of the
-  whole site today, matched on the same email); `is_tester()` reads the JWT; every
-  row-level policy in `public` and `storage` requires it (a schema test fails
-  CI on one that does not) and the anon role holds nothing, including on
-  objects created later (the default privileges leave it out). The client's gate screens only say
-  so politely. Opening the app later is one migration that drops the conjunct,
-  with the anonymous-first client path back in front of the door. Never add a
-  policy, view or RPC that answers a non-tester while this holds. A second lock
-  keeps new users out while the app is a work in progress: an address not
-  already on the list cannot get an account at all. `refuse_unlisted_signup()`,
-  a `before insert` trigger on `auth.users`, refuses the auth service's own
-  connection (GoTrue is `supabase_auth_admin`, the path open to the internet)
-  unless `public.testers` already names the address; an anonymous sign-in
-  carries no address and is refused too. An empty list — where a fresh project
-  starts — means nobody can sign up. A migration, a fixture or the owner with
-  the service role is unaffected, because a check the owner must switch off for
-  ordinary work ends up switched off. Reading nothing and not existing are
+  query is a new entry there (with its case in `test/queries.db.test.ts`).
+  Every query filters on the caller's own id; a query that could read another
+  learner's row is a bug the database tests exist to catch. Who the caller is
+  comes from Cloudflare Access (`ctx.access.getIdentity()`, never a header the
+  client could forge), looked up by address in D1; no `ctx.access` is a 401,
+  not a pass. The clips and pictures are R2 objects under the paths the
+  database holds (`client/worker/media.ts`); the pipeline writes them there
+  (`bjt/r2.py`).
+- **Testers only, for now, and the Worker is the door.** `testers` lists who
+  may use the app by sign-in email (Cloudflare Access in front of the whole
+  site, matched on the same email). Every query from an address not on the
+  list is refused before it runs (`client/worker/index.ts`), and the app's gate
+  screens only say so politely. A second lock keeps new users out while the app
+  is a work in progress: an address not already on the list cannot get an
+  account at all — `resolveLearner()` (`core/caller.ts`) makes the account and
+  its profile on a listed address's first visit and on nobody else's. An empty
+  list means nobody gets in. Opening the app later is dropping the list from
+  that door, with a public sign-in in front of it. Never add a query that
+  answers a non-tester while this holds. Reading nothing and not existing are
   different things, and both are wanted.
 
 ### Removing questions
 
-- **A report is a report; a veto is the decision.** `public.item_feedback` takes
+- **A report is a report; a veto is the decision.** `item_feedback` takes
   one row per person per item (a fixed reason, an optional sentence) and nothing
   in the queue reads it: a reported item is served until somebody looks, since a
   button press is not a review and an item that vanishes on one press leaves the
   bank one press from empty. The reasons are a closed set because the generator
   loop can act on a count and not on prose. The owner, not a tester in this
-  respect, removes a bad question the moment it is met: `veto_item()`
+  respect, removes a bad question the moment it is met: `vetoItem()` (`core/bank.ts`)
   unpublishes it for everybody at once, from inside the practice screen. Who may
   press it keeps the rule above true: `testers.may_veto` is false on every row
-  by default (`bjt tester <email> --veto` sets it), `may_i_veto()` decides
-  whether the button is drawn, and `veto_item()` re-checks it rather than
+  by default (`bjt tester <email> --veto` sets it), `mayVeto()` decides
+  whether the button is drawn, and `vetoItem()` re-checks it rather than
   trusting the client. It is an unpublish, never a delete, so every attempt,
   review rung and report pointing at the item keeps resolving. Vetoing happens
   instead of answering: no `attempts` row, and the day's ten is not spent.
-  `public.item_vetoes` keeps who and when.
+  `item_vetoes` keeps who and when.
 - **A question leaves the bank through `batches/withdrawn.txt`, never by
   deletion** — the veto made from the repository. Every reference to an item
   is `on delete restrict`, so the database refuses a delete outright. One line per item (id, a

@@ -150,8 +150,8 @@ def test_publish_writes_the_rate_and_a_null_when_there_is_none():
     # ...and the value for it is null rather than a made-up number. The items
     # statement is the one that carries it; the bundles statement above it does
     # not, so the row has to be located rather than taken off the end.
-    items_stmt = without.split("insert into public.items ", 1)[1]
-    row = items_stmt.split("values ", 1)[1].split("\non conflict", 1)[0]
+    items_stmt = without.split("insert into items ", 1)[1]
+    row = items_stmt.split("values ", 1)[1].split(" on conflict", 1)[0]
     assert row.rstrip().endswith("null)")
 
 
@@ -241,43 +241,33 @@ def test_a_floor_of_zero_is_the_old_rule():
     assert all(w.item_type not in schemas.READING_TYPES for w in order)
 
 
-def test_the_section_map_matches_the_database():
-    """The planner needs the sections without a database; the migration is the
-    authority. The two are asserted equal so neither can drift."""
+def _item_type_rows() -> dict[str, tuple[str, int]]:
+    """item_types as the D1 migrations seed it: id → (section, exam_questions)."""
     import re
     sql = "\n".join(
         p.read_text(encoding="utf-8")
-        for p in sorted((ROOT_DIR / "supabase" / "migrations").glob("*.sql"))
+        for p in sorted((ROOT_DIR / "d1" / "migrations").glob("*.sql"))
     )
-    rows: dict[str, str] = {}
-    for stmt in re.findall(r"insert into public\.item_types\b.*?;", sql, re.S):
-        rows.update(re.findall(r"\('([a-z_]+)',\s*'(choukai|choudokkai|dokkai)',", stmt))
-    assert rows == schemas.SECTIONS
+    rows: dict[str, tuple[str, int]] = {}
+    for stmt in re.findall(r"insert into item_types\b.*?;", sql, re.S):
+        for row in re.findall(r"\(('[a-z_]+'.*?)\)\s*[,;]", stmt):
+            fields = [f.strip() for f in row.split(",")]
+            rows[fields[0].strip("'")] = (fields[1].strip("'"), int(fields[-1]))
+    assert rows, "no migration seeds item_types"
+    return rows
+
+
+def test_the_section_map_matches_the_database():
+    """The planner needs the sections without a database; the migration is the
+    authority. The two are asserted equal so neither can drift."""
+    assert {t: section for t, (section, _) in _item_type_rows().items()} == schemas.SECTIONS
 
 
 def test_the_exam_question_counts_match_the_database():
     """Same argument as the section map: the planner needs the counts with no
     database, the queue reads them from one, and a drift between the two would
     quietly build a bank in one shape and serve it in another."""
-    import re
-    sql = "\n".join(
-        p.read_text(encoding="utf-8")
-        for p in sorted((ROOT_DIR / "supabase" / "migrations").glob("*.sql"))
-    )
-    # The column arrives with a default and is then set per type, so the
-    # authority is the default plus every update that overrides it.
-    default = re.search(
-        r"add column exam_questions smallint not null default (\d+)", sql
-    )
-    assert default, "the migration should declare exam_questions with a default"
-    counts = {t: int(default.group(1)) for t in schemas.SECTIONS}
-    for value, ids in re.findall(
-        r"update public\.item_types set exam_questions = (\d+) where id (?:=|in) \(?([^;)]*)\)?;",
-        sql,
-    ):
-        for item_type in re.findall(r"'([a-z_]+)'", ids):
-            counts[item_type] = int(value)
-    assert counts == schemas.EXAM_QUESTIONS
+    assert {t: n for t, (_, n) in _item_type_rows().items()} == schemas.EXAM_QUESTIONS
 
 
 def test_the_planner_fills_against_the_share_not_the_depth():

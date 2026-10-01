@@ -1,0 +1,12 @@
+{
+  // The database tests run in Node, against a local D1 through wrangler's
+  // platform proxy: the Worker's types and Node's.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "node"],
+    // The move script runs under `node --experimental-strip-types`, which
+    // wants the extension written out.
+    "allowImportingTsExtensions": true
+  },
+  "include": ["../**/*.ts", "../../scripts/**/*.ts", "../../scripts/**/*.mts"]
+}

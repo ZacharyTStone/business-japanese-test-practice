@@ -10,7 +10,9 @@ import urllib.error
 
 import pytest
 
-from bjt import http, scene_art
+from bjt import http, r2, scene_art
+
+CREDS = r2.Credentials("acct", "k", "s")
 
 
 @pytest.fixture
@@ -100,8 +102,11 @@ def test_a_reply_that_is_not_json_names_the_url(wire):
 
 
 def test_the_bucket_listing_survives_a_dropped_request(wire):
-    wire.replies = [_status(502), json.dumps([{"name": "a.webp", "id": 1}]).encode()]
-    bucket = scene_art.Bucket(url="https://x.supabase.co", key="k")
+    listing = ('<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+               "<IsTruncated>false</IsTruncated><Contents><Key>scenes/a.webp</Key></Contents>"
+               "</ListBucketResult>").encode()
+    wire.replies = [_status(502), listing]
+    bucket = scene_art.Bucket(creds=CREDS)
     assert bucket.list() == {"a.webp"}
 
 
@@ -109,7 +114,7 @@ def test_an_upload_is_never_sent_twice(wire):
     """A retried upload that had in fact arrived would come back as "already
     there" — and be counted as live when it is tonight's file."""
     wire.replies = [_status(503)]
-    bucket = scene_art.Bucket(url="https://x.supabase.co", key="k")
+    bucket = scene_art.Bucket(creds=CREDS)
     with pytest.raises(http.RequestFailed):
         bucket.upload("a.webp", b"x", "image/webp")
     assert len(wire.sent) == 1

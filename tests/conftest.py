@@ -10,7 +10,7 @@ from bjt.db import Store
 #: `bjt.config` loads `.env` at import, and a developer's shell or a CI job may
 #: carry any of these; a test must never see them, so a model call nobody
 #: faked cannot quietly find a key and spend it.
-_LIVE_ENV_PREFIXES = ("ANTHROPIC_", "OPENAI_", "TYPESAFE_", "SUPABASE_", "GEMINI_", "GOOGLE_")
+_LIVE_ENV_PREFIXES = ("ANTHROPIC_", "OPENAI_", "TYPESAFE_", "R2_", "CLOUDFLARE_", "GEMINI_", "GOOGLE_")
 _LIVE_ENV_NAMES = ("BJT_SPEND_LEDGER",)
 
 

@@ -118,7 +118,7 @@ def test_jev_is_held_to_the_shared_ledger(shared, monkeypatch):
 
 def _run(code: str, ledger: Path) -> subprocess.CompletedProcess:
     env = {k: v for k, v in os.environ.items()
-           if not k.startswith(("ANTHROPIC_", "OPENAI_", "TYPESAFE_", "SUPABASE_"))}
+           if not k.startswith(("ANTHROPIC_", "OPENAI_", "TYPESAFE_", "R2_", "CLOUDFLARE_"))}
     env[llm.LEDGER_ENV] = str(ledger)
     env["BJT_RUN_BUDGET_USD"] = "0.5"
     return subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env,

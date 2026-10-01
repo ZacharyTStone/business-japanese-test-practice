@@ -129,7 +129,7 @@ def test_a_withdrawn_item_is_never_measured(bank, measured):
     assert victim["seed_cell"]["id"] not in measured and len(measured) == 3
     assert _rates(bank, SHELVES[0]) == [None, 0.6]
     # And the SQL written for its bundle still unpublishes it.
-    assert "is_published = false" in (bank / SHELVES[0]).with_suffix(".sql").read_text(
+    assert "is_published = 0" in (bank / SHELVES[0]).with_suffix(".sql").read_text(
         encoding="utf-8")
 
 
@@ -283,7 +283,7 @@ def test_withdraw_appends_the_proposals_and_publishes_them(bank, reviewers):
     for name in SHELVES:
         assert _sql_is_published(bank, name)
     unpublished = (bank / SHELVES[0]).with_suffix(".sql").read_text(
-        encoding="utf-8").split("is_published = false")[1]
+        encoding="utf-8").split("is_published = 0")[1]
     assert ids[1] in unpublished and ids[0] not in unpublished
 
     # A second run finds nothing left to check and nothing new to add.

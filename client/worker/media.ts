@@ -5,12 +5,8 @@
  * `scenes.image_path`), so nothing stored changes. The R2 key is
  * `<bucket>/<path>` — `audio/openai/ab/ab12….wav`.
  *
- * Read-through while the pipeline still uploads to Supabase Storage: a key R2
- * does not have yet is fetched from the Supabase public bucket of the same
- * name, stored in R2 under the same key, and served. So the library moves over
- * as it is listened to, and `bjt synth --upload` / `bjt scenes --upload` need
- * not change on the day the app does. Once the pipeline writes to R2 itself,
- * `SUPABASE_URL` is unset and the fallback is gone; a miss is then a 404.
+ * The pipeline writes there itself (`bjt synth --upload`, the scene job), and
+ * a key R2 does not have is a 404: there is nowhere else to look.
  *
  * A clip's id hashes its text and voice, and a live clip is never re-made, so
  * a clip is served as immutable. A picture can be redrawn under its own name
@@ -64,34 +60,20 @@ export function contentTypeFor(path: string): string {
   return TYPES[ext] ?? "application/octet-stream";
 }
 
-export type MediaEnv = { MEDIA: R2Bucket; SUPABASE_URL?: string };
+export type MediaEnv = { MEDIA: R2Bucket };
 
-export async function serveMedia(request: Request, env: MediaEnv, ctx: ExecutionContext): Promise<Response> {
+export async function serveMedia(request: Request, env: MediaEnv): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
   }
   const media = parseMediaPath(new URL(request.url).pathname);
   if (!media) return new Response("not found", { status: 404 });
 
-  const headers = new Headers({ "cache-control": cacheControl(media.bucket) });
   const stored = await env.MEDIA.get(media.key);
-  if (stored) {
-    stored.writeHttpMetadata(headers);
-    if (!headers.has("content-type")) headers.set("content-type", contentTypeFor(media.path));
-    headers.set("etag", stored.httpEtag);
-    return new Response(request.method === "HEAD" ? null : stored.body, { headers });
-  }
-
-  // Not in R2 yet: the Supabase public bucket, while there is one.
-  const origin = (env.SUPABASE_URL ?? "").replace(/\/+$/, "");
-  if (!origin) return new Response("not found", { status: 404 });
-  const upstream = await fetch(`${origin}/storage/v1/object/public/${media.bucket}/${media.path}`);
-  if (!upstream.ok) return new Response("not found", { status: upstream.status === 404 || upstream.status === 400 ? 404 : 502 });
-
-  const body = await upstream.arrayBuffer();
-  const contentType = upstream.headers.get("content-type") || contentTypeFor(media.path);
-  // Kept for next time without making this listener wait for the write.
-  ctx.waitUntil(env.MEDIA.put(media.key, body, { httpMetadata: { contentType } }));
-  headers.set("content-type", contentType);
-  return new Response(request.method === "HEAD" ? null : body, { headers });
+  if (!stored) return new Response("not found", { status: 404 });
+  const headers = new Headers({ "cache-control": cacheControl(media.bucket) });
+  stored.writeHttpMetadata(headers);
+  if (!headers.has("content-type")) headers.set("content-type", contentTypeFor(media.path));
+  headers.set("etag", stored.httpEtag);
+  return new Response(request.method === "HEAD" ? null : stored.body, { headers });
 }

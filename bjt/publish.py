@@ -1,11 +1,12 @@
 """Bundle → SQL. How checked content gets into the database.
 
 The app never generates anything, so publishing is not an API the app calls; it
-is a file. `bjt publish` turns a bundle into one idempotent SQL transaction that
-can be read before it is run, committed next to the migration that shaped it,
-and applied with `psql` or pasted into the Supabase SQL editor. Re-running it is
-always safe: every statement is an upsert, so a corrected batch overwrites the
-old rows rather than duplicating them.
+is a file. `bjt publish` turns a bundle into an idempotent SQL file for D1
+(SQLite) that can be read before it is run, committed next to the schema that
+shaped it (d1/migrations/), and applied with `wrangler d1 execute --file` or
+pasted into the D1 console. Re-running it is always safe: every statement is an
+upsert, so a corrected batch overwrites the old rows rather than duplicating
+them.
 
 That is deliberately less convenient than a script that talks to the API with a
 service key. It is also the reason there is no service key on anyone's laptop, no
@@ -14,10 +15,13 @@ items reach real users.
 
 Two things this must get right:
 
-* **One transaction.** `items.correct_index` is a deferred foreign key into the
-  option set, so an item and its options are only valid together. Splitting them
-  across transactions fails, which is the database refusing to hold a question
-  with no answer.
+* **One file, all or nothing.** D1 runs a file with `wrangler d1 execute
+  --remote --file` as one unit and rolls it back if any statement fails, so an
+  item never lands without its options. The file holds no BEGIN/COMMIT: D1
+  refuses them and supplies the transaction itself.
+* **Small statements.** One row per INSERT. D1 refuses a statement over
+  100 KB, and a bundle of long documents written as one multi-row INSERT
+  would eventually be one.
 * **Quoting.** Every value goes through `lit()`. The content is Japanese prose
   full of quotes and brackets, written by a model, and string-formatting it into
   SQL by hand is how you end up with a broken publish at best.
@@ -37,31 +41,33 @@ from .files import write_atomic
 def lit(value: Any) -> str:
     """A SQL literal for anything we put in a bundle.
 
-    Dicts and lists become jsonb. Everything else becomes a quoted string with
-    embedded quotes doubled, or NULL. A float that is not a number (nan, inf)
-    is refused: written bare it is an identifier Postgres does not know, and
-    quoted it would be a value nobody measured. So is a NUL, which a Postgres
-    text value cannot hold.
+    Dicts and lists become JSON text. Booleans become 1 and 0, which is what a
+    SQLite boolean is. Everything else becomes a quoted string with embedded
+    quotes doubled, or NULL. A float that is not a number (nan, inf) is
+    refused: written bare it is an identifier SQL does not know, and quoted it
+    would be a value nobody measured. So is a NUL, which would cut a text
+    value short.
     """
     if value is None:
         return "null"
     if isinstance(value, bool):
-        return "true" if value else "false"
+        return "1" if value else "0"
     if isinstance(value, float) and not math.isfinite(value):
         raise ValueError(f"{value!r} is not a number SQL can store")
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, (dict, list)):
-        # allow_nan=False: JSON has no NaN either, and jsonb would refuse it.
-        return _quote(json.dumps(value, ensure_ascii=False, allow_nan=False)) + "::jsonb"
+        # allow_nan=False: JSON has no NaN either, and json_valid() would
+        # refuse it.
+        return _quote(json.dumps(value, ensure_ascii=False, allow_nan=False))
     return _quote(str(value))
 
 
 def _quote(s: str) -> str:
-    # Backslashes are literal in standard_conforming_strings, which Postgres has
-    # had on by default for fifteen years; only the quote needs doubling.
+    # Backslashes are literal in an SQLite string; only the quote needs
+    # doubling.
     if "\x00" in s:
-        raise ValueError("a NUL cannot be stored in a Postgres text value")
+        raise ValueError("a NUL cannot be stored in a text value")
     return "'" + s.replace("'", "''") + "'"
 
 
@@ -81,25 +87,20 @@ def comment(value: Any) -> str:
 
 
 def _upsert(table: str, columns: list[str], rows: list[list[Any]], key: list[str]) -> str:
-    """One multi-row INSERT ... ON CONFLICT DO UPDATE."""
+    """An INSERT ... ON CONFLICT DO UPDATE per row (see "Small statements")."""
     if not rows:
         return ""
     updatable = [c for c in columns if c not in key]
-    values = ",\n       ".join(
-        "(" + ", ".join(lit(v) for v in row) + ")" for row in rows
+    if updatable:
+        on_conflict = (f"on conflict ({', '.join(key)}) do update set "
+                       + ", ".join(f"{c} = excluded.{c}" for c in updatable))
+    else:
+        on_conflict = f"on conflict ({', '.join(key)}) do nothing"
+    return "\n".join(
+        f"insert into {table} ({', '.join(columns)}) values "
+        f"({', '.join(lit(v) for v in row)}) {on_conflict};"
+        for row in rows
     )
-    sql = [
-        f"insert into public.{table} ({', '.join(columns)})",
-        f"values {values}",
-        f"on conflict ({', '.join(key)}) do update set",
-        "       " + ",\n       ".join(f"{c} = excluded.{c}" for c in updatable)
-        if updatable
-        else "       nothing",
-    ]
-    if not updatable:
-        sql[-2] = f"on conflict ({', '.join(key)}) do nothing"
-        sql.pop()
-    return "\n".join(sql) + ";"
 
 
 def scene_labels(item_type: str) -> dict[str, str]:
@@ -112,7 +113,7 @@ def scene_labels(item_type: str) -> dict[str, str]:
 
 
 def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] = None) -> str:
-    """The whole publish, as one transaction.
+    """The whole publish, as one file D1 applies all or nothing.
 
     `withdrawn_ids` defaults to the committed ledger (`batches/withdrawn.txt`).
     """
@@ -126,8 +127,6 @@ def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] =
         f"-- generated {comment(bundle.get('generated_at', ''))} "
         f"by {comment(bundle.get('generator_model', ''))}",
         "-- Produced by `bjt publish`. Idempotent: re-running replaces these rows.",
-        "",
-        "begin;",
         "",
     ]
 
@@ -224,7 +223,7 @@ def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] =
         "-- Options are replaced wholesale rather than upserted: a corrected item can",
         "-- have fewer options or a different order, and a stale row left behind would",
         "-- be a fifth answer nobody meant to publish.",
-        f"delete from public.item_options where item_id in ({ids});",
+        f"delete from item_options where item_id in ({ids});",
         _upsert(
             "item_options",
             ["item_id", "position", "text", "role", "why", "clip_id"],
@@ -241,14 +240,14 @@ def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] =
         parts += [
             "-- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,",
             "-- never a delete, so every answer already given keeps resolving. Nothing",
-            "-- here ever sets is_published back to true: a question the owner vetoed",
+            "-- here ever sets is_published back to 1: a question the owner vetoed",
             "-- in the app stays vetoed however often this file is applied.",
-            "update public.items set is_published = false",
+            "update items set is_published = 0",
             f" where id in ({', '.join(lit(i) for i in pulled)});",
             "",
         ]
 
-    parts += ["commit;", ""]
+    parts += [""]
     return "\n".join(p for p in parts if p is not None)
 
 
