@@ -26,20 +26,21 @@
 -- asserts all of the above, then runs every Worker query through
 -- client/worker/queries.db.test.ts.
 
+-- Only `login` and `noinherit` are said. Everything else a new role is
+-- denied by default (superuser, createdb, createrole, bypassrls), and naming
+-- those attributes at all, even to say "no", is refused to an owner that is
+-- not a superuser — which Supabase's `postgres` is not. run.sh's test asserts
+-- every one of them is off.
 do $$
 begin
     if not exists (select 1 from pg_roles where rolname = 'bjt_worker') then
-        create role bjt_worker login noinherit nosuperuser nocreatedb nocreaterole nobypassrls;
+        create role bjt_worker login noinherit;
     end if;
 end
 $$;
 
--- Re-assert the attributes on a role that already existed, so running this
--- again repairs one somebody loosened by hand.
-alter role bjt_worker login noinherit nosuperuser nocreatedb nocreaterole nobypassrls;
+-- Re-assert on a role that already existed, so running this again repairs one
+-- somebody loosened by hand.
+alter role bjt_worker login noinherit;
 
 grant authenticated to bjt_worker;
-
-comment on role bjt_worker is
-    'The Cloudflare Worker (client/worker). Logs in, becomes authenticated for one '
-    'transaction per request, and can do nothing else. See supabase/worker_role.sql.';
