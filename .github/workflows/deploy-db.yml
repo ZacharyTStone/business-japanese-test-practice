@@ -189,6 +189,13 @@ jobs:
         if: steps.db.outputs.go == 'true'
         run: $WRANGLER d1 migrations apply "$DB" --remote
 
+      # As a file, not a migration: D1 splits a migration into statements on
+      # its own side and cuts a trigger body at its first semicolon. Each
+      # trigger is dropped and created again, so this is idempotent.
+      - name: apply the triggers
+        if: steps.db.outputs.go == 'true'
+        run: $WRANGLER d1 execute "$DB" --remote --yes --file ../d1/triggers.sql
+
       - name: publish the committed bank
         if: steps.db.outputs.go == 'true'
         run: |

@@ -152,7 +152,7 @@ def test_a_trigger_body_has_no_case_expression():
     """CASE ... END inside BEGIN ... END is what a splitter counting ENDs
     closes the trigger on. Plain boolean logic says the same thing."""
     from bjt import config
-    for path in sorted(config.ROOT.glob("d1/migrations/*.sql")):
+    for path in sorted(config.ROOT.glob("d1/**/*.sql")):
         for body in re.findall(r"create trigger.*?\nend;", path.read_text(encoding="utf-8"), re.S | re.I):
             code = "\n".join(line.split("--")[0] for line in body.splitlines())
             assert not re.search(r"\bcase\b", code, re.I), f"{path.name}: {body[:80]}"

@@ -107,8 +107,8 @@ const upsert = (keys: string[], cols: string[]) =>
  *  is live, whether the grade is the item's, whether the day is full. An
  *  answer from the old database is history — some to questions vetoed since,
  *  some graded against a question corrected since, some given today — so they
- *  are lifted for the import and put back, word for word, from the
- *  migration, in the same all-or-nothing file. */
+ *  are lifted for the import and put back, word for word, from
+ *  d1/triggers.sql, in the same all-or-nothing file. */
 export function attemptTriggers(migrationsSql: string): { name: string; sql: string }[] {
   const out: { name: string; sql: string }[] = [];
   const re = /^create trigger (?:if not exists )?(attempts_\w+)\s*\nbefore insert on attempts[\s\S]*?^end;/gm;
@@ -147,7 +147,7 @@ export function buildMoveSql(x: Export, knownItems: Set<string>, migrationsSql: 
   );
 
   const triggers = attemptTriggers(migrationsSql);
-  if (triggers.length < 2) throw new Error("the migration's attempts triggers were not found");
+  if (triggers.length < 2) throw new Error("the attempts triggers were not found in d1/triggers.sql");
   for (const t of triggers) lines.push(`drop trigger if exists ${t.name};`);
 
   // An account made by signing in to the new app before the move has a new
@@ -500,7 +500,7 @@ async function main(argv: string[]): Promise<void> {
     const url = process.env.SUPABASE_DB_URL;
     if (!url) throw new Error("SUPABASE_DB_URL is not set");
     const here = dirname(fileURLToPath(import.meta.url));
-    const migrations = readFileSync(resolve(here, "../../d1/migrations/0001_initial.sql"), "utf8");
+    const migrations = readFileSync(resolve(here, "../../d1/triggers.sql"), "utf8");
     const knownItems = new Set((JSON.parse(readFileSync(known, "utf8")) as { id: string }[]).map((r) => r.id));
     const built = buildMoveSql(await readOldDatabase(url), knownItems, migrations);
     writeFileSync(out, built.sql);

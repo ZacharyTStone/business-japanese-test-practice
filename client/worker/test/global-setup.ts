@@ -54,6 +54,8 @@ export default function setup(project: TestProject) {
   );
 
   wrangler(["d1", "migrations", "apply", "DB", "--local", "--persist-to", state, "-c", config]);
+  // The triggers, as the deploy applies them: a file of their own.
+  wrangler(["d1", "execute", "DB", "--local", "--persist-to", state, "-c", config, "--file", join(ROOT, "d1/triggers.sql")]);
 
   // The scene bank first: an item names its scene.
   const batches = readdirSync(join(ROOT, "batches"))
