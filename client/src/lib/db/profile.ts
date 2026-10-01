@@ -5,37 +5,24 @@
 import type {
   Profile,
 } from "../types";
-import { supabase } from "../supabase";
+import { call } from "../api";
 
 export async function fetchProfile(): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(
-      "id, display_name, target_level, daily_goal, exam_date, timed_reading"
-    )
-    .maybeSingle();
-  if (error) throw error;
-  return (data as Profile) ?? null;
+  return (await call<Profile | null>("profile")) ?? null;
 }
 
 /**
  * Change one of the few things a learner sets.
  *
- * `userId` is the signed-in session's, passed in rather than asked for:
- * `auth.getUser()` is a round trip to the auth server on every call, and the
- * session the screen already holds says the same thing. Row-level security
- * checks the id against the token either way.
+ * `userId` is kept in the signature the screens call with; the Worker updates
+ * the signed-in learner's row and no other, as row-level security insists.
  */
 export async function updateProfile(
-  userId: string,
+  _userId: string,
   // Not target_level: the database moves that, on the evidence of the answers.
   patch: Partial<Pick<Profile, "daily_goal" | "display_name" | "exam_date" | "timed_reading">>
 ) {
-  // PostgREST refuses an unfiltered update, and row-level security would narrow
-  // it to this row anyway — but saying which row is clearer than relying on a
-  // policy to save us from a statement that reads as "update every profile".
-  const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
-  if (error) throw error;
+  await call("updateProfile", { patch });
 }
 
 /** What a reset removed, for the line the screen shows afterwards. */
@@ -61,9 +48,7 @@ type ResetCounts = {
  * not progress. See the migration for the whole list.
  */
 export async function resetProgress(): Promise<ResetCounts> {
-  const { data, error } = await supabase.rpc("reset_my_progress");
-  if (error) throw error;
-  return data as ResetCounts;
+  return call<ResetCounts>("resetProgress");
 }
 
 /** The ad-free unlock. Absence of a row is the normal case.
@@ -75,12 +60,9 @@ export async function resetProgress(): Promise<ResetCounts> {
  *  than withholding one from everybody; the reverse would be a worse trade for
  *  a free tier that is meant to be genuinely complete. */
 export async function hasAdFree(): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("entitlements")
-    .select("product")
-    .eq("product", "ads_free")
-    .is("revoked_at", null)
-    .maybeSingle();
-  if (error) return false;
-  return Boolean(data);
+  try {
+    return (await call<boolean>("hasAdFree")) === true;
+  } catch {
+    return false;
+  }
 }

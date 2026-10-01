@@ -33,7 +33,7 @@
  * and holding the answer for tomorrow would count it against a day it was not
  * given in.
  *
- * Kept free of the Supabase client so it runs in Node; `src/lib/answers.ts`
+ * Kept free of the network so it runs in Node; `src/lib/answers.ts`
  * wires it to the database. The queue is per account, because the database
  * files an insert under whoever is signed in when it arrives.
  */

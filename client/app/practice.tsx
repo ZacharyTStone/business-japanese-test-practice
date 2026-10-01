@@ -55,7 +55,7 @@ import { useLang } from "../src/lib/i18n";
 import { budgetSeconds } from "../src/lib/pace";
 import { playlistFor, spokenOptionUrls } from "../src/lib/playlist";
 import { initialPractice, practiceReducer, questionView, type Stage } from "../src/lib/practice";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../src/lib/api";
 import { NO_ANSWER } from "../src/lib/types";
 import { Button, Loading, Notice } from "../src/ui/components";
 import { DayDone } from "../src/ui/done";

@@ -2,8 +2,8 @@
  * The one thing every screen used to check for itself: whether the app has
  * been pointed at a project at all.
  *
- * A fresh clone has no `EXPO_PUBLIC_SUPABASE_*`, and every screen then shows
- * the setup notice instead of a stack trace. Seven screens carried their own
+ * A native build has no Worker to talk to without `EXPO_PUBLIC_API_BASE`, and
+ * every screen then shows the setup notice instead of a stack trace. Seven screens carried their own
  * copy of that branch, and of an `isConfigured` guard in each of their loads;
  * this is the one copy. A screen's default export wraps its body in it, so the
  * body — its effects included — runs only when there is a project to ask.
@@ -15,7 +15,7 @@
 import React from "react";
 
 import { useLang } from "../lib/i18n";
-import { isConfigured, MISSING_CONFIG_MESSAGE } from "../lib/supabase";
+import { isConfigured, MISSING_CONFIG_MESSAGE } from "../lib/api";
 import { Notice, ScreenMessage } from "./components";
 
 export function ScreenGate({

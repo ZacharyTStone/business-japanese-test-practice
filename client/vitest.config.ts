@@ -17,7 +17,10 @@ const stub = (file: string) => new URL(`./src/test/${file}`, import.meta.url).pa
 
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts"],
+    // The Worker's pure parts too; its queries need a database and are run by
+    // supabase/test/run.sh instead (worker/vitest.db.config.ts).
+    include: ["src/**/*.test.ts", "worker/**/*.test.ts"],
+    exclude: ["worker/**/*.db.test.ts", "node_modules/**"],
     environment: "node",
   },
   resolve: {

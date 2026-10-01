@@ -1,7 +1,7 @@
 /**
  * What went wrong, in words a learner can act on.
  *
- * Kept free of react-native and of the Supabase client so it can be tested in
+ * Kept free of react-native and of the network so it can be tested in
  * Node and imported anywhere without creating a client as a side effect.
  */
 import type { Key } from "./i18n";
@@ -10,7 +10,7 @@ import type { Key } from "./i18n";
  * The technical account: message, details and hint joined, with the Postgres
  * `code` kept because it is the part worth searching for.
  *
- * A supabase-js failure is not an `Error` — it is a plain object carrying
+ * A failed query is not an `Error` — it is a plain object carrying
  * `message`, `details`, `hint` and a Postgres `code` — so `String(e)` would
  * show "[object Object]" and hide what actually went wrong. `42703` is
  * "undefined column", which says "this client is newer than this database"
@@ -46,7 +46,13 @@ export function errorKind(e: unknown): ErrorKind {
   const status = typeof fields.status === "number" ? fields.status : undefined;
 
   if (code === "invalid_credentials" || WRONG_PASSWORD.test(text)) return "wrong_password";
-  if (code === "PGRST301" || code === "PGRST303" || name === "AuthSessionMissingError" || EXPIRED.test(text)) {
+  if (
+    code === "session_expired" ||
+    code === "PGRST301" ||
+    code === "PGRST303" ||
+    name === "AuthSessionMissingError" ||
+    EXPIRED.test(text)
+  ) {
     return "session_expired";
   }
   if (OFFLINE.test(text) || name === "AuthRetryableFetchError" || status === 0) return "offline";

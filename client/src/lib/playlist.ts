@@ -2,7 +2,7 @@
  * What an item plays, in the order it is heard.
  *
  * Pure: the storage URL of a clip is passed in (`clipUrl` in db.ts, in the
- * app), so the order and the all-or-none rule can be tested without a Supabase
+ * app), so the order and the all-or-none rule can be tested without a database
  * client — playlist.test.ts.
  */
 import type { QueuedItem } from "./types";

@@ -53,27 +53,6 @@ const S = {
   radar_untried: ["まだ解いていません", "not tried yet"],
   list_sep: ["、", ", "],
   // A forgotten password: a link by mail, and the screen it opens.
-  gate_forgot: ["パスワードを忘れた", "Forgot your password?"],
-  gate_reset_need_email: [
-    "メールアドレスを入れてから押してください。そのアドレスに、パスワードを決め直すためのリンクを送ります。",
-    "Enter your email address first, and we'll send a link to it for choosing a new password.",
-  ],
-  gate_reset_sent: [
-    "パスワードを決め直すためのリンクを送りました。メールを開いて、リンクを押してください。",
-    "We've sent a link for choosing a new password. Open the email and follow the link.",
-  ],
-  gate_link_expired: [
-    "リンクの有効期限が切れているか、すでに使われています。もう一度「パスワードを忘れた」を押してください。",
-    "That link has expired or has already been used. Press “Forgot your password?” again.",
-  ],
-  reset_title: ["新しいパスワードを決めてください", "Choose a new password"],
-  reset_body: [
-    "6文字以上です。決めると、そのままログインした状態で始まります。",
-    "At least 6 characters. Once it's set, you carry on signed in.",
-  ],
-  reset_password: ["新しいパスワード", "New password"],
-  reset_save: ["パスワードを変える", "Set the password"],
-  reset_busy: ["変えています…", "Setting it…"],
   loading: ["読み込み中…", "Loading…"],
   tab_home: ["ホーム", "Home"],
   tab_progress: ["記録", "Progress"],
@@ -131,14 +110,7 @@ const S = {
 
   // the door, while the app is in testing
   gate_title: ["ログインしてください", "Sign in to continue"],
-  gate_body: ["いまはテスト中のため、登録されたメールアドレスでのみ使えます。", "The app is in testing and opens only to registered email addresses."],
-  gate_email: ["メールアドレス", "Email"],
-  gate_password: ["パスワード", "Password"],
-  gate_password_hint: ["パスワードは6文字以上です。テスト参加者として登録されたアドレスで初めて使うときは、「アカウントを作る」を押してください。", "At least 6 characters. The first time you use an address registered as a tester, press “Create account”."],
   gate_sign_in: ["ログイン", "Sign in"],
-  gate_create: ["アカウントを作る", "Create account"],
-  gate_busy: ["確認しています…", "Checking…"],
-  gate_check_email: ["確認メールを送りました。メールのリンクを開いてから、もう一度ログインしてください。", "We sent a confirmation email. Open the link in it, then sign in again."],
   closed_title: ["まだ公開していません", "Not open yet"],
   closed_body: ["{email} はテスト参加者に登録されていません。別のアカウントで入る場合は、いったんログアウトしてください。", "{email} is not on the tester list. To use another account, sign out first."],
 

@@ -4,11 +4,19 @@
   // does not go in a product name, slug, or identifier.
   "name": "business-japanese-test-practice",
   "compatibility_date": "2026-09-14",
+  // postgres.js needs Node's net and crypto APIs; Hyperdrive's documented
+  // driver setup asks for this flag.
+  "compatibility_flags": ["nodejs_compat"],
 
-  // Assets only — no Worker script. Everything dynamic is Supabase's job, so
-  // there is nothing to run at the edge and no `main` or `binding` here.
+  // The API and the media (worker/index.ts). Everything else is the static
+  // web build below, served without running this script.
+  "main": "worker/index.ts",
+
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
+    // Only these reach the script first; every other path is an asset.
+    "run_worker_first": ["/api/*", "/media/*"],
 
     // expo-router exports one HTML file per route, so a miss is a genuine miss
     // and should say so. `npm run build:web` leaves a 404.html for this to
@@ -18,5 +26,34 @@
 
     // Serves /practice from practice.html without inventing a trailing slash.
     "html_handling": "auto-trailing-slash"
-  }
+  },
+
+  // The database, through Hyperdrive, with query caching OFF: the Worker sets
+  // the caller's claims inside each transaction, and a cache keyed on query
+  // text cannot see them — a cached result could be another learner's. The
+  // id is not a secret; the connection string inside it is.
+  // Create it with:
+  //   npx wrangler hyperdrive create business-japanese-drill-db \
+  //     --connection-string="postgres://bjt_worker:<password>@<host>:5432/postgres" \
+  //     --caching-disabled
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+
+  // The clips and the pictures (worker/media.ts), keyed `audio/<path>` and
+  // `scenes/<path>`. Private: served only through this Worker.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "business-japanese-drill-media"
+    }
+  ]
+
+  // Secrets, set once with `npx wrangler secret put <NAME>` (never here):
+  //   ACCESS_USERS  {"you@example.com": "<your auth.users id>"} — worker/identity.ts
+  //   SUPABASE_URL  https://<ref>.supabase.co — media R2 does not have yet;
+  //                 leave unset once the pipeline uploads to R2 itself
 }

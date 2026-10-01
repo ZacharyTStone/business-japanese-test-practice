@@ -59,43 +59,33 @@ outstanding.
 **Next step.** Run **deploy database** by hand with `remake_list` set to that
 file, check the run summary, then delete the file.
 
-## 4. Sign-in is email and password, for listed testers only
+## 4. Sign-in is Cloudflare Access, for listed testers only
 
-**Where it stands.** The app opens only to an address in `public.testers`, and
-sign-up itself is refused for any other. The client has no Google sign-in and
-no anonymous path; the schema supports an anonymous-first sign-in that links an
-identity later, but nothing uses it yet.
+**Where it stands.** Cloudflare Access stands in front of the whole Worker (the
+web app, its API and its media), with a policy that names the addresses
+allowed in. The Worker maps the signed-in address to the account's user id
+(`ACCESS_USERS`), and the database still opens only to an address in
+`public.testers`. There is no password form, no Google button and no
+anonymous path in the app; the schema supports an anonymous-first sign-in that
+links an identity later, but nothing uses it yet. Access is a browser sign-in,
+so the app is web-only until a native build has a way in.
 
 **Next step, when the app opens.** One migration that drops the tester check
-from the row-level policies and the sign-up trigger, with the anonymous-first
-client path in front of the door. For Google: an OAuth client in Google Cloud
-Console with the redirect URI `https://<project-ref>.supabase.co/auth/v1/callback`,
-its id and secret in Supabase → Authentication → Providers → Google, the
-`bizjadrill` scheme allowed under URL Configuration, and a button beside the
-email form that calls `signInWithOAuth({ provider: "google" })`.
-
-**Two dashboard settings the sign-in already depends on.** Supabase →
-Authentication → URL Configuration → Redirect URLs must list
-`https://<site>/reset-password` and `bizjadrill://reset-password` (plus the Expo
-Go `exp://…/--/reset-password` URL for development), or 「パスワードを忘れた」
-mails a link that goes nowhere. And Authentication → Providers → Email should
-require confirmation: with auto-confirm on, anybody who knows a listed address
-that has no account yet can create that account without owning the mailbox —
-`is_tester()` cannot tell, because auto-confirm stamps the address as confirmed.
+from the row-level policies and the sign-up trigger, and a sign-in that is not
+an allow-list — an auth library on the Worker (accounts on the same user ids),
+since Access's own login page is for known people, not the public.
 
 After any change to sign-in, on the deployed URL:
 
-- A fresh browser shows the sign-in screen, and nothing behind it.
-- An unlisted address cannot create an account, and leaves no `auth.users` or
-  profile row behind.
-- A listed account taken off the list sees the "not open yet" screen, and every
-  query returns nothing.
-- A listed account's history is the same after a refresh and on a second device.
-- Signing out returns to the sign-in screen, with nothing readable.
-- A wrong password and a missing build variable each fail in a way the app
-  explains.
-- 「パスワードを忘れた」 mails a link that opens the new-password screen, on the
-  web and in the app.
+- A fresh browser gets Cloudflare's sign-in page, and nothing of the app.
+- An address the Access policy does not name cannot reach the app at all.
+- A named address that `ACCESS_USERS` or `public.testers` does not have sees
+  the "not open yet" screen, and every query returns nothing.
+- The account's history is the same after a refresh and on a second device.
+- Signing out (account screen) ends the Access session; the next visit asks
+  again.
+- An expired Access session shows "sign in again", and the button brings the
+  learner back signed in.
 
 ## 5. No store builds
 

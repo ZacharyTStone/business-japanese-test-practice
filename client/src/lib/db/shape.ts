@@ -2,7 +2,7 @@
  * Rows made into what the screens use: the joins and tallies the data layer
  * does once a query has answered.
  *
- * Kept apart from the queries, and from the Supabase client, so `npm test`
+ * Kept apart from the queries, and from the network, so `npm test`
  * holds them without a network or a client — they are where "an unpublished
  * question's answers are skipped, not broken", "the most recent miss is the
  * one a word points at" and "all four numbers or none" are actually decided.

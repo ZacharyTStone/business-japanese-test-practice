@@ -475,18 +475,19 @@ python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json
 bjt.client_constants` and `python supabase/snapshot.py`. `CLAUDE.md` lists the
 decisions not to undo by accident.
 
-**Running the app** needs a Supabase project (email sign-in on, anonymous off).
-List yourself as a tester *before* signing up:
+**Running the app** needs a Postgres with the schema (a Supabase project today)
+and the Cloudflare Worker in front of it: Hyperdrive to the database, an R2
+bucket for the media, and Cloudflare Access as the sign-in. List yourself as a
+tester first:
 
 ```bash
 supabase db push --db-url "$SUPABASE_DB_URL"
 for f in batches/*.sql; do psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"; done
 python -m bjt tester you@example.com | psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f -
-cd client && cp .env.example .env && npm run web
 ```
 
-The app needs only `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
-See `client/README.md` for its structure and Cloudflare deployment.
+The Cloudflare side, step by step, is in `cloudflare-migration.md`; the app's
+structure and local development are in `client/README.md`.
 
 **Generating** (needs `ANTHROPIC_API_KEY`, e.g. in `.env`):
 

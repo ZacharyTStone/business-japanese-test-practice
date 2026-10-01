@@ -29,12 +29,15 @@ stales them: `python -m bjt.client_constants` (the app's distractor roles and
 tag names, from `bjt/` and `seedtable/`) and `python supabase/snapshot.py`
 (`supabase/current.sql`). After anything that touches the library, run `python
 -m bjt plan` (not a check) to see whether the bank is still the shape the queue
-needs. `supabase/test/run.sh` starts its own Postgres if `PGHOST` is unset, and
-fails if a table, view, column or function named by a query in `client/src/lib`
-does not exist, if the app writes a column the signed-in role may not, or if
-`client/src/lib/database.types.ts` no longer matches the schema
-(`BJT_TYPEGEN_WRITE=1 supabase/test/run.sh` regenerates it) — the checks that
-catch a schema change the app has missed.
+needs. `supabase/test/run.sh` starts its own Postgres if `PGHOST` is unset
+(and needs `npm ci` run once in `client/`), and runs every query the Worker
+serves the app (`client/worker/queries.ts`) as a tester against the schema
+(`client/worker/queries.db.test.ts`): it fails if a table, view, column or
+function a query names does not exist, if the app writes a column the
+signed-in role may not, if a policy hides a row it should show or shows one it
+should hide, if a query has no case, or if `client/src/lib/database.types.ts`
+no longer matches the schema (`BJT_TYPEGEN_WRITE=1 supabase/test/run.sh`
+regenerates it) — the checks that catch a schema change the app has missed.
 
 ## Invariants worth not breaking
 
@@ -357,9 +360,28 @@ accident is not.
   and trigger from the migrations, comments included. Read it to see what the
   queue does today; never apply it — the migrations are the schema. A test fails
   when it is stale.
+- **The app reaches the database only through the Worker, as the learner.**
+  `client/worker/` serves the web build, `/api/q/<name>` and `/media/*` on one
+  origin. The app names a query in `client/worker/queries.ts` and passes its
+  arguments; it never sends SQL, a table or a column list, and a new screen's
+  query is a new entry there (with its case in `queries.db.test.ts`). The
+  Worker logs in as `bjt_worker` (`supabase/worker_role.sql`: `noinherit`, a
+  member of `authenticated` and of nothing else, owns nothing) and turns each
+  request into one transaction that says `set local role authenticated` and
+  sets the caller's claims, so row-level security, the column grants and every
+  trigger decide exactly what they decided under PostgREST. Never connect it as
+  a role that bypasses RLS (`postgres`, `service_role`), never skip the `set
+  local role`, and keep Hyperdrive's query cache off for it: the cache keys on
+  query text, which does not carry the claims, so it could serve one learner's
+  rows to another. Who the caller is comes from Cloudflare Access
+  (`ctx.access.getIdentity()`, never a header the client could forge), mapped
+  to the existing user id by the `ACCESS_USERS` secret; no `ctx.access` is a
+  401, not a pass. The clips and pictures are R2 objects under the paths the
+  database already holds, read through from Supabase Storage until the
+  pipeline uploads to R2 itself (`client/worker/media.ts`).
 - **Testers only, for now, and the database is the door.** `public.testers`
-  lists who may use the app by sign-in email (email and password today; Google
-  later, matched on the same email); `is_tester()` reads the JWT; every
+  lists who may use the app by sign-in email (Cloudflare Access in front of the
+  whole site today, matched on the same email); `is_tester()` reads the JWT; every
   row-level policy in `public` and `storage` requires it (a schema test fails
   CI on one that does not) and the anon role holds nothing, including on
   objects created later (the default privileges leave it out). The client's gate screens only say
