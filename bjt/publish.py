@@ -75,15 +75,23 @@ def _quote(s: str) -> str:
 #: kind, and every other control character.
 _NOT_IN_A_COMMENT = re.compile(r"[\x00-\x1f\x7f\x85\u2028\u2029]+")
 
+#: What a statement splitter that does not know about comments would read as
+#: the start of a string or the end of a statement. D1 splits some SQL on its
+#: own side, and a "learner's" in a comment there swallowed the rest of a
+#: migration (2026-10-01), so no SQL this project ships has one in a comment
+#: (tests/test_sql_literals.py sweeps them).
+_SPLITTER_CHARS = str.maketrans({"'": "\u2019", ";": ",", "`": "", '"': ""})
+
 
 def comment(value: Any) -> str:
     """A value made safe to write inside a `-- ...` SQL comment line.
 
     The comment ends at the line break, so a newline in a value put into one —
     a model name, a date, an address typed into a form — would start a line of
-    SQL that runs. Every line break and control character becomes one space.
+    SQL that runs. Every line break and control character becomes one space,
+    and nothing a splitter could read as a quote or a statement end is kept.
     """
-    return _NOT_IN_A_COMMENT.sub(" ", str(value))
+    return _NOT_IN_A_COMMENT.sub(" ", str(value)).translate(_SPLITTER_CHARS)
 
 
 def _upsert(table: str, columns: list[str], rows: list[list[Any]], key: list[str]) -> str:
@@ -126,7 +134,7 @@ def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] =
         f"-- {comment(bundle_id)}: {len(items)} × {comment(item_type)} ({comment(bundle['level'])})",
         f"-- generated {comment(bundle.get('generated_at', ''))} "
         f"by {comment(bundle.get('generator_model', ''))}",
-        "-- Produced by `bjt publish`. Idempotent: re-running replaces these rows.",
+        "-- Produced by bjt publish. Idempotent: re-running replaces these rows.",
         "",
     ]
 
@@ -137,7 +145,7 @@ def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] =
                       if it.get("scene_id") and it.get("image_brief")}
     if scenes:
         parts += [
-            "-- Scenes are a shared bank (or, for 画像把握, one picture per item);",
+            "-- Scenes are a shared bank (or, for 画像把握, one picture per item),",
             "-- image_path stays null until the art exists, and is deliberately not",
             "-- overwritten by a re-publish.",
             _upsert(
@@ -238,7 +246,7 @@ def bundle_sql(bundle: dict, bundle_id: str, withdrawn_ids: Optional[set[str]] =
     pulled = [it["id"] for it in items if it["id"] in gone]
     if pulled:
         parts += [
-            "-- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,",
+            "-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,",
             "-- never a delete, so every answer already given keeps resolving. Nothing",
             "-- here ever sets is_published back to 1: a question the owner vetoed",
             "-- in the app stays vetoed however often this file is applied.",

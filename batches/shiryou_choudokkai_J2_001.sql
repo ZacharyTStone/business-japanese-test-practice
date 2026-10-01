@@ -1,8 +1,8 @@
 -- shiryou_choudokkai_J2_001: 6 × shiryou_choudokkai (J2)
 -- generated 2026-09-22T08:18:12+00:00 by author-composed
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
--- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- Scenes are a shared bank (or, for 画像把握, one picture per item),
 -- image_path stays null until the art exists, and is deliberately not
 -- overwritten by a re-publish.
 insert into scenes (id, label_ja) values ('scene_meeting_room_table', '社内の会議室のテーブル') on conflict (id) do update set label_ja = excluded.label_ja;
@@ -56,7 +56,7 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 insert into item_options (item_id, position, text, role, why, clip_id) values ('d0694b8a01', 2, '山本', 'surface_keyword_match', '同じ一覧に並んでいるが、担当はひかり製作所。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 insert into item_options (item_id, position, text, role, why, clip_id) values ('d0694b8a01', 3, '急ぎなので川口ではなく佐藤', 'ignores_the_spoken_change', '引用部分の「急ぎの件は川口さんに」は佐藤が持つ案件についての話で、向きが逆になっている。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 
--- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,
+-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,
 -- never a delete, so every answer already given keeps resolving. Nothing
 -- here ever sets is_published back to 1: a question the owner vetoed
 -- in the app stays vetoed however often this file is applied.

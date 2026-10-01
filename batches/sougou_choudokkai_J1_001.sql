@@ -1,8 +1,8 @@
 -- sougou_choudokkai_J1_001: 2 × sougou_choudokkai (J1)
 -- generated 2026-09-18T08:50:50+00:00 by manual-load
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
--- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- Scenes are a shared bank (or, for 画像把握, one picture per item),
 -- image_path stays null until the art exists, and is deliberately not
 -- overwritten by a re-publish.
 insert into scenes (id, label_ja) values ('scene_client_meeting_room', '取引先の会議室') on conflict (id) do update set label_ja = excluded.label_ja;
@@ -42,7 +42,7 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 insert into item_options (item_id, position, text, role, why, clip_id) values ('749cfab0e3', 2, '保守契約を外して、最も安い案にする。', 'stated_by_wrong_speaker', '部下が用意した案の一つではあるが、先方が保守を重視していると課長が指摘し、部下も実質外れると認めている。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 insert into item_options (item_id, position, text, role, why, clip_id) values ('749cfab0e3', 3, '納期を1か月延ばして設置費を減らし、超える分は先方に予算を増やしてもらう。', 'wrong_action_owner', '案二を通す方法としてはあり得るが、超過分を吸収するのは自社の保守の値引きで、先方に予算を動かしてもらう話は出ていない。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 
--- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,
+-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,
 -- never a delete, so every answer already given keeps resolving. Nothing
 -- here ever sets is_published back to 1: a question the owner vetoed
 -- in the app stays vetoed however often this file is applied.

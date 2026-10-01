@@ -1,6 +1,6 @@
 -- hyougen_J2_001: 6 × hyougen (J2)
 -- generated 2026-09-15T17:48:41+00:00 by author-composed
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
 insert into bundles (id, item_type, level, generator_model, generated_at) values ('hyougen_J2_001', 'hyougen', 'J2', 'author-composed', '2026-09-15T17:48:41+00:00') on conflict (id) do update set item_type = excluded.item_type, level = excluded.level, generator_model = excluded.generator_model, generated_at = excluded.generated_at;
 
@@ -40,7 +40,7 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 insert into item_options (item_id, position, text, role, why, clip_id) values ('fb167cd9a3', 2, 'つきましては、九月三日に限り持ち出しをさせていただきます。', 'correct_keigo_wrong_speech_act', '謙譲語は正しいが言い切りで、許可を求めずに持ち出すことを通告している。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 insert into item_options (item_id, position, text, role, why, clip_id) values ('fb167cd9a3', 3, 'つきましては、九月三日に限り持ち出してもいいですか。', 'register_too_casual', '社内掲示の書式に話し言葉が混ざっており、文書としての体裁が崩れている。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 
--- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,
+-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,
 -- never a delete, so every answer already given keeps resolving. Nothing
 -- here ever sets is_published back to 1: a question the owner vetoed
 -- in the app stays vetoed however often this file is applied.

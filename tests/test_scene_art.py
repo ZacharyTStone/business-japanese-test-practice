@@ -374,7 +374,7 @@ def test_a_scene_without_a_picture_borrows_its_stand_ins(tmp_path):
     assert scenes.stand_in_for(outside, survey).scene_id == "scene_phone_desk"
     sql = scenes.to_sql(survey)
     assert "('scene_phone_mobile_outside', '外出先で携帯電話', 'scene_phone_desk.webp')" in sql
-    assert "borrows scene_phone_desk's" in sql
+    assert "borrows the picture of scene_phone_desk" in sql
     # One hop only: the desk pair borrows from the open floor, which has nothing.
     pair = next(s for s in survey if s.scene_id == "scene_office_desk_pair")
     assert scenes.stand_in_for(pair, survey) is None

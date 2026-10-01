@@ -1,6 +1,6 @@
 -- hyougen_J1_002: 6 × hyougen (J1)
 -- generated 2026-09-21T13:11:08+00:00 by manual-load
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
 insert into bundles (id, item_type, level, generator_model, generated_at) values ('hyougen_J1_002', 'hyougen', 'J1', 'manual-load', '2026-09-21T13:11:08+00:00') on conflict (id) do update set item_type = excluded.item_type, level = excluded.level, generator_model = excluded.generator_model, generated_at = excluded.generated_at;
 
@@ -40,7 +40,7 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 insert into item_options (item_id, position, text, role, why, clip_id) values ('042637ac83', 2, '展示会の準備、来週からじゃ絶対間に合わないでしょ。今週からやったほうがいいんじゃない？普段からもっと早めに動いてよ。', 'register_insulting', '提案の形にはなっているが、相手の普段の仕事ぶりを非難する一言が加わっており、同僚への言い方として失礼にあたる。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 insert into item_options (item_id, position, text, role, why, clip_id) values ('042637ac83', 3, '展示会の準備について、今週中に始めさせていただいてもよろしいでしょうか。', 'correct_keigo_wrong_speech_act', '敬語としては誤りではないが、対等な同僚への提案ではなく許可を求める形になっており、一緒に進めようという提案の趣旨からずれている。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 
--- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,
+-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,
 -- never a delete, so every answer already given keeps resolving. Nothing
 -- here ever sets is_published back to 1: a question the owner vetoed
 -- in the app stays vetoed however often this file is applied.

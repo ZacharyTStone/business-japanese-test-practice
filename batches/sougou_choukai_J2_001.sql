@@ -1,8 +1,8 @@
 -- sougou_choukai_J2_001: 6 × sougou_choukai (J2)
 -- generated 2026-09-19T17:03:52+00:00 by author-composed
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
--- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- Scenes are a shared bank (or, for 画像把握, one picture per item),
 -- image_path stays null until the art exists, and is deliberately not
 -- overwritten by a re-publish.
 insert into scenes (id, label_ja) values ('scene_client_meeting_room', '取引先の会議室') on conflict (id) do update set label_ja = excluded.label_ja;

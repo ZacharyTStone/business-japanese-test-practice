@@ -1,6 +1,6 @@
 -- goi_bunpou_J3_001: 6 × goi_bunpou (J3)
 -- generated 2026-09-17T13:19:30+00:00 by author-composed
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
 insert into bundles (id, item_type, level, generator_model, generated_at) values ('goi_bunpou_J3_001', 'goi_bunpou', 'J3', 'author-composed', '2026-09-17T13:19:30+00:00') on conflict (id) do update set item_type = excluded.item_type, level = excluded.level, generator_model = excluded.generator_model, generated_at = excluded.generated_at;
 
@@ -40,7 +40,7 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 insert into item_options (item_id, position, text, role, why, clip_id) values ('6674a17ee8', 2, 'いらっしゃられる', 'nonexistent_form', 'すでに尊敬語である「いらっしゃる」にさらに「〜れる」を重ねた二重敬語で、標準的な言い方として使われる形ではない。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 insert into item_options (item_id, position, text, role, why, clip_id) values ('6674a17ee8', 3, 'いらっしゃる', 'correct', '取引先である田中様の行為を高める尊敬語で、この場面にふさわしい言い方。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 
--- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,
+-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,
 -- never a delete, so every answer already given keeps resolving. Nothing
 -- here ever sets is_published back to 1: a question the owner vetoed
 -- in the app stays vetoed however often this file is applied.
