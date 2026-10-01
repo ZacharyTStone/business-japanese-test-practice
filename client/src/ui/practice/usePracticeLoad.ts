@@ -28,7 +28,7 @@ import { examIsNear } from "../../lib/exam";
 import type { TypePace } from "../../lib/pace";
 import { playlistFor } from "../../lib/playlist";
 import type { PracticeAction } from "../../lib/practice";
-import { isConfigured } from "../../lib/supabase";
+import { isConfigured } from "../../lib/api";
 import type { QueuedItem, SectionLevel } from "../../lib/types";
 
 export type PracticeLoad = {

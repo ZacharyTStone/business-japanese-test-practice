@@ -4,5 +4,8 @@
     "strict": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  // The Worker runs on workerd, not React Native, and is checked against its
+  // own types (worker/tsconfig.json); `npm run typecheck` runs both.
+  "exclude": ["worker", "node_modules", "dist"]
 }

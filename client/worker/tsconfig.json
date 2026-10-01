@@ -1,0 +1,18 @@
+{
+  // The Worker is type-checked on its own: it runs on workerd, not React
+  // Native, so it gets the Workers types and none of Expo's. `npm run
+  // typecheck` runs both projects.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["./**/*.ts"]
+}

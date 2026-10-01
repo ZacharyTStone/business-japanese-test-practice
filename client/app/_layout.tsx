@@ -7,10 +7,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../src/lib/auth";
 import { errorKind, friendlyError } from "../src/lib/errors";
 import { LangProvider, useLang } from "../src/lib/i18n";
-import { isConfigured } from "../src/lib/supabase";
+import { isConfigured } from "../src/lib/api";
 import { Loading, Notice, ScreenMessage } from "../src/ui/components";
 import { RootCrash } from "../src/ui/crash";
-import { ClosedScreen, NewPasswordScreen, SignInScreen } from "../src/ui/gate";
+import { ClosedScreen, SignInAgainScreen } from "../src/ui/gate";
 import { Icon } from "../src/ui/icons";
 import { colors, space, type } from "../src/ui/theme";
 import { WelcomeScreen, useWelcome } from "../src/ui/welcome";
@@ -84,41 +84,24 @@ function Navigator() {
   // flash of an app nobody has been introduced to yet.
   const welcome = useWelcome();
   const auth = useAuth();
-  // A reset email's link, opened: its session is for choosing a new password
-  // and nothing else yet, so that comes before the introduction and before
-  // the door. Without a session the link failed, and the sign-in screen says so.
-  if (isConfigured && auth.recovering) {
-    if (auth.loading) return <Loading />;
-    if (auth.session) return <NewPasswordScreen />;
-  }
   if (!welcome.ready) return <Loading />;
   if (!welcome.seen) return <WelcomeScreen onStart={welcome.dismiss} />;
 
-  // The door. Testers only, for now: no session means sign in, and a session
-  // the database does not recognise means a closed sign. Without a configured
-  // project the screens inside show the setup notice instead, so the door
-  // stands aside for them.
+  // The door. Testers only, for now. Cloudflare Access has already signed the
+  // learner in before this page could load; what is left is the database's
+  // word on the account. Without a configured Worker the screens inside show
+  // the setup notice instead, so the door stands aside for them.
   if (isConfigured) {
     if (auth.loading) return <Loading />;
-    // No session *because the server could not be reached* is not no session.
-    // Offline with an expired access token, supabase-js answers "no session"
-    // and keeps the refresh token for when the network is back — so the sign-in
-    // form here would ask for a password the device already has, and typing
-    // it would fail for the same reason. Say what is wrong and offer the retry.
-    // A refresh token the server has refused is different: that one does need
-    // the password again, so it falls through to the form.
-    if (!auth.session && auth.failure != null && errorKind(auth.failure) !== "session_expired") {
-      return <CantConnect failure={auth.failure} onRetry={auth.retry} />;
+    // Only a confirmed `false` means the account is not approved.
+    if (auth.isTester === false) return <ClosedScreen />;
+    // The Access session ran out: a reload is the way back through it.
+    if (auth.failure != null && errorKind(auth.failure) === "session_expired") return <SignInAgainScreen />;
+    // A question that failed to answer is not one that said no: say what is
+    // wrong and offer the retry.
+    if (!auth.session || auth.isTester !== true) {
+      return <CantConnect failure={auth.failure ?? "no session"} onRetry={auth.retry} />;
     }
-    if (!auth.session) return <SignInScreen />;
-    // An RPC that failed to answer is not an RPC that said no. Only a
-    // confirmed `false` means the account is not approved; a `null` with an
-    // error means try again.
-    if (auth.isTester === null && auth.failure != null) {
-      return <CantConnect failure={auth.failure} onRetry={auth.retry} />;
-    }
-    if (auth.isTester === null) return <Loading />;
-    if (auth.isTester !== true) return <ClosedScreen />;
   }
 
   return (
@@ -149,9 +132,6 @@ function Navigator() {
             name="words"
             options={{ title: t("title_words"), headerLeft: () => <BackToRecord /> }}
           />
-          {/* Where a reset email lands. By the time the stack is drawn the
-              new password is chosen, so it only passes the learner home. */}
-          <Stack.Screen name="reset-password" options={{ headerShown: false }} />
         </Stack>
   );
 }

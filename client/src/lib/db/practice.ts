@@ -12,7 +12,7 @@ import type {
 } from "../types";
 import type { AttemptArgs, Graded } from "../outbox";
 import type { TypePace } from "../pace";
-import { supabase } from "../supabase";
+import { call } from "../api";
 
 /** The practice queue — the only way this app asks for questions.
  *
@@ -22,28 +22,25 @@ import { supabase } from "../supabase";
  *  one from the level above. There is no level, type or mode to pass, because
  *  there is no screen where anybody chooses one. */
 export async function fetchQueue(limit: number): Promise<QueuedItem[]> {
-  const { data, error } = await supabase.rpc("next_items", { p_limit: limit });
-  if (error) throw error;
-  return (data ?? []) as QueuedItem[];
+  return (await call<QueuedItem[]>("nextItems", { limit })) ?? [];
 }
 
-export async function startSession(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("practice_sessions")
-    .insert({ user_id: userId })
-    .select("id")
-    .single();
+// `userId` is kept in the signature the screens call with; the Worker files the
+// session under the signed-in learner, as row-level security would insist.
+export async function startSession(_userId: string): Promise<string | null> {
   // A session is only a grouping label. If creating it fails we still want the
   // person to be able to practise, so this is not allowed to throw.
-  if (error) return null;
-  return data?.id ?? null;
+  try {
+    const row = await call<{ id: string } | null>("startSession");
+    return row?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function finishSession(sessionId: string): Promise<void> {
-  await supabase
-    .from("practice_sessions")
-    .update({ finished_at: new Date().toISOString() })
-    .eq("id", sessionId);
+  // A label, as above: a session left open is not worth an error on screen.
+  await call("finishSession", { sessionId }).catch(() => {});
 }
 
 /**
@@ -71,22 +68,8 @@ export async function recordAttempt(args: {
   peeked: boolean;
   standsFor: string | null;
 }): Promise<{ isCorrect: boolean; chosenRole: string }> {
-  const { data, error } = await supabase
-    .from("attempts")
-    .insert({
-      item_id: args.itemId,
-      chosen_index: args.chosenIndex,
-      session_id: args.sessionId,
-      elapsed_ms: args.elapsedMs,
-      think_ms: args.thinkMs,
-      replays: args.replays,
-      peeked: args.peeked,
-      stands_for: args.standsFor,
-    })
-    .select("is_correct, chosen_role")
-    .single();
-  if (error) throw error;
-  return { isCorrect: data.is_correct, chosenRole: data.chosen_role };
+  const graded = await call<{ is_correct: boolean; chosen_role: string }>("recordAttempt", args);
+  return { isCorrect: graded.is_correct, chosenRole: graded.chosen_role };
 }
 
 /**
@@ -106,11 +89,7 @@ export async function recordAttempt(args: {
  * changing the pace is one UPDATE and not a release.
  */
 export async function fetchPace(): Promise<Record<string, TypePace>> {
-  const { data, error } = await supabase
-    .from("item_types")
-    .select("id, seconds_per_item, typical_chars")
-    .not("seconds_per_item", "is", null);
-  if (error) throw error;
+  const data = await call<{ id: string; seconds_per_item: number | null; typical_chars: number | null }[]>("pace");
   const out: Record<string, TypePace> = {};
   for (const row of data ?? []) {
     out[row.id as string] = {
@@ -151,16 +130,9 @@ export async function reportItem(args: {
   reason: FeedbackReason;
   note?: string;
 }): Promise<void> {
-  const row = { item_id: args.itemId, reason: args.reason, note: (args.note ?? "").trim() };
-  const { error } = await supabase.from("item_feedback").insert(row);
-  if (!error) return;
-  // 23505 — this person has already reported this item. Replace what they said.
-  if (error.code !== "23505") throw error;
-  const { error: updateError } = await supabase
-    .from("item_feedback")
-    .update({ reason: row.reason, note: row.note })
-    .eq("item_id", args.itemId);
-  if (updateError) throw updateError;
+  // Insert, and on the unique violation replace what they said — in the
+  // Worker, inside one transaction (worker/queries.ts, reportItem).
+  await call("reportItem", { itemId: args.itemId, reason: args.reason, note: (args.note ?? "").trim() });
 }
 
 /**
@@ -170,9 +142,11 @@ export async function reportItem(args: {
  * decides who may press it.
  */
 export async function mayVeto(): Promise<boolean> {
-  const { data, error } = await supabase.rpc("may_i_veto");
-  if (error) return false;
-  return data === true;
+  try {
+    return (await call<boolean>("mayVeto")) === true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -189,11 +163,7 @@ export async function mayVeto(): Promise<boolean> {
  * answering, so no attempt is written and the day's count does not move.
  */
 export async function vetoItem(itemId: string, note = ""): Promise<void> {
-  const { error } = await supabase.rpc("veto_item", {
-    p_item_id: itemId,
-    p_note: note.trim(),
-  });
-  if (error) throw error;
+  await call("vetoItem", { itemId, note: note.trim() });
 }
 
 /**
@@ -206,15 +176,9 @@ export async function vetoItem(itemId: string, note = ""): Promise<void> {
  * may be null, which an equality filter never matches.
  */
 export async function findAttempt(args: AttemptArgs): Promise<Graded | null> {
-  const { data, error } = await supabase
-    .from("attempts")
-    .select("is_correct, chosen_role, elapsed_ms, think_ms")
-    .eq("item_id", args.itemId)
-    .eq("chosen_index", args.chosenIndex)
-    .eq("replays", args.replays)
-    .order("answered_at", { ascending: false })
-    .limit(20);
-  if (error) throw error;
+  const data = await call<
+    { is_correct: boolean; chosen_role: string; elapsed_ms: number | null; think_ms: number | null }[]
+  >("findAttempt", { itemId: args.itemId, chosenIndex: args.chosenIndex, replays: args.replays });
   const row = (data ?? []).find(
     (r) => (r.elapsed_ms ?? null) === args.elapsedMs && (r.think_ms ?? null) === args.thinkMs
   );

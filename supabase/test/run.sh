@@ -71,10 +71,20 @@ done
 
 psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f "$HERE/20_published_test.sql"
 
-# Finally, check the app and the schema still agree. TypeScript cannot catch a
-# column name that is merely asserted; this can.
-if [[ -d "$ROOT/client/src/lib" ]]; then
-    echo "checking the client's queries against the schema"
-    python3 "$HERE/contract.py" "$ROOT/client/src/lib" \
-        | psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f -
+# The role the Worker logs in as, and proof it can become a signed-in client
+# and nothing else.
+psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f "$ROOT/supabase/worker_role.sql" >/dev/null
+psql -v ON_ERROR_STOP=1 -X -q -d "$DB" -f "$HERE/30_worker_role_test.sql"
+
+# Finally, check the app and the schema still agree: every query the Worker
+# serves the app is run, as a tester, against this database. TypeScript cannot
+# catch a column name that is merely asserted; this can, and it also catches a
+# write the signed-in role may not make and a policy that hides the wrong rows.
+if [[ -d "$ROOT/client/worker" ]]; then
+    if [[ ! -d "$ROOT/client/node_modules" ]]; then
+        echo "client/node_modules is missing: run 'npm ci' in client/ first (the Worker's queries are run from there)" >&2
+        exit 1
+    fi
+    echo "running every Worker query against the schema"
+    (cd "$ROOT/client" && BJT_WORKER_DB_TEST=1 BJT_TEST_DB="$DB" npx vitest run --config worker/vitest.db.config.ts)
 fi

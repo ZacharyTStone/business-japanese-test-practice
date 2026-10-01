@@ -118,6 +118,15 @@ jobs:
           python-version: "3.11"
       - name: install psql
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      # run.sh ends by running every query the Worker serves against this
+      # database (client/worker/queries.db.test.ts), from client/.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
       # PGHOST is set, so run.sh uses this server instead of starting its own.
       - run: supabase/test/run.sh
 

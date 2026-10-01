@@ -15,7 +15,7 @@
  */
 import { clipUrl } from "./db/media";
 import { allOrNone } from "./db/shape";
-import { supabase } from "./supabase";
+import { call } from "./api";
 
 // The data layer lives in ./db/, a file per concern; this is the one module
 // the screens import it through, so a query can move between those files
@@ -50,12 +50,10 @@ const NARRATOR_VOICE = "narrator_f";
  *  synthesised. All four or none: a run that says the number before three of
  *  the options and not the fourth is worse than one that says none. */
 export async function fetchOptionLabels(): Promise<string[] | null> {
-  const { data, error } = await supabase
-    .from("audio_clips")
-    .select("text, audio_path")
-    .eq("voice", NARRATOR_VOICE)
-    .in("text", OPTION_LABELS);
-  if (error) throw error;
+  const data = await call<{ text: string; audio_path: string | null }[]>("optionLabels", {
+    voice: NARRATOR_VOICE,
+    texts: OPTION_LABELS,
+  });
   const paths = new Map((data ?? []).map((row) => [row.text as string, row.audio_path as string | null]));
   return allOrNone(OPTION_LABELS, paths, clipUrl);
 }

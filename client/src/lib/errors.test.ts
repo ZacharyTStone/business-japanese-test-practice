@@ -22,6 +22,10 @@ describe("errorKind", () => {
   });
   it("recognises an expired session", () => {
     expect(errorKind({ message: "JWT expired", code: "PGRST301" })).toBe("session_expired");
+    // The Worker's word for an Access sign-in that has run out (lib/api.ts).
+    expect(errorKind({ code: "session_expired", message: "Cloudflare Access session expired" })).toBe(
+      "session_expired"
+    );
     expect(errorKind({ name: "AuthSessionMissingError", message: "Auth session missing!" })).toBe(
       "session_expired"
     );
