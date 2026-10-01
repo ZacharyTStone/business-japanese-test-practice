@@ -54,8 +54,8 @@ def cmd_grant(args) -> int:
         )
     print(f"-- {'Revoke' if args.revoke else 'Grant'} {publish.comment(args.product)} "
           f"for {args.user}.")
-    print("-- For D1: `wrangler d1 execute business-japanese-drill --remote --file <this>`.")
-    print("-- Only the owner, signed in to Cloudflare, can run it; the app cannot.")
+    print("-- For D1: wrangler d1 execute business-japanese-drill --remote --file <this>")
+    print("-- Only the owner, signed in to Cloudflare, can run it. The app cannot.")
     if not args.revoke:
         print("-- Idempotent: a replayed purchase updates the row it already wrote.")
     print()
@@ -77,8 +77,8 @@ def cmd_tester(args) -> int:
         print(f"not an email address: {args.email!r}", file=sys.stderr)
         return 2
     if args.remove:
-        print(f"-- Remove {email} from the tester list. Their history stays; they cannot read it.")
-        print("-- For D1: `wrangler d1 execute`. Only the owner, signed in to Cloudflare, can run it.")
+        print(f"-- Remove {publish.comment(email)} from the tester list. Their history stays, and they cannot read it.")
+        print("-- For D1: wrangler d1 execute. Only the owner, signed in to Cloudflare, can run it.")
         print()
         print(f"delete from testers where email = {publish.lit(email)};")
     else:
@@ -108,7 +108,7 @@ def cmd_tester(args) -> int:
                                   ("the veto button", args.veto),
                                   (f"a day of up to {args.max_goal} questions",
                                    args.max_goal is not None)) if on]
-        print(f"-- Let {email} use the app while it is in testing"
+        print(f"-- Let {publish.comment(email)} use the app while it is in testing"
               + (f", with {' and '.join(extras)}." if extras else "."))
         if args.veto:
             print("-- The veto button unpublishes a question for EVERYBODY on one press.")
@@ -118,9 +118,9 @@ def cmd_tester(args) -> int:
             print("-- it may choose in the app, and the point its day stops. Every other")
             print("-- row stays null, which is the ten-a-day, fifteen-at-most everyone has.")
             print("-- Ask for more than the bank can serve and the queue serves what it has.")
-        print("-- For D1: `wrangler d1 execute`. Only the owner, signed in to Cloudflare, can run it.")
+        print("-- For D1: wrangler d1 execute. Only the owner, signed in to Cloudflare, can run it.")
         print("-- Idempotent. On a row that exists it changes only what this command")
-        print("-- names; a flag it does not name keeps the value it has.")
+        print("-- names: a flag it does not name keeps the value it has.")
         print()
         print("insert into testers (email, note, unlimited, may_veto, max_daily_goal) "
               f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, "

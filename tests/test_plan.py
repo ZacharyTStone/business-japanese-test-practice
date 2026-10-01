@@ -249,7 +249,7 @@ def _item_type_rows() -> dict[str, tuple[str, int]]:
         for p in sorted((ROOT_DIR / "d1" / "migrations").glob("*.sql"))
     )
     rows: dict[str, tuple[str, int]] = {}
-    for stmt in re.findall(r"insert into item_types\b.*?;", sql, re.S):
+    for stmt in re.findall(r"insert (?:or ignore )?into item_types\b.*?;", sql, re.S):
         for row in re.findall(r"\(('[a-z_]+'.*?)\)\s*[,;]", stmt):
             fields = [f.strip() for f in row.split(",")]
             rows[fields[0].strip("'")] = (fields[1].strip("'"), int(fields[-1]))

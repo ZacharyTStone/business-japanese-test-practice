@@ -347,8 +347,8 @@ def to_sql(report: SynthReport) -> str:
         *([f"-- {len(report.remade)} of them replace a clip that was already live, "
            f"by name: the file in the bucket and the duration below are the new "
            f"recording."] if report.remade else []),
-        "-- Produced by `bjt synth`. Idempotent: re-running sets the same values.",
-        "-- For D1: `wrangler d1 execute` applies the file all or nothing.",
+        "-- Produced by bjt synth. Idempotent: re-running sets the same values.",
+        "-- For D1: wrangler d1 execute applies the file all or nothing.",
         "",
     ]
     lines += [

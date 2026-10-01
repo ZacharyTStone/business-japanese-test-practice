@@ -445,7 +445,7 @@ def to_sql(scenes: list[Scene]) -> str:
     if not with_art:
         return (
             "-- No approved scene artwork found. Nothing to apply.\n"
-            "-- Put files in media/scenes/<scene_id>.webp and re-run `bjt scenes`.\n"
+            "-- Put files in media/scenes/<scene_id>.webp and re-run bjt scenes.\n"
         )
 
     rows = [(s.scene_id, s.label_ja, s.path) for s in with_art]
@@ -461,12 +461,12 @@ def to_sql(scenes: list[Scene]) -> str:
     ]
     notes = [f"-- Artwork for {len(with_art)} scene(s)."]
     for s, other in sorted(borrowed, key=lambda pair: pair[0].scene_id):
-        notes.append(f"-- {publish.comment(s.scene_id)} has no picture of its own and borrows "
-                     f"{publish.comment(other.scene_id)}'s until it does.")
+        notes.append(f"-- {publish.comment(s.scene_id)} has no picture of its own and borrows the "
+                     f"picture of {publish.comment(other.scene_id)} until it does.")
     return "\n".join([
         *notes,
-        "-- Produced by `bjt scenes --sql`. Idempotent: re-running sets the same values.",
-        "-- For D1: `wrangler d1 execute` applies the file all or nothing.",
+        "-- Produced by bjt scenes --sql. Idempotent: re-running sets the same values.",
+        "-- For D1: wrangler d1 execute applies the file all or nothing.",
         "",
         *upserts,
         "",

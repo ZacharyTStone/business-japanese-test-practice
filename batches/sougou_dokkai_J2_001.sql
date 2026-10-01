@@ -1,6 +1,6 @@
 -- sougou_dokkai_J2_001: 6 × sougou_dokkai (J2)
 -- generated 2026-09-22T08:18:13+00:00 by author-composed
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
 insert into bundles (id, item_type, level, generator_model, generated_at) values ('sougou_dokkai_J2_001', 'sougou_dokkai', 'J2', 'author-composed', '2026-09-22T08:18:13+00:00') on conflict (id) do update set item_type = excluded.item_type, level = excluded.level, generator_model = excluded.generator_model, generated_at = excluded.generated_at;
 

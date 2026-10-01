@@ -111,7 +111,7 @@ const upsert = (keys: string[], cols: string[]) =>
  *  migration, in the same all-or-nothing file. */
 export function attemptTriggers(migrationsSql: string): { name: string; sql: string }[] {
   const out: { name: string; sql: string }[] = [];
-  const re = /^create trigger (attempts_\w+)\s*\nbefore insert on attempts[\s\S]*?^end;/gm;
+  const re = /^create trigger (?:if not exists )?(attempts_\w+)\s*\nbefore insert on attempts[\s\S]*?^end;/gm;
   for (const m of migrationsSql.matchAll(re)) out.push({ name: m[1], sql: m[0] });
   return out;
 }

@@ -1,13 +1,13 @@
 -- How often the people who meet each question get it right: the shared
--- bank's own measure of difficulty, which the practice queue reads once a
+-- bank’s own measure of difficulty, which the practice queue reads once a
 -- question has been answered by eight people or more (core/snapshot.ts).
--- Run by the nightly workflow (`wrangler d1 execute --remote --file`), as one
+-- Run by the nightly workflow (wrangler d1 execute --remote --file), as one
 -- all-or-nothing unit.
 --
 -- From nothing, every time: a history that was reset must not leave its
 -- counts behind, and a full recount is still one pass at this scale.
 --
--- Each person's first answer to each question, and never a timeout. A second
+-- Each person’s first answer to each question, and never a timeout. A second
 -- answer comes after the explanation was read, and a timeout is a fact about
 -- the clock (or a phone put down), not about the Japanese.
 delete from item_stats;

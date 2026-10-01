@@ -1,8 +1,8 @@
 -- bamen_haaku_J1_001: 2 × bamen_haaku (J1)
 -- generated 2026-09-19T17:03:51+00:00 by manual-load
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
--- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- Scenes are a shared bank (or, for 画像把握, one picture per item),
 -- image_path stays null until the art exists, and is deliberately not
 -- overwritten by a re-publish.
 insert into scenes (id, label_ja) values ('scene_expo_booth', '展示会のブース') on conflict (id) do update set label_ja = excluded.label_ja;

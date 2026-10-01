@@ -1,8 +1,8 @@
 -- shiryou_choudokkai_J1_001: 2 × shiryou_choudokkai (J1)
 -- generated 2026-09-18T08:50:50+00:00 by manual-load
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
--- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- Scenes are a shared bank (or, for 画像把握, one picture per item),
 -- image_path stays null until the art exists, and is deliberately not
 -- overwritten by a re-publish.
 insert into scenes (id, label_ja) values ('scene_meeting_room_table', '社内の会議室のテーブル') on conflict (id) do update set label_ja = excluded.label_ja;

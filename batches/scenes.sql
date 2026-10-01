@@ -1,7 +1,7 @@
 -- Artwork for 18 scene(s).
--- scene_phone_mobile_outside has no picture of its own and borrows scene_phone_desk's until it does.
--- Produced by `bjt scenes --sql`. Idempotent: re-running sets the same values.
--- For D1: `wrangler d1 execute` applies the file all or nothing.
+-- scene_phone_mobile_outside has no picture of its own and borrows the picture of scene_phone_desk until it does.
+-- Produced by bjt scenes --sql. Idempotent: re-running sets the same values.
+-- For D1: wrangler d1 execute applies the file all or nothing.
 
 insert into scenes (id, label_ja, image_path) values ('pic_09fa4bde9a', '取引先の会議室で名刺交換をする', 'pic_09fa4bde9a.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
 insert into scenes (id, label_ja, image_path) values ('pic_66f0315028', '会議室でホワイトボードを使って説明する', 'pic_66f0315028.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;

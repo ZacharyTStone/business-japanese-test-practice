@@ -89,7 +89,7 @@ def test_a_bundle_cannot_smuggle_a_statement_through_its_header():
     sql = publish.bundle_sql(bundle, "goi_bunpou_J2_999", withdrawn_ids=set())
     for line in _code_lines(sql):
         assert not line.lstrip().startswith(("delete from items;", "drop table")), line
-    assert "-- generated 2026-09-30 delete from items; -- by claude drop table" in sql
+    assert "-- generated 2026-09-30 delete from items, -- by claude drop table" in sql
 
 
 def test_the_grant_refuses_what_is_not_a_user_id(capsys):
@@ -119,3 +119,56 @@ def test_the_tester_list_takes_a_real_address(address, capsys):
     assert cli.main(["tester", address]) == 0
     out = capsys.readouterr().out
     assert publish.lit(address) in out
+
+
+# ----- what a statement splitter sees -------------------------------------------
+
+#: A splitter that does not know about `--` comments reads a quote in one as
+#: the start of a string, and a semicolon as the end of a statement. D1 splits
+#: a migration on its own side, and a "learner's" in a comment swallowed the
+#: rest of one (the first remote deploy, 2026-10-01: "incomplete input").
+_SPLITTER_CHARS = ("'", ";", "`", '"')
+
+
+def _comment_lines(sql: str) -> list[str]:
+    return [line for line in sql.splitlines() if line.lstrip().startswith("--")]
+
+
+def _shipped_sql() -> list:
+    from bjt import config
+    root = config.ROOT
+    return sorted([*root.glob("d1/**/*.sql"), *root.glob("batches/*.sql")])
+
+
+def test_no_sql_this_project_ships_has_a_quote_or_a_semicolon_in_a_comment():
+    files = _shipped_sql()
+    assert files
+    for path in files:
+        for line in _comment_lines(path.read_text(encoding="utf-8")):
+            assert not any(ch in line for ch in _SPLITTER_CHARS), f"{path.name}: {line}"
+
+
+def test_a_trigger_body_has_no_case_expression():
+    """CASE ... END inside BEGIN ... END is what a splitter counting ENDs
+    closes the trigger on. Plain boolean logic says the same thing."""
+    from bjt import config
+    for path in sorted(config.ROOT.glob("d1/migrations/*.sql")):
+        for body in re.findall(r"create trigger.*?\nend;", path.read_text(encoding="utf-8"), re.S | re.I):
+            code = "\n".join(line.split("--")[0] for line in body.splitlines())
+            assert not re.search(r"\bcase\b", code, re.I), f"{path.name}: {body[:80]}"
+
+
+@pytest.mark.parametrize("argv", [
+    ["tester", "o'brien@example.com", "--note", "it's me; really", "--max-goal", "60", "--veto"],
+    ["tester", "o'brien@example.com", "--remove"],
+    ["grant", "3f2b8c1e-9d4a-4e6b-8a7f-1c2d3e4f5a6b", "--product", "ads'free;x"],
+    ["grant", "3f2b8c1e-9d4a-4e6b-8a7f-1c2d3e4f5a6b", "--revoke"],
+])
+def test_the_one_off_sql_the_commands_print_has_clean_comments(argv, capsys):
+    assert cli.main(argv) == 0
+    for line in _comment_lines(capsys.readouterr().out):
+        assert not any(ch in line for ch in _SPLITTER_CHARS), line
+
+
+def test_a_comment_value_loses_what_a_splitter_would_read():
+    assert publish.comment("borrows desk's; `x` \"y\"") == "borrows desk’s, x y"

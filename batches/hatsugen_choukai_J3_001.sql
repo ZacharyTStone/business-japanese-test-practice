@@ -1,8 +1,8 @@
 -- hatsugen_choukai_J3_001: 10 × hatsugen_choukai (J3)
 -- generated 2026-09-15T17:20:43+00:00 by author-composed
--- Produced by `bjt publish`. Idempotent: re-running replaces these rows.
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
 
--- Scenes are a shared bank (or, for 画像把握, one picture per item);
+-- Scenes are a shared bank (or, for 画像把握, one picture per item),
 -- image_path stays null until the art exists, and is deliberately not
 -- overwritten by a re-publish.
 insert into scenes (id, label_ja) values ('scene_client_office_sofa', '取引先の応接ソファ') on conflict (id) do update set label_ja = excluded.label_ja;
@@ -127,7 +127,7 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 insert into item_options (item_id, position, text, role, why, clip_id) values ('f1c44b24eb', 2, '本日はお忙しい中お集まりいただき、ありがとうございます。〇〇商事です。', 'content_mismatch', '会議を開く側の言葉としては自然だが、自分の名前を名乗っておらず、自己紹介という場面の目的を果たしていない。', 'e6d39827ba98df46') on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 insert into item_options (item_id, position, text, role, why, clip_id) values ('f1c44b24eb', 3, 'はじめまして。〇〇商事の田中と仰います。よろしくお願いいたします。', 'wrong_honorific_direction', '「仰る」は相手の発言に使う尊敬語。自分の名前を名乗る場面で使うと、自分の行為を高めてしまっている。', 'a8b08ab8b3ce7538') on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 
--- Withdrawn after review; batches/withdrawn.txt says why. An unpublish,
+-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,
 -- never a delete, so every answer already given keeps resolving. Nothing
 -- here ever sets is_published back to 1: a question the owner vetoed
 -- in the app stays vetoed however often this file is applied.
