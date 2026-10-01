@@ -1,17 +1,17 @@
 /**
  * The app's one way to the database: a named query, sent to the Worker.
  *
- * The Worker (client/worker/) runs it as the signed-in learner, with
- * row-level security deciding what they see exactly as it did when the app
- * spoke to PostgREST. The app names a query from worker/queries.ts and passes
- * its arguments; it never sends SQL, a table or a column list.
+ * The Worker (client/worker/) runs it against D1 as the signed-in learner,
+ * and every query reads only that learner's rows. The app names a query from
+ * worker/queries.ts and passes its arguments; it never sends SQL, a table or
+ * a column list.
  *
  * On the web the Worker is the origin the app was loaded from, so a request
  * carries the Cloudflare Access cookie and there is nothing to configure. A
  * native build would need `EXPO_PUBLIC_API_BASE` — and a sign-in Access does
  * not give it — so for now the app is a web app.
  *
- * A failure throws the shape supabase-js threw — `code`, `message`,
+ * A failure throws one shape — `code`, `message`,
  * `details`, `hint` — so `errorText` and `errorKind` read it unchanged.
  */
 import { Platform } from "react-native";

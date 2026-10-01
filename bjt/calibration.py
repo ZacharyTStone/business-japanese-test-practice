@@ -14,7 +14,7 @@ numbers are easy to get wrong in a way that flatters the bank:
   folded in.
 * **The bank's side is the app, not the terminal.** The local SQLite
   `responses` table holds only what `bjt practice` writes; the app's record is
-  `public.attempts` in Supabase, which comes in as a CSV exported with
+  `attempts` in D1, which comes in as a CSV exported with
   `ATTEMPTS_EXPORT_SQL` (`--attempts-csv`). The SQLite table is read when no
   file is given, for somebody who practised here.
 """
@@ -25,9 +25,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-#: What to run in the Supabase SQL editor to export the app's side, then
-#: "Download CSV". One select, so it changes nothing; the editor runs it as
-#: `postgres`, which can read `auth.users`, and no key leaves the dashboard.
+#: What to run in the D1 console of the Cloudflare dashboard to export the
+#: app's side, then download the result as CSV (or `npx wrangler d1 execute
+#: business-japanese-drill --remote --json --command "..."`). One select, so it
+#: changes nothing.
 #:
 #: * **First attempts only**: each question's first answer, before its 解説
 #:   was on screen, which is the only answer comparable with an official item
@@ -37,18 +38,19 @@ from typing import Optional
 #:   testers' ability.
 #: * **The live bank**: a withdrawn question left for being broken, and its
 #:   answers say nothing about how the bank is pitched now.
-#: * `chosen_index` -1 is the reading clock running out
-#:   (supabase/migrations/20260919000300_the_reading_clock.sql). It is exported
-#:   so it can be counted apart, the way a skip is on the official side.
+#: * `chosen_index` -1 is the reading clock running out. It is exported so it
+#:   can be counted apart, the way a skip is on the official side.
 ATTEMPTS_EXPORT_SQL = """\
 select i.item_type, a.is_correct, a.chosen_index
-  from (select distinct on (att.item_id) att.item_id, att.is_correct, att.chosen_index
-          from public.attempts att
-          join auth.users u on u.id = att.user_id
-         where lower(u.email) = lower('you@example.com')  -- your sign-in address
-         order by att.item_id, att.answered_at, att.id) a
-  join public.items i on i.id = a.item_id
- where i.is_published
+  from (select att.item_id, att.is_correct, att.chosen_index,
+               row_number() over (partition by att.item_id
+                                  order by att.answered_at, att.id) as nth
+          from attempts att
+          join users u on u.id = att.user_id
+         where u.email = lower('you@example.com')  -- your sign-in address
+       ) a
+  join items i on i.id = a.item_id
+ where a.nth = 1 and i.is_published = 1
  order by i.item_type;"""
 
 #: The columns `--attempts-csv` cannot do without. `chosen_index` is optional:

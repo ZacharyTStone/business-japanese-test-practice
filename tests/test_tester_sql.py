@@ -44,13 +44,13 @@ def test_each_named_flag_is_the_only_one_written(capsys):
 
 def test_a_flag_can_still_be_taken_away_by_name(capsys):
     sql = _sql(capsys, "a@example.com", "--no-veto", "--no-unlimited", "--no-max-goal")
-    assert "values ('a@example.com', '', false, false, null)" in sql
+    assert "values ('a@example.com', '', 0, 0, null)" in sql
     assert _updated(sql) == ["unlimited", "may_veto", "max_daily_goal"]
 
 
 def test_a_new_row_still_gets_the_defaults(capsys):
     sql = _sql(capsys, "new@example.com", "--note", "new")
-    assert "values ('new@example.com', 'new', false, false, null)" in sql
+    assert "values ('new@example.com', 'new', 0, 0, null)" in sql
 
 
 def test_contradicting_the_day_is_refused(capsys):

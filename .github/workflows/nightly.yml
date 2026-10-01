@@ -41,12 +41,13 @@
 #                      and the run summary says which one was used; it is a much
 #                      stronger one than no examples, which is what a job that
 #                      refused to run would leave the bank with.
-#   SUPABASE_DB_URL    a connection string for the production database. Used for
-#                      one statement — refresh_item_stats() — which recounts how
-#                      often each item is answered correctly across all learners.
-#                      That is what the practice queue reads to pitch a set at a
-#                      difficulty that teaches. Also applies batches/scenes.sql
-#                      once artwork has been uploaded (below).
+#   CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+#                      a token allowed to edit D1, and the account it is in.
+#                      Used for one file — d1/refresh_item_stats.sql — which
+#                      recounts how often each item is answered correctly across
+#                      all learners. That is what the practice queue reads to
+#                      pitch a set at a difficulty that teaches. Also applies
+#                      batches/scenes.sql once artwork has been uploaded (below).
 #   OPENAI_API_KEY     the image model that draws the pictures. With it (and
 #                      ANTHROPIC_API_KEY, which reviews every draft against the
 #                      brief) the job draws whichever of the sixteen bank scenes
@@ -55,12 +56,16 @@
 #                      item's own four descriptions and is what makes the item
 #                      servable. A picture refused too often is given up on,
 #                      and the bucket remembers (rejected/).
-#   SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
-#                      the project URL and the service-role key, which together
-#                      let the job put approved artwork in the `scenes` bucket
-#                      and see what is already there. The service-role key is
-#                      the one that bypasses row-level security: it lives here
-#                      and in nobody's .env, and never in client/.
+#   R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY
+#                      an R2 token's S3 pair, which lets the job put approved
+#                      artwork in the media bucket and see what is already
+#                      there (bjt/r2.py). It is the one key that writes media:
+#                      it lives here and in nobody's .env, and never in client/.
+#                      Pictures are drawn only when the bucket can be read: a
+#                      job that cannot see what is drawn would draw it all
+#                      again. And not while the bucket's scenes/ folder is
+#                      empty — that is a library not yet moved in (the
+#                      move-off-supabase workflow), not one to redraw.
 #   TYPESAFE_API_KEY   Jev, the prototype difficulty instrument (bjt/jev.py).
 #                      With it a manual run can compare Jev with the probe's
 #                      own model ("compare_jev"), which writes nothing. Jev
@@ -234,10 +239,14 @@ jobs:
         env:
           HAVE_API_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
           HAVE_SEEDS: ${{ secrets.SEEDS_TAR_B64 != '' }}
-          HAVE_DB: ${{ secrets.SUPABASE_DB_URL != '' }}
+          HAVE_DB: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
           HAVE_IMAGES: ${{ secrets.OPENAI_API_KEY != '' }}
-          HAVE_STORAGE: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+          HAVE_STORAGE: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' && secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' }}
           HAVE_TYPESAFE: ${{ secrets.TYPESAFE_API_KEY != '' }}
+          # Read only to count what the bucket already holds (below).
+          R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           echo "db=$HAVE_DB" >> "$GITHUB_OUTPUT"
           echo "storage=$HAVE_STORAGE" >> "$GITHUB_OUTPUT"
@@ -261,10 +270,33 @@ jobs:
           # over "probe" when both are ticked, being the one that changes less.
           compare=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.compare_jev }}" = "true" ]; then compare=true; probe=false; fi
+          # The bucket must be readable, and must already hold the library:
+          # a job that cannot see what has been drawn would pay to draw all of
+          # it again.
+          drawn=0
+          if [ "$HAVE_STORAGE" = "true" ]; then
+            drawn=$(python -c 'from bjt import scene_art; print(len(scene_art.Bucket().list()))' || echo error)
+          fi
           if [ "$probe" = "true" ]; then
             echo "art=false" >> "$GITHUB_OUTPUT"
           elif [ "$compare" = "true" ]; then
             echo "art=false" >> "$GITHUB_OUTPUT"
+          elif [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ] && { [ "$HAVE_STORAGE" != "true" ] || [ "$drawn" = "error" ] || [ "$drawn" = "0" ]; }; then
+            echo "art=false" >> "$GITHUB_OUTPUT"
+            {
+              echo
+              echo '### No pictures drawn'
+              echo
+              if [ "$HAVE_STORAGE" != "true" ]; then
+                echo 'The media bucket cannot be read without `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`,'
+                echo 'and a job that cannot see what has been drawn would draw all of it again.'
+              elif [ "$drawn" = "error" ]; then
+                echo 'The media bucket could not be listed tonight (see this step'"'"'s log).'
+              else
+                echo 'The bucket has no scene picture yet. If the library is still being moved in,'
+                echo 'run the **move off supabase** workflow; nothing is redrawn until it has.'
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
           elif [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
             echo "art=true" >> "$GITHUB_OUTPUT"
             if [ "$weekly" = "true" ]; then
@@ -335,23 +367,21 @@ jobs:
       # gets better with scale: the more people answer an item, the better the
       # queue knows how hard it is. One statement, as the service role, out of
       # hours — never on the path of somebody waiting for five questions.
-      - name: install psql
-        if: steps.keys.outputs.db == 'true' && github.event.inputs.compare_jev != 'true'
-        # The runner image ships one; the ten-second apt round trip is only for
-        # the day it stops doing so.
-        run: |
-          command -v psql >/dev/null || {
-            sudo apt-get update
-            sudo apt-get install -y --no-install-recommends postgresql-client
-          }
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.keys.outputs.db == 'true'
+        with:
+          node-version: "22"
 
       - name: recount how hard each item is
         if: steps.keys.outputs.db == 'true' && github.event.inputs.compare_jev != 'true'
+        working-directory: client
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
-            -c "select public.refresh_item_stats() as items_recounted;"
+          npx --yes wrangler@4.131.1 d1 execute business-japanese-drill --remote --yes \
+            --file ../d1/refresh_item_stats.sql
 
       # --------------------------------------------------------- the generation
 
@@ -469,8 +499,9 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           upload=""
           if [ "${{ steps.keys.outputs.storage }}" = "true" ]; then upload="--upload --sql"; fi
@@ -493,7 +524,9 @@ jobs:
       - name: point the database at the artwork
         if: steps.keys.outputs.art == 'true' && steps.keys.outputs.storage == 'true' && steps.keys.outputs.db == 'true' && github.event.inputs.dry_run != 'true'
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
         run: |
           if [ ! -f batches/scenes.sql ]; then
             {
@@ -505,7 +538,8 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f batches/scenes.sql
+          (cd client && npx --yes wrangler@4.131.1 d1 execute business-japanese-drill --remote --yes \
+            --file ../batches/scenes.sql)
 
       # batches/scenes.sql is included when the scene step wrote it, so the
       # pull request also records which pictures the database was pointed at.

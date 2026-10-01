@@ -1,8 +1,7 @@
 """A live clip is never re-made, whether or not the caller said which are live.
 
 `bjt synth --upload` without `--have` on an empty media/ re-synthesised every
-clip, uploaded each over the live file (x-upsert: true), and rewrote every
-duration. Now the upload needs `--have`, and the bucket itself is asked not to
+clip, uploaded each over the live file, and rewrote every duration. Now the upload needs `--have`, and the bucket itself is asked not to
 replace anything but the clips `--remake` names: a file already at a clip's
 path is a live clip, left alone and counted as live.
 """
@@ -12,7 +11,7 @@ import urllib.request
 
 import pytest
 
-from bjt import batch, cli, config, fixtures, http, scene_art
+from bjt import batch, cli, config, fixtures, http, r2, scene_art
 from bjt.tts import providers, synth
 
 REFERENCE = str(config.ROOT / "batches" / "hatsugen_choukai_J2_001.json")
@@ -40,26 +39,26 @@ def _bucket_seeing(monkeypatch, answer):
         return answer(url, headers)
 
     monkeypatch.setattr(http, "request", request)
-    return scene_art.Bucket(name="audio", url="https://x.supabase.co", key="k"), seen
+    return scene_art.Bucket(name="audio", creds=r2.Credentials("acct", "k", "s")), seen
 
 
 def test_the_bucket_is_asked_not_to_replace(monkeypatch):
     bucket, seen = _bucket_seeing(monkeypatch, lambda url, h: b"{}")
     bucket.upload("openai/ab/abc.wav", b"RIFF", "audio/wav", upsert=False)
     bucket.upload("openai/ab/abd.wav", b"RIFF", "audio/wav", upsert=True)
-    assert [h["x-upsert"] for h in seen] == ["false", "true"]
+    # R2 refuses a put onto a taken key only when asked to (If-None-Match).
+    assert [h.get("if-none-match") for h in seen] == ["*", None]
 
 
 @pytest.mark.parametrize("status, body", [
-    (409, '{"error": "Duplicate"}'),
-    (400, '{"statusCode":"409","error":"Duplicate","message":"The resource already exists"}'),
+    (412, "<Error><Code>PreconditionFailed</Code></Error>"),
 ])
 def test_a_file_already_there_is_said_so(monkeypatch, status, body):
     def refuse(req, timeout=None):
         raise urllib.error.HTTPError(req.full_url, status, "x", {}, io.BytesIO(body.encode()))
 
     monkeypatch.setattr(http, "_open", refuse)
-    bucket = scene_art.Bucket(name="audio", url="https://x.supabase.co", key="k")
+    bucket = scene_art.Bucket(name="audio", creds=r2.Credentials("acct", "k", "s"))
     with pytest.raises(scene_art.AlreadyExists):
         bucket.upload("openai/ab/abc.wav", b"RIFF", "audio/wav", upsert=False)
     # With upsert the same answer is an ordinary failure, never "already live".

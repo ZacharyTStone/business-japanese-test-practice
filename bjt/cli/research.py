@@ -485,7 +485,7 @@ def register(sub, types: list[str]) -> None:
         "calibrate", help="sit official items, compare to your accuracy on the bank",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=("Your side of the bank comes from the app. Export it with this read-only\n"
-                "SQL in the Supabase SQL editor (your sign-in address in place of\n"
+                "SQL in the D1 console of the Cloudflare dashboard (your sign-in address in place of\n"
                 "you@example.com), download the result as CSV, and pass the file:\n\n"
                 + textwrap.indent(calibration.ATTEMPTS_EXPORT_SQL, "    ")))
     c.add_argument("--type", required=True, choices=types)

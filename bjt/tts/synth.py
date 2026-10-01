@@ -269,7 +269,7 @@ def _duration_of(path: Path) -> int:
 
 def read_have(path: Path) -> set[str]:
     """The clip ids already live, one per line. Blank lines and `#` comments
-    are ignored, so the file can be the raw output of a psql query."""
+    are ignored, so the file can be a query's output with one id a line."""
     ids = set()
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -348,26 +348,15 @@ def to_sql(report: SynthReport) -> str:
            f"by name: the file in the bucket and the duration below are the new "
            f"recording."] if report.remade else []),
         "-- Produced by `bjt synth`. Idempotent: re-running sets the same values.",
-        "",
-        "begin;",
+        "-- For D1: `wrangler d1 execute` applies the file all or nothing.",
         "",
     ]
-    values = ",\n       ".join(
-        f"({publish.lit(c.clip_id)}, {publish.lit(c.path)}, {c.duration_ms})"
-        for c in sorted(report.clips, key=lambda c: c.clip_id)
-    )
     lines += [
-        "update public.audio_clips c set",
-        "       audio_path  = v.audio_path,",
-        "       duration_ms = v.duration_ms",
-        "  from (values",
-        f"       {values}",
-        "       ) as v (id, audio_path, duration_ms)",
-        " where c.id = v.id;",
-        "",
-        "commit;",
-        "",
+        f"update audio_clips set audio_path = {publish.lit(c.path)}, "
+        f"duration_ms = {int(c.duration_ms)} where id = {publish.lit(c.clip_id)};"
+        for c in sorted(report.clips, key=lambda c: c.clip_id)
     ]
+    lines.append("")
     return "\n".join(lines)
 
 

@@ -12,7 +12,7 @@ import wave
 
 import pytest
 
-from bjt import batch, fixtures, http, publish, scene_art
+from bjt import batch, fixtures, http, publish, r2, scene_art
 from bjt.files import write_atomic
 from bjt.tts import channel, synth
 
@@ -90,18 +90,26 @@ def test_a_corrupt_clip_on_disk_is_a_failure_not_zero_milliseconds(tmp_path):
 
 
 def test_the_bucket_listing_reads_every_page(monkeypatch):
-    pages = [[{"name": f"r/{i}.txt", "id": i} for i in range(1000)],
-             [{"name": f"r/{i}.txt", "id": i} for i in range(1000, 1005)]]
+    ns = 'xmlns="http://s3.amazonaws.com/doc/2006-03-01/"'
+
+    def page(keys, token=None):
+        more = f"<IsTruncated>true</IsTruncated><NextContinuationToken>{token}</NextContinuationToken>" \
+            if token else "<IsTruncated>false</IsTruncated>"
+        return (f"<ListBucketResult {ns}>{more}"
+                + "".join(f"<Contents><Key>scenes/rejected/{k}.txt</Key></Contents>" for k in keys)
+                + "</ListBucketResult>").encode()
+
+    pages = [page(range(1000), token="p2"), page(range(1000, 1005))]
     asked = []
 
     def listing(method, url, body, headers, **kw):
-        asked.append(body["offset"])
+        asked.append("continuation-token=p2" in url)
         return pages[len(asked) - 1]
 
-    monkeypatch.setattr(http, "json_request", listing)
-    bucket = scene_art.Bucket(url="https://x.supabase.co", key="k")
+    monkeypatch.setattr(http, "request", listing)
+    bucket = scene_art.Bucket(creds=r2.Credentials("acct", "k", "s"))
     assert len(bucket.list("rejected/")) == 1005
-    assert asked == [0, 1000]
+    assert asked == [False, True]
 
 
 def test_an_approved_picture_is_written_whole(tmp_path, monkeypatch):

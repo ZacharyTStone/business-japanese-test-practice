@@ -14,5 +14,7 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["./**/*.ts"]
+  "include": ["./**/*.ts"],
+  // The database tests run in Node: worker/test/tsconfig.json.
+  "exclude": ["./test/**", "./**/*.db.test.ts"]
 }

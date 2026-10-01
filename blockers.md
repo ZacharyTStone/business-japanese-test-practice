@@ -63,24 +63,23 @@ file, check the run summary, then delete the file.
 
 **Where it stands.** Cloudflare Access stands in front of the whole Worker (the
 web app, its API and its media), with a policy that names the addresses
-allowed in. The Worker maps the signed-in address to the account's user id
-(`ACCESS_USERS`), and the database still opens only to an address in
-`public.testers`. There is no password form, no Google button and no
-anonymous path in the app; the schema supports an anonymous-first sign-in that
-links an identity later, but nothing uses it yet. Access is a browser sign-in,
-so the app is web-only until a native build has a way in.
+allowed in. The Worker looks the signed-in address up in D1 and answers only
+an address in `testers`, making an account for it on its first visit
+(`client/worker/core/caller.ts`). There is no password form, no Google button
+and no anonymous path in the app. Access is a browser sign-in, so the app is
+web-only until a native build has a way in.
 
-**Next step, when the app opens.** One migration that drops the tester check
-from the row-level policies and the sign-up trigger, and a sign-in that is not
-an allow-list — an auth library on the Worker (accounts on the same user ids),
-since Access's own login page is for known people, not the public.
+**Next step, when the app opens.** Drop the tester check from the door in
+`core/caller.ts`, and a sign-in that is not an allow-list — an auth library on
+the Worker (accounts on the same user ids), since Access's own login page is
+for known people, not the public.
 
 After any change to sign-in, on the deployed URL:
 
 - A fresh browser gets Cloudflare's sign-in page, and nothing of the app.
 - An address the Access policy does not name cannot reach the app at all.
-- A named address that `ACCESS_USERS` or `public.testers` does not have sees
-  the "not open yet" screen, and every query returns nothing.
+- A named address that `testers` does not have sees the "not open yet"
+  screen, every query is refused, and no account is made for it.
 - The account's history is the same after a refresh and on a second device.
 - Signing out (account screen) ends the Access session; the next visit asks
   again.

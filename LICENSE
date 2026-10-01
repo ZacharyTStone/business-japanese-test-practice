@@ -6,7 +6,7 @@ You may read it, and you may quote short extracts with attribution — in a
 review, an article, or a discussion of how it works. Everything else is
 reserved. Without written permission you may not copy, modify, distribute,
 sublicense, or use this repository or any part of it in a product or a service.
-That covers the item pipeline in bjt/, the schema and policies in supabase/,
+That covers the item pipeline in bjt/, the schema in d1/,
 the app in client/, the seed table in seedtable/, and the question bank in
 batches/.
 

@@ -8,7 +8,7 @@ rejects, and never lets a stand-in be mistaken for artwork.
 
 import pytest
 
-from bjt import config, http, scene_art, scenes
+from bjt import config, http, r2, scene_art, scenes
 
 
 def _png_is_valid(data: bytes) -> bool:
@@ -158,36 +158,62 @@ def test_the_speaker_addresses_the_viewer_and_nobody_else_is_principal(tmp_path)
 
 # ----- the bucket -----------------------------------------------------------
 
-def test_the_bucket_refuses_without_its_two_variables(monkeypatch):
-    monkeypatch.delenv("SUPABASE_URL", raising=False)
-    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+CREDS = r2.Credentials("acct", "key-id", "secret")
+BASE = "https://acct.r2.cloudflarestorage.com/business-japanese-drill-media"
+
+
+def _listing(*keys: str, truncated: bool = False, token: str = "") -> bytes:
+    """An R2 ListObjectsV2 reply holding these keys."""
+    body = "".join(f"<Contents><Key>{k}</Key></Contents>" for k in keys)
+    more = f"<NextContinuationToken>{token}</NextContinuationToken>" if token else ""
+    return ('<?xml version="1.0" encoding="UTF-8"?>'
+            '<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+            f"<IsTruncated>{'true' if truncated else 'false'}</IsTruncated>{more}{body}"
+            "</ListBucketResult>").encode()
+
+
+def _no_r2(monkeypatch):
+    for name in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_the_bucket_refuses_without_its_credentials(monkeypatch):
+    _no_r2(monkeypatch)
     bucket = scene_art.Bucket()
     assert not bucket.configured
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="R2_ACCOUNT_ID"):
         bucket.list()
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="R2_ACCOUNT_ID"):
         bucket.upload("x.webp", b"", "image/webp")
+
+
+def test_the_bucket_reads_its_credentials_from_the_environment(monkeypatch):
+    monkeypatch.setenv("R2_ACCOUNT_ID", "acct")
+    monkeypatch.setenv("R2_ACCESS_KEY_ID", "key-id")
+    monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.delenv("R2_BUCKET", raising=False)
+    assert scene_art.Bucket().creds == CREDS
 
 
 def test_artwork_already_in_the_bucket_counts_and_is_not_resent(tmp_path, monkeypatch):
     requests = []
 
-    def fake_json(method, url, body, headers, **kw):
-        requests.append((method, url))
-        return [{"name": "scene_corridor.webp", "id": "1"},
-                {"name": "rejected", "id": None},
-                {"name": "notes.txt", "id": "2"}]
-
     def fake_raw(method, url, body, headers, **kw):
-        requests.append((method, url, headers["Content-Type"], headers["x-upsert"]))
+        if method == "GET":
+            requests.append((method, url.split("?")[0], url.split("?")[1]))
+            # The folder's own files only: `rejected/` is a deeper prefix and
+            # the delimiter keeps its contents out of the listing.
+            return _listing("scenes/scene_corridor.webp", "scenes/notes.txt")
+        requests.append((method, url, headers["content-type"], headers.get("if-none-match")))
         return b""
 
-    monkeypatch.setattr(http, "json_request", fake_json)
     monkeypatch.setattr(http, "request", fake_raw)
-    bucket = scene_art.Bucket(url="https://p.supabase.co/", key="service")
+    bucket = scene_art.Bucket(creds=CREDS)
     assert bucket.configured
     assert bucket.list() == {"scene_corridor.webp"}
-    assert requests[0] == ("POST", "https://p.supabase.co/storage/v1/object/list/scenes")
+    method, url, query = requests[0]
+    assert (method, url) == ("GET", BASE)
+    assert "prefix=scenes%2F" in query and "delimiter=%2F" in query and "list-type=2" in query
 
     (tmp_path / "scenes").mkdir()
     (tmp_path / "scenes" / "scene_phone_desk.webp").write_bytes(b"art")
@@ -199,8 +225,8 @@ def test_artwork_already_in_the_bucket_counts_and_is_not_resent(tmp_path, monkey
     up = scene_art.upload_approved(survey, bucket, tmp_path)
     assert up.sent == ["scene_phone_desk.webp"]  # the bucket's own file is not re-sent
     assert up.failed == []
-    assert requests[-1] == ("POST", "https://p.supabase.co/storage/v1/object/scenes/scene_phone_desk.webp",
-                            "image/webp", "true")
+    # A redrawn picture replaces the old one under its own name.
+    assert requests[-1] == ("PUT", f"{BASE}/scenes/scene_phone_desk.webp", "image/webp", None)
 
     # Both reach the SQL, so a scene drawn on an earlier night keeps its picture.
     sql = scenes.to_sql(survey)
@@ -216,7 +242,7 @@ def test_one_bad_upload_does_not_stop_the_rest(tmp_path, monkeypatch):
 
     def fake_raw(method, url, body, headers, **kw):
         if url.endswith("scene_corridor.webp"):
-            raise RuntimeError(f"POST {url} → HTTP 400: EntityTooLarge")
+            raise RuntimeError(f"PUT {url} → HTTP 400: EntityTooLarge")
         uploaded.append(url.rsplit("/", 1)[1])
         return b""
 
@@ -228,7 +254,7 @@ def test_one_bad_upload_does_not_stop_the_rest(tmp_path, monkeypatch):
     (tmp_path / "scenes" / "scene_elevator_hall.webp").write_bytes(b"x" * 5)  # fine
     (tmp_path / "scenes" / "scene_izakaya_table.webp").write_bytes(b"x" * 5)  # fine
 
-    bucket = scene_art.Bucket(url="https://p.supabase.co", key="service")
+    bucket = scene_art.Bucket(creds=CREDS)
     survey = scenes.survey(tmp_path)
     up = scene_art.upload_approved(survey, bucket, tmp_path)
 
@@ -325,15 +351,14 @@ def test_the_cli_draws_offline_and_writes_the_summary(tmp_path, capsys):
 def test_the_cli_refuses_to_upload_without_the_bucket(tmp_path, monkeypatch):
     from bjt import cli
 
-    monkeypatch.delenv("SUPABASE_URL", raising=False)
-    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    _no_r2(monkeypatch)
     assert cli.main(["scenes", "--upload", "--media-dir", str(tmp_path)]) == 2
 
 
 def test_the_cli_names_an_unknown_scene(tmp_path, monkeypatch):
     from bjt import cli
 
-    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    _no_r2(monkeypatch)
     assert cli.main(["scenes", "--generate", "scene_nowhere", "--provider", "placeholder",
                      "--media-dir", str(tmp_path)]) == 2
 
@@ -365,25 +390,38 @@ def test_every_stand_in_is_a_bank_scene_with_a_brief():
 
 
 def test_the_ledger_counts_refusals_and_records_new_ones(monkeypatch):
-    requests = []
+    listed, sent = [], []
 
-    def fake_json(method, url, body, headers, **kw):
-        requests.append(body["prefix"])
-        return [{"name": "scene_phone_mobile_outside-1.txt", "id": "1"},
-                {"name": "scene_phone_mobile_outside-3.txt", "id": "2"},
-                {"name": "scene_corridor-2.txt", "id": "3"},
-                {"name": "junk", "id": "4"}]
+    def fake_raw(method, url, body, headers, **kw):
+        if method == "GET":
+            listed.append(url)
+            return _listing("scenes/rejected/scene_phone_mobile_outside-1.txt",
+                            "scenes/rejected/scene_phone_mobile_outside-3.txt",
+                            "scenes/rejected/scene_corridor-2.txt",
+                            "scenes/rejected/junk")
+        sent.append((url, body, headers["content-type"]))
+        return b""
 
-    sent = []
-    monkeypatch.setattr(http, "json_request", fake_json)
-    monkeypatch.setattr(http, "request",
-                        lambda m, url, body, headers, **kw: sent.append((url, body, headers["Content-Type"])) or b"")
-    bucket = scene_art.Bucket(url="https://p.supabase.co", key="k")
+    monkeypatch.setattr(http, "request", fake_raw)
+    bucket = scene_art.Bucket(creds=CREDS)
     assert bucket.refusals() == {"scene_phone_mobile_outside": 3, "scene_corridor": 2}
-    assert requests == ["rejected/"]
+    assert len(listed) == 1 and "prefix=scenes%2Frejected%2F" in listed[0]
     bucket.record_refusal("scene_corridor", 3, ("readable text", "wrong setting"))
-    assert sent[0][0].endswith("/object/scenes/rejected/scene_corridor-3.txt")
+    assert sent[0][0] == f"{BASE}/scenes/rejected/scene_corridor-3.txt"
     assert sent[0][1] == b"readable text\nwrong setting\n"
+
+
+def test_a_long_ledger_is_read_to_its_end(monkeypatch):
+    """The ledger grows by a file per refusal; a listing read only to its first
+    page would forget the rest and draw given-up pictures again."""
+    pages = iter([
+        _listing("scenes/rejected/scene_corridor-1.txt", truncated=True, token="next"),
+        _listing("scenes/rejected/scene_corridor-6.txt"),
+    ])
+    urls = []
+    monkeypatch.setattr(http, "request", lambda m, url, b, h, **kw: urls.append(url) or next(pages))
+    assert scene_art.Bucket(creds=CREDS).refusals() == {"scene_corridor": 6}
+    assert "continuation-token=next" in urls[1]
 
 
 def test_a_scene_at_its_lifetime_allowance_is_not_drawn_again(tmp_path):
@@ -492,3 +530,15 @@ def test_a_withdrawn_question_gets_no_picture(monkeypatch):
     victim = sorted(every)[0]
     monkeypatch.setattr(withdrawn, "ids", lambda path=None: frozenset({victim}))
     assert victim not in {it["id"] for _, it in scenes.picture_items()}
+
+
+def test_the_nightly_job_never_draws_into_a_bucket_it_cannot_see_or_that_is_empty():
+    """A job that cannot list the bucket would see every scene as undrawn and
+    pay to draw the whole bank again; so would one run before the library was
+    moved into R2. Neither draws."""
+    text = (config.ROOT / ".github/workflows/nightly.yml").read_text(encoding="utf-8")
+    start = text.index("name: which of tonight's work is unlocked")
+    keys = text[start:text.index("- name:", start + 1)]
+    assert "scene_art.Bucket().list()" in keys
+    guard = keys.index('[ "$HAVE_STORAGE" != "true" ] || [ "$drawn" = "error" ] || [ "$drawn" = "0" ]')
+    assert guard < keys.index('echo "art=true"'), "the refusal comes before any yes"

@@ -230,8 +230,8 @@ def test_the_sql_updates_rather_than_inserts(bundle, tmp_path):
     """The clip rows come from `bjt publish`, off the same manifest. A missing
     row means the bundle was never published, and inventing one hides that."""
     sql = synth.to_sql(synth.synthesise_bundle(bundle, out_dir=tmp_path))
-    assert "update public.audio_clips" in sql
-    assert "insert into public.audio_clips" not in sql
+    assert "update audio_clips" in sql
+    assert "insert into audio_clips" not in sql
 
 
 def test_the_run_leaves_a_record(bundle, tmp_path):
@@ -682,7 +682,14 @@ def test_the_deploy_workflow_only_re_records_when_a_hand_run_asks_it_to():
     assert "remake_list:" in text, "the run form offers it"
     assert re.search(r"^\s+REMAKE_LIST: \$\{\{ github\.event\.inputs\.remake_list \}\}$",
                      text, re.M), "and it is the only source of the value"
-    assert '--have have.txt' in text, "what is live is still read from the database"
+    assert '--have "$RUNNER_TEMP/have.txt"' in text, "what is live is still read from the database"
+    # A database with no live clip is a library not moved in yet, never one to
+    # record again from the top — unless a hand run says it is starting from
+    # nothing.
+    voice = text[text.index("name: which voice, if any"):text.index("name: give the bank its voice")]
+    assert "select id from audio_clips where audio_path is not null" in voice
+    assert '[ "$live" -eq 0 ] && [ "$FIRST_VOICE" != "true" ]' in voice
+    assert "FIRST_VOICE: ${{ github.event.inputs.first_voice == 'true' }}" in voice
 
     step = text.index("name: give the bank its voice")
     block = text[step:text.index("- name:", step + 1)]

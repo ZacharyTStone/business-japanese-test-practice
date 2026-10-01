@@ -31,7 +31,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Callable, Protocol
 
-from . import config, http, llm, scenes
+from . import config, http, llm, r2, scenes
 from .files import write_atomic
 
 # ----- image providers ------------------------------------------------------
@@ -467,56 +467,40 @@ def lifetime_ledger(bucket: "Bucket", *, record: bool
 
 
 class Bucket:
-    """The `scenes` storage bucket, over Supabase's storage REST API.
+    """One folder of the media bucket in R2 (bjt/r2.py): `scenes` for the
+    pictures, `audio` for the clips. A file at `path` is the object
+    `<name>/<path>`, which is where the app's Worker looks for it.
 
-    Needs the project URL and the service-role key, because the bucket's write
-    policy is "nobody but the service role" — a client that could write here
-    could replace the picture of a question with anything at all. The key is
-    read from the environment when the bucket is used, never stored in config,
-    and it must never reach the client or a commit.
+    Needs an R2 token's S3 pair in the environment, because writing here is
+    nobody's but the pipeline's — a client that could write here could replace
+    the picture of a question with anything at all. The secret is read when the
+    bucket is used, never stored in config, and must never reach the client or
+    a commit.
     """
 
-    def __init__(self, name: str = "scenes", url: str | None = None, key: str | None = None):
+    def __init__(self, name: str = "scenes", creds: "r2.Credentials | None" = None):
         self.name = name
-        self.url = (url or os.environ.get("SUPABASE_URL") or "").rstrip("/")
-        self.key = key or os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
+        self.creds = creds if creds is not None else r2.Credentials.from_env()
 
     @property
     def configured(self) -> bool:
-        return bool(self.url and self.key)
+        return self.creds is not None
 
-    def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.key}", "apikey": self.key}
-
-    #: Rows per listing request; the storage API returns at most this many,
-    #: so a longer folder is read a page at a time.
-    PAGE = 1000
+    def _creds(self) -> "r2.Credentials":
+        if self.creds is None:
+            raise RuntimeError(r2.NOT_CONFIGURED)
+        return self.creds
 
     def list(self, prefix: str = "") -> set[str]:
-        """Names of the files at the bucket root — the artwork already shipped.
+        """Names of the files at the folder's top — the artwork already shipped.
 
         With a prefix, the names under that folder (without the folder). Every
         page of them: the refusals ledger grows by a file per refused draft,
         and a ledger read only to its thousandth file would forget the rest and
         draw given-up pictures again."""
-        if not self.configured:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
-        rows: list = []
-        while True:
-            # A listing is safe to ask for twice, and an overloaded storage
-            # server drops one now and then: a few tries before a night gives up.
-            page = http.json_request(
-                "POST", f"{self.url}/storage/v1/object/list/{self.name}",
-                {"prefix": prefix, "limit": self.PAGE, "offset": len(rows),
-                 "sortBy": {"column": "name", "order": "asc"}},
-                self._headers(), retries=2,
-            )
-            if not isinstance(page, list):
-                raise RuntimeError(f"listing the `{self.name}` bucket returned {type(page).__name__}")
-            rows += page
-            if len(page) < self.PAGE:
-                break
-        names = {row["name"] for row in rows if row.get("id") is not None}  # folders have no id
+        base = f"{self.name}/{prefix}"
+        keys = r2.list_keys(self._creds(), base, delimiter="/")
+        names = {k[len(base):] for k in keys if k.startswith(base) and k != base}
         if prefix:
             return names
         return {n for n in names if Path(n).suffix in scenes.IMAGE_EXTENSIONS}
@@ -545,27 +529,11 @@ class Bucket:
         """Put one file at `path`. With `upsert` it replaces whatever is
         there; without, a file already there is left alone and
         `AlreadyExists` says so."""
-        if not self.configured:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set")
-        headers = {**self._headers(), "Content-Type": content_type,
-                   "x-upsert": "true" if upsert else "false"}
-        try:
-            http.request("POST", f"{self.url}/storage/v1/object/{self.name}/{path}", data, headers)
-        except RequestFailed as exc:
-            if not upsert and _is_duplicate(exc):
-                raise AlreadyExists(f"{path} is already in the `{self.name}` bucket") from exc
-            raise
+        r2.put(self._creds(), f"{self.name}/{path}", data, content_type, overwrite=upsert)
 
 
-class AlreadyExists(RuntimeError):
-    """The bucket already holds a file at that path, and it was not replaced."""
-
-
-def _is_duplicate(exc: "RequestFailed") -> bool:
-    """Storage's answer to an upload without upsert onto a file that exists:
-    a 409, or (older servers) a 400 whose body says 409 / Duplicate."""
-    detail = exc.detail.lower()
-    return exc.status == 409 or "already exists" in detail or "duplicate" in detail
+#: The bucket already holds a file at that path, and it was not replaced.
+AlreadyExists = r2.AlreadyExists
 
 
 _MEDIA_TYPES = {

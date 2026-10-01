@@ -1,4 +1,4 @@
-# The four checks CLAUDE.md asks for before every push, run on the server too.
+# The checks CLAUDE.md asks for before every push, run on the server too.
 #
 # Work lands directly on `main` with no gate in front of it, so this workflow is
 # the only thing between a mistake and the tree everyone reads. That is why it
@@ -11,7 +11,7 @@
 # anywhere gets a pull request, and the pull request is checked; checking the
 # push as well ran every job twice for the same commit.
 #
-# Every job here is offline. No API key, no Supabase project, no network calls.
+# Every job here is offline. No API key, no Cloudflare account, no network calls.
 name: checks
 
 on:
@@ -90,45 +90,30 @@ jobs:
           [ "$found" = 1 ] || { echo "no bundles found in batches/"; exit 1; }
 
   schema:
-    name: supabase — schema, RLS, publish
+    name: d1 — schema, every query, the bank
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      PGHOST: localhost
-      PGPORT: "5432"
-      PGUSER: postgres
-      PGPASSWORD: postgres
+    defaults:
+      run:
+        working-directory: client
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-      - name: install psql
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
-      # run.sh ends by running every query the Worker serves against this
-      # database (client/worker/queries.db.test.ts), from client/.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: client/package-lock.json
       - run: npm ci
-        working-directory: client
-      # PGHOST is set, so run.sh uses this server instead of starting its own.
-      - run: supabase/test/run.sh
+      # A local D1 (Miniflare, the same SQLite the real one runs), built the
+      # way the deploy builds the real one: every migration in d1/migrations,
+      # then every batches/*.sql, twice. Then every query the Worker serves,
+      # as a tester, and the schema's promises (client/worker/test/). Offline:
+      # wrangler's local mode reaches no Cloudflare account.
+      - run: npm run test:db
+        env:
+          WRANGLER_SEND_METRICS: "false"
 
   app:
     name: typecheck, lint and unit tests — the Expo app

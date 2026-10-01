@@ -136,12 +136,12 @@ def test_the_export_sql_is_in_the_help_and_only_reads(capsys):
         cli.main(["calibrate", "--help"])
     assert done.value.code == 0
     out = capsys.readouterr().out
-    assert "public.attempts" in out and "you@example.com" in out
+    assert "from attempts att" in out and "you@example.com" in out
 
     sql = calibration.ATTEMPTS_EXPORT_SQL.lower()
     assert sql.lstrip().startswith("select") and sql.count(";") == 1
     for verb in ("insert", "update", "delete", "truncate", "drop", "alter", "grant"):
         assert verb not in sql, f"the export must only read, and it says {verb}"
     # First attempts, one account, the live bank.
-    assert "distinct on (att.item_id)" in sql and "order by att.item_id, att.answered_at" in sql
+    assert "partition by att.item_id" in sql and "order by att.answered_at, att.id" in sql and "nth = 1" in sql
     assert "u.email" in sql and "is_published" in sql

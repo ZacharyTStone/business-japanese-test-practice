@@ -11,7 +11,7 @@ from .. import (
     publish,
 )
 
-#: A user id as Supabase writes one.
+#: A user id (users.id), a uuid.
 _UUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
@@ -32,21 +32,30 @@ def cmd_grant(args) -> int:
     if not _UUID.match(args.user):
         print(f"not a user id (a uuid): {args.user!r}", file=sys.stderr)
         return 2
-    fn = "revoke_entitlement" if args.revoke else "grant_entitlement"
-    call = (
-        f"select * from public.{fn}({publish.lit(args.user)}, {publish.lit(args.product)}"
-        + (f", {publish.lit(args.note)}" if args.revoke and args.note else "")
-        + (
-            f", {publish.lit(args.source)}, {publish.lit(args.external_id)}, "
-            f"{publish.lit(args.note)}"
-            if not args.revoke
-            else ""
+    user, product = publish.lit(args.user), publish.lit(args.product)
+    if args.revoke:
+        # Withdrawn without deleting the record of it having existed: a refund
+        # should still leave an answer to "why did this person have it".
+        call = (
+            "update entitlements set revoked_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"
+            + (f", note = {publish.lit(args.note)}" if args.note else "")
+            + f" where user_id = {user} and product = {product};"
         )
-        + ");"
-    )
+    else:
+        # Re-granting after a revocation restores it, which is what a
+        # re-purchase after a refund means.
+        call = (
+            "insert into entitlements (user_id, product, source, external_id, note) values "
+            f"({user}, {product}, {publish.lit(args.source)}, {publish.lit(args.external_id)}, "
+            f"{publish.lit(args.note)}) on conflict (user_id, product) do update set "
+            "source = excluded.source, "
+            "external_id = coalesce(excluded.external_id, entitlements.external_id), "
+            "note = coalesce(excluded.note, entitlements.note), revoked_at = null;"
+        )
     print(f"-- {'Revoke' if args.revoke else 'Grant'} {publish.comment(args.product)} "
           f"for {args.user}.")
-    print("-- Runs as the service role; a client cannot call either function.")
+    print("-- For D1: `wrangler d1 execute business-japanese-drill --remote --file <this>`.")
+    print("-- Only the owner, signed in to Cloudflare, can run it; the app cannot.")
     if not args.revoke:
         print("-- Idempotent: a replayed purchase updates the row it already wrote.")
     print()
@@ -57,8 +66,8 @@ def cmd_grant(args) -> int:
 def cmd_tester(args) -> int:
     """SQL adding (or removing) somebody on the tester list.
 
-    While the app is in testing, `public.testers` is the only door: every
-    row-level policy requires the signed-in user's email to be in it.
+    While the app is in testing, `testers` is the only door: the Worker
+    refuses every query from an address that is not in it.
     SQL rather than a live call, for the same reason `bjt grant` is: what
     reaches the database is a statement somebody can read first, and no key
     that can write it has to live near this process.
@@ -69,9 +78,9 @@ def cmd_tester(args) -> int:
         return 2
     if args.remove:
         print(f"-- Remove {email} from the tester list. Their history stays; they cannot read it.")
-        print("-- Runs as the service role; a client cannot touch this table.")
+        print("-- For D1: `wrangler d1 execute`. Only the owner, signed in to Cloudflare, can run it.")
         print()
-        print(f"delete from public.testers where email = {publish.lit(email)};")
+        print(f"delete from testers where email = {publish.lit(email)};")
     else:
         # No product ceiling: what limits a set is how many items the bank has
         # in the learner's level window, not this number. 32767 is where the
@@ -83,8 +92,8 @@ def cmd_tester(args) -> int:
         if args.max_goal is not None and args.no_max_goal:
             print("--max-goal and --no-max-goal say opposite things", file=sys.stderr)
             return 2
-        unlimited = "true" if args.unlimited else "false"
-        may_veto = "true" if args.veto else "false"
+        unlimited = "1" if args.unlimited else "0"
+        may_veto = "1" if args.veto else "0"
         max_goal = "null" if args.max_goal is None else str(args.max_goal)
         # What an existing row takes from this statement: only what the
         # command names. The deploy workflow re-adds testers with a note and
@@ -105,21 +114,20 @@ def cmd_tester(args) -> int:
             print("-- The veto button unpublishes a question for EVERYBODY on one press.")
             print("-- Give it to the owner and to nobody else.")
         if args.max_goal is not None:
-            print("-- max_daily_goal is the ONE account's own fifteen: the largest set it")
-            print("-- may choose in the app, and the point its day stops. Everybody else's")
+            print("-- max_daily_goal is the own fifteen of this ONE account: the largest set")
+            print("-- it may choose in the app, and the point its day stops. Every other")
             print("-- row stays null, which is the ten-a-day, fifteen-at-most everyone has.")
             print("-- Ask for more than the bank can serve and the queue serves what it has.")
-        print("-- Runs as the service role; a client cannot touch this table.")
+        print("-- For D1: `wrangler d1 execute`. Only the owner, signed in to Cloudflare, can run it.")
         print("-- Idempotent. On a row that exists it changes only what this command")
         print("-- names; a flag it does not name keeps the value it has.")
         print()
-        print("insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)")
-        print(f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, "
+        print("insert into testers (email, note, unlimited, may_veto, max_daily_goal) "
+              f"values ({publish.lit(email)}, {publish.lit(args.note or '')}, "
               f"{unlimited}, {may_veto}, {max_goal})")
         if named:
             print("on conflict (email) do update set "
-                  + ",\n                                  ".join(
-                      f"{column} = excluded.{column}" for column in named) + ";")
+                  + ", ".join(f"{column} = excluded.{column}" for column in named) + ";")
         else:
             print("on conflict (email) do nothing;")
     return 0
@@ -129,7 +137,7 @@ def cmd_tester(args) -> int:
 def register(sub, types: list[str]) -> None:
     """Add this module's subcommands to the `bjt` parser."""
     gr = sub.add_parser("grant", help="SQL granting or revoking the ad-free unlock")
-    gr.add_argument("user", help="the Supabase user id (uuid)")
+    gr.add_argument("user", help="the user id (users.id, a uuid)")
     gr.add_argument("--product", default="ads_free")
     gr.add_argument("--source", default="grant",
                     choices=["app_store", "play_store", "stripe", "grant"])

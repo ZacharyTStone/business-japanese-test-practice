@@ -75,7 +75,7 @@ def test_selftest_passes():
 def test_tester_sql_is_lowercased_and_idempotent(capsys):
     assert cli.main(["tester", " Zach@Example.com ", "--note", "owner"]) == 0
     out = capsys.readouterr().out
-    assert "insert into public.testers" in out
+    assert "insert into testers" in out
     assert "'zach@example.com'" in out and "Zach" not in out.split("--")[-1]
     assert "on conflict (email) do update" in out
 
@@ -83,13 +83,13 @@ def test_tester_sql_is_lowercased_and_idempotent(capsys):
 def test_tester_unlimited_lifts_the_ceiling_and_is_off_by_default(capsys):
     assert cli.main(["tester", "z@example.com"]) == 0
     out = capsys.readouterr().out
-    assert "insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)" in out
-    assert "'z@example.com', '', false" in out
+    assert "insert into testers (email, note, unlimited, may_veto, max_daily_goal)" in out
+    assert "'z@example.com', '', 0" in out
     assert "unlimited = excluded.unlimited" not in out, "an unnamed flag is left alone"
 
     assert cli.main(["tester", "z@example.com", "--unlimited"]) == 0
     out = capsys.readouterr().out
-    assert "'z@example.com', '', true, false" in out
+    assert "'z@example.com', '', 1, 0" in out
     assert "no daily ceiling" in out
 
 
@@ -97,17 +97,17 @@ def test_tester_veto_is_off_by_default_and_says_what_it_does(capsys):
     """The veto flag unpublishes for everybody on one press, so the SQL that
     grants it says so out loud — it is the owner's row, not a tester's."""
     assert cli.main(["tester", "z@example.com"]) == 0
-    assert "'z@example.com', '', false, false" in capsys.readouterr().out
+    assert "'z@example.com', '', 0, 0" in capsys.readouterr().out
 
     assert cli.main(["tester", "z@example.com", "--veto"]) == 0
     out = capsys.readouterr().out
-    assert "'z@example.com', '', false, true" in out
+    assert "'z@example.com', '', 0, 1" in out
     assert "for EVERYBODY on one press" in out
     assert "may_veto = excluded.may_veto" in out
 
     assert cli.main(["tester", "z@example.com", "--unlimited", "--veto"]) == 0
     out = capsys.readouterr().out
-    assert "'z@example.com', '', true, true" in out
+    assert "'z@example.com', '', 1, 1" in out
     assert "no daily ceiling and the veto button" in out
 
 
@@ -117,19 +117,19 @@ def test_tester_max_goal_sizes_one_accounts_day(capsys):
     ten-a-day, fifteen-at-most everybody gets."""
     assert cli.main(["tester", "z@example.com"]) == 0
     out = capsys.readouterr().out
-    assert "insert into public.testers (email, note, unlimited, may_veto, max_daily_goal)" in out
-    assert "'z@example.com', '', false, false, null)" in out
+    assert "insert into testers (email, note, unlimited, may_veto, max_daily_goal)" in out
+    assert "'z@example.com', '', 0, 0, null)" in out
 
     assert cli.main(["tester", "z@example.com", "--max-goal", "40"]) == 0
     out = capsys.readouterr().out
-    assert "'z@example.com', '', false, false, 40)" in out
+    assert "'z@example.com', '', 0, 0, 40)" in out
     assert "a day of up to 40 questions" in out
     assert "max_daily_goal = excluded.max_daily_goal" in out
 
     # However many: there is no product ceiling here, because what limits a set
     # is how many items the bank has in the learner's window rather than this.
     assert cli.main(["tester", "z@example.com", "--max-goal", "500"]) == 0
-    assert "'z@example.com', '', false, false, 500)" in capsys.readouterr().out
+    assert "'z@example.com', '', 0, 0, 500)" in capsys.readouterr().out
 
     # The only bound is the smallint the column is declared as, so the CLI
     # refuses only SQL the database itself would reject.
@@ -148,7 +148,7 @@ def test_the_deploy_workflow_never_prints_a_testers_address():
     assert "env:" not in step
     run = step[step.index("run: |"):]
     assert "${{" not in run, "an expression is expanded into the logged script"
-    assert run.index("::add-mask::$EMAIL") < run.index("bjt tester") < run.index("psql")
+    assert run.index("::add-mask::$EMAIL") < run.index("bjt tester") < run.index("d1 execute")
     assert "strip().lower()" in run, "the form bjt tester writes into the SQL is masked too"
     assert "::add-mask::$NOTE" in run
     # Named once, in the `if:` (which is not logged); read nowhere else.
@@ -158,7 +158,7 @@ def test_the_deploy_workflow_never_prints_a_testers_address():
 
 def test_tester_remove_and_bad_input(capsys):
     assert cli.main(["tester", "b@example.com", "--remove"]) == 0
-    assert "delete from public.testers where email = 'b@example.com'" in capsys.readouterr().out
+    assert "delete from testers where email = 'b@example.com'" in capsys.readouterr().out
     assert cli.main(["tester", "not-an-email"]) == 2
 
 

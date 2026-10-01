@@ -203,7 +203,7 @@ NIGHT_MAX_PICTURES = int(_env("BJT_NIGHT_MAX_PICTURES", "4"))
 
 # How hard the image API compresses the WebP it returns (0–100, higher is
 # larger). The `scenes` bucket refuses anything over SCENE_MAX_BYTES, which is
-# the file_size_limit in supabase/migrations/20260915000300_media_storage.sql,
+# the limit the pipeline keeps for the media bucket in R2,
 # and a 1536×1024 "high" draft can exceed it. 80 keeps a flat illustration far
 # under the limit with no visible cost, and the limit is checked before a byte
 # is sent.

@@ -6,7 +6,7 @@ synthesis sequence (`synth.run`) used to live inside `cmd_scenes` and
 """
 import pytest
 
-from bjt import batch, fixtures, http, scene_art, scenes
+from bjt import batch, fixtures, http, r2, scene_art, scenes
 from bjt.tts import synth
 
 
@@ -41,16 +41,16 @@ def test_select_by_name_and_kind(tmp_path):
 
 
 def test_an_unconfigured_bucket_remembers_and_records_nothing():
-    assert scene_art.lifetime_ledger(scene_art.Bucket(url="", key=""), record=True) == ({}, None, None)
+    assert scene_art.lifetime_ledger(scene_art.Bucket(creds=None), record=True) == ({}, None, None)
 
 
 def test_an_unreadable_ledger_is_a_warning(monkeypatch):
-    bucket = scene_art.Bucket(url="https://x.supabase.co", key="k")
+    bucket = scene_art.Bucket(creds=r2.Credentials("acct", "k", "s"))
 
     def down(*a, **k):
         raise RuntimeError("HTTP 503")
 
-    monkeypatch.setattr(http, "json_request", down)
+    monkeypatch.setattr(http, "request", down)
     prior, on_reject, warning = scene_art.lifetime_ledger(bucket, record=True)
     assert prior == {} and on_reject is not None and "HTTP 503" in warning
 

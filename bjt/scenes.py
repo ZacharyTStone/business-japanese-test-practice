@@ -452,10 +452,13 @@ def to_sql(scenes: list[Scene]) -> str:
     # A scene without a picture of its own shows its stand-in's until its own
     # is drawn; the upsert overwrites the borrowed path the night that happens.
     rows += [(s.scene_id, s.label_ja, other.path) for s, other in borrowed]
-    values = ",\n       ".join(
-        f"({publish.lit(sid)}, {publish.lit(label)}, {publish.lit(path)})"
+    upserts = [
+        f"insert into scenes (id, label_ja, image_path) values "
+        f"({publish.lit(sid)}, {publish.lit(label)}, {publish.lit(path)}) "
+        "on conflict (id) do update set label_ja = excluded.label_ja, "
+        "image_path = excluded.image_path;"
         for sid, label, path in sorted(rows)
-    )
+    ]
     notes = [f"-- Artwork for {len(with_art)} scene(s)."]
     for s, other in sorted(borrowed, key=lambda pair: pair[0].scene_id):
         notes.append(f"-- {publish.comment(s.scene_id)} has no picture of its own and borrows "
@@ -463,15 +466,8 @@ def to_sql(scenes: list[Scene]) -> str:
     return "\n".join([
         *notes,
         "-- Produced by `bjt scenes --sql`. Idempotent: re-running sets the same values.",
+        "-- For D1: `wrangler d1 execute` applies the file all or nothing.",
         "",
-        "begin;",
-        "",
-        "insert into public.scenes (id, label_ja, image_path)",
-        f"values {values}",
-        "on conflict (id) do update set",
-        "       label_ja   = excluded.label_ja,",
-        "       image_path = excluded.image_path;",
-        "",
-        "commit;",
+        *upserts,
         "",
     ])

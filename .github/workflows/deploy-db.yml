@@ -1,11 +1,12 @@
 # Deploy the database: migrations, the committed bank, its audio, and who may
 # use it.
 #
-# Everything the schema needs to reach the real project, so that nobody needs
-# the repository on a laptop to bring a project up. Each step is idempotent —
-# re-running the workflow on a project that is already current changes nothing
-# and says so — which is what makes "run it again" the safe answer to any doubt
-# about whether it ran, and what makes it safe to run without being asked:
+# Everything the schema needs to reach the real D1 database, so that nobody
+# needs the repository on a laptop to bring it up. Each step is idempotent —
+# re-running the workflow on a database that is already current changes
+# nothing and says so — which is what makes "run it again" the safe answer to
+# any doubt about whether it ran, and what makes it safe to run without being
+# asked:
 #
 #   by itself   after the `checks` workflow goes green on `main`. A merged
 #               nightly pull request is therefore live — items and their audio
@@ -20,34 +21,39 @@
 #               and a run from any other branch would push that branch's
 #               unreviewed migrations to production. It is refused.
 #
-#   migrations   `supabase db push` against SUPABASE_DB_URL. The CLI records
-#                what it applied in supabase_migrations.schema_migrations and
-#                applies only what is new next time.
-#   the bank     every batches/*.sql, which `bjt publish` wrote as upserts.
-#                Includes scenes.sql once the nightly job has drawn artwork.
-#   a tester     optional: the email address typed into the run form,
-#                added to public.testers with `bjt tester`. The app admits
-#                nobody who is not in that table. The address is masked in
-#                the log, which is public.
+#   migrations   `wrangler d1 migrations apply --remote`, from d1/migrations.
+#                Wrangler records what it applied in the database's
+#                d1_migrations table and applies only what is new next time.
+#   the bank     every batches/*.sql, which `bjt publish` wrote as upserts,
+#                scenes.sql first (an item names its scene). Each file is one
+#                all-or-nothing unit.
+#   a tester     optional: the email address typed into the run form, added
+#                to `testers` with `bjt tester`. The Worker admits nobody who
+#                is not in that table. The address is masked in the log, which
+#                is public.
 #   the audio    optional: every clip the published bank names that the
 #                database does not yet point at is synthesised, put in the
-#                `audio` bucket, and pointed at. A clip already live is never
-#                touched again — the voice a learner first heard is the voice
-#                they keep hearing. Runs only with a TTS key and the storage
-#                secrets; without them the app keeps showing the text, which
-#                it was built to do.
+#                media bucket in R2, and pointed at. A clip already live is
+#                never touched again — the voice a learner first heard is the
+#                voice they keep hearing. Runs only with a TTS key and the R2
+#                keys; without them the app keeps showing the text, which it
+#                was built to do. And only once some clip is live: a database
+#                with no live clip is one whose library has not been moved in
+#                yet (the move-off-supabase workflow), and recording it all
+#                again would replace every voice. A library started from
+#                nothing says so on the run form (`first_voice`).
 #                The one exception is by hand: `remake_list` on the run form
 #                names a committed file of clip ids to record again, for clips
 #                made with a delivery that was wrong. It is blank on every
 #                automatic run, so nothing is ever replaced unasked, and it
 #                replaces only the ids in that file.
 #
-# Needs one secret: SUPABASE_DB_URL, the session-pooler connection string with
-# the database password in it. The audio step additionally reads OPENAI_API_KEY
-# (the library's voice — the owner chose it, and bjt/tts/providers.py records
-# that; the same key draws the scene artwork) and SUPABASE_URL +
-# SUPABASE_SERVICE_ROLE_KEY, the only key that may write to a bucket. That key
-# lives here and in nobody's .env, and never in client/.
+# Needs two secrets: CLOUDFLARE_API_TOKEN (a token allowed to edit D1) and
+# CLOUDFLARE_ACCOUNT_ID. The audio step additionally reads OPENAI_API_KEY (the
+# library's voice — the owner chose it, and bjt/tts/providers.py records that;
+# the same key draws the scene artwork) and R2_ACCESS_KEY_ID +
+# R2_SECRET_ACCESS_KEY, an R2 token's S3 pair, the only key that may write to
+# the bucket. Those live here and in nobody's .env, and never in client/.
 name: deploy database
 
 on:
@@ -69,6 +75,11 @@ on:
         description: "Path to a committed file of clip ids to record AGAIN, replacing the live clip (e.g. batches/remake-20260919-pace.txt). Leave blank — this is for clips made with the wrong delivery"
         required: false
         default: ""
+      first_voice:
+        description: "Record a library from nothing (only for a database that has never had a live clip and never will be moved in). Leave unticked"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: deploy-db
@@ -81,8 +92,8 @@ jobs:
   deploy:
     name: migrate, publish, admit
     # By hand, from `main` only: the run form offers every branch, and
-    # `supabase db push` applies whatever migrations the checked-out branch
-    # has. After `checks`, three things have to be true, and the last two are
+    # `wrangler d1 migrations apply` applies whatever migrations the
+    # checked-out branch has. After `checks`, three things have to be true, and the last two are
     # what make this workflow safe in a public repository.
     #
     # `branches: [main]` above matches the NAME of the branch the `checks` run
@@ -116,8 +127,20 @@ jobs:
     # step behaving.
     timeout-minutes: 60
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       BY_HAND: ${{ github.event_name == 'workflow_dispatch' }}
+      # One wrangler, chosen rather than whichever was published this morning:
+      # `migrations apply` is the one step here that changes the production
+      # schema. The same version client/package-lock.json pins.
+      WRANGLER: npx --yes wrangler@4.131.1
+      DB: business-japanese-drill
+      WRANGLER_SEND_METRICS: "false"
+    defaults:
+      run:
+        # wrangler.jsonc names the database (and its id); the paths below are
+        # relative to client/.
+        working-directory: client
     steps:
       # Exactly the commit `checks` passed, not whatever `main` is by the time
       # this starts: a push that lands while the checks are running has not
@@ -131,59 +154,61 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -e .
-      # A CLI chosen, not whichever was published this morning: `db push` is
-      # the one step here that changes the production schema.
-      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+      - run: pip install -e ..
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          version: 2.118.0
-      - name: install psql
-        # The runner image ships one; apt is only for the day it stops doing so.
-        run: |
-          command -v psql >/dev/null || {
-            sudo apt-get update
-            sudo apt-get install -y --no-install-recommends postgresql-client
-          }
+          node-version: "22"
 
-      # No project yet is an ordinary state on an automatic run — every merge
+      # No database yet is an ordinary state on an automatic run — every merge
       # to main would otherwise be a red workflow — and an error on a run
       # somebody started by hand, because they expected it to do something.
-      - name: the one secret this needs
+      - name: the two secrets this needs
         id: db
         run: |
-          if [ -n "$SUPABASE_DB_URL" ]; then
+          if grep -q REPLACE_WITH_THE_D1_DATABASE_ID wrangler.jsonc; then
+            # The database has not been created yet, so there is nothing to
+            # deploy to; wrangler.jsonc names it once it has.
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo '## Nothing deployed: `client/wrangler.jsonc` has no D1 database id yet. See cloudflare-migration.md.' >> "$GITHUB_STEP_SUMMARY"
+            if [ "$BY_HAND" = "true" ]; then exit 1; fi
+          elif [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           elif [ "$BY_HAND" = "true" ]; then
-            echo "::error::SUPABASE_DB_URL is not set. Settings → Secrets and variables → Actions."
+            echo "::error::CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must both be set. Settings → Secrets and variables → Actions."
             exit 1
           else
             echo "go=false" >> "$GITHUB_OUTPUT"
             {
               echo '## Nothing deployed'
               echo
-              echo 'No `SUPABASE_DB_URL` secret, so there is no project to deploy to. See blockers.md.'
+              echo 'No `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secret, so there is no database to deploy to. See blockers.md.'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: apply migrations
         if: steps.db.outputs.go == 'true'
-        run: supabase db push --db-url "$SUPABASE_DB_URL" --yes
+        run: $WRANGLER d1 migrations apply "$DB" --remote
 
       - name: publish the committed bank
         if: steps.db.outputs.go == 'true'
         run: |
           shopt -s nullglob
-          for f in batches/*.sql; do
+          files=()
+          [ -f ../batches/scenes.sql ] && files+=(../batches/scenes.sql)
+          for f in ../batches/*.sql; do
+            [ "$f" = ../batches/scenes.sql ] || files+=("$f")
+          done
+          for f in "${files[@]}"; do
             echo "::group::$f"
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$f"
+            $WRANGLER d1 execute "$DB" --remote --yes --file "$f"
             echo "::endgroup::"
           done
 
       # This repository's Actions logs are public, and a step's `env:` values
       # are printed at the top of its log. So the address and the note are read
       # from the event payload inside the script and masked before anything
-      # can echo them — including an error from `bjt tester` or psql. The SQL
-      # carries the address as `bjt tester` normalises it, so that form is
+      # can echo them — including an error from `bjt tester` or wrangler. The
+      # SQL carries the address as `bjt tester` normalises it, so that form is
       # masked too.
       - name: let a tester in
         if: steps.db.outputs.go == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.tester_email != ''
@@ -193,8 +218,8 @@ jobs:
           echo "::add-mask::$EMAIL"
           echo "::add-mask::$(python -c 'import sys; print(sys.argv[1].strip().lower())' "$EMAIL")"
           if [ -n "$NOTE" ]; then echo "::add-mask::$NOTE"; fi
-          python -m bjt tester "$EMAIL" --note "$NOTE" > tester.sql
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f tester.sql
+          python -m bjt tester "$EMAIL" --note "$NOTE" > "$RUNNER_TEMP/tester.sql"
+          $WRANGLER d1 execute "$DB" --remote --yes --file "$RUNNER_TEMP/tester.sql" > /dev/null
 
       # ---------------------------------------------------------- the audio
 
@@ -207,35 +232,48 @@ jobs:
         id: tts
         env:
           HAVE_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
-          HAVE_STORAGE: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+          HAVE_STORAGE: ${{ secrets.R2_ACCESS_KEY_ID != '' && secrets.R2_SECRET_ACCESS_KEY != '' }}
+          FIRST_VOICE: ${{ github.event.inputs.first_voice == 'true' }}
         run: |
-          if [ "$HAVE_OPENAI" = "true" ] && [ "$HAVE_STORAGE" = "true" ]; then
-            echo "go=true" >> "$GITHUB_OUTPUT"
-          else
+          if [ "$HAVE_OPENAI" != "true" ] || [ "$HAVE_STORAGE" != "true" ]; then
             echo "go=false" >> "$GITHUB_OUTPUT"
             {
               echo '### No audio synthesised'
               echo
               echo "Giving the bank a voice needs \`OPENAI_API_KEY\` (present: $HAVE_OPENAI)"
-              echo "and the storage pair \`SUPABASE_URL\` + \`SUPABASE_SERVICE_ROLE_KEY\` (present: $HAVE_STORAGE)."
+              echo "and the R2 pair \`R2_ACCESS_KEY_ID\` + \`R2_SECRET_ACCESS_KEY\` (present: $HAVE_STORAGE)."
               echo 'Until then listening items show their text. See blockers.md.'
             } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
-
-      - name: what is already live
-        if: steps.tts.outputs.go == 'true'
-        run: |
-          psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 \
-            -c "select id from public.audio_clips where audio_path is not null" > have.txt
-          echo "$(wc -l < have.txt) clip(s) already live"
+          $WRANGLER d1 execute "$DB" --remote --json \
+            --command "select id from audio_clips where audio_path is not null" \
+            | jq -r '.[0].results[].id' > "$RUNNER_TEMP/have.txt"
+          live=$(wc -l < "$RUNNER_TEMP/have.txt")
+          echo "$live clip(s) already live"
+          if [ "$live" -eq 0 ] && [ "$FIRST_VOICE" != "true" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            {
+              echo '### No audio synthesised'
+              echo
+              echo 'No clip is live in the database yet. If the library is still being moved'
+              echo 'in, run the **move off supabase** workflow first: recording now would'
+              echo 'replace every voice a learner has heard. A library started from nothing'
+              echo 'is the run form'"'"'s `first_voice`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: give the bank its voice
         if: steps.tts.outputs.go == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           REMAKE_LIST: ${{ github.event.inputs.remake_list }}
+        working-directory: .
         run: |
           shopt -s nullglob
           failed=0
@@ -258,10 +296,10 @@ jobs:
             # One bundle failing must not stop the rest: its clips are made on
             # the next run, and everything that did reach the bucket is pointed
             # at now.
-            python -m bjt synth "$f" --provider openai --have have.txt \
+            python -m bjt synth "$f" --provider openai --have "$RUNNER_TEMP/have.txt" \
               "${remake[@]}" --upload --out "$out" || failed=1
             if [ -f "$out" ]; then
-              psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -f "$out"
+              (cd client && $WRANGLER d1 execute "$DB" --remote --yes --file "../$out")
             fi
             echo "::endgroup::"
           done
@@ -269,11 +307,11 @@ jobs:
             echo '### Audio'
             echo
             echo '```'
-            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "
-              select count(*) filter (where audio_path is not null) as clips_live,
-                     count(*) filter (where audio_path is null)     as clips_silent,
-                     coalesce(sum(duration_ms) / 60000, 0)           as minutes
-                from public.audio_clips;"
+            (cd client && $WRANGLER d1 execute "$DB" --remote --json --command "
+              select sum(audio_path is not null)          as clips_live,
+                     sum(audio_path is null)              as clips_silent,
+                     coalesce(sum(duration_ms) / 60000, 0) as minutes
+                from audio_clips;" | jq -c '.[0].results[0]')
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           exit $failed
@@ -287,18 +325,19 @@ jobs:
             media/reports
           if-no-files-found: ignore
 
-      - name: what the project holds now
+      - name: what the database holds now
         if: always() && steps.db.outputs.go == 'true'
         run: |
           {
             echo '## The database after this run'
             echo
             echo '```'
-            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "
-              select (select count(*) from supabase_migrations.schema_migrations) as migrations,
-                     (select count(*) from public.items where is_published)     as published_items,
-                     (select count(*) from public.scenes where image_path is not null) as scenes_with_art,
-                     (select count(*) from public.audio_clips where audio_path is not null) as clips_with_audio,
-                     (select count(*) from public.testers)                       as testers;"
+            $WRANGLER d1 execute "$DB" --remote --json --command "
+              select (select count(*) from d1_migrations)                              as migrations,
+                     (select count(*) from items where is_published = 1)              as published_items,
+                     (select count(*) from scenes where image_path is not null)       as scenes_with_art,
+                     (select count(*) from audio_clips where audio_path is not null)  as clips_with_audio,
+                     (select count(*) from testers)                                   as testers;" \
+              | jq -c '.[0].results[0]'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

@@ -45,14 +45,13 @@ def test_the_app_describes_every_role_by_the_generated_list():
 
 def test_the_reading_clock_and_the_ladder_agree_on_its_longest_allowance():
     """pace.ts clamps a reading question's clock at MAX_SCALE times its type's
-    budget; the ladder calls a right answer slow past pace_max_scale() times
-    the same budget. If the two drift, an answer given inside the clock could
-    be held as slow."""
+    budget; the ladder (client/worker/core/grade.ts) calls a right answer slow
+    past PACE_MAX_SCALE times the same budget. If the two drift, an answer
+    given inside the clock could be held as slow."""
     pace = (ROOT / "client" / "src" / "lib" / "pace.ts").read_text(encoding="utf-8")
     ts = re.search(r"const MAX_SCALE = ([0-9.]+);", pace)
     assert ts, "pace.ts no longer declares MAX_SCALE as expected"
-    sql = "\n".join(p.read_text(encoding="utf-8")
-                    for p in sorted((ROOT / "supabase" / "migrations").glob("*.sql")))
-    defs = re.findall(r"function public\.pace_max_scale\(\).*?select ([0-9.]+)::numeric", sql, re.S)
-    assert defs, "no migration defines pace_max_scale()"
-    assert float(defs[-1]) == float(ts.group(1))
+    grade = (ROOT / "client" / "worker" / "core" / "grade.ts").read_text(encoding="utf-8")
+    ladder = re.search(r"export const PACE_MAX_SCALE = ([0-9.]+);", grade)
+    assert ladder, "grade.ts no longer declares PACE_MAX_SCALE as expected"
+    assert float(ladder.group(1)) == float(ts.group(1))

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { errorKind, errorText, friendlyError } from "./errors";
 
 describe("errorText", () => {
-  it("joins a PostgREST error's parts and keeps its code", () => {
+  it("joins an error's parts and keeps its code", () => {
     expect(errorText({ message: "column x does not exist", hint: "", code: "42703" })).toBe(
       "column x does not exist (42703)"
     );

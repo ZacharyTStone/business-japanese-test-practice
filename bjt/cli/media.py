@@ -63,7 +63,7 @@ def cmd_synth(args) -> int:
             return 2
         bucket = scene_art.Bucket(name="audio")
         if not bucket.configured:
-            print("--upload needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment",
+            print("--upload needs R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY in the environment",
                   file=sys.stderr)
             return 2
 
@@ -120,7 +120,7 @@ def cmd_synth(args) -> int:
                   "--upload), then apply the SQL:")
         else:
             print("Next: apply the SQL:")
-        print(f"  psql \"$SUPABASE_DB_URL\" -v ON_ERROR_STOP=1 -f {out}")
+        print(f"  (cd client && npx wrangler d1 execute business-japanese-drill --remote --file {out.resolve()})")
     return 1 if result.failed else 0
 
 
@@ -171,7 +171,7 @@ def cmd_scenes(args) -> int:
             print(f"could not list the scenes bucket: {exc}", file=sys.stderr)
             return 1
     elif args.upload:
-        print("--upload needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment",
+        print("--upload needs R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY in the environment",
               file=sys.stderr)
         return 2
 
@@ -335,7 +335,7 @@ def register(sub, types: list[str]) -> None:
                          "Named clips only — never a blanket re-make of the library")
     sy.add_argument("--upload", action="store_true",
                     help="put the clips in the `audio` bucket "
-                         "(needs --have, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY); never over "
+                         "(needs --have and the R2_* credentials); never over "
                          "a file already there but the ones --remake names")
     sy.add_argument("--out", help="where to write the SQL (default: alongside the bundle)")
     sy.add_argument("--media-dir", type=pathlib.Path,
@@ -379,7 +379,7 @@ def register(sub, types: list[str]) -> None:
                          "(default: both)")
     sc.add_argument("--upload", action="store_true",
                     help="put approved files in the `scenes` bucket "
-                         "(needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)")
+                         "(needs the R2_* credentials)")
     sc.add_argument("--sql", action="store_true",
                     help="write the SQL pointing the database at approved artwork")
     sc.add_argument("--out", help="where to write that SQL")

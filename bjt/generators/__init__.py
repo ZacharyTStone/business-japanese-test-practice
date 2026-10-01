@@ -21,8 +21,7 @@ from .reading import (
 )
 
 #: Every generator, keyed by item type. The keys must match `item_types` in the
-#: database — supabase/test/run.sh is not the place that checks this, so
-#: tests/test_generators.py is.
+#: database (d1/migrations).
 GENERATORS = {
     g.item_type: g
     for g in (
