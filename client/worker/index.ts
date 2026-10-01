@@ -14,6 +14,7 @@
  * Same origin, so there is no CORS to configure and the Access cookie rides
  * along with every request the app makes.
  */
+import { accessEmail } from "./access";
 import { resolveLearner } from "./core/caller";
 import { toApiError } from "./core/errors";
 import { isRefusal, notATester, signedInEmail, type Refusal } from "./identity";
@@ -24,6 +25,10 @@ export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   MEDIA: R2Bucket;
+  /** `<team>.cloudflareaccess.com` and the Access application's AUD tag
+   *  (wrangler.jsonc `vars`): whose signature, for which app, a token needs. */
+  ACCESS_TEAM_DOMAIN?: string;
+  ACCESS_AUD?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -64,8 +69,11 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
   const name = new URL(request.url).pathname.replace(/^\/api\/q\//, "");
   if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "POST only" } }, 405);
 
-  const identity = ctx.access ? await ctx.access.getIdentity() : undefined;
-  const email = signedInEmail(Boolean(ctx.access), identity?.email);
+  // ctx.access when the runtime hands it over; on a Worker with static assets
+  // it never does, and the token Access signed says the same (access.ts).
+  const email = ctx.access
+    ? signedInEmail(true, (await ctx.access.getIdentity())?.email)
+    : await accessEmail(request, { teamDomain: env.ACCESS_TEAM_DOMAIN, aud: env.ACCESS_AUD }, Date.now());
   if (isRefusal(email)) return refuse(email);
 
   let args: Record<string, unknown> = {};

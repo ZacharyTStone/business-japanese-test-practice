@@ -192,7 +192,8 @@ origin, so there is no CORS and the Access cookie rides along.
 ```
 worker/
   index.ts      routing; the static build is everything except /api and /media
-  identity.ts   the address Cloudflare Access signed in
+  access.ts     the token Cloudflare Access signed: whose, for which app, in date
+  identity.ts   the address it names, or why there is none
   queries.ts    every query the app may ask for, by name — its arguments, checked
   media.ts      the clips and pictures, from R2
   core/         the logic, on D1:
@@ -231,8 +232,10 @@ Create → Import a repository**, pick this repo, then:
 Build-time environment variable: `NODE_VERSION=22`. Nothing about the database
 is baked into the bundle: the app asks its own origin. The Worker has no
 secrets at all; its bindings (D1, R2) are in `wrangler.jsonc`, and who is
-asking comes from Cloudflare Access. **No key is ever set as a variable
-here.**
+asking comes from the token Cloudflare Access signs, checked against the two
+plain `vars` there (the team domain and the Access application's AUD tag,
+both shown when Access is turned on for the Worker). **No key is ever set as
+a variable here.**
 
 `build:web` is `expo export` plus one copy: Expo writes the not-found page as
 `+not-found.html`, and `not_found_handling: "404-page"` looks for `404.html`.
