@@ -44,8 +44,16 @@
       "binding": "MEDIA",
       "bucket_name": "business-japanese-drill-media"
     }
-  ]
+  ],
 
-  // No secrets: who is asking comes from Cloudflare Access, and what they may
-  // see from the tester list in D1.
+  // Who is asking: the token Cloudflare Access signs on every request it lets
+  // through, checked by worker/access.ts against these two — the team whose
+  // keys must have signed it, and the Access application it must be for (its
+  // AUD tag). Neither is a secret: both are written in every token the browser
+  // holds. Left empty, every query is refused. No secrets: what a person may
+  // see is the tester list in D1.
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  }
 }

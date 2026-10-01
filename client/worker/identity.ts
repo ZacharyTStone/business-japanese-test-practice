@@ -2,10 +2,10 @@
  * Who is asking: the address Cloudflare Access signed in.
  *
  * Access stands in front of the whole Worker, so by the time a request
- * reaches this code a person has already signed in, and
- * `ctx.access.getIdentity()` says who (no token to verify by hand: Access has
- * done that). No `ctx.access` means Access did not run at all — switched off,
- * or a route it does not cover — and the answer is no, never "let it through".
+ * reaches this code a person has already signed in, and the token Access
+ * signed says who (access.ts checks it). No token means Access did not run at
+ * all — switched off, or a route it does not cover — and the answer is no,
+ * never "let it through".
  *
  * The address is all this file decides. Which account it is, and whether the
  * tester list has it, is the database's to say (core/caller.ts): an address
@@ -14,7 +14,7 @@
 
 /** `email` is set on a refusal of an address Access did sign in, so the app
  *  can say which account is not on the list. */
-export type Refusal = { status: 401 | 403; code: string; message: string; email?: string };
+export type Refusal = { status: 401 | 403 | 500 | 503; code: string; message: string; email?: string };
 
 /** The signed-in address, lower-cased, or why there is none. */
 export function signedInEmail(accessRan: boolean, email: string | null | undefined): string | Refusal {

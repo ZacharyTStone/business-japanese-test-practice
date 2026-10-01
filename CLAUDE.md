@@ -379,9 +379,12 @@ accident is not.
   query is a new entry there (with its case in `test/queries.db.test.ts`).
   Every query filters on the caller's own id; a query that could read another
   learner's row is a bug the database tests exist to catch. Who the caller is
-  comes from Cloudflare Access (`ctx.access.getIdentity()`, never a header the
-  client could forge), looked up by address in D1; no `ctx.access` is a 401,
-  not a pass. The clips and pictures are R2 objects under the paths the
+  comes from Cloudflare Access: the token it signs on every request
+  (`Cf-Access-Jwt-Assertion`), checked by `client/worker/access.ts` against the
+  team's keys and the app's AUD tag (`vars` in `wrangler.jsonc`), never a header
+  the client could forge; looked up by address in D1. No token, or one the
+  team did not sign for this app, is a 401, not a pass. (`ctx.access` would say
+  the same, but a Worker with static assets never receives it.) The clips and pictures are R2 objects under the paths the
   database holds (`client/worker/media.ts`); the pipeline writes them there
   (`bjt/r2.py`).
 - **Testers only, for now, and the Worker is the door.** `testers` lists who
