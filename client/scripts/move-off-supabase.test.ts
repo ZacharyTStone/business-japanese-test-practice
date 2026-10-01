@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { attemptTriggers, buildMoveSql, lit, ts, type Export } from "./move-off-supabase.mts";
+import { attemptTriggers, buildMoveSql, lit, r2Credential, ts, type Export } from "./move-off-supabase.mts";
 
 const MIGRATION = readFileSync(resolve(__dirname, "../../d1/triggers.sql"), "utf8");
 const ME = "6F1C2C1E-6F0A-4A77-9D1E-2B8F6C3A9E10";
@@ -105,5 +105,15 @@ describe("the move off Supabase", () => {
     expect(() => lit("a\0b")).toThrow();
     expect(ts("2026-09-20 12:00:00+09")).toBe("2026-09-20T03:00:00.000Z");
     expect(ts(null)).toBeNull();
+  });
+
+  it("says which R2 key field was pasted wrong, by its length, never its value", () => {
+    expect(r2Credential("R2_ACCESS_KEY_ID", "a".repeat(32))).toBe("a".repeat(32));
+    expect(r2Credential("R2_SECRET_ACCESS_KEY", "0f".repeat(32))).toBe("0f".repeat(32));
+    // The token value (a different, longer non-hex string) in the secret's place.
+    const tokenValue = "Xy_" + "k".repeat(37);
+    expect(() => r2Credential("R2_SECRET_ACCESS_KEY", tokenValue)).toThrow(/40 characters, not all hexadecimal.*Secret Access Key is 64/);
+    expect(() => r2Credential("R2_SECRET_ACCESS_KEY", tokenValue)).not.toThrow(new RegExp(tokenValue));
+    expect(() => r2Credential("R2_ACCESS_KEY_ID", "a".repeat(64))).toThrow(/64 characters; an R2 Access Key ID is 32/);
   });
 });

@@ -445,17 +445,54 @@ async function listStorage(base: string, key: string, bucket: string, prefix = "
   }
 }
 
+/** An R2 token's S3 pair has a fixed shape: the Access Key ID is 32
+ *  hexadecimal characters and the Secret Access Key 64 (the SHA-256 of the
+ *  token value). Anything else is the wrong field pasted, and is said so by
+ *  its length alone, never its value. */
+export function r2Credential(name: string, value: string): string {
+  const want = name === "R2_ACCESS_KEY_ID" ? 32 : 64;
+  const hex = /^[0-9a-f]+$/i.test(value);
+  if (value.length !== want || !hex) {
+    const field = name === "R2_ACCESS_KEY_ID" ? "Access Key ID" : "Secret Access Key";
+    throw new Error(
+      `${name} is ${value.length} characters${hex ? "" : ", not all hexadecimal"}; an R2 ${field} is ${want} hexadecimal characters. ` +
+        `Paste the "${field}" value from the R2 API token screen (not the "Token value").`
+    );
+  }
+  return value;
+}
+
 async function copyMedia(): Promise<void> {
   const { AwsClient } = await import("aws4fetch");
+  // Trimmed: a secret pasted with a trailing newline signs every request wrong.
   const env = (name: string) => {
-    const v = process.env[name];
+    const v = (process.env[name] ?? "").trim();
     if (!v) throw new Error(`${name} is not set`);
     return v;
   };
   const base = env("SUPABASE_URL").replace(/\/+$/, "");
   const key = env("SUPABASE_SERVICE_ROLE_KEY");
-  const r2 = new AwsClient({ accessKeyId: env("R2_ACCESS_KEY_ID"), secretAccessKey: env("R2_SECRET_ACCESS_KEY"), service: "s3", region: "auto" });
-  const endpoint = `https://${env("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com/${process.env.R2_BUCKET || "business-japanese-drill-media"}`;
+  const accessKeyId = r2Credential("R2_ACCESS_KEY_ID", env("R2_ACCESS_KEY_ID"));
+  const secretAccessKey = r2Credential("R2_SECRET_ACCESS_KEY", env("R2_SECRET_ACCESS_KEY"));
+  const r2 = new AwsClient({ accessKeyId, secretAccessKey, service: "s3", region: "auto" });
+  const endpoint = `https://${env("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com/${(process.env.R2_BUCKET || "business-japanese-drill-media").trim()}`;
+
+  // One request before five hundred: a key R2 refuses is said once, plainly.
+  const probe = await r2.fetch(`${endpoint}?list-type=2&max-keys=1`);
+  if (!probe.ok) {
+    const body = await probe.text();
+    const code = /<Code>([^<]+)<\/Code>/.exec(body)?.[1] ?? `HTTP ${probe.status}`;
+    throw new Error(
+      `R2 refused the keys (${code}). ` +
+        (code === "SignatureDoesNotMatch"
+          ? "The Access Key ID is known but R2_SECRET_ACCESS_KEY is not its secret: use the Secret Access Key shown when the R2 token was made, not the Token value."
+          : code === "InvalidAccessKeyId"
+            ? "R2_ACCESS_KEY_ID is not a key R2 knows."
+            : code === "AccessDenied"
+              ? "The token is not allowed to read and write this bucket."
+              : "")
+    );
+  }
 
   let copied = 0;
   let already = 0;
