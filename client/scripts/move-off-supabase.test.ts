@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { attemptTriggers, buildMoveSql, lit, ts, type Export } from "./move-off-supabase.mts";
 
-const MIGRATION = readFileSync(resolve(__dirname, "../../d1/migrations/0001_initial.sql"), "utf8");
+const MIGRATION = readFileSync(resolve(__dirname, "../../d1/triggers.sql"), "utf8");
 const ME = "6F1C2C1E-6F0A-4A77-9D1E-2B8F6C3A9E10";
 const me = ME.toLowerCase();
 

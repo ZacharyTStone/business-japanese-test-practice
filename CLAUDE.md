@@ -30,7 +30,8 @@ tag names, from `bjt/` and `seedtable/`). After anything that touches the
 library, run `python -m bjt plan` (not a check) to see whether the bank is
 still the shape the queue needs. `npm run test:db` builds a local D1
 (Miniflare, the same SQLite D1 runs) the way the deploy builds the real one —
-every migration in `d1/migrations`, then every `batches/*.sql`, twice — and
+every migration in `d1/migrations`, `d1/triggers.sql`, then every
+`batches/*.sql`, twice — and
 runs every query the Worker serves the app (`client/worker/queries.ts`) as a
 tester (`client/worker/test/queries.db.test.ts`) and the schema's promises
 (`schema.db.test.ts`): it fails if a table or column a query names does not
@@ -361,7 +362,12 @@ accident is not.
   each person's first answer to each question, timeouts left out, recounting
   from nothing, so the floor of eight is eight people and a reset history
   leaves no count behind.
-- **`d1/migrations/` is the schema; the logic is TypeScript.** What were SQL
+- **`d1/migrations/` is the schema, `d1/triggers.sql` its triggers; the logic
+  is TypeScript.** D1 splits a migration into statements on its own side and
+  cuts a trigger body at its first semicolon, so triggers never go in a
+  migration: the deploy applies `triggers.sql` as a file (drop and create, so
+  it is how a trigger change ships). No SQL comment holds a quote or a
+  semicolon (a test sweeps them), for the same splitter. What were SQL
   functions and views are `client/worker/core/`, one file per job, and they
   were checked step by step against the SQL they replaced before the move. A
   new migration is a new numbered file, never an edit to one that has been
