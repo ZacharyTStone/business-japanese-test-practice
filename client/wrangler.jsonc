@@ -32,7 +32,7 @@
     {
       "binding": "DB",
       "database_name": "business-japanese-drill",
-      "database_id": "REPLACE_WITH_THE_D1_DATABASE_ID",
+      "database_id": "55f4024e-aa7a-4bfe-a8ca-e86648a5a317",
       "migrations_dir": "../d1/migrations"
     }
   ],
