@@ -3,10 +3,7 @@
   // platform proxy: the Worker's types and Node's.
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["@cloudflare/workers-types", "node"],
-    // The move script runs under `node --experimental-strip-types`, which
-    // wants the extension written out.
-    "allowImportingTsExtensions": true
+    "types": ["@cloudflare/workers-types", "node"]
   },
-  "include": ["../**/*.ts", "../../scripts/**/*.ts", "../../scripts/**/*.mts"]
+  "include": ["../**/*.ts"]
 }

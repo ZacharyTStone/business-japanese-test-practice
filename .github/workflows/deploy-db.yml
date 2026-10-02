@@ -38,10 +38,10 @@
 #                voice they keep hearing. Runs only with a TTS key and the R2
 #                keys; without them the app keeps showing the text, which it
 #                was built to do. And only once some clip is live: a database
-#                with no live clip is one whose library has not been moved in
-#                yet (the move-off-supabase workflow), and recording it all
-#                again would replace every voice. A library started from
-#                nothing says so on the run form (`first_voice`).
+#                with no live clip has lost track of its library, and recording
+#                it all again would replace every voice a learner has heard. A
+#                library started from nothing says so on the run form
+#                (`first_voice`).
 #                The one exception is by hand: `remake_list` on the run form
 #                names a committed file of clip ids to record again, for clips
 #                made with a delivery that was wrong. It is blank on every
@@ -169,7 +169,7 @@ jobs:
             # The database has not been created yet, so there is nothing to
             # deploy to; wrangler.jsonc names it once it has.
             echo "go=false" >> "$GITHUB_OUTPUT"
-            echo '## Nothing deployed: `client/wrangler.jsonc` has no D1 database id yet. See cloudflare-migration.md.' >> "$GITHUB_STEP_SUMMARY"
+            echo '## Nothing deployed: `client/wrangler.jsonc` has no D1 database id yet. See README.md, Working on it.' >> "$GITHUB_STEP_SUMMARY"
             if [ "$BY_HAND" = "true" ]; then exit 1; fi
           elif [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
@@ -263,10 +263,9 @@ jobs:
             {
               echo '### No audio synthesised'
               echo
-              echo 'No clip is live in the database yet. If the library is still being moved'
-              echo 'in, run the **move off supabase** workflow first: recording now would'
-              echo 'replace every voice a learner has heard. A library started from nothing'
-              echo 'is the run form'"'"'s `first_voice`.'
+              echo 'No clip is live in the database. Recording now would replace every voice'
+              echo 'a learner has heard; find out why the database has no clip first. A library'
+              echo 'started from nothing is the run form'"'"'s `first_voice`.'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "go=true" >> "$GITHUB_OUTPUT"

@@ -458,9 +458,7 @@ question; nothing acts on it automatically. A veto (for accounts with
 deploy builds the real one: every query the app makes, as a tester; privacy
 between users; testers-only access; the database refusing a grade it did not
 compute; bundles applying twice cleanly; the day's ceiling, vetoes and starting
-again. Before the move from Postgres, the TypeScript queue, grading, ladder and
-levels were replayed step by step against the old SQL functions over thousands
-of simulated answers, with no difference.
+again.
 
 ---
 
@@ -502,8 +500,9 @@ npx wrangler d1 execute business-japanese-drill --remote --file tester.sql
 Locally, `npx wrangler dev` runs the Worker against a local D1 (`--local` on
 the commands above).
 
-The Cloudflare side, step by step, is in `cloudflare-migration.md`; the app's
-structure and local development are in `client/README.md`.
+The app's structure, local development and the Worker's dashboard settings
+are in `client/README.md`; the secrets each workflow reads are listed at the
+top of its file in `.github/workflows/`.
 
 **Generating** (needs `ANTHROPIC_API_KEY`, e.g. in `.env`):
 

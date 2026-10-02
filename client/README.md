@@ -216,8 +216,7 @@ database only through the Worker, as the learner").
 `expo export -p web` renders one HTML file per route into `dist/`, which the
 Worker serves as static assets; `/api/*` and `/media/*` run `worker/index.ts`
 first (`run_worker_first`). The database is D1 and the media are in R2, both
-bound in `wrangler.jsonc`; the step-by-step setup is in
-`cloudflare-migration.md` at the repository root.
+bound in `wrangler.jsonc`.
 
 It deploys as a **Worker** with static assets. Dashboard → **Workers & Pages →
 Create → Import a repository**, pick this repo, then:

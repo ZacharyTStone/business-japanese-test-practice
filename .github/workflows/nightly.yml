@@ -64,8 +64,8 @@
 #                      Pictures are drawn only when the bucket can be read: a
 #                      job that cannot see what is drawn would draw it all
 #                      again. And not while the bucket's scenes/ folder is
-#                      empty — that is a library not yet moved in (the
-#                      move-off-supabase workflow), not one to redraw.
+#                      empty — that is a bucket that has lost its library, not
+#                      one to redraw.
 #   TYPESAFE_API_KEY   Jev, the prototype difficulty instrument (bjt/jev.py).
 #                      With it a manual run can compare Jev with the probe's
 #                      own model ("compare_jev"), which writes nothing. Jev
@@ -300,8 +300,8 @@ jobs:
               elif [ "$drawn" = "error" ]; then
                 echo 'The media bucket could not be listed tonight (see this step'"'"'s log).'
               else
-                echo 'The bucket has no scene picture yet. If the library is still being moved in,'
-                echo 'run the **move off supabase** workflow; nothing is redrawn until it has.'
+                echo 'The bucket has no scene picture. A bucket that has lost its library is not'
+                echo 'one to redraw; nothing is drawn until the pictures are back.'
               fi
             } >> "$GITHUB_STEP_SUMMARY"
           elif [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then

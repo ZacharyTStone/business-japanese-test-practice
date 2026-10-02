@@ -19,7 +19,7 @@ export default defineConfig({
   test: {
     // The Worker's pure parts too; its queries need a database and are run by
     // `npm run test:db` instead (worker/vitest.db.config.ts).
-    include: ["src/**/*.test.ts", "worker/**/*.test.ts", "scripts/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "worker/**/*.test.ts"],
     exclude: ["worker/**/*.db.test.ts", "node_modules/**"],
     environment: "node",
   },
