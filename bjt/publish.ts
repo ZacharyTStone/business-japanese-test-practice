@@ -63,7 +63,7 @@ export function lit(value: unknown, opts: { asFloat?: boolean } = {}): string {
   if (typeof value === "number") {
     // `str(int)` for a whole number Python held as an int, whatever its size
     // (`numStr` would switch a large one to exponent form, as for a float).
-    if (Number.isInteger(value) && !opts.asFloat) {
+    if (Number.isInteger(value) && !opts.asFloat && !Object.is(value, -0)) {
       return BigInt(value).toString();
     }
     return numStr(value, opts.asFloat ?? false);

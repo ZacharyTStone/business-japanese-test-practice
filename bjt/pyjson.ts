@@ -43,7 +43,7 @@ export function dumps(value: unknown, opts: DumpsOptions = {}): string {
 
   const num = (x: number, asFloat: boolean): string => {
     if (!Number.isFinite(x)) {
-      if (!allowNan) throw new ValueError(`Out of range float values are not JSON compliant: ${floatRepr(x)}`);
+      if (!allowNan) throw new ValueError("Out of range float values are not JSON compliant");
       return Number.isNaN(x) ? "NaN" : x > 0 ? "Infinity" : "-Infinity";
     }
     if (Number.isInteger(x) && !asFloat && Math.abs(x) < 2 ** 63) return BigInt(x).toString();
