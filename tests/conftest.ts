@@ -3,15 +3,32 @@
  *
  * pytest's `no_network` (no credential in the environment, every network seam
  * refusing) is tests/setup.ts, which runs before every test by itself; what
- * is here is what a test asks for by name. `store()` joins them with the port
- * of bjt/db.
+ * is here is what a test asks for by name.
  */
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { afterEach } from "vitest";
+import { Store } from "../bjt/db/index.ts";
 import * as fixtures from "../bjt/fixtures.ts";
 import { deepcopy } from "../bjt/py.ts";
 import * as seedtable from "../bjt/seedtable.ts";
 import { setConfig, tmpPath } from "./helpers.ts";
+
+/** The Stores `store()` opened in this test, closed after it. */
+const openStores: Store[] = [];
+
+afterEach(() => {
+  while (openStores.length) openStores.pop()!.close();
+});
+
+/** `store`: a Store on a fresh database, `test.db` in a temp dir, closed after
+ *  the test. Pass the test's own `tmpPath()` when it uses one too, so that the
+ *  database sits inside it as it sat inside pytest's `tmp_path`. */
+export function store(tmp: string = tmpPath()): Store {
+  const s = new Store({ path: path.join(tmp, "test.db") });
+  openStores.push(s);
+  return s;
+}
 
 /** `goi_item`: a fresh copy of the 語彙・文法 fixture, the test's to change. */
 export function goiItem(): Record<string, any> {

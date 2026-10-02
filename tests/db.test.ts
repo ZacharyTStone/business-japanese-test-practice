@@ -1,24 +1,14 @@
-/**
- * SQLite persistence: items, responses, metrics history.
- *
- * Uses conftest's `store()`, which arrives with the port of bjt/db
- * (bjt/db/store.ts). Until it is there these tests are skipped, by name, rather
- * than failing on a missing import; they run as soon as it exists.
- */
+/** SQLite persistence: items, responses, metrics history. */
 import { describe, expect, test } from "vitest";
 import * as schemas from "../bjt/schemas.ts";
-import * as conftest from "./conftest.ts";
-import { goiItem, hyougenItem } from "./conftest.ts";
+import { goiItem, hyougenItem, store } from "./conftest.ts";
 
-/** `store`: a fresh Store on a temp database, closed after the test. */
-const store = (): any => (conftest as any).store();
-
-describe.skipIf(!("store" in conftest))("db (needs tests/conftest.ts store(), from the port of bjt/db)", () => {
+describe("db", () => {
   test("insert and get", () => {
     const s = store();
     const goi = goiItem();
     const iid = s.insertItem("goi_bunpou", "J2", goi, "test-model");
-    const got = s.getItem(iid);
+    const got = s.getItem(iid)!;
     expect(got.stem).toBe(goi.stem);
     expect(got.options.length).toBe(4);
     expect(got.correct_index).toBe(schemas.correctIndex(goi.options));
@@ -98,7 +88,7 @@ describe.skipIf(!("store" in conftest))("db (needs tests/conftest.ts store(), fr
     const s = store();
     const rid = s.insertCalibrationRun("hyougen", 0.7, 0.9, 10, 20);
     // `conn` is the node:sqlite DatabaseSync (sqlite3's `execute(...).fetchone()`).
-    const row = s.conn.prepare("SELECT * FROM calibration_runs WHERE id = ?").get(rid);
+    const row = s.conn.prepare("SELECT * FROM calibration_runs WHERE id = ?").get(rid)!;
     expect(row.item_type).toBe("hyougen");
     expect([row.official_accuracy, row.generated_accuracy]).toEqual([0.7, 0.9]);
   });
