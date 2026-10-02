@@ -106,7 +106,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.98
     },
     {
       "id": "5165a67c41",
@@ -203,7 +204,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.98
     },
     {
       "id": "d0f01bbe08",
@@ -306,7 +308,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 1.0
     },
     {
       "id": "239d687cb0",
@@ -424,7 +427,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 1.0
     },
     {
       "id": "bcf3ee0bf3",
@@ -527,7 +531,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.22
     },
     {
       "id": "7438c97fc1",
@@ -619,7 +624,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.77
     }
   ],
   "audio_manifest": [],

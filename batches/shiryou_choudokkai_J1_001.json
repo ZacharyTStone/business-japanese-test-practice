@@ -124,7 +124,8 @@
         }
       ],
       "scene_id": "scene_meeting_room_table",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.26
     },
     {
       "id": "afae5f31b2",
@@ -225,7 +226,8 @@
         }
       ],
       "scene_id": "scene_phone_desk",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.92
     }
   ],
   "audio_manifest": [

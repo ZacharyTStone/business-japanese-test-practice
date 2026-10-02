@@ -84,7 +84,8 @@
         }
       ],
       "scene_id": "scene_corridor",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 1.0
     },
     {
       "id": "00f53e44f4",
@@ -177,7 +178,8 @@
         }
       ],
       "scene_id": "scene_phone_desk",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.54
     }
   ],
   "audio_manifest": [

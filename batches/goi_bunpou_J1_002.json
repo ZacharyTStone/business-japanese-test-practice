@@ -61,7 +61,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.59
     },
     {
       "id": "0c5060af4a",
@@ -119,7 +120,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.9393939393939393
     },
     {
       "id": "2c702a6023",
@@ -177,7 +179,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.92
     },
     {
       "id": "6b0ed58b79",
@@ -235,7 +238,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.92
     },
     {
       "id": "a34e031e34",
@@ -293,7 +297,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.79
     },
     {
       "id": "5158f0ad6d",
@@ -351,7 +356,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.8300000000000001
     },
     {
       "id": "7dc813c66d",
@@ -409,7 +415,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.44
     },
     {
       "id": "f4dca56dff",

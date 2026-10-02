@@ -399,7 +399,8 @@
       "scene_id": "scene_phone_mobile_outside",
       "speaker_role": "サポート担当",
       "listener_role": "一般のお客様",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 1.0
     },
     {
       "id": "d53d14e60e",
@@ -465,7 +466,8 @@
       "scene_id": "scene_reception_counter",
       "speaker_role": "受付担当",
       "listener_role": "取引先の担当者",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.98
     },
     {
       "id": "4aa2abf69f",
@@ -663,7 +665,8 @@
       "scene_id": "scene_office_desk_pair",
       "speaker_role": "部下",
       "listener_role": "課長",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 1.0
     }
   ],
   "audio_manifest": [

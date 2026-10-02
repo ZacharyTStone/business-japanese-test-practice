@@ -61,7 +61,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.95
     },
     {
       "id": "016554fd7e",
@@ -177,7 +178,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.62
     },
     {
       "id": "873ae90bf2",
@@ -235,7 +237,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.91
     },
     {
       "id": "c1e08d21fa",
@@ -351,7 +354,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.86
     }
   ],
   "audio_manifest": [],

@@ -119,7 +119,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.79
     },
     {
       "id": "b85cc7b1d0",
@@ -293,7 +294,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "video"
+      "channel": "video",
+      "model_p_correct": 0.97
     },
     {
       "id": "042637ac83",
@@ -351,7 +353,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.71
     }
   ],
   "audio_manifest": [],
