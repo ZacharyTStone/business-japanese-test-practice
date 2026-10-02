@@ -363,6 +363,17 @@ describe("bundle checks on the reference batch", () => {
 
 // ----- bundle round trip --------------------------------------------------
 
+/** A bundle's items without the difficulty probe's measurement.
+ *
+ *  `bjt probe --all` (bjt/backfill.ts) writes `model_p_correct` into a bundle
+ *  after it was built: a measurement of the question, not part of what a
+ *  person wrote, so the source never carries it and `importbatch` never writes
+ *  it (`batch.asGeneratorShape` drops it too). The round trip compares what
+ *  a person wrote. */
+function _unmeasured(items: Record<string, any>[]): Record<string, any>[] {
+  return items.map((it) => Object.fromEntries(Object.entries(it).filter(([k]) => k !== "model_p_correct")));
+}
+
 /** Bundle item back to the shape the generator emits. */
 function _asSource(bundleItem: Item): Item {
   return Object.fromEntries(Object.entries(bundleItem).filter(([k]) => !["id", "audio", "correct_index"].includes(k)));
@@ -418,7 +429,7 @@ describe("the CLI paths", () => {
     const src = _sourceOf(p);
     expect(await cli.main({ argv: ["importbatch", src, "--out", out] })).toBe(0);
     const [rebuilt, committed] = [batch.load(out), batch.load(p)];
-    expect(rebuilt["items"]).toEqual(committed["items"]);
+    expect(rebuilt["items"]).toEqual(_unmeasured(committed["items"]));
     expect(rebuilt["audio_manifest"]).toEqual(committed["audio_manifest"]);
   });
 
