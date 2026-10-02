@@ -53,7 +53,7 @@
   // holds. Left empty, every query is refused. No secrets: what a person may
   // see is the tester list in D1.
   "vars": {
-    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_TEAM_DOMAIN": "crimson-voice-2494.cloudflareaccess.com",
     "ACCESS_AUD": ""
   }
 }
