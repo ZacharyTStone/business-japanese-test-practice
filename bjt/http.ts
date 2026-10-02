@@ -18,7 +18,7 @@
  * `seams.open` is the one place a connection is made, which is the seam the
  * tests refuse (tests/setup.ts) and the fakes stand in front of.
  */
-import { loads } from "./pyjson.ts";
+import { dumps, loads } from "./pyjson.ts";
 import { PyError, RuntimeError } from "./py.ts";
 
 /** Seconds a request may take unless the caller says otherwise. A picture or
@@ -165,7 +165,9 @@ export async function jsonRequest(
   opts: { headers?: Record<string, string> | null; timeout?: number; retries?: number } = {},
 ): Promise<any> {
   const raw = await request(method, url, {
-    body: new TextEncoder().encode(JSON.stringify(body)),
+    // Python's `json.dumps(body)`: its separators and ASCII escapes, so the
+    // bytes on the wire are the ones the Python pipeline sent.
+    body: new TextEncoder().encode(dumps(body)),
     headers: { ...(opts.headers ?? {}), "Content-Type": "application/json" },
     timeout: opts.timeout,
     retries: opts.retries,

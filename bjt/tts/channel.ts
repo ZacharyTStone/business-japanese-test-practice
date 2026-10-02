@@ -17,7 +17,7 @@
  * and written here the way Python's `wave` module (which the pipeline used to
  * use) reads and writes it, so the same input gives the same bytes.
  */
-import { floorDiv, get, PyError, round, truthy, ValueError } from "../py.ts";
+import { floorDiv, get, PyError, round, RuntimeError, truthy, ValueError } from "../py.ts";
 import { CHANNEL_PROFILES } from "./plan.ts";
 
 /** WAV bytes → (samples, sample_rate, channels). Mono-mixed. */
@@ -185,7 +185,7 @@ export class WaveError extends PyError {}
 /** Python's EOFError: the container ended inside a header. */
 export class EOFError extends PyError {}
 /** Python's RuntimeError, raised by `chunk.Chunk.seek` past a chunk's end. */
-export class RuntimeError extends PyError {}
+export { RuntimeError };
 /** `struct.error`: a sample outside 16 bits, or a byte string of odd length. */
 export class StructError extends PyError {}
 export class IndexError extends PyError {}
