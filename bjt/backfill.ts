@@ -42,7 +42,7 @@ import * as config from "./config.ts";
 import * as difficulty from "./fidelity/difficulty.ts";
 import * as jev from "./jev.ts";
 import * as llmmod from "./llm.ts";
-import { errText, fixed, floorDiv, get, print, sorted, str, sum, truthy, ValueError, zip } from "./py.ts";
+import { errText, fixed, floorDiv, g, get, print, sorted, str, sum, truthy, ValueError, zip } from "./py.ts";
 import * as publish from "./publish.ts";
 import * as withdrawn from "./withdrawn.ts";
 
@@ -194,25 +194,13 @@ export function surveyProbe(paths: string[]): Shelf[] {
   return out;
 }
 
-/** `f"{x:g}"`: six significant digits, trailing zeros dropped, the exponent
- *  form outside 1e-4 … 1e6. */
-function _g(x: number): string {
-  if (Number.isNaN(x)) return "nan";
-  if (!Number.isFinite(x)) return x > 0 ? "inf" : "-inf";
-  if (x === 0) return Object.is(x, -0) ? "-0" : "0";
-  const [mant, e] = x.toExponential(5).split("e");
-  const exp = Number(e);
-  const dropZeros = (s: string) => (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s);
-  if (exp >= -4 && exp < 6) return dropZeros(fixed(x, 5 - exp));
-  return `${dropZeros(mant)}e${exp < 0 ? "-" : "+"}${String(Math.abs(exp)).padStart(2, "0")}`;
-}
 
 /** How many runs the ceilings make `calls` — at least, because the dollar
  *  and minute ceilings may bind before the call ceiling does. */
 export function runsEstimate(calls: number): string {
   const runs = config.RUN_MAX_CALLS > 0 ? Math.max(1, -floorDiv(-calls, config.RUN_MAX_CALLS)) : 1;
   return (`A run stops at ${str(config.RUN_MAX_CALLS)} calls, $${fixed(config.RUN_BUDGET_USD, 2)} or `
-          + `${_g(config.RUN_MAX_MINUTES)} minutes (BJT_RUN_*), whichever comes first, and\n`
+          + `${g(config.RUN_MAX_MINUTES)} minutes (BJT_RUN_*), whichever comes first, and\n`
           + `the next run resumes where it stopped: at least ${runs} run(s) for all of it.`);
 }
 

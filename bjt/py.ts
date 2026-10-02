@@ -187,6 +187,19 @@ export function thousands(n: number): string {
   return (n < 0 ? "-" : "") + grouped + (f ? "." + f : "");
 }
 
+/** `f"{x:g}"`: six significant digits, trailing zeros dropped, the exponent
+ *  form below 1e-4 and from 1e6. */
+export function g(x: number): string {
+  if (Number.isNaN(x)) return "nan";
+  if (!Number.isFinite(x)) return x > 0 ? "inf" : "-inf";
+  if (x === 0) return Object.is(x, -0) ? "-0" : "0";
+  const [mant, e] = x.toExponential(5).split("e");
+  const exp = Number(e);
+  const dropZeros = (s: string) => (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s);
+  if (exp >= -4 && exp < 6) return dropZeros(fixed(x, 5 - exp));
+  return `${dropZeros(mant)}e${exp < 0 ? "-" : "+"}${String(Math.abs(exp)).padStart(2, "0")}`;
+}
+
 /** `f"{x:.0%}"` / `f"{x:.1%}"`: a percentage, rounded half to even. */
 export function percent(x: number, digits: number = 0): string {
   return fixed(x * 100, digits) + "%";

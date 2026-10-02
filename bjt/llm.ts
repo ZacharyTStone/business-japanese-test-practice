@@ -21,7 +21,7 @@ import { existsSync, readFileSync } from "node:fs";
 import Anthropic, { AnthropicError, APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import * as config from "./config.ts";
 import { writeAtomic } from "./files.ts";
-import { eprint, errText, fixed, get, KeyError, len, max, PyError, repr, sorted, str, strip, thousands, time, toFloat, toInt, truthy, TypeError_, ValueError, RuntimeError } from "./py.ts";
+import { eprint, errText, fixed, g, get, KeyError, len, max, PyError, repr, RuntimeError, sorted, str, strip, thousands, time, toFloat, toInt, truthy, TypeError_, ValueError } from "./py.ts";
 import { dumps, loads } from "./pyjson.ts";
 
 export class LLMError extends RuntimeError {}
@@ -180,18 +180,6 @@ function _unreadable(e: unknown): boolean {
   return e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string";
 }
 
-/** `f"{x:g}"`: six significant digits, trailing zeros dropped, the exponent
- *  form below 1e-4 and from 1e6. */
-function _g(x: number): string {
-  if (Number.isNaN(x)) return "nan";
-  if (!Number.isFinite(x)) return x > 0 ? "inf" : "-inf";
-  if (x === 0) return Object.is(x, -0) ? "-0" : "0";
-  const [mant, e] = x.toExponential(5).split("e");
-  const exp = Number(e);
-  const dropZeros = (s: string) => (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s);
-  if (exp >= -4 && exp < 6) return dropZeros(fixed(x, 5 - exp));
-  return `${dropZeros(mant)}e${exp < 0 ? "-" : "+"}${String(Math.abs(exp)).padStart(2, "0")}`;
-}
 
 /** Everything this process has spent on the API, priced as it went.
  *
@@ -364,7 +352,7 @@ export class Spend {
     if (this.minutes >= config.RUN_MAX_MINUTES) {
       throw new LLMSpendLimitError(
         `time ceiling reached: ${fixed(this.minutes, 0)} minutes this run `
-        + `(BJT_RUN_MAX_MINUTES=${_g(config.RUN_MAX_MINUTES)}); `
+        + `(BJT_RUN_MAX_MINUTES=${g(config.RUN_MAX_MINUTES)}); `
         + `$${fixed(this.usd, 2)} spent in ${str(this.calls)} calls`);
     }
   }
