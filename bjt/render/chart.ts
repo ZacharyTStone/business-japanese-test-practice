@@ -31,7 +31,7 @@
  * The validator holds all of this, so a draft outside it is sent back with the
  * reason rather than drawn badly.
  */
-import { fixed, get, len, or, repr, round, rstrip, str, strip, truthy, zip } from "../py.ts";
+import { fixed, get, len, or, repr, round, rstrip, str, strip, truthy, zip, TypeError_ } from "../py.ts";
 
 /** What a chart may draw. See the module docstring for why not a pie. */
 export const CHART_KINDS = ["bar", "line"];
@@ -77,7 +77,7 @@ function iterOf(v: unknown): unknown[] {
   if (Array.isArray(v)) return v;
   if (typeof v === "string") return [...v];
   if (isDict(v)) return Object.keys(v);
-  throw new TypeError(`'${typeof v}' object is not iterable`);
+  throw new TypeError_(`'${typeof v}' object is not iterable`);
 }
 
 /** A real, finite number. `true` is an int to Python and not a figure to

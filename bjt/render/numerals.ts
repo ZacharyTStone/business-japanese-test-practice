@@ -45,7 +45,7 @@
  * part of an item that is printed *to look like something*, so it is the only
  * place the problem arises.
  */
-import { get, has, sorted, str } from "../py.ts";
+import { get, has, sorted, str, TypeError_ } from "../py.ts";
 
 export const _DIGITS: Record<string, number> = {
   "〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4,
@@ -82,7 +82,7 @@ export const _NOT_NUMBERS: readonly string[] = [
 ];
 
 function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\\/-]/g, "\\$&");
+  return s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
 }
 
 /** A run of numeral kanji that a counter follows. Three lookbehinds guard it:
@@ -215,7 +215,7 @@ function iterOr(v: unknown): unknown[] {
   if (Array.isArray(v)) return v;
   if (typeof v === "string") return [...v];
   if (isDict(v)) return Object.keys(v);
-  throw new TypeError(`'${typeof v}' object is not iterable`);
+  throw new TypeError_(`'${typeof v}' object is not iterable`);
 }
 
 /** Rewrite every number in a document as digits. Returns how many strings moved.
@@ -402,8 +402,17 @@ export function mixedNotation(text: string): string[] {
   return out;
 }
 
-/** `ch.isdigit()` for one character: a decimal digit in any script, and the
- *  superscript and circled digits Python also counts. */
+/** Python's `str.isdigit()` beyond the decimal digits: the superscript,
+ *  subscript, circled and other digits it also counts (Numeric_Type=Digit). */
+const _PY_DIGIT = new RegExp(
+  "^[\\p{Nd}\\u00B2\\u00B3\\u00B9\\u1369-\\u1371\\u19DA\\u2070\\u2074-\\u2079\\u2080-\\u2089" +
+  "\\u2460-\\u2468\\u2474-\\u247C\\u2488-\\u2490\\u24EA\\u24F5-\\u24FD\\u24FF\\u2776-\\u277E" +
+  "\\u2780-\\u2788\\u278A-\\u2792\\u{10A40}-\\u{10A43}\\u{10E60}-\\u{10E68}\\u{11052}-\\u{1105A}" +
+  "\\u{1F100}-\\u{1F10A}]$",
+  "u",
+);
+
+/** `ch.isdigit()` for one character. */
 function isdigit(ch: string): boolean {
-  return /^[\p{Nd}²³¹⁰-⁹₀-₉①-⑨⑴-⑼⒈-⒐⓵-⓽⓪⓿❶-❾➀-➈➊-➒\u{1F100}-\u{1F10A}]$/u.test(ch);
+  return _PY_DIGIT.test(ch);
 }
