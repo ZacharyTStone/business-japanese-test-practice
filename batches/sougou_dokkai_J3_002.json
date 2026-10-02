@@ -1,0 +1,114 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_dokkai",
+  "level": "J3",
+  "generated_at": "2026-10-02T21:42:50+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "086fc7d264",
+      "item_type": "sougou_dokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "internal_change+junior_to_senior+infer_owner@J3",
+        "setting": "internal_change",
+        "relation": "junior_to_senior",
+        "function": "infer_owner",
+        "level": "J3",
+        "channel": "written"
+      },
+      "topic": "消耗品発注ルール変更の訂正対応",
+      "stem": "この通知によると、営業部で消耗品が足りなくなったとき、誰が発注の手続きをしますか。",
+      "options": [
+        {
+          "text": "総務部の担当者が、営業部からのメール依頼を受けて発注する。",
+          "role": "correct",
+          "why": "訂正のお知らせで、営業部は従来どおり総務部へメールで依頼する形を続けると明記されている。"
+        },
+        {
+          "text": "営業部の発注担当者が、10月1日から社内システム「よろずくん」で発注する。",
+          "role": "wrong_timeframe",
+          "why": "これは9月20日の当初の通知の内容で、その後の訂正により営業部はシステム発注の対象から外れている。"
+        },
+        {
+          "text": "システム管理者が、営業部の発注を代行して入力する。",
+          "role": "surface_keyword_match",
+          "why": "通知に「システム」という語は出てくるが、営業部の発注はシステムではなくメール依頼の形を続けることになっており、システム管理者という役割も登場しない。"
+        },
+        {
+          "text": "各部署の発注担当者が、毎月25日までに社内システムで発注する。",
+          "role": "stated_but_answers_different_question",
+          "why": "他の部署には当てはまる規定だが、営業部は訂正で除外されているため、この問いの答えにはならない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "通知はまず当初のルール（全部署がシステムで発注）を示したあと、訂正として営業部だけは従来どおり総務部へメールで依頼する形を続けると定めている。したがって営業部の発注は、総務部が依頼を受けて行う。システム発注や毎月25日の締め切りは他部署の話で、営業部には当てはまらない。システム管理者という役割はそもそも文書に存在しない。",
+      "explanation_en": "The revision carves out Sales from the new system-based ordering, so General Affairs still handles their requests by email; the system rule and deadline belong to the other departments.",
+      "vocab_notes": [
+        {
+          "term": "一括",
+          "reading": "いっかつ",
+          "meaning": "all at once, in a lump"
+        },
+        {
+          "term": "不慣れ",
+          "reading": "ふなれ",
+          "meaning": "unaccustomed, unfamiliar"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "memo_notice",
+          "title": "消耗品発注ルールの変更について（訂正）",
+          "meta": [
+            {
+              "label": "発信者",
+              "value": "総務部"
+            },
+            {
+              "label": "発信日",
+              "value": "9月28日"
+            },
+            {
+              "label": "対象",
+              "value": "全社員"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "heading",
+              "text": "当初のお知らせ（9月20日発信分）",
+              "level": 2
+            },
+            {
+              "type": "paragraph",
+              "text": "10月1日より、消耗品（文房具・コピー用紙等）の発注方法を次のとおり変更します。これまで総務部が一括で発注していましたが、今後は各部署の発注担当者が、社内システム「よろずくん」から直接発注してください。締め切りは毎月25日です。"
+            },
+            {
+              "type": "heading",
+              "text": "訂正のお知らせ",
+              "level": 2
+            },
+            {
+              "type": "paragraph",
+              "text": "上記について、一部訂正いたします。営業部は人数が少なく、システムの操作に不慣れな方も多いため、従来どおり総務部へメールで依頼する形を続けます。システムでの発注は不要です。その他の部署は、予定どおり10月1日からシステムでの発注に切り替えてください。"
+            },
+            {
+              "type": "callout",
+              "text": "営業部の方は、消耗品が必要になった際、品目と数量を記載のうえ総務部（soumu@asahi-kogyo.co.jp）宛にメールしてください。",
+              "tone": "action"
+            }
+          ]
+        }
+      ],
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}

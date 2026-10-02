@@ -1,0 +1,273 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choukai",
+  "level": "J1",
+  "generated_at": "2026-10-02T21:45:20+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "641b8c655c",
+      "item_type": "sougou_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "desk_huddle+junior_to_senior+what_was_decided@J1",
+        "setting": "desk_huddle",
+        "relation": "junior_to_senior",
+        "function": "what_was_decided",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "取引先への値引き・納期対応の結論",
+      "stem": "山川商事への対応について、結論はどうなりましたか。",
+      "options": [
+        {
+          "text": "値引き五％にして、納期も一週間短縮する。",
+          "role": "superseded_by_later_turn",
+          "why": "先輩が一度は「両方いけるんじゃないか」と述べたが、来月分の受注が入ったことを理由に直後で撤回している。"
+        },
+        {
+          "text": "後輩の意見どおり、一割の値引きを行う。",
+          "role": "stated_by_wrong_speaker",
+          "why": "一割の値引きを提案したのは後輩自身であり、先輩は「一割はさすがに厳しいよ」と明確に否定している。"
+        },
+        {
+          "text": "値引きは五％にとどめ、納期は従来どおりとする。",
+          "role": "correct",
+          "why": "先輩が「値引きを五％にするなら、納期は今まで通りでいこう」と最後に決め、後輩もその形で先方に伝えると応じている。"
+        },
+        {
+          "text": "値引きはせず、納期だけ一週間短縮する。",
+          "role": "unsupported_but_plausible",
+          "why": "現場の空き状況から考えればありえそうな対応だが、会話ではそのような組み合わせは一度も話し合われていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "後輩は最初、取引先の求め通り一割の値引きを飲むべきだと述べるが、先輩は「一割はさすがに厳しい」と否定し、五％なら対応できると言う。さらに先輩はいったん「納期短縮も含めて両方いけるんじゃないか」と述べるが、来月分の受注が入ったことに気づき、納期短縮は無理だと撤回する。最終的な結論は、値引きを五％にとどめ、納期は従来どおりとすることで、後輩もそのように先方へ伝えると答えている。途中で出た「一割」や「両方いける」という発言をそのまま答えにすると誤りになる。",
+      "explanation_en": "The junior's suggestion of a 10% discount is rejected, and the senior's early idea of doing both a discount and a shorter delivery is withdrawn once a conflicting order comes in; the final decision is a 5% discount with the delivery date unchanged.",
+      "vocab_notes": [
+        {
+          "term": "納期",
+          "reading": "のうき",
+          "meaning": "delivery date/deadline"
+        },
+        {
+          "term": "受注",
+          "reading": "じゅちゅう",
+          "meaning": "receiving an order"
+        },
+        {
+          "term": "原価",
+          "reading": "げんか",
+          "meaning": "cost price"
+        }
+      ],
+      "audio": {
+        "narration": "0fa4140a0b6ae8a0",
+        "options": [
+          "bcdac78baa90ccf2",
+          "548682030c361d9e",
+          "d7b87f2af20b51ce",
+          "f7b3d9ec71ea7413"
+        ],
+        "dialogue": [
+          "0fea7fe676806729",
+          "592d77a770a45b0f",
+          "fb6ae93c7ad8eec2",
+          "e130bff5be205da8",
+          "3acce30aadb219b9",
+          "ae90aaf7526953db",
+          "5260cabbcdc46067"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "後輩",
+          "text": "先輩、山川商事から見積もりの件で連絡がありまして、値引きと納期短縮の両方を求められています。",
+          "clip_id": "0fea7fe676806729"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "どのくらい求められているの。",
+          "clip_id": "592d77a770a45b0f"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "値引きは一割、納期も一週間早めてほしいとのことです。私としては、一割は飲んで関係を強化したほうがいいと思うのですが。",
+          "clip_id": "fb6ae93c7ad8eec2"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "一割はさすがに厳しいよ。五％なら原価的に飲める。納期短縮は生産ラインに空きがあるから対応できそうだし、両方いけるんじゃないか。",
+          "clip_id": "e130bff5be205da8"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "では五％の値引きと納期一週間短縮、両方を提案書に盛り込みますか。",
+          "clip_id": "3acce30aadb219b9"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "いや、待って。さっき空きがあると言ったけど、来月分の受注が入ったから、納期短縮まではもう無理だ。値引きを五％にするなら、納期は今まで通りでいこう。",
+          "clip_id": "ae90aaf7526953db"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "承知しました。値引き五％、納期は従来どおりという形で先方にお伝えします。",
+          "clip_id": "5260cabbcdc46067"
+        }
+      ],
+      "scene_id": "scene_office_desk_pair",
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "0fa4140a0b6ae8a0",
+      "item_id": "641b8c655c",
+      "kind": "narration",
+      "index": null,
+      "text": "山川商事への対応について、結論はどうなりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0fea7fe676806729",
+      "item_id": "641b8c655c",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "先輩、山川商事から見積もりの件で連絡がありまして、値引きと納期短縮の両方を求められています。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "592d77a770a45b0f",
+      "item_id": "641b8c655c",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "どのくらい求められているの。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fb6ae93c7ad8eec2",
+      "item_id": "641b8c655c",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "値引きは一割、納期も一週間早めてほしいとのことです。私としては、一割は飲んで関係を強化したほうがいいと思うのですが。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e130bff5be205da8",
+      "item_id": "641b8c655c",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "一割はさすがに厳しいよ。五％なら原価的に飲める。納期短縮は生産ラインに空きがあるから対応できそうだし、両方いけるんじゃないか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3acce30aadb219b9",
+      "item_id": "641b8c655c",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "では五％の値引きと納期一週間短縮、両方を提案書に盛り込みますか。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ae90aaf7526953db",
+      "item_id": "641b8c655c",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "いや、待って。さっき空きがあると言ったけど、来月分の受注が入ったから、納期短縮まではもう無理だ。値引きを五％にするなら、納期は今まで通りでいこう。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5260cabbcdc46067",
+      "item_id": "641b8c655c",
+      "kind": "dialogue",
+      "index": 6,
+      "text": "承知しました。値引き五％、納期は従来どおりという形で先方にお伝えします。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "641b8c655c",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "bcdac78baa90ccf2",
+      "item_id": "641b8c655c",
+      "kind": "option",
+      "index": 0,
+      "text": "値引き五％にして、納期も一週間短縮する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "641b8c655c",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "548682030c361d9e",
+      "item_id": "641b8c655c",
+      "kind": "option",
+      "index": 1,
+      "text": "後輩の意見どおり、一割の値引きを行う。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "641b8c655c",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d7b87f2af20b51ce",
+      "item_id": "641b8c655c",
+      "kind": "option",
+      "index": 2,
+      "text": "値引きは五％にとどめ、納期は従来どおりとする。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "641b8c655c",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f7b3d9ec71ea7413",
+      "item_id": "641b8c655c",
+      "kind": "option",
+      "index": 3,
+      "text": "値引きはせず、納期だけ一週間短縮する。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_office_desk_pair"
+  ]
+}
