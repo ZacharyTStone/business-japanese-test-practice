@@ -1,0 +1,159 @@
+/**
+ * The listening types whose stimulus is a scene rather than an utterance.
+ *
+ * 場面把握 and 総合聴解 share a shape: something is heard once, and the question is
+ * about what was heard rather than about what to say next. That makes their traps
+ * memory traps — a distractor that was true of a different speaker, or true earlier
+ * in the conversation — which is a different job from 発言聴解's 敬語 direction, and
+ * the reason they are separate generators rather than one with a flag.
+ *
+ * What they do share is the listening constraint, and it is severe: the learner
+ * hears the stimulus once and cannot go back. Every clue the question turns on has
+ * to be in there, said plainly, in the order somebody would actually say it.
+ */
+import { get, repr } from "../py.ts";
+import type { Cell } from "../seedtable.ts";
+import { Generator, type Item, withRelationNote } from "./base.ts";
+
+/** Said once, in every prompt for a heard item. The single biggest difference
+ *  between an item that works and one that merely reads well is whether it
+ *  survives being heard rather than read. */
+export const _HEARD_ONCE = (
+  "This is heard, once, with nothing on the page to go back to. So: no written-only "
+  + "devices (parentheses, bullet points, ＿＿＿ blanks, 「A社」 as a written abbreviation "
+  + "read aloud); every fact the question turns on must be stated plainly rather than "
+  + "implied by layout; and nothing that matters may sit in a subordinate clause at the "
+  + "very end, where a listener has already committed to an interpretation."
+);
+
+/** 場面把握問題 — where is this, who is talking, what happens next. */
+export class BamenHaakuGenerator extends Generator {
+  override item_type = "bamen_haaku";
+  override label = "場面把握問題 (situation grasp, listening)";
+  override requires_cell = true;
+  override task_spec = (
+    "Format: `stem` is what the NARRATOR reads aloud — a short moment at work (one "
+    + "or two turns of speech, or a brief description of what is happening), ending "
+    + "with a question about the situation itself, such as 「ここはどこですか。」"
+    + "「このあと何をしますか。」. The four options are short STATEMENTS about the "
+    + "situation, read on the page — they are not things anybody says.\n"
+    + `${_HEARD_ONCE}\n`
+    + "The situation must be identifiable from what is heard and from nothing else. "
+    + "In particular it must not be identifiable from the scene image: the picture is "
+    + "a shared bank entry used by many items, so an item answerable from the picture "
+    + "is answerable without listening at all.\n"
+    + "Nor may the narration name it. An item asking where this is does not open "
+    + "「社内の会議室で、…」 — one the nightly job wrote did, and was withdrawn — "
+    + "and one asking who is speaking does not introduce the speaker by that role. Ask "
+    + "the question in plain Japanese: 「ここはどこですか。」 or 「二人はどこで話して"
+    + "いますか。」, never a blend of the two.\n"
+    + "Keep the four options parallel in form and length. The correct one is the only "
+    + "one the audio supports; each distractor is defensible until you remember what "
+    + "was actually said.\n"
+    + "**The four options are HEARD, not read.** On the exam the screen shows the "
+    + "picture and the bare numerals 1–4, and the candidates are read aloud after the "
+    + "question. Write them to survive that: short, parallel, distinguishable from "
+    + "each other in the first few syllables, and free of anything that only works on "
+    + "a page — no parenthesised glosses, no 「A社」 as a written abbreviation, nothing "
+    + "whose meaning turns on which kanji was used."
+  );
+
+  override cellSpec(cell: Cell): string {
+    const scenes = cell.scenes.join("、");
+    return withRelationNote(
+      "Write this item for the following assigned situation. These are "
+      + "requirements, not suggestions:\n"
+      + `- 場面: ${cell.setting_ja}\n`
+      + `- 関係: ${cell.relation_ja}\n`
+      + `- 設問が問うこと: ${cell.function_ja}\n`
+      + `- channel: ${cell.channel}\n`
+      + `- scene_id: choose exactly one of: ${scenes}\n`
+      + "The question must ask exactly the 設問が問うこと above. Set `channel` to the "
+      + "value given.",
+      cell,
+    );
+  }
+
+  override validateExtra(item: Item, opts: { cell?: Cell | null } = {}): string[] {
+    return _sceneAndChannelErrors(item, opts.cell ?? null);
+  }
+}
+
+/** 総合聴解問題 — a meeting or presentation, then questions about it. */
+export class SougouChoukaiGenerator extends Generator {
+  override item_type = "sougou_choukai";
+  override label = "総合聴解問題 (integrated listening)";
+  override requires_cell = true;
+  override task_spec = (
+    "Format: `dialogue` is the exchange the test-taker hears — three to eight turns "
+    + "across two or three speaker ROLES (never personal names; roles cast the "
+    + "voices). `stem` is what the narrator asks afterwards. The four options answer "
+    + "that question.\n"
+    + `${_HEARD_ONCE}\n`
+    + "The exchange must be a real one: people interrupt, revise, and settle things "
+    + "late. Use that — it is where this type's distractors come from. At least one "
+    + "fact should be stated and then amended before the end, so that "
+    + "`superseded_by_later_turn` is a genuine trap rather than a decorative label, "
+    + "and at least two speakers should assert something, so that "
+    + "`stated_by_wrong_speaker` is too.\n"
+    + "The question must NOT be answerable from the last turn alone. If it is, the "
+    + "item is testing whether somebody was still awake, not whether they followed "
+    + "the conversation. Review shows a reader the question and the four options "
+    + "with the conversation withheld and rejects the item if the answer can be "
+    + "picked: every option must be something the conversation could have settled.\n"
+    + "**Nothing is on the screen for this type — not even the options.** The "
+    + "conversation, the question and all four answers are heard, once. Write options "
+    + "that can be held in the ear: on the real paper they are compound clauses "
+    + "（「監査役を社外から迎え、取締役の数を減らす」), where each option gets one half "
+    + "right and the other half wrong, so that following only part of the exchange is "
+    + "not enough. Nothing may depend on how a word is written.\n"
+    + "This is the hardest listening type and its register is the highest: the real "
+    + "paper reaches 役員体制・監査役・取締役・前年比 here, not 会議室の予約. At J1 in "
+    + "particular, write the business the company is actually deciding."
+  );
+
+  override cellSpec(cell: Cell): string {
+    const scenes = cell.scenes.join("、");
+    return withRelationNote(
+      "Write this item for the following assigned situation. These are "
+      + "requirements, not suggestions:\n"
+      + `- 場面: ${cell.setting_ja}\n`
+      + `- 参加者の関係: ${cell.relation_ja}\n`
+      + `- 設問が問うこと: ${cell.function_ja}\n`
+      + `- channel: ${cell.channel}\n`
+      + `- scene_id: choose exactly one of: ${scenes}\n`
+      + "Every turn's `speaker_role` must be consistent with 参加者の関係.",
+      cell,
+    );
+  }
+
+  override validateExtra(item: Item, opts: { cell?: Cell | null } = {}): string[] {
+    return _sceneAndChannelErrors(item, opts.cell ?? null);
+  }
+}
+
+/**
+ * The cell is an assignment, so check the model honoured it.
+ *
+ * A wrong scene id means the item has no picture; a wrong channel means it
+ * gets the wrong TTS treatment, which for a phone item means an easier
+ * question than the one we meant to ask.
+ */
+export function _sceneAndChannelErrors(item: Item, cell: Cell | null): string[] {
+  const errors: string[] = [];
+  if (cell === null) {
+    return errors;
+  }
+  if (cell.scenes.length > 0 && !cell.scenes.includes(get(item, "scene_id"))) {
+    errors.push(
+      `scene_id ${repr(get(item, "scene_id"))} is not one of this cell's scenes: `
+      + `${repr([...cell.scenes])}`,
+    );
+  }
+  if (get(item, "channel") !== cell.channel) {
+    errors.push(
+      `channel ${repr(get(item, "channel"))} does not match the cell's ${repr(cell.channel)}`,
+    );
+  }
+  return errors;
+}
