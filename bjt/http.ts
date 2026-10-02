@@ -19,7 +19,7 @@
  * tests refuse (tests/setup.ts) and the fakes stand in front of.
  */
 import { loads } from "./pyjson.ts";
-import { PyError } from "./py.ts";
+import { PyError, RuntimeError } from "./py.ts";
 
 /** Seconds a request may take unless the caller says otherwise. A picture or
  *  a clip takes a while to make; three minutes is well over it. */
@@ -34,7 +34,7 @@ export const RETRY_STATUSES: readonly number[] = [408, 429, 500, 502, 503, 504];
  *  there was no response at all; `detail` is the first few hundred characters
  *  of the body (or the network's reason), the part of a vendor's error that
  *  actually says what was wrong. */
-export class RequestFailed extends PyError {
+export class RequestFailed extends RuntimeError {
   readonly status: number | null;
   readonly detail: string;
   constructor(message: string, opts: { status: number | null; detail: string; cause?: unknown }) {
@@ -173,6 +173,6 @@ export async function jsonRequest(
   try {
     return loads(decoder.decode(raw));
   } catch (exc) {
-    throw new PyError(`${url} returned something that is not JSON`, { cause: exc });
+    throw new RuntimeError(`${url} returned something that is not JSON`, { cause: exc });
   }
 }

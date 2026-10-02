@@ -32,6 +32,10 @@ export class PyError extends Error {
   }
 }
 
+/** Python's RuntimeError: the base of the pipeline's own failures
+ *  (`LLMError`, `RequestFailed`), so `except RuntimeError` still catches
+ *  them. */
+export class RuntimeError extends PyError {}
 export class ValueError extends PyError {}
 export class KeyError extends PyError {}
 export class TypeError_ extends PyError {}
