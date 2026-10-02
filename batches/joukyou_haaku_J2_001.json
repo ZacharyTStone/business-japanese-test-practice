@@ -93,7 +93,8 @@
         }
       ],
       "scene_id": "scene_reception_counter",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 1.0
     },
     {
       "id": "5183736ad7",
@@ -204,7 +205,8 @@
         }
       ],
       "scene_id": "scene_meeting_room_table",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.9
     },
     {
       "id": "d6bb06d3b8",
@@ -309,7 +311,8 @@
         }
       ],
       "scene_id": "scene_office_open_floor",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.85
     },
     {
       "id": "1deef9802d",
@@ -402,7 +405,8 @@
         }
       ],
       "scene_id": "scene_phone_desk",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.88
     },
     {
       "id": "2a8263856b",
@@ -508,7 +512,8 @@
         }
       ],
       "scene_id": "scene_office_desk_pair",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.8
     },
     {
       "id": "4ff5cfd876",
@@ -589,7 +594,8 @@
         }
       ],
       "scene_id": "scene_corridor",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.91
     }
   ],
   "audio_manifest": [

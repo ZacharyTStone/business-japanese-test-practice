@@ -135,7 +135,8 @@
       "scene_id": "scene_phone_desk",
       "speaker_role": "電話を受けた社員",
       "listener_role": "取引先の担当者",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.29
     },
     {
       "id": "79a2a86cd8",
@@ -201,7 +202,8 @@
       "scene_id": "scene_office_desk_pair",
       "speaker_role": "入社一年目の社員",
       "listener_role": "先輩社員",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.09
     },
     {
       "id": "5ce5d0c9b9",
@@ -333,7 +335,8 @@
       "scene_id": "scene_elevator_hall",
       "speaker_role": "打ち合わせを担当した社員",
       "listener_role": "帰る来客",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.67
     },
     {
       "id": "21645856a6",
@@ -399,7 +402,8 @@
       "scene_id": "scene_phone_desk",
       "speaker_role": "後輩社員",
       "listener_role": "別のフロアにいる先輩",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.62
     },
     {
       "id": "daa75dd6f7",
@@ -465,7 +469,8 @@
       "scene_id": "scene_client_office_sofa",
       "speaker_role": "初めて訪問した営業担当",
       "listener_role": "取引先の担当者",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.8099999999999999
     },
     {
       "id": "feeae3d00f",
@@ -531,7 +536,8 @@
       "scene_id": "scene_meeting_room_table",
       "speaker_role": "同僚",
       "listener_role": "同僚",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.52
     },
     {
       "id": "3ecbdc1b0b",
@@ -663,7 +669,8 @@
       "scene_id": "scene_office_desk_pair",
       "speaker_role": "部下",
       "listener_role": "直属の上司（課長）",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.99
     }
   ],
   "audio_manifest": [

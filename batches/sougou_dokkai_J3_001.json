@@ -100,7 +100,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 1.0
     },
     {
       "id": "e6cfbc7831",
@@ -195,7 +196,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.98
     }
   ],
   "audio_manifest": [],

@@ -61,7 +61,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.93
     },
     {
       "id": "4dae5d71aa",
@@ -119,7 +120,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 0.37
     }
   ],
   "audio_manifest": [],

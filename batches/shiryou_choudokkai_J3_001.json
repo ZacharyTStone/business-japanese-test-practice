@@ -114,7 +114,8 @@
         }
       ],
       "scene_id": "scene_video_call_laptop",
-      "channel": "video"
+      "channel": "video",
+      "model_p_correct": 1.0
     },
     {
       "id": "aa772d5814",
@@ -214,7 +215,8 @@
         }
       ],
       "scene_id": "scene_phone_desk",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 1.0
     }
   ],
   "audio_manifest": [
