@@ -347,8 +347,10 @@ class _WaveRead {
 /** `wave.open(buf, "wb")`, mono, 16-bit, `setframerate(rate)`,
  *  `writeframes(data)`: the 44-byte header Python writes, then the data. */
 function _waveWrite(rate: number, data: Uint8Array): Uint8Array {
-  if (rate <= 0) throw new WaveError("bad frame rate");
-  const framerate = round(rate);
+  // `setframerate` refuses a rate at or below zero, and rounds the rest; the
+  // `with` block's close then fails on the rate never having been set, and
+  // that is the error Python reports.
+  const framerate = rate <= 0 ? 0 : round(rate);
   if (!framerate) throw new WaveError("sampling rate not specified");
   const nchannels = 1;
   const sampwidth = 2;

@@ -260,133 +260,292 @@ function _utf8(s: string): Buffer {
 // three lookups: elements named `{namespace}local` (the namespace resolved from
 // the `xmlns` declarations in scope), an element's `text` being the character
 // data before its first child (entities and CDATA decoded, comments dropped,
-// None when there is none), and a document that is not well-formed refused.
+// None when there is none), and a document that is not well-formed refused
+// with expat's words and position — which is what a warning about an
+// unreadable ledger quotes. The document is read as UTF-8, which is what R2
+// sends; a declared encoding is not consulted.
 
-/** `xml.etree.ElementTree.ParseError`. */
-export class ParseError extends PyError {}
+/** `xml.etree.ElementTree.ParseError`: expat's reason, then where. */
+export class ParseError extends PyError {
+  readonly position: [number, number];
+  constructor(reason: string, position: [number, number]) {
+    super(`${reason}: line ${position[0]}, column ${position[1]}`);
+    this.position = position;
+  }
+}
 
 /** An element as ElementTree holds it: `tag` in `{namespace}local` form. */
 export type XmlElement = { tag: string; text: string | null; children: XmlElement[] };
 
-const NAME = "[A-Za-z_\\u00C0-\\uFFFF][-A-Za-z0-9_.\\u00B7\\u00C0-\\uFFFF]*(?::[A-Za-z_\\u00C0-\\uFFFF][-A-Za-z0-9_.\\u00B7\\u00C0-\\uFFFF]*)?";
-const OPEN_TAG = new RegExp(`^<(${NAME})((?:\\s+${NAME}\\s*=\\s*(?:"[^"<]*"|'[^'<]*'))*)\\s*(/?)>`, "u");
-const ATTR = new RegExp(`(${NAME})\\s*=\\s*(?:"([^"<]*)"|'([^'<]*)')`, "gu");
-const CLOSE_TAG = new RegExp(`^</(${NAME})\\s*>`, "u");
-
 const ENTITIES: Record<string, string> = { lt: "<", gt: ">", amp: "&", apos: "'", quot: '"' };
+const INVALID = "not well-formed (invalid token)";
 
-/** Character data with its references replaced; an unknown entity is not
- *  well-formed. */
-function _unescape(text: string): string {
-  return text.replace(/&([^;&]*);?/g, (whole, name: string) => {
-    if (!whole.endsWith(";")) throw new ParseError("not well-formed (invalid token)");
-    if (Object.prototype.hasOwnProperty.call(ENTITIES, name)) return ENTITIES[name];
-    const num = /^#(?:x([0-9A-Fa-f]+)|([0-9]+))$/.exec(name);
-    if (num) {
-      const cp = num[1] !== undefined ? parseInt(num[1], 16) : parseInt(num[2], 10);
-      if (cp > 0x10ffff || cp === 0 || (cp >= 0xd800 && cp <= 0xdfff)) {
-        throw new ParseError("reference to invalid character number");
-      }
-      return String.fromCodePoint(cp);
+const _isWs = (ch: string | undefined) => ch === " " || ch === "\t" || ch === "\n" || ch === "\r";
+const _isNameStart = (ch: string | undefined) => ch !== undefined && (/[A-Za-z_:]/.test(ch) || ch.charCodeAt(0) >= 0xc0);
+const _isNameChar = (ch: string | undefined) => ch !== undefined && (_isNameStart(ch) || /[-.0-9\u00B7]/.test(ch));
+/** A character XML does not allow anywhere (after end-of-line handling). */
+const _isInvalidChar = (ch: string) => {
+  const code = ch.charCodeAt(0);
+  return (code < 0x20 && ch !== "\t" && ch !== "\n") || code === 0xfffe || code === 0xffff;
+};
+
+/** The offset of the first byte that is not UTF-8, or -1. */
+function _badUtf8(data: Uint8Array): number {
+  let i = 0;
+  while (i < data.length) {
+    const b = data[i];
+    let need: number;
+    let lo = 0x80;
+    let hi = 0xbf;
+    if (b < 0x80) need = 0;
+    else if (b >= 0xc2 && b <= 0xdf) need = 1;
+    else if (b >= 0xe0 && b <= 0xef) {
+      need = 2;
+      if (b === 0xe0) lo = 0xa0;
+      if (b === 0xed) hi = 0x9f;
+    } else if (b >= 0xf0 && b <= 0xf4) {
+      need = 3;
+      if (b === 0xf0) lo = 0x90;
+      if (b === 0xf4) hi = 0x8f;
+    } else return i;
+    for (let k = 1; k <= need; k++) {
+      const c = data[i + k];
+      if (c === undefined || c < (k === 1 ? lo : 0x80) || c > (k === 1 ? hi : 0xbf)) return i;
     }
-    throw new ParseError(`undefined entity &${name};`);
-  });
+    i += need + 1;
+  }
+  return -1;
 }
 
 /** `ET.fromstring(data)` for a UTF-8 document. */
 export function _fromstring(data: Uint8Array): XmlElement {
-  // The XML spec's end-of-line handling, which expat applies before anything
-  // else sees the text.
-  let doc: string;
-  try {
-    doc = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(data).replace(/\r\n?/g, "\n");
-  } catch {
-    throw new ParseError("not well-formed (invalid token)");
+  const decode = (bytes: Uint8Array) =>
+    // The XML spec's end-of-line handling, which expat applies before anything
+    // else sees the text. A byte order mark is kept: expat counts it as a column.
+    new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes).replace(/\r\n?/g, "\n");
+  const where = (text: string, i: number): [number, number] => {
+    const before = text.slice(0, i);
+    const nl = before.lastIndexOf("\n");
+    return [before.split("\n").length, [...before.slice(nl + 1)].length];
+  };
+  const bad = _badUtf8(data);
+  if (bad >= 0) {
+    const prefix = decode(data.subarray(0, bad));
+    throw new ParseError(INVALID, where(prefix, prefix.length));
   }
-  let pos = 0;
+  const doc = decode(data);
+  const n = doc.length;
+  const fail = (reason: string, i: number): never => {
+    throw new ParseError(reason, where(doc, i));
+  };
+
+  /** A character or entity reference at `k` (an `&`): its text, and where
+   *  the reference ends. `at` is where a reference expat refuses is reported. */
+  const reference = (k: number, at: number | null): [string, number] => {
+    let j = k + 1;
+    if (doc[j] === "#") {
+      j++;
+      const hex = doc[j] === "x";
+      if (hex) j++;
+      const digits = j;
+      while (j < n && (hex ? /[0-9A-Fa-f]/ : /[0-9]/).test(doc[j])) j++;
+      if (j === digits || doc[j] !== ";") fail(INVALID, at ?? j);
+      const cp = parseInt(doc.slice(digits, j), hex ? 16 : 10);
+      const ok = cp === 0x9 || cp === 0xa || cp === 0xd || (cp >= 0x20 && cp <= 0xd7ff)
+        || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff);
+      if (!ok) fail("reference to invalid character number", at ?? k);
+      return [String.fromCodePoint(cp), j + 1];
+    }
+    if (!_isNameStart(doc[j])) fail(INVALID, at ?? j);
+    while (j < n && _isNameChar(doc[j])) j++;
+    if (doc[j] !== ";") fail(INVALID, at ?? j);
+    const name = doc.slice(k + 1, j);
+    if (!Object.prototype.hasOwnProperty.call(ENTITIES, name)) fail("undefined entity", at ?? k);
+    return [ENTITIES[name], j + 1];
+  };
+
+  /** Character data from `i` to `end`, its references replaced. */
+  const chars = (i: number, end: number): string => {
+    let out = "";
+    let k = i;
+    while (k < end) {
+      const c = doc[k];
+      if (c === "&") {
+        const [text, next] = reference(k, null);
+        out += text;
+        k = next;
+        continue;
+      }
+      if (c === "]" && doc.startsWith("]]>", k)) fail(INVALID, k + 2);
+      if (_isInvalidChar(c)) fail(INVALID, k);
+      out += c;
+      k++;
+    }
+    return out;
+  };
+
   let root: XmlElement | null = null;
   const stack: { el: XmlElement; ns: Map<string, string>; qname: string; sawChild: boolean }[] = [];
   const nsAt = () => (stack.length ? stack[stack.length - 1].ns : new Map<string, string>([["xml", "http://www.w3.org/XML/1998/namespace"]]));
 
   const addText = (t: string) => {
     if (t === "") return;
-    if (!stack.length) {
-      if (/\S/.test(t)) throw new ParseError(root ? "junk after document element" : "syntax error");
-      return;
-    }
     const top = stack[stack.length - 1];
     // Text after a child is that child's tail, which nothing here reads.
     if (!top.sawChild) top.el.text = (top.el.text ?? "") + t;
   };
 
-  const resolve = (qname: string, ns: Map<string, string>): string => {
+  const resolve = (qname: string, ns: Map<string, string>, at: number): string => {
     const colon = qname.indexOf(":");
     if (colon < 0) {
       const uri = ns.get("");
       return uri ? `{${uri}}${qname}` : qname;
     }
-    const prefix = qname.slice(0, colon);
-    const uri = ns.get(prefix);
-    if (uri === undefined) throw new ParseError("unbound prefix");
+    const uri = ns.get(qname.slice(0, colon));
+    if (uri === undefined) fail("unbound prefix", at);
     return `{${uri}}${qname.slice(colon + 1)}`;
   };
 
-  while (pos < doc.length) {
-    const rest = doc.slice(pos);
-    if (rest.startsWith("<?")) {
-      const end = doc.indexOf("?>", pos + 2);
-      if (end < 0) throw new ParseError("unclosed token");
-      pos = end + 2;
-    } else if (rest.startsWith("<!--")) {
-      const end = doc.indexOf("-->", pos + 4);
-      if (end < 0) throw new ParseError("unclosed token");
-      pos = end + 3;
-    } else if (rest.startsWith("<![CDATA[")) {
-      const end = doc.indexOf("]]>", pos + 9);
-      if (end < 0) throw new ParseError("unclosed CDATA section");
-      if (!stack.length) throw new ParseError("syntax error");
-      addText(doc.slice(pos + 9, end));
-      pos = end + 3;
-    } else if (rest.startsWith("<!DOCTYPE")) {
-      const end = doc.indexOf(">", pos);
-      if (end < 0) throw new ParseError("unclosed token");
-      pos = end + 1;
-    } else if (rest.startsWith("</")) {
-      const m = CLOSE_TAG.exec(rest);
-      if (!m) throw new ParseError("not well-formed (invalid token)");
-      const top = stack.pop();
-      if (!top || top.qname !== m[1]) throw new ParseError("mismatched tag");
-      pos += m[0].length;
-    } else if (rest.startsWith("<")) {
-      const m = OPEN_TAG.exec(rest);
-      if (!m) throw new ParseError("not well-formed (invalid token)");
-      if (!stack.length && root) throw new ParseError("junk after document element");
-      const ns = new Map(nsAt());
-      for (const a of m[2].matchAll(ATTR)) {
-        const value = _unescape(a[2] ?? a[3]);
-        if (a[1] === "xmlns") ns.set("", value);
-        else if (a[1].startsWith("xmlns:")) ns.set(a[1].slice(6), value);
+  const openTag = (i: number): number => {
+    if (!stack.length && root) fail("junk after document element", i);
+    let j = i + 1;
+    if (j >= n) fail("unclosed token", i);
+    if (!_isNameStart(doc[j])) fail(INVALID, j);
+    while (j < n && _isNameChar(doc[j])) j++;
+    const qname = doc.slice(i + 1, j);
+    const attrs: [string, number, number][] = [];
+    let selfClosing = false;
+    for (;;) {
+      const gap = j;
+      while (j < n && _isWs(doc[j])) j++;
+      if (j >= n) fail("unclosed token", i);
+      if (doc[j] === ">") {
+        j++;
+        break;
       }
-      const el: XmlElement = { tag: resolve(m[1], ns), text: null, children: [] };
-      if (stack.length) {
-        const parent = stack[stack.length - 1];
-        parent.el.children.push(el);
-        parent.sawChild = true;
-      } else {
-        root = el;
+      if (doc[j] === "/") {
+        if (j + 1 >= n) fail("unclosed token", i);
+        if (doc[j + 1] !== ">") fail(INVALID, j + 1);
+        j += 2;
+        selfClosing = true;
+        break;
       }
-      if (!m[3]) stack.push({ el, ns, qname: m[1], sawChild: false });
-      pos += m[0].length;
+      if (j === gap || !_isNameStart(doc[j])) fail(INVALID, j);
+      const nameAt = j;
+      while (j < n && _isNameChar(doc[j])) j++;
+      const name = doc.slice(nameAt, j);
+      while (j < n && _isWs(doc[j])) j++;
+      if (j >= n) fail("unclosed token", i);
+      if (doc[j] !== "=") fail(INVALID, j);
+      j++;
+      while (j < n && _isWs(doc[j])) j++;
+      if (j >= n) fail("unclosed token", i);
+      const quote = doc[j];
+      if (quote !== '"' && quote !== "'") fail(INVALID, j);
+      let k = j + 1;
+      while (k < n && doc[k] !== quote) {
+        if (doc[k] === "<") fail(INVALID, k);
+        k++;
+      }
+      if (k >= n) fail("unclosed token", i);
+      if (attrs.some(([a]) => a === name)) fail("duplicate attribute", nameAt);
+      attrs.push([name, j + 1, k]);
+      j = k + 1;
+    }
+    const ns = new Map(nsAt());
+    for (const [name, from, to] of attrs) {
+      // An attribute value's whitespace is normalised to spaces; a reference
+      // is not. A reference expat refuses is reported at the tag.
+      let value = "";
+      for (let k = from; k < to;) {
+        if (doc[k] === "&") {
+          const [text, next] = reference(k, i);
+          value += text;
+          k = next;
+        } else {
+          if (_isInvalidChar(doc[k])) fail(INVALID, k);
+          value += _isWs(doc[k]) ? " " : doc[k];
+          k++;
+        }
+      }
+      if (name === "xmlns" || name.startsWith("xmlns:")) ns.set(name === "xmlns" ? "" : name.slice(6), value);
+    }
+    const el: XmlElement = { tag: resolve(qname, ns, i), text: null, children: [] };
+    if (stack.length) {
+      const parent = stack[stack.length - 1];
+      parent.el.children.push(el);
+      parent.sawChild = true;
     } else {
-      const end = doc.indexOf("<", pos);
-      const text = doc.slice(pos, end < 0 ? doc.length : end);
-      addText(_unescape(text));
-      pos += text.length;
+      root = el;
+    }
+    if (!selfClosing) stack.push({ el, ns, qname, sawChild: false });
+    return j;
+  };
+
+  const closeTag = (i: number): number => {
+    if (!stack.length) fail(INVALID, i + 1);
+    let j = i + 2;
+    if (j >= n) fail("unclosed token", i);
+    if (!_isNameStart(doc[j])) fail(INVALID, j);
+    while (j < n && _isNameChar(doc[j])) j++;
+    const qname = doc.slice(i + 2, j);
+    while (j < n && _isWs(doc[j])) j++;
+    if (j >= n) fail("unclosed token", i);
+    if (doc[j] !== ">") fail(INVALID, j);
+    if (stack.pop()!.qname !== qname) fail("mismatched tag", i + 2);
+    return j + 1;
+  };
+
+  let i = doc.startsWith("\uFEFF") ? 1 : 0;
+  while (i < n) {
+    if (doc[i] !== "<") {
+      let end = doc.indexOf("<", i);
+      if (end < 0) end = n;
+      if (stack.length) {
+        addText(chars(i, end));
+      } else {
+        // Outside the document element only whitespace may stand.
+        let p = i;
+        while (p < end && _isWs(doc[p])) p++;
+        if (p < end) {
+          if (_isInvalidChar(doc[p])) fail(INVALID, p);
+          if (root) fail("junk after document element", p);
+          // Before it, expat's prolog reads a name and finds no declaration.
+          if (!_isNameChar(doc[p])) fail(INVALID, p);
+          let q = p;
+          while (q < n && _isNameChar(doc[q])) q++;
+          fail(q >= n || _isWs(doc[q]) ? "syntax error" : INVALID, q >= n || _isWs(doc[q]) ? p : q);
+        }
+      }
+      i = end;
+    } else if (doc.startsWith("<?", i)) {
+      const end = doc.indexOf("?>", i + 2);
+      if (end < 0) fail("unclosed token", i);
+      i = end + 2;
+    } else if (doc.startsWith("<!--", i)) {
+      const end = doc.indexOf("-->", i + 4);
+      if (end < 0) fail("unclosed token", i);
+      i = end + 3;
+    } else if (doc.startsWith("<![CDATA[", i)) {
+      if (!stack.length) fail("syntax error", i);
+      const end = doc.indexOf("]]>", i + 9);
+      if (end < 0) fail("unclosed CDATA section", n);
+      addText(doc.slice(i + 9, end));
+      i = end + 3;
+    } else if (doc.startsWith("<!DOCTYPE", i)) {
+      const end = doc.indexOf(">", i);
+      if (end < 0) fail("unclosed token", i);
+      i = end + 1;
+    } else if (doc.startsWith("<!", i)) {
+      fail(INVALID, i + 2);
+    } else if (doc.startsWith("</", i)) {
+      i = closeTag(i);
+    } else {
+      i = openTag(i);
     }
   }
-  if (stack.length) throw new ParseError("no element found");
-  if (!root) throw new ParseError("no element found");
-  return root;
+  if (stack.length || !root) fail("no element found", n);
+  return root!;
 }
 
 /** `elem.iter(tag)`: the element and every descendant with that tag, in
