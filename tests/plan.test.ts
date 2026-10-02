@@ -12,6 +12,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import * as batchmod from "../bjt/batch.ts";
+import * as cli from "../bjt/cli/index.ts";
 import * as fixtures from "../bjt/fixtures.ts";
 import * as plan from "../bjt/plan.ts";
 import * as publish from "../bjt/publish.ts";
@@ -21,10 +22,6 @@ import * as schemas from "../bjt/schemas.ts";
 import { capture, patch, tmpPath } from "./helpers.ts";
 
 const ROOT_DIR = path.resolve(import.meta.dirname, "..");
-
-/** Not ported yet: the CLI. Imported by a name tsc does not resolve, so this
- *  file type-checks before bjt/cli/index.ts exists. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 type Row = [string, string, number, number];
 
@@ -381,10 +378,8 @@ describe("the difficulty signal the queue needs", () => {
     expect(plan.difficultyCoverage()).toEqual([1, 3]);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("plan says so when the difficulty term sorts nothing", async () => {
+  test("plan says so when the difficulty term sorts nothing", async () => {
     const cap = capture();
-    const cli: any = await import(CLI_MODULE);
     patch(plan.seams, "difficultyCoverage", () => [4, 146]);
     expect(await cli.main({ argv: ["plan"] })).toBe(0);
     const out = cap.readouterr().out;
@@ -393,10 +388,8 @@ describe("the difficulty signal the queue needs", () => {
     expect(out).toContain("bjt probe");
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("plan stays quiet when every item has one", async () => {
+  test("plan stays quiet when every item has one", async () => {
     const cap = capture();
-    const cli: any = await import(CLI_MODULE);
     patch(plan.seams, "difficultyCoverage", () => [146, 146]);
     expect(await cli.main({ argv: ["plan"] })).toBe(0);
     const out = cap.readouterr().out;

@@ -9,6 +9,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
+import * as cli from "../bjt/cli/index.ts";
 import * as batch from "../bjt/batch.ts";
 import * as config from "../bjt/config.ts";
 import * as fixtures from "../bjt/fixtures.ts";
@@ -18,9 +19,6 @@ import * as scene_art from "../bjt/scene_art.ts";
 import * as providers from "../bjt/tts/providers.ts";
 import * as synth from "../bjt/tts/synth.ts";
 import { capture, patch, tmpPath } from "./helpers.ts";
-
-/** Where the command line will be once it is ported. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 const REFERENCE = path.join(config.ROOT, "batches", "hatsugen_choukai_J2_001.json");
 
@@ -70,9 +68,7 @@ class _Bucket {
 }
 
 describe("synth_upload", () => {
-  // needs bjt/cli (ported later)
-  test.skip("the upload needs the list of live clips", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the upload needs the list of live clips", async () => {
     const tmp = tmpPath();
     const cap = capture();
     const rc = await cli.main({ argv: ["synth", REFERENCE, "--provider", "openai", "--upload",
@@ -124,9 +120,7 @@ describe("synth_upload", () => {
     expect(sent.has(ids[0])).toBe(false);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the command leaves a clip the bucket has out of the sql", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the command leaves a clip the bucket has out of the sql", async () => {
     const tmp = tmpPath();
     const cap = capture();
 

@@ -10,15 +10,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
+import * as cli from "../bjt/cli/index.ts";
 import * as http from "../bjt/http.ts";
 import * as llm from "../bjt/llm.ts";
 import { RuntimeError } from "../bjt/py.ts";
 import * as scene_art from "../bjt/scene_art.ts";
 import * as scenes from "../bjt/scenes.ts";
 import { patch, setConfig, setEnv, tmpPath } from "./helpers.ts";
-
-/** Where the command line will be once it is ported. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 class _Real implements scene_art.ImageProvider {
   name = "fake";
@@ -153,9 +151,7 @@ describe("scene_ceilings", () => {
     expect(refused.length).toBe(1);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the command uploads nothing new but reports the stop", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the command uploads nothing new but reports the stop", async () => {
     const tmp = tmpPath();
     patch(scene_art.PROVIDERS, "fake", _Real);
     setConfig({ RUN_BUDGET_USD: 0.5 });

@@ -8,6 +8,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
+import * as cli from "../bjt/cli/index.ts";
 import * as batch from "../bjt/batch.ts";
 import * as config from "../bjt/config.ts";
 import * as fixtures from "../bjt/fixtures.ts";
@@ -21,9 +22,6 @@ import * as plan from "../bjt/tts/plan.ts";
 import * as providers from "../bjt/tts/providers.ts";
 import * as synth from "../bjt/tts/synth.ts";
 import { capture, delEnv, patch, setEnv, tmpPath } from "./helpers.ts";
-
-/** Where the command line will be once it is ported. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 /** A signal with content at both ends of the band, so a filter that does
  *  nothing is distinguishable from one that works. */
@@ -519,9 +517,7 @@ describe("media", () => {
 
   /** Silent clips in the real bucket would make the app play nothing where it
    *  now shows the text — worse than no audio at all. */
-  // needs bjt/cli (ported later)
-  test.skip("the cli refuses to upload silence", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the cli refuses to upload silence", async () => {
     const tmp = tmpPath();
     const cap = capture();
     delEnv("BJT_TTS_PROVIDER");
@@ -531,8 +527,7 @@ describe("media", () => {
     expect(cap.readouterr().err).toContain("ship silence");
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the cli names the provider it used", async () => {
+  test("the cli names the provider it used", async () => {
     const tmp = tmpPath();
     const cap = capture();
     for (const keys of Object.values(providers.CREDENTIALS)) {
@@ -541,7 +536,6 @@ describe("media", () => {
       }
     }
     delEnv("BJT_TTS_PROVIDER");
-    const cli: any = await import(CLI_MODULE);
 
     const rc = await cli.main({ argv: ["synth", path.join(config.ROOT, "batches", "hatsugen_choukai_J2_001.json"),
                                        "--media-dir", tmp, "--out", path.join(tmp, "a.sql")] });

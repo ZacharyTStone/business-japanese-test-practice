@@ -9,6 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
+import * as cli from "../bjt/cli/index.ts";
 import * as config from "../bjt/config.ts";
 import * as http from "../bjt/http.ts";
 import * as llm from "../bjt/llm.ts";
@@ -18,9 +19,6 @@ import * as scene_art from "../bjt/scene_art.ts";
 import * as scenes from "../bjt/scenes.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
 import { capture, delEnv, patch, setConfig, setEnv, tmpPath } from "./helpers.ts";
-
-/** Where the command line will be once it is ported. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 type RequestOpts = Parameters<typeof http.request>[2];
 
@@ -395,9 +393,7 @@ describe("scene_art", () => {
 
   /** Once the bank is full every night is this night, and the workflow
    *  appends the summary file whatever happened — so it has to exist. */
-  // needs bjt/cli (ported later)
-  test.skip("the cli writes the summary even when there is nothing to draw", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the cli writes the summary even when there is nothing to draw", async () => {
     const tmp = tmpPath();
     mkdirSync(path.join(tmp, "scenes"));
     for (const scene of scenes.survey({ mediaDir: tmp })) {
@@ -411,9 +407,7 @@ describe("scene_art", () => {
     expect(readFileSync(summary, "utf8")).toContain("nothing to draw");
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the cli draws offline and writes the summary", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the cli draws offline and writes the summary", async () => {
     const tmp = tmpPath();
     const cap = capture();
     const rc = await cli.main({ argv: ["scenes", "--generate", "--provider", "placeholder",
@@ -424,17 +418,13 @@ describe("scene_art", () => {
     expect(cap.readouterr().out).toContain("nothing uploads them");
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the cli refuses to upload without the bucket", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the cli refuses to upload without the bucket", async () => {
     const tmp = tmpPath();
     _noR2();
     expect(await cli.main({ argv: ["scenes", "--upload", "--media-dir", tmp] })).toBe(2);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the cli names an unknown scene", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the cli names an unknown scene", async () => {
     const tmp = tmpPath();
     _noR2();
     expect(await cli.main({ argv: ["scenes", "--generate", "scene_nowhere", "--provider", "placeholder",
@@ -607,9 +597,7 @@ describe("scene_art", () => {
     expect(v.reasons).toEqual([scene_art.PICTURE_RULES["unclear"]]);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("a night draws only so many pictures", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("a night draws only so many pictures", async () => {
     const tmp = tmpPath();
     const cap = capture();
     setConfig({ NIGHT_MAX_PICTURES: 2 });

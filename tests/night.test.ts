@@ -11,6 +11,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import * as batch from "../bjt/batch.ts";
+import * as cli from "../bjt/cli/index.ts";
 import * as fixtures from "../bjt/fixtures.ts";
 import * as llm from "../bjt/llm.ts";
 import * as pipeline from "../bjt/pipeline.ts";
@@ -20,10 +21,6 @@ import { deepcopy } from "../bjt/py.ts";
 import * as dedupe from "../bjt/fidelity/dedupe.ts";
 import { store } from "./conftest.ts";
 import { patch, setConfig, tmpPath } from "./helpers.ts";
-
-/** The CLI is ported later; its tests import it by a path the type checker
- *  does not follow until it exists. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 /** `night`: a bank in a temporary directory, a generator that writes the
  *  fixture, and no proofreader, gate or probe to fake. */
@@ -119,8 +116,7 @@ describe("night", () => {
     expect(result.written.map(([t]) => t)).toEqual(["goi_bunpou", "hyougen"]);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the nightly command reports the stopped shelf as written", async () => {
+  test("the nightly command reports the stopped shelf as written", async () => {
     const tmp = tmpPath();
     store(tmp);
     night(tmp);
@@ -128,7 +124,6 @@ describe("night", () => {
     patch(plan, "workOrder", () => [
       new plan.WorkItem({ item_type: "goi_bunpou", level: "J2", n: 2, have: 0, cells_left: 50 })]);
     setConfig({ DB_PATH: path.join(tmp, "night.db") });
-    const cli: any = await import(CLI_MODULE);
 
     const summary = path.join(tmp, "summary.md");
     expect(await cli.main({ argv: ["nightly", "--no-gate", "--no-sanity", "--summary", summary] })).toBe(0);

@@ -11,6 +11,8 @@
  */
 import path from "node:path";
 import { describe, expect, test } from "vitest";
+import * as cli from "../bjt/cli/index.ts";
+import * as gen from "../bjt/cli/generate.ts";
 import type { Store } from "../bjt/db/index.ts";
 import * as fixtures from "../bjt/fixtures.ts";
 import * as llm from "../bjt/llm.ts";
@@ -23,11 +25,6 @@ import { shelfKey } from "../bjt/shelf_rest.ts";
 import * as dedupe from "../bjt/fidelity/dedupe.ts";
 import { store } from "./conftest.ts";
 import { patch, setConfig, tmpPath } from "./helpers.ts";
-
-/** The CLI is ported later; its tests import it by a path the type checker
- *  does not follow until it exists. */
-const CLI_MODULE = "../bjt/cli/index.ts";
-const CLI_GENERATE_MODULE = "../bjt/cli/generate.ts";
 
 const DAY_MS = 86400000;
 const NOW = new Date(Date.UTC(2026, 9, 2, 18, 0));
@@ -224,16 +221,12 @@ describe("shelf rest", () => {
     expect(result.outcomes).toEqual([["goi_bunpou", "J2", W]]);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the nightly command rests reads and records", async () => {
+  test("the nightly command rests reads and records", async () => {
     // End to end through `bjt nightly`: a resting shelf is left out of the
     // order, and the shelf that ran is recorded.
     const tmp = tmpPath();
     store(tmp);
     night(tmp);
-    const cli: any = await import(CLI_MODULE);
-    const gen: any = await import(CLI_GENERATE_MODULE);
-
     // `cli/generate`'s clock (Python's `gen._now`), through its seams.
     patch(gen.seams, "now", () => NOW);
     patch(shelf_rest, "load", async () => [new Map([[shelfKey("hyougen", "J2"), _plusDays(NOW, 2)]]), null]);
