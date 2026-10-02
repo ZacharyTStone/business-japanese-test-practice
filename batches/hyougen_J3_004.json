@@ -1,0 +1,69 @@
+{
+  "bundle_version": 2,
+  "item_type": "hyougen",
+  "level": "J3",
+  "generated_at": "2026-10-02T04:41:14+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "e495e40444",
+      "item_type": "hyougen",
+      "level": "J3",
+      "seed_cell": {
+        "id": "phone_call+junior_to_senior+confirm@J3",
+        "setting": "phone_call",
+        "relation": "junior_to_senior",
+        "function": "confirm",
+        "level": "J3",
+        "channel": "phone"
+      },
+      "topic": "同行訪問の集合場所を確認する電話",
+      "stem": "後輩が先輩に電話をかけ、明日一緒に取引先を訪問する件で、集合時間と場所が合っているか確認します。最も適切な表現はどれですか。",
+      "options": [
+        {
+          "text": "明日は私が10時に本社ロビーへお伺いになります。",
+          "role": "wrong_honorific_direction",
+          "why": "「お伺いになる」は謙譲語の「伺う」に尊敬語の形を重ねており、自分の行為に敬意を向ける誤りになっている。"
+        },
+        {
+          "text": "明日って10時に本社ロビーでいい？",
+          "role": "register_too_casual",
+          "why": "内容は確認だが、先輩への電話としては話し言葉が崩れすぎており丁寧さに欠ける。"
+        },
+        {
+          "text": "明日は10時に本社ロビーに伺います。",
+          "role": "correct_keigo_wrong_speech_act",
+          "why": "謙譲語は正しいが、自分の予定を述べているだけで、時間や場所が合っているかを尋ねる形になっていない。"
+        },
+        {
+          "text": "明日のご訪問ですが、集合は10時に本社ロビーでよろしいでしょうか。",
+          "role": "correct",
+          "why": "「よろしいでしょうか」で相手の確認を求める形になっており、先輩への電話での確認として丁寧さも適切。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "後輩から先輩への確認は、決まっている予定を「よろしいでしょうか」の形で相手に問い返すのが適切。「伺います」は謙譲語として正しいが、自分の予定を報告しているだけで確認の働きをしていない。「明日って〜いい？」は先輩への電話としてくだけすぎている。「お伺いになります」は謙譲語の「伺う」に尊敬語の形を足しており、自分の行為を敬う誤った向きになっている。",
+      "explanation_en": "A junior confirming a schedule with a senior on the phone should phrase it as a question (よろしいでしょうか), not as a plain report, casual speech, or a self-directed honorific error.",
+      "vocab_notes": [
+        {
+          "term": "伺う",
+          "reading": "うかがう",
+          "meaning": "to visit/ask (humble form)"
+        },
+        {
+          "term": "集合",
+          "reading": "しゅうごう",
+          "meaning": "gathering/meeting up"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "model_p_correct": 0.0
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}

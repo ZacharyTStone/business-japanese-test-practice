@@ -1,0 +1,166 @@
+{
+  "bundle_version": 2,
+  "item_type": "gazou_haaku",
+  "level": "J1",
+  "generated_at": "2026-10-02T04:41:14+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "643098801f",
+      "item_type": "gazou_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "office_floor+peer_to_peer+stamping_document@J1",
+        "setting": "office_floor",
+        "relation": "peer_to_peer",
+        "function": "stamping_document",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "社内書類への押印",
+      "stem": "机に座っている人は何をしていますか。",
+      "options": [
+        {
+          "text": "書類にサインをしています。",
+          "role": "different_action",
+          "why": "手にあるのはペンではなくはんこで、紙の上には署名ではなく印影を残す動作が描かれている。"
+        },
+        {
+          "text": "受付で来客の書類に確認の印を押しています。",
+          "role": "adjacent_setting",
+          "why": "場所は受付カウンターではなく机が並ぶ執務フロアで、来客の姿はない。"
+        },
+        {
+          "text": "書類に印を押しています。",
+          "role": "correct",
+          "why": "座っている人が朱肉の付いたはんこを紙に押し当てており、もう一方の手で紙を押さえている。"
+        },
+        {
+          "text": "同僚に印を押してもらっています。",
+          "role": "wrong_participants",
+          "why": "はんこを持って押しているのは座っている本人で、立っている同僚は書類に触れていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "座っている人がはんこを紙に押し当て、もう一方の手で紙を押さえているので、書類に印を押している場面である。ペンで署名している様子はなく、はんこを持って押しているのは座っている本人で、立っている同僚は押していない。また場所は受付ではなく執務フロアの机であり、来客も描かれていない。",
+      "explanation_en": "The seated colleague presses a hanko stamp onto a held-down document, so the correct description is 'stamping the document'; the other options misstate the action, reverse who is stamping, or move the scene to a reception desk.",
+      "vocab_notes": [
+        {
+          "term": "印を押す",
+          "reading": "いんをおす",
+          "meaning": "to stamp a seal"
+        },
+        {
+          "term": "朱肉",
+          "reading": "しゅにく",
+          "meaning": "red ink pad used for hanko stamps"
+        },
+        {
+          "term": "押印",
+          "reading": "おういん",
+          "meaning": "affixing a seal/stamp"
+        }
+      ],
+      "audio": {
+        "narration": "700fd7b1f7af313d",
+        "options": [
+          "75e51f06c29bf14f",
+          "466cbf757d61d8e3",
+          "86d1c2b4a98d515d",
+          "8697cd6869442220"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "An open-plan Japanese office floor with rows of desks, most empty in the background. In the foreground, one colleague sits at a desk holding a small rectangular hanko stamp freshly pressed onto a blank sheet of paper, the other hand flat on the paper to hold it steady; a faint red circular mark is visible where the stamp touches. A second colleague stands beside the desk, holding a closed folder against their chest, watching but not touching the paper or stamp. No pen is visible, nobody is writing or signing, there is no reception counter, and no visitor is present. No signs or readable text anywhere.",
+      "scene_id": "pic_643098801f",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "700fd7b1f7af313d",
+      "item_id": "643098801f",
+      "kind": "narration",
+      "index": null,
+      "text": "机に座っている人は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "643098801f",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "75e51f06c29bf14f",
+      "item_id": "643098801f",
+      "kind": "option",
+      "index": 0,
+      "text": "書類にサインをしています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "643098801f",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "466cbf757d61d8e3",
+      "item_id": "643098801f",
+      "kind": "option",
+      "index": 1,
+      "text": "受付で来客の書類に確認の印を押しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "643098801f",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "86d1c2b4a98d515d",
+      "item_id": "643098801f",
+      "kind": "option",
+      "index": 2,
+      "text": "書類に印を押しています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "643098801f",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8697cd6869442220",
+      "item_id": "643098801f",
+      "kind": "option",
+      "index": 3,
+      "text": "同僚に印を押してもらっています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "pic_643098801f"
+  ]
+}

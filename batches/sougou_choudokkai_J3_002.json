@@ -1,0 +1,441 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J3",
+  "generated_at": "2026-10-02T04:41:14+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "b39fb5be07",
+      "item_type": "sougou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "client_review+peer_to_peer+identify_risk@J3",
+        "setting": "client_review",
+        "relation": "peer_to_peer",
+        "function": "identify_risk",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "検討会後の家具見積りの残課題",
+      "stem": "この見積りについて、何が問題として残っていますか。",
+      "options": [
+        {
+          "text": "パーティションの納品日が、まだ決まっていないこと",
+          "role": "combines_wrong_pair",
+          "why": "資料ではパーティションとシェルフの両方が未定と書かれているが、会話でパーティションは来週水曜に入荷が確定したと述べられている。"
+        },
+        {
+          "text": "シェルフの納品日を、同僚Bが先方に確認すること",
+          "role": "wrong_action_owner",
+          "why": "納品日を確認しているのはメーカーであり、同僚Bが先方に確認する話は会話に出ていない。"
+        },
+        {
+          "text": "シェルフの単価が、まだ決まっていないこと",
+          "role": "unsupported_but_plausible",
+          "why": "資料では未定と記載されているが、会話でメーカーから連絡があり9000円に決まったと同僚Bが説明している。"
+        },
+        {
+          "text": "シェルフの納品日が、まだ決まっていないこと",
+          "role": "correct",
+          "why": "会話で単価とパーティションの納品日は解決したが、シェルフの納品日はメーカーが在庫確認中でまだ分からないと同僚Bが述べている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "資料には、パーティションとシェルフの納品日が両方未定、シェルフの単価も未定と記載されている。会話では、シェルフの単価が9000円に決まったこと、パーティションの納品日が来週水曜に確定したことが分かる。結果として未解決のまま残るのはシェルフの納品日だけで、これはメーカーが在庫を確認中のためである。資料だけを読むと未定事項が二つ以上あるように見え、会話だけでは元々どの項目が未定だったのか分からない。",
+      "explanation_en": "The document lists both the shelf price and two delivery dates as pending; the conversation resolves the price and one delivery date, leaving only the shelf's delivery date unresolved.",
+      "vocab_notes": [
+        {
+          "term": "在庫確認",
+          "reading": "ざいこかくにん",
+          "meaning": "stock check / inventory confirmation"
+        },
+        {
+          "term": "入荷",
+          "reading": "にゅうか",
+          "meaning": "arrival of goods (into stock)"
+        }
+      ],
+      "audio": {
+        "narration": "c80c4363e4929897",
+        "options": [],
+        "dialogue": [
+          "b205d09efbc6f4ce",
+          "a548d70e0eff879c",
+          "794167fa62b3ef8a",
+          "808e8ab78e1602d7",
+          "f6e0e09411ed7d68",
+          "97b719f0bb9ae2b2",
+          "5bc6580ceb2446f7"
+        ]
+      },
+      "documents": [
+        {
+          "template": "quote_order",
+          "title": "御見積書（オフィス家具一式）",
+          "meta": [
+            {
+              "label": "宛先",
+              "value": "さくら文具株式会社 御中"
+            },
+            {
+              "label": "発行者",
+              "value": "山川商事株式会社 営業部"
+            },
+            {
+              "label": "発行日",
+              "value": "10月3日"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "品目",
+                "数量",
+                "単価",
+                "金額"
+              ],
+              "rows": [
+                [
+                  "デスク",
+                  "20台",
+                  "15,000円",
+                  "300,000円"
+                ],
+                [
+                  "椅子",
+                  "20台",
+                  "8,000円",
+                  "160,000円"
+                ],
+                [
+                  "パーティション",
+                  "15枚（変更前20枚）",
+                  "12,000円",
+                  "180,000円"
+                ],
+                [
+                  "シェルフ",
+                  "10台",
+                  "未定",
+                  "未定"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "同僚A",
+          "text": "検討会の見積り、パーティションの数量が変わっていますね。",
+          "clip_id": "b205d09efbc6f4ce"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "はい、先方の要望で二十枚から十五枚に減らしました。",
+          "clip_id": "a548d70e0eff879c"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "シェルフの単価がまだ未定になっていますが、あれは決まりましたか。",
+          "clip_id": "794167fa62b3ef8a"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "ちょうどメーカーから連絡があって、九千円に決まりました。",
+          "clip_id": "808e8ab78e1602d7"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "よかったです。納品日はどうですか。資料ではパーティションとシェルフ、両方未定でしたが。",
+          "clip_id": "f6e0e09411ed7d68"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "パーティションは来週水曜に入荷すると確定しました。ただ、シェルフのほうはまだメーカーが在庫を確認中で、納品日は分かりません。",
+          "clip_id": "97b719f0bb9ae2b2"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では、そこが残る問題ですね。",
+          "clip_id": "5bc6580ceb2446f7"
+        }
+      ],
+      "scene_id": "scene_client_meeting_room",
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    },
+    {
+      "id": "a786957ed9",
+      "item_type": "sougou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "video_review+peer_to_peer+choose_revision@J3",
+        "setting": "video_review",
+        "relation": "peer_to_peer",
+        "function": "choose_revision",
+        "level": "J3",
+        "channel": "video"
+      },
+      "topic": "パンフレットデザイン修正案の採用",
+      "stem": "今回、どの修正案を、誰が担当して進めることになりましたか。",
+      "options": [
+        {
+          "text": "表紙の色を変えるC案を、田中が担当して進める。",
+          "role": "correct",
+          "why": "先方からC案を進めてほしいと連絡があり、担当も保留から田中に決まったため。"
+        },
+        {
+          "text": "写真を大きくするB案を、佐藤が担当して進める。",
+          "role": "combines_wrong_pair",
+          "why": "議事録どおりの組み合わせだが、先方がB案を予算オーバーで断ったという会話の内容を反映していない。"
+        },
+        {
+          "text": "表紙の色を変えるC案を、佐藤が担当して進める。",
+          "role": "wrong_action_owner",
+          "why": "採用する案自体はC案で合っているが、担当は佐藤ではなく田中に変わっている。"
+        },
+        {
+          "text": "文字サイズを変えるA案を採用して進める。",
+          "role": "stated_by_wrong_speaker",
+          "why": "同僚Aが思いつきで挙げただけで、同僚Bが前回すでに見送りが決まっていると答えており、採用された案ではない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "議事録では、A案は見送り、B案は採用（担当・佐藤）、C案は先方の意向確認後に判断（担当未定）となっていた。会話で、B案は先方が予算オーバーで断ったこと、代わりに保留だったC案を進めてほしいと言われたこと、C案の担当は佐藤ではなく田中になったことが分かる。議事録だけでは先方の判断が変わったことが分からず、会話だけでは元々の担当割り当てが分からないため、両方を突き合わせて初めて正しい組み合わせが決まる。",
+      "explanation_en": "The minutes adopt plan B and leave plan C pending; the conversation reveals the client rejected B and requested C instead, with a new owner.",
+      "vocab_notes": [
+        {
+          "term": "見送り",
+          "reading": "みおくり",
+          "meaning": "postponement / passing on (a proposal)"
+        },
+        {
+          "term": "保留",
+          "reading": "ほりゅう",
+          "meaning": "pending, held over"
+        }
+      ],
+      "audio": {
+        "narration": "aa757f8c419a0639",
+        "options": [],
+        "dialogue": [
+          "6ba24d68230e190a",
+          "8deda4d63b7dfe22",
+          "1acb9a0c55ed9ef1",
+          "721b26e0ee23be0d",
+          "6669e7ea7d280aca",
+          "53623583553557ff"
+        ]
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "パンフレットデザイン 修正案 打ち合わせ議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "9月5日（木）15時〜16時"
+            },
+            {
+              "label": "場所",
+              "value": "オンライン会議室"
+            },
+            {
+              "label": "出席者",
+              "value": "佐藤、田中、同僚A、同僚B"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "numbered",
+              "items": [
+                "A案（文字サイズを11ptから12ptに変更）：見送り",
+                "B案（写真を大きくするレイアウト変更）：採用、担当は佐藤",
+                "C案（表紙の色を変更）：先方の意向確認後に判断、担当は未定"
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "同僚A",
+          "text": "議事録では、写真を大きくするB案を採用することになっていましたね。",
+          "clip_id": "6ba24d68230e190a"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "そうなんですが、先ほど先方から連絡があって、B案は予算オーバーで難しいと言われました。",
+          "clip_id": "8deda4d63b7dfe22"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では、文字サイズを変えるA案はどうですか。",
+          "clip_id": "1acb9a0c55ed9ef1"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "いえ、それは前回ですでに見送りが決まっています。先方は、保留にしていた表紙の色を変えるC案の方を進めてほしいそうです。",
+          "clip_id": "721b26e0ee23be0d"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "では担当は佐藤さんのままで進めましょうか。",
+          "clip_id": "6669e7ea7d280aca"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "いえ、C案は佐藤さんではなく、田中さんが担当することになっています。",
+          "clip_id": "53623583553557ff"
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "c80c4363e4929897",
+      "item_id": "b39fb5be07",
+      "kind": "narration",
+      "index": null,
+      "text": "この見積りについて、何が問題として残っていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b205d09efbc6f4ce",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "検討会の見積り、パーティションの数量が変わっていますね。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a548d70e0eff879c",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "はい、先方の要望で二十枚から十五枚に減らしました。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "794167fa62b3ef8a",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "シェルフの単価がまだ未定になっていますが、あれは決まりましたか。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "808e8ab78e1602d7",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "ちょうどメーカーから連絡があって、九千円に決まりました。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f6e0e09411ed7d68",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "よかったです。納品日はどうですか。資料ではパーティションとシェルフ、両方未定でしたが。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "97b719f0bb9ae2b2",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "パーティションは来週水曜に入荷すると確定しました。ただ、シェルフのほうはまだメーカーが在庫を確認中で、納品日は分かりません。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5bc6580ceb2446f7",
+      "item_id": "b39fb5be07",
+      "kind": "dialogue",
+      "index": 6,
+      "text": "では、そこが残る問題ですね。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "aa757f8c419a0639",
+      "item_id": "a786957ed9",
+      "kind": "narration",
+      "index": null,
+      "text": "今回、どの修正案を、誰が担当して進めることになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6ba24d68230e190a",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "議事録では、写真を大きくするB案を採用することになっていましたね。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "8deda4d63b7dfe22",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "そうなんですが、先ほど先方から連絡があって、B案は予算オーバーで難しいと言われました。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "1acb9a0c55ed9ef1",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "では、文字サイズを変えるA案はどうですか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "721b26e0ee23be0d",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "いえ、それは前回ですでに見送りが決まっています。先方は、保留にしていた表紙の色を変えるC案の方を進めてほしいそうです。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "6669e7ea7d280aca",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "では担当は佐藤さんのままで進めましょうか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "53623583553557ff",
+      "item_id": "a786957ed9",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "いえ、C案は佐藤さんではなく、田中さんが担当することになっています。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    }
+  ],
+  "scenes": [
+    "scene_client_meeting_room",
+    "scene_video_call_laptop"
+  ]
+}
