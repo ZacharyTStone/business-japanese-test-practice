@@ -109,12 +109,16 @@ Settings → Actions → General → Workflow permissions → "Allow GitHub Acti
 create and approve pull requests"; when it is off, the run summary says so and
 links the branch.
 
-**Next step.** Tick the setting if a run summary reports it, and read each
-night's pull request item by item before merging it — merging deploys. The
-checkout no longer keeps the token; only the pull-request step is given git
-credentials (`gh auth setup-git` with `GH_TOKEN`). That cannot be exercised
-offline, so watch the first night's push; if it fails, the fallback is a
-one-off `http.extraheader` on that push.
+**Next step.** Tick the setting if a run summary reports it. Nobody needs to
+read a night's pull request any more (2026-10-02): the workflow runs the
+`checks` on its branch and merges it on green, then starts the deploy. A pull
+request left open carries a comment saying why — a red check, or `main` having
+moved during the night — and is the one to look at. The merge uses the
+workflow's own token, so it needs no new secret; a branch protection rule that
+requires a review would stop it, and the comment would say so. The checkout no
+longer keeps the token; only the pull-request step is given git credentials
+(`gh auth setup-git` with `GH_TOKEN`). That cannot be exercised offline, so
+watch the first night's merge; if it fails, the fallback is merging by hand.
 
 ---
 

@@ -99,9 +99,8 @@ Three programs that only meet in the database:
 
 | When | What happens |
 |---|---|
-| 03:00 JST | The **nightly** workflow writes up to 3 questions (≤ $0.50) and opens a pull request. |
-| Morning | The owner reads and merges it. **Merging is the decision to ship.** |
-| Minutes later | **checks** runs on `main`; when green, **deploy database** applies migrations, runs every bundle's SQL, and makes missing audio. |
+| 03:00 JST | The **nightly** workflow writes up to 3 questions (≤ $0.50) and opens a pull request, the night's record. |
+| Minutes later | It runs **checks** on that branch; when every job is green it merges the pull request and starts **deploy database**, which applies migrations, runs every bundle's SQL, and makes missing audio. A red check leaves the pull request open for the owner. |
 | Any time | A learner presses the button; the Worker builds a set of 10 and the database grades each answer. |
 | 15 answers | Nothing more is served, and the database accepts nothing more, until midnight in Japan. |
 

@@ -53,12 +53,18 @@ accident is not.
   never more than fifty cents (`BJT_RUN_BUDGET_USD` and the `max_usd` default in
   `nightly.yml`, both pinned at or below 0.5 by `tests/test_ceilings.py`). A
   manual run can ask for the difficulty probe (`bjt probe --all`) instead. The
-  nightly job opens a pull request and never publishes: that branch is the
-  review gate and, with Dependabot's weekly pull request of pinned-action
-  updates, the only exception to main-only. Merging it is the decision to
-  ship — once `checks` is green on `main`, the **deploy database** workflow
-  runs by itself, deploys exactly the commit `checks` passed, and publishes the
-  items and their audio together; by hand it runs only from `main`.
+  nightly job opens a pull request — the night's record and, with Dependabot's
+  weekly pull request of pinned-action updates, the only exception to
+  main-only — then runs the whole `checks` workflow on that branch and, only
+  when every job is green and `main` has not moved meanwhile, merges it and
+  starts the **deploy database** workflow itself (a merge made with the
+  workflow's own token starts no other workflow). The owner stopped reviewing
+  nightly content by hand on 2026-10-02: the gate, the proofreader, the batch
+  checks and `checks` are the review. A red check leaves the pull request open
+  with a comment for a person; nothing from it is live. Otherwise, once
+  `checks` is green on `main`, the deploy runs by itself, deploys exactly the
+  commit `checks` passed, and publishes the items and their audio together; by
+  hand it runs only from `main`.
 - **A run's ceilings are checked before the call, not after.** `bjt/llm.py`
   prices each response from its reported usage (a timed-out request at its
   output ceiling, an unknown model at 15/75 per MTok) and refuses the next
