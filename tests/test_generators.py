@@ -163,6 +163,50 @@ def test_a_fifth_option_is_trimmed_not_regenerated(monkeypatch, goi_cell):
     assert repair_surplus_options(two) == [] and len(two["options"]) == 5
 
 
+def test_the_explanation_loses_what_it_said_about_a_trimmed_option():
+    """The 解説 is written about all five options, so a trimmed option's
+    sentences go with it. Left in, they described an option the item no longer
+    has, and the proofreader rejected every 表現読解 J3 draft as
+    explanation_mismatch — the trim saved nothing."""
+    from bjt.generators.base import repair_surplus_options
+    item = _valid("goi_bunpou")
+    spare = dict(item["options"][1], text="本日は遅れられまして申し訳ございません。")
+    item["options"].append(spare)  # a duplicate role, so it is the one dropped
+    correct = next(o["text"] for o in item["options"] if o["role"] == roles.CORRECT)
+    item["explanation_ja"] = (f"正解は「{correct.rstrip('。')}」。"
+                              "「遅れられまして」は二重敬語で、誤り。\n"
+                              "ほかの選択肢は場面に合わない。")
+    item["explanation_en"] = "The key fits. 「遅れられまして」 is a double honorific. Others misfit."
+    assert repair_surplus_options(item) == [spare["text"]]
+    assert "遅れられまして" not in item["explanation_ja"]
+    assert item["explanation_ja"].startswith("正解は「") and "ほかの選択肢" in item["explanation_ja"]
+    assert item["explanation_en"] == "The key fits. Others misfit."
+
+
+def test_a_sentence_about_a_kept_option_stays_and_text_is_never_rewritten():
+    from bjt.generators.base import _SENTENCE, drop_sentences_about
+    kept, dropped = ["明日は10時に伺います。"], ["明日伺えますか。"]
+    # 「明日」 is in both, so a sentence quoting only that is not about the dropped one.
+    text = "「明日」の言い方に注意。「伺えますか」は依頼になっている。"
+    assert drop_sentences_about(text, dropped, kept) == "「明日」の言い方に注意。"
+    # Nothing about a dropped option: the text comes back untouched, 1.5 and all.
+    same = "Option A fits, at 1.5 times the cost.\nB is rude."
+    assert drop_sentences_about(same, dropped, kept) == same
+    # Every sentence about the dropped option: kept as it was, for the proofreader.
+    assert drop_sentences_about("「伺えますか」は依頼。", dropped, kept) == "「伺えますか」は依頼。"
+    for t in ("一。二！三？", "A. B.\nC", "1.5 stays", ""):
+        assert "".join(_SENTENCE.findall(t)) == t
+
+
+def test_the_prompt_asks_for_four_options_whatever_the_role_count():
+    """Every type offers four or more distractor roles; told only to use three
+    distinct ones, the model wrote one option per role — five — often enough
+    that 表現読解 lost whole nights to it."""
+    for item_type in ("hyougen", "goi_bunpou", "hatsugen_choukai", "gazou_haaku"):
+        sp = get_generator(item_type).system_prompt("J2")
+        assert "exactly FOUR options" in sp and "never write one option per role" in sp
+
+
 def test_review_feedback_reaches_the_next_prompt(monkeypatch, goi_cell):
     seen = {}
 
@@ -277,3 +321,12 @@ def test_a_chart_the_template_cannot_carry_is_sent_back_with_the_reason(monkeypa
     assert len(prompts) == 2
     assert "does not carry one" in prompts[1]
     assert item["document"]["template"] == "figures"
+
+
+def test_the_picture_options_are_told_not_to_orbit_the_key():
+    """画像把握 J1 lost every draft on three nights to the cold gate: each
+    distractor was the key with one thing changed, so the key was the core the
+    other three shared and a reader picked it without the picture."""
+    sp = get_generator("gazou_haaku").system_prompt("J1")
+    assert "must not orbit the correct one" in sp
+    assert "no element of the correct description may appear in all three distractors" in sp

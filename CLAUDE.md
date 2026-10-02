@@ -81,6 +81,18 @@ accident is not.
   defaults, which must agree), sized to how little the app is used. A type in
   `plan.NIGHT_TYPE_CAPS` (画像把握: one) never exceeds its nightly allowance,
   however empty its shelves.
+- **A shelf that writes nothing rests.** A shelf the generator cannot write
+  stays furthest behind its share, so every night would go back to it: from
+  2026-09-28 three nights spent their budget on the same three shelves and
+  wrote nothing. Each night records what each shelf did — `written` or
+  `missed` — as an empty marker under `nightly/shelves/` in the media bucket
+  (`bjt/shelf_rest.py`; the Worker serves only `audio/` and `scenes/`). After
+  `BJT_SHELF_REST_AFTER` (3) misses in a row the work order passes the shelf
+  over for `BJT_SHELF_REST_DAYS` (7) after its last miss, then tries it once
+  more; one written night clears it. A night stopped by a ceiling or the
+  account records nothing for that shelf. The bucket is the memory, not a
+  branch, and it decides only *which* shelves, never *whether* a night runs; a
+  ledger that cannot be read rests nothing.
 
 ### Writing and checking items
 
@@ -103,7 +115,18 @@ accident is not.
 - **A rejected draft's reason goes to the next draft on that shelf.** The gate,
   the proofreader and the dedupe check each give one sentence and `run_batch`
   passes it on, so a shelf's second and third drafts are not written blind. A
-  draft with a fifth option is trimmed, not regenerated.
+  draft with a fifth option is trimmed, not regenerated, and the 解説 sentences
+  that quote the trimmed option go with it (`drop_sentences_about`) — left in,
+  they cost the draft at the proofreader as `explanation_mismatch`. The prompt
+  asks for exactly four options and says at least one role goes unused, since
+  every type offers four or more.
+- **No optional field in a generation schema** but `scene_id`. Optional fields
+  are what grow the API's compiled grammar: the chart's four took the 総合聴読解
+  schema past it, and from 2026-09-28 every request was refused "Schema is too
+  complex" before a token was written. A document block requires every field
+  and sends the unused ones empty; `render.drop_unused_fields` strips them as
+  the draft arrives, so nothing downstream sees the padding. A test holds the
+  document types to it.
 - **A distractor is wrong the way people are wrong.** Over-politeness is wording
   people really use somewhere more formal, or a 二重敬語 people really say — never
   an invented stack (させていただかせていただく is the commonest).

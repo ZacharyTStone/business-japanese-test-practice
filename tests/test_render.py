@@ -412,3 +412,76 @@ def test_a_malformed_chart_draws_what_it_can_rather_than_raising(block):
     html = render.render(_figures(block))
     assert "</article>" in html
     render.text_of(_figures(block))
+
+
+# ----- every block field required, the empties taken off ------------------
+
+#: Every field a block can carry, as the schema sends it when unused.
+_EMPTY_BLOCK = {"text": "", "level": 0, "items": [], "caption": "", "columns": [], "rows": [],
+                "pairs": [], "sender": "", "sent_at": "", "depth": 0, "tone": "", "kind": "",
+                "unit": "", "categories": [], "series": []}
+
+
+def _padded(block):
+    """A block as the generator receives it now: every field present."""
+    return {**_EMPTY_BLOCK, **block}
+
+
+@pytest.mark.parametrize("item_type", ["shiryou_choudokkai", "sougou_choudokkai",
+                                       "joukyou_haaku", "sougou_dokkai"])
+def test_no_generation_schema_has_optional_document_fields(item_type):
+    """Optional fields are what make the API's compiled grammar grow. With the
+    chart's four added, the 総合聴読解 schema — documents and a dialogue, sixteen
+    optional fields — was refused as "Schema is too complex" every night from
+    2026-09-28, before a token was written. Every block field is required now,
+    and nothing else in a document type's schema may be optional but the
+    scene id."""
+    from bjt import schemas
+    optional = []
+    for path, node in _walk(schemas.build_item_schema(item_type)):
+        if isinstance(node, dict) and node.get("type") == "object":
+            optional += [f"{path}.{k}" for k in set(node.get("properties", {}))
+                         - set(node.get("required", []))]
+    assert [p for p in optional if not p.endswith(".scene_id")] == [], optional
+    block = render.document_schema()["properties"]["blocks"]["items"]
+    assert set(block["required"]) == set(block["properties"]) == {"type", *_EMPTY_BLOCK}
+    # An enum field must be able to say "unused".
+    assert "" in block["properties"]["tone"]["enum"]
+    assert "" in block["properties"]["kind"]["enum"]
+
+
+def test_unused_fields_come_off_and_the_document_is_what_it_was():
+    """Stripped as the draft arrives, the padding never reaches the validator,
+    the renderers, the app or a bundle: each block is exactly the block an
+    optional schema would have produced."""
+    plain = [
+        {"type": "heading", "text": "日程", "level": 2},
+        {"type": "paragraph", "text": "本文です。"},
+        {"type": "table", "caption": "在庫", "columns": ["品名", "数"], "rows": [["A", "3"]]},
+        {"type": "quoted_message", "sender": "佐藤", "sent_at": "4月8日", "text": "了解です。",
+         "depth": 2},
+        {"type": "callout", "text": "締切は4月10日です。", "tone": "warning"},
+        _bar(),
+    ]
+    doc = _figures(*[_padded(b) for b in plain])
+    assert render.drop_unused_fields(doc) > 0
+    assert doc["blocks"] == plain
+    assert render.drop_unused_fields(doc) == 0  # nothing left to take off
+
+
+def test_a_newest_quoted_message_reads_the_same_without_its_zero():
+    """depth 0 is the newest message, and a missing depth reads as 0 in both
+    renderers, so the 0 goes with the rest of the padding."""
+    doc = _email(blocks=[_padded({"type": "quoted_message", "sender": "佐藤", "text": "了解です。"})])
+    render.drop_unused_fields(doc)
+    assert doc["blocks"] == [{"type": "quoted_message", "sender": "佐藤", "text": "了解です。"}]
+    assert render.validate_document(doc) == []
+
+
+def test_a_block_left_empty_still_fails_for_what_it_lacks():
+    """Taking the empties off does not hide a block that is empty where it
+    matters: a chart with kind "" is a chart without a kind."""
+    doc = _figures(_padded({**_bar(), "kind": ""}))
+    render.drop_unused_fields(doc)
+    assert any("missing kind" in e for e in render.validate_document(doc))
+    assert render.drop_unused_fields("not a document") == 0

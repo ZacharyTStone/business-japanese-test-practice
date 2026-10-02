@@ -45,20 +45,40 @@ BLOCK_TYPES = [
 CALLOUT_TONES = ["info", "warning", "action"]
 CHART_KINDS = chart.CHART_KINDS
 
+#: Every field a block can carry, `type` first. The schema requires all of them.
+_BLOCK_FIELDS = ("type", "text", "level", "items", "caption", "columns", "rows", "pairs",
+                 "sender", "sent_at", "depth", "tone", "kind", "unit", "categories", "series")
+
+#: The two numeric fields, and the value that means "not used": a heading's
+#: level and a quoted message's depth both read a missing field as their
+#: default (html.py, the app's document.tsx), so a 0 says nothing a missing
+#: field does not.
+_UNUSED_NUMBERS = ("level", "depth")
+
 
 def _block_schema() -> dict:
     """One JSON schema covering every block type.
 
     Structured output has no discriminated unions we can rely on across
-    providers, so this is one object with a required `type` and everything else
-    optional; `validate_document` enforces which fields each type actually
-    needs. That keeps the model's job simple and puts the strictness on our
-    side, which is the same split the item schema uses.
+    providers, so this is one object covering every type, and
+    `validate_document` enforces which fields each type actually needs. That
+    keeps the model's job simple and puts the strictness on our side, which is
+    the same split the item schema uses.
+
+    Every field is *required*, and one a block does not use is sent empty
+    ("", [], 0, or "" for an enum). Optional fields are what make the API's
+    compiled grammar grow: with the chart's four added (2026-09-27) the
+    総合聴読解 schema — documents and a dialogue — was refused outright as "Schema
+    is too complex", every night, before a token was written. Required fields
+    compile to one fixed sequence. `drop_unused_fields` strips the empties as
+    the draft arrives, so nothing downstream ever sees them.
     """
     return {
         "type": "object",
         "additionalProperties": False,
-        "required": ["type"],
+        "required": list(_BLOCK_FIELDS),
+        "description": "Every field is present on every block. A field this block's "
+        "type does not use is left empty: \"\" for text, [] for a list, 0 for a number.",
         "properties": {
             "type": {"type": "string", "enum": BLOCK_TYPES},
             "text": {
@@ -67,7 +87,8 @@ def _block_schema() -> dict:
             },
             "level": {
                 "type": "integer",
-                "description": "Heading depth within the document, 2 or 3.",
+                "description": "Heading depth within the document, 2 or 3; 0 for any "
+                "other block.",
             },
             "items": {
                 "type": "array",
@@ -107,22 +128,24 @@ def _block_schema() -> dict:
             "sent_at": {"type": "string", "description": "When a quoted message was sent."},
             "depth": {
                 "type": "integer",
-                "description": "How deep in the reply chain a quoted message sits; 0 is the newest.",
+                "description": "How deep in the reply chain a quoted message sits; 0 is the "
+                "newest, and 0 for any other block.",
             },
             "tone": {
                 "type": "string",
-                "enum": CALLOUT_TONES,
-                "description": "What a callout is for: information, a warning, or an action to take.",
+                "enum": [*CALLOUT_TONES, ""],
+                "description": "What a callout is for: information, a warning, or an action "
+                "to take. \"\" for any other block.",
             },
             # The chart's own fields. Bounds the API's schema subset cannot
             # state (no minimum/maximum, no maxItems) are stated in words here
             # and enforced by `chart.errors`, as the rest of this schema does.
             "kind": {
                 "type": "string",
-                "enum": CHART_KINDS,
+                "enum": [*CHART_KINDS, ""],
                 "description": "For a chart: `bar` to compare a few groups (branches, "
                 "products, this year against last), `line` to follow one quantity "
-                "through time.",
+                "through time. \"\" for any other block.",
             },
             "unit": {
                 "type": "string",
@@ -233,6 +256,31 @@ REQUIRED_BY_TYPE: dict[str, tuple[str, ...]] = {
     # that mean nothing.
     "chart": ("kind", "caption", "unit", "categories", "series"),
 }
+
+
+def drop_unused_fields(doc: Any) -> int:
+    """Take off the empty fields every generated block carries. Returns how
+    many were dropped.
+
+    The schema requires every field on every block (see `_block_schema`), so a
+    paragraph arrives with `"rows": []`, `"tone": ""` and `"level": 0`. Removed
+    here, a document is exactly what it was when those fields were optional —
+    the validator, the renderers, the app and the bundles never see the
+    padding. A field with something in it is left alone, whatever the block's
+    type, as it always was.
+    """
+    if not isinstance(doc, dict) or not isinstance(doc.get("blocks"), list):
+        return 0
+    dropped = 0
+    for block in doc["blocks"]:
+        if not isinstance(block, dict):
+            continue
+        for key in [k for k in block if k != "type"]:
+            value = block[key]
+            if value is None or value == "" or value == [] or (key in _UNUSED_NUMBERS and value == 0):
+                del block[key]
+                dropped += 1
+    return dropped
 
 
 #: Block types whose whole content is one text field. A block of one of these
