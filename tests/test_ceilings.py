@@ -303,9 +303,20 @@ def test_the_workflow_keeps_its_guards():
     assert re.search(r"if:\s*always\(\)", keep_block), "the artifact is saved even when a later step fails"
     assert "batches" in keep_block
 
-    pr = text.index("name: open a pull request for somebody to read")
-    pr_block = text[pr:]
+    pr = text.index("name: open the night's pull request")
+    pr_block = text[pr:text.index("\n  verify:", pr)]
     assert "git rebase" in pr_block and "git fetch origin" in pr_block, "tonight's commit sits on today's main"
+
+    # Nobody reviews a night any more (2026-10-02), so the merge is guarded by
+    # the checks instead: it waits for the whole `checks` workflow on tonight's
+    # branch, and it does not merge into a `main` that moved while it ran.
+    verify = text[text.index("\n  verify:"):text.index("\n  publish:")]
+    assert "uses: ./.github/workflows/checks.yml" in verify, "the night is checked by the checks workflow"
+    assert "needs.nightly.outputs.branch" in verify, "on tonight's branch, not on main"
+    publish = text[text.index("\n  publish:"):text.index("\n  held:")]
+    assert re.search(r"needs:\s*\[nightly, verify\]", publish), "the merge waits for the checks"
+    assert '"$now" != "$BASE"' in publish, "a main that moved meanwhile is not merged into"
+    assert publish.index("gh pr merge") < publish.index("gh workflow run deploy-db.yml"), "deploy after the merge"
 
     # What a night may spend is bounded by the ceilings above and nothing
     # else: no check on other branches decides whether it runs, so a leftover

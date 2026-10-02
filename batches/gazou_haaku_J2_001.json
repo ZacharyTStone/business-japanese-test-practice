@@ -203,7 +203,8 @@
       },
       "channel": "in_person",
       "image_brief": "A meeting room at a client company. Two people in business suits stand facing each other beside a table, each holding out a small blank white card with both hands at chest height, slightly bowing toward each other, the cards passing between them. Nobody is seated; the chairs are pushed in. On the table lie two closed folders and two glasses of water. There is no pen, nobody is writing, and nothing is being signed. No reception counter is visible. No signs, logos or readable text.",
-      "scene_id": "pic_09fa4bde9a"
+      "scene_id": "pic_09fa4bde9a",
+      "model_p_correct": 1.0
     },
     {
       "id": "1a8cd70899",

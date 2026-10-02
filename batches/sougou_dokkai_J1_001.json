@@ -98,7 +98,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 1.0
     },
     {
       "id": "a151810e90",
@@ -214,7 +215,8 @@
           ]
         }
       ],
-      "channel": "written"
+      "channel": "written",
+      "model_p_correct": 1.0
     }
   ],
   "audio_manifest": [],

@@ -106,7 +106,8 @@
         }
       ],
       "scene_id": "scene_office_desk_pair",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 1.0
     },
     {
       "id": "b2498c2196",
@@ -203,7 +204,8 @@
         }
       ],
       "scene_id": "scene_client_meeting_room",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 1.0
     }
   ],
   "audio_manifest": [

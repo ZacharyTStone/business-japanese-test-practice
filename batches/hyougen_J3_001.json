@@ -61,7 +61,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.97
     },
     {
       "id": "4018d43df2",
@@ -119,7 +120,8 @@
         "options": [],
         "dialogue": []
       },
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.99
     }
   ],
   "audio_manifest": [],

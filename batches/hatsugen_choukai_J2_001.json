@@ -69,7 +69,8 @@
       "scene_id": "scene_phone_desk",
       "speaker_role": "電話を受けた社員",
       "listener_role": "取引先の担当者",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.02
     },
     {
       "id": "ee5a9788b4",
@@ -135,7 +136,8 @@
       "scene_id": "scene_office_desk_pair",
       "speaker_role": "若手社員",
       "listener_role": "直属の上司（課長）",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.89
     },
     {
       "id": "37d1093d48",
@@ -201,7 +203,8 @@
       "scene_id": "scene_reception_counter",
       "speaker_role": "来客を迎えに出た社員",
       "listener_role": "約束のある来客",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.92
     },
     {
       "id": "6c4b89f4b8",
@@ -267,7 +270,8 @@
       "scene_id": "scene_office_open_floor",
       "speaker_role": "残業している社員",
       "listener_role": "先に帰る課長",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.65
     },
     {
       "id": "5ff8b33d92",
@@ -465,7 +469,8 @@
       "scene_id": "scene_meeting_room_table",
       "speaker_role": "営業担当（若手）",
       "listener_role": "課長",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.99
     },
     {
       "id": "1a52c8f69c",
@@ -531,7 +536,8 @@
       "scene_id": "scene_restaurant_private",
       "speaker_role": "接待している自社の社員",
       "listener_role": "取引先の部長",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.42
     },
     {
       "id": "c087f1fe96",
@@ -597,7 +603,8 @@
       "scene_id": "scene_phone_desk",
       "speaker_role": "電話をかけた社員",
       "listener_role": "電話に出た取引先の社員",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.88
     },
     {
       "id": "a425ecc58c",
@@ -663,7 +670,8 @@
       "scene_id": "scene_corridor",
       "speaker_role": "後輩社員",
       "listener_role": "先輩社員",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.69
     }
   ],
   "audio_manifest": [

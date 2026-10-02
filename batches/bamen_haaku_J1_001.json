@@ -67,7 +67,8 @@
         "dialogue": []
       },
       "scene_id": "scene_expo_booth",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 1.0
     },
     {
       "id": "64619d5452",
@@ -131,7 +132,8 @@
         "dialogue": []
       },
       "scene_id": "scene_restaurant_private",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.97
     }
   ],
   "audio_manifest": [

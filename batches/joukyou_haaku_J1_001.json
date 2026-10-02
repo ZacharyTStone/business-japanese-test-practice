@@ -101,7 +101,8 @@
         }
       ],
       "scene_id": "scene_office_open_floor",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.92
     },
     {
       "id": "b7865a8ee7",
@@ -194,7 +195,8 @@
         }
       ],
       "scene_id": "scene_phone_desk",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.97
     }
   ],
   "audio_manifest": [

@@ -67,7 +67,8 @@
         "dialogue": []
       },
       "scene_id": "scene_office_open_floor",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.29
     },
     {
       "id": "32efa89696",
@@ -131,7 +132,8 @@
         "dialogue": []
       },
       "scene_id": "scene_phone_mobile_outside",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 1.0
     }
   ],
   "audio_manifest": [

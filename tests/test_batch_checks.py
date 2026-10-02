@@ -338,6 +338,17 @@ def test_default_path_does_not_overwrite(tmp_path, monkeypatch):
     assert batch.default_path("hatsugen_choukai", "J2") != first
 
 
+def _unmeasured(items):
+    """A bundle's items without the difficulty probe's measurement.
+
+    `bjt probe --all` (bjt/backfill.py) writes `model_p_correct` into a bundle
+    after it was built: a measurement of the question, not part of what a
+    person wrote, so the source never carries it and `importbatch` never writes
+    it (`batch.as_generator_shape` drops it too). The round trip compares what
+    a person wrote."""
+    return [{k: v for k, v in it.items() if k != "model_p_correct"} for it in items]
+
+
 def _as_source(bundle_item):
     """Bundle item back to the shape the generator emits."""
     it = {k: v for k, v in bundle_item.items() if k not in ("id", "audio", "correct_index")}
@@ -367,7 +378,7 @@ def test_importbatch_reproduces_the_committed_bundle(path, tmp_path, monkeypatch
     src = _source_of(path)
     assert cli.main(["importbatch", str(src), "--out", str(out)]) == 0
     rebuilt, committed = batch.load(out), batch.load(path)
-    assert rebuilt["items"] == committed["items"]
+    assert rebuilt["items"] == _unmeasured(committed["items"])
     assert rebuilt["audio_manifest"] == committed["audio_manifest"]
 
 

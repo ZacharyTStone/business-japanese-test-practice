@@ -201,7 +201,8 @@
       "scene_id": "scene_phone_desk",
       "speaker_role": "内線をかけた社員",
       "listener_role": "経理部で電話に出た社員",
-      "channel": "phone"
+      "channel": "phone",
+      "model_p_correct": 0.98
     },
     {
       "id": "22487a1794",
@@ -267,7 +268,8 @@
       "scene_id": "scene_corridor",
       "speaker_role": "後輩社員",
       "listener_role": "先輩社員",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.97
     },
     {
       "id": "43f67d1f13",
@@ -465,7 +467,8 @@
       "scene_id": "scene_office_desk_pair",
       "speaker_role": "同僚",
       "listener_role": "隣の席の同僚",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 0.12
     },
     {
       "id": "2099bba427",

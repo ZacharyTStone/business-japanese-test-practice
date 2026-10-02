@@ -138,7 +138,8 @@
         }
       ],
       "scene_id": "scene_video_call_laptop",
-      "channel": "video"
+      "channel": "video",
+      "model_p_correct": 1.0
     },
     {
       "id": "dfb5fc07a2",
@@ -273,7 +274,8 @@
         }
       ],
       "scene_id": "scene_meeting_room_table",
-      "channel": "in_person"
+      "channel": "in_person",
+      "model_p_correct": 1.0
     }
   ],
   "audio_manifest": [
