@@ -414,50 +414,83 @@ export function htmlEscape(s: string, quote: boolean = true): string {
   return out;
 }
 
-/** `textwrap.wrap(text, width)` with the defaults the pipeline uses: words
- *  split on whitespace, a word longer than the width broken at it (Japanese
- *  has no spaces, so most lines are that), widths counted in code points. */
+/** `textwrap.wrap(text, width)` with Python's defaults, step for step
+ *  (`TextWrapper._split` and `_wrap_chunks`): tabs expanded and the other
+ *  ASCII whitespace turned into spaces, the text cut into chunks on ASCII
+ *  whitespace and after the hyphen of a hyphenated word, a chunk longer than
+ *  the line broken at the width — after its last hyphen that fits, when it has
+ *  one — and widths counted in code points. Only ASCII whitespace separates
+ *  words, as in Python: a full-width space is part of the word. */
 export function wrap(text: string, width: number): string[] {
-  const words = splitWs(text.replace(/\t/g, " "));
-  const lines: string[] = [];
-  let cur: string[] = [];
-  let curLen = 0;
-  const flush = () => {
-    if (cur.length) lines.push(cur.join(" "));
-    cur = [];
-    curLen = 0;
-  };
-  for (let word of words) {
-    while (true) {
-      const space = cur.length ? 1 : 0;
-      const wl = len(word);
-      if (curLen + space + wl <= width) {
-        cur.push(word);
-        curLen += space + wl;
-        break;
-      }
-      if (cur.length) {
-        // Python's textwrap fills the rest of the line with the start of a
-        // long word only when the word does not fit on a line of its own.
-        if (wl > width) {
-          const room = width - curLen - 1;
-          if (room > 0) {
-            cur.push(slice(word, 0, room));
-            word = slice(word, room);
-          }
-        }
-        flush();
-        continue;
-      }
-      // An empty line and a word longer than it: break the word.
-      cur.push(slice(word, 0, width));
-      curLen = width;
-      word = slice(word, width);
-      flush();
-      if (word === "") break;
+  // _munge_whitespace: expandtabs(8), then each of \t\n\v\f\r becomes a space.
+  let col = 0;
+  let expanded = "";
+  for (const ch of text) {
+    if (ch === "\t") {
+      const n = 8 - (col % 8);
+      expanded += " ".repeat(n);
+      col += n;
+    } else {
+      expanded += ch;
+      col = ch === "\n" || ch === "\r" ? 0 : col + 1;
     }
   }
-  flush();
+  const munged = expanded.replace(/[\t\n\v\f\r]/g, " ");
+
+  // _split: wordsep_re, Python's pattern with its Unicode classes spelled out.
+  const ws = "[\\t\\n\\v\\f\\r ]";
+  const nws = "[^\\t\\n\\v\\f\\r ]";
+  const wp = "[\\p{L}\\p{N}_!\"'&.,?]";
+  const lt = "[\\p{L}\\p{Nl}\\p{No}_]";
+  const wordsep = new RegExp(
+    `(${ws}+` +
+      `|(?<=${wp})-{2,}(?=[\\p{L}\\p{N}_])` +
+      `|${nws}+?(?:-(?:(?<=${lt}{2}-)|(?<=${lt}-${lt}-))(?=${lt}-?${lt})|(?=${ws}|$)|(?<=${wp})(?=-{2,}[\\p{L}\\p{N}_])))`,
+    "gu",
+  );
+  const chunks: string[][] = [];
+  let at = 0;
+  for (const m of munged.matchAll(wordsep)) {
+    if (m.index > at) chunks.push([...munged.slice(at, m.index)]);
+    if (m[0]) chunks.push([...m[0]]);
+    at = m.index + m[0].length;
+  }
+  if (at < munged.length) chunks.push([...munged.slice(at)]);
+
+  // _wrap_chunks, with drop_whitespace and break_long_words on.
+  const isBlank = (c: string[]) => strip(c.join("")) === "";
+  const lines: string[] = [];
+  chunks.reverse();
+  while (chunks.length) {
+    let cur: string[][] = [];
+    let curLen = 0;
+    if (isBlank(chunks[chunks.length - 1]) && lines.length) chunks.pop();
+    while (chunks.length) {
+      const l = chunks[chunks.length - 1].length;
+      if (curLen + l <= width) {
+        cur.push(chunks.pop()!);
+        curLen += l;
+      } else break;
+    }
+    if (chunks.length && chunks[chunks.length - 1].length > width) {
+      // _handle_long_word
+      const spaceLeft = width < 1 ? 1 : width - curLen;
+      const chunk = chunks[chunks.length - 1];
+      let end = spaceLeft;
+      if (chunk.length > spaceLeft) {
+        const hyphen = chunk.slice(0, spaceLeft).lastIndexOf("-");
+        if (hyphen > 0 && chunk.slice(0, hyphen).some((c) => c !== "-")) end = hyphen + 1;
+      }
+      cur.push(chunk.slice(0, end));
+      chunks[chunks.length - 1] = chunk.slice(end);
+      curLen = cur.reduce((n, c) => n + c.length, 0);
+    }
+    if (cur.length && isBlank(cur[cur.length - 1])) {
+      curLen -= cur[cur.length - 1].length;
+      cur = cur.slice(0, -1);
+    }
+    if (cur.length) lines.push(cur.map((c) => c.join("")).join(""));
+  }
   return lines;
 }
 

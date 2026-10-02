@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import * as batch from "../bjt/batch.ts";
+import * as cli from "../bjt/cli/index.ts";
 import { Store } from "../bjt/db/index.ts";
 import * as dedupe from "../bjt/fidelity/dedupe.ts";
 import * as roles from "../bjt/fidelity/roles.ts";
@@ -45,10 +46,6 @@ function _bundleId(p: string): string {
 
 /** `[[id, path], ...]` for a parametrised sweep, named as pytest named them. */
 const byId = (paths: string[]): [string, string][] => paths.map((p) => [_bundleId(p), p]);
-
-/** Not ported yet: the CLI. Imported by a name tsc does not resolve, so this
- *  file type-checks before bjt/cli/index.ts exists. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 // ----- near-duplicate detection ------------------------------------------
 
@@ -407,10 +404,8 @@ describe("bundle round trip", () => {
 // ----- the CLI paths ------------------------------------------------------
 
 describe("the CLI paths", () => {
-  // needs bjt/cli (ported later)
-  test.skip("checkbatch exits zero on the reference bundle", async () => {
+  test("checkbatch exits zero on the reference bundle", async () => {
     const cap = capture();
-    const cli: any = await import(CLI_MODULE);
     expect(await cli.main({ argv: ["checkbatch", REFERENCE] })).toBe(0);
     expect(cap.readouterr().out).toContain("SHIPPABLE");
   });
@@ -420,9 +415,7 @@ describe("the CLI paths", () => {
    *
    *  Only the hand-written bundles — the nightly job's have no source to drift
    *  from. See HAND_WRITTEN. */
-  // needs bjt/cli (ported later)
-  test.skip.each(byId(HAND_WRITTEN))("importbatch reproduces the committed bundle [%s]", async (_id, p) => {
-    const cli: any = await import(CLI_MODULE);
+  test.each(byId(HAND_WRITTEN))("importbatch reproduces the committed bundle [%s]", async (_id, p) => {
     const tmp = tmpPath();
     setConfig({ DB_PATH: path.join(tmp, "t.db") });
     const out = path.join(tmp, "rebuilt.json");
@@ -433,9 +426,7 @@ describe("the CLI paths", () => {
     expect(rebuilt["audio_manifest"]).toEqual(committed["audio_manifest"]);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("importbatch rejects an unknown seed cell", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("importbatch rejects an unknown seed cell", async () => {
     const tmp = tmpPath();
     setConfig({ DB_PATH: path.join(tmp, "t.db") });
     const src = JSON.parse(readFileSync(_sourceOf(REFERENCE), "utf8"));
@@ -446,9 +437,7 @@ describe("the CLI paths", () => {
     expect(await cli.main({ argv: ["importbatch", p, "--out", path.join(tmp, "o.json")] })).toBe(1);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("importbatch marks the cells used", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("importbatch marks the cells used", async () => {
     const tmp = tmpPath();
     setConfig({ DB_PATH: path.join(tmp, "t.db") });
     const src = _sourceOf(REFERENCE);

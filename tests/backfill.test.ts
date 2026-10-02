@@ -11,6 +11,7 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 import * as backfill from "../bjt/backfill.ts";
 import * as batch from "../bjt/batch.ts";
+import * as cli from "../bjt/cli/index.ts";
 import * as config from "../bjt/config.ts";
 import * as answerability from "../bjt/fidelity/answerability.ts";
 import * as difficulty from "../bjt/fidelity/difficulty.ts";
@@ -27,10 +28,6 @@ type Item = Record<string, any>;
 const ROOT = path.resolve(import.meta.dirname, "..");
 /** Two small committed bundles, two live items each, in this order on disk. */
 const SHELVES = ["hyougen_J3_001.json", "sougou_dokkai_J1_001.json"] as const;
-
-/** Not ported yet: the CLI. Imported by a name tsc does not resolve, so this
- *  file type-checks before bjt/cli/index.ts exists. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 /** `bank`: the two bundles in a batches/ of their own, with no rates and
  *  nothing withdrawn, and a fresh spend ledger: a bank the tests may write to. */
@@ -89,9 +86,7 @@ function measured(): string[] {
 // ----- the probe ----------------------------------------------------------------
 
 describe("the probe", () => {
-  // needs bjt/cli (ported later)
-  test.skip("the whole bank is counted before anything is spent", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the whole bank is counted before anything is spent", async () => {
     const cap = capture();
     patch(difficulty, "measure", async () => {
       throw new Error("--dry-run must not reach the model");
@@ -117,9 +112,7 @@ describe("the probe", () => {
 
   /** Three items' allowance for four items: the first bundle is written whole,
    *  the second with the one item it got to, and the run says it stopped. */
-  // needs bjt/cli (ported later)
-  test.skip("a run stopped by its ceiling keeps what it measured", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("a run stopped by its ceiling keeps what it measured", async () => {
     const tmp = tmpPath();
     const d = bank();
     measured();
@@ -137,9 +130,7 @@ describe("the probe", () => {
     expect(text.includes("call ceiling reached") && text.includes("What it cost")).toBe(true);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the next run resumes where the last one stopped", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the next run resumes where the last one stopped", async () => {
     const d = bank();
     const seen = measured();
     setConfig({ RUN_MAX_CALLS: 3 });
@@ -155,9 +146,7 @@ describe("the probe", () => {
     expect(seen.length).toBe(4);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("a withdrawn item is never measured", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("a withdrawn item is never measured", async () => {
     const d = bank();
     const seen = measured();
     const victim = batch.load(path.join(d, SHELVES[0]))["items"][0];
@@ -171,9 +160,7 @@ describe("the probe", () => {
     expect(readFileSync(_sqlOf(d, SHELVES[0]), "utf8")).toContain("is_published = 0");
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("an unreachable model stops the pass and writes nothing", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("an unreachable model stops the pass and writes nothing", async () => {
     const d = bank();
     const cap = capture();
     const calls: number[] = [];
@@ -195,14 +182,12 @@ describe("the probe", () => {
     expect(cap.readouterr().out).toContain("could not be reached for 3 items in a row");
   });
 
-  // needs bjt/cli (ported later)
-  test.skip.each([
+  test.each([
     [["probe"]],                                               // nothing named
     [["probe", "--all", "batches/hyougen_J3_001.json"]],       // both
     [["probe", "batches/hyougen_J3_001.source.json"]],         // a source file
     [["probe", "batches/no_such_bundle.json"]],                // nothing there
   ])("a probe that cannot mean anything is refused %j", async (argv) => {
-    const cli: any = await import(CLI_MODULE);
     const cap = capture();
     expect(await cli.main({ argv })).toBe(2);
     expect(cap.readouterr().err).toBeTruthy();
@@ -281,9 +266,7 @@ function reviewers(d: string): Reviewers {
 }
 
 describe("the regate", () => {
-  // needs bjt/cli (ported later)
-  test.skip("the regate dry run counts the calls and spends nothing", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the regate dry run counts the calls and spends nothing", async () => {
     const cap = capture();
     const explode = async (): Promise<never> => {
       throw new Error("--dry-run must not reach a model");
@@ -308,9 +291,7 @@ describe("the regate", () => {
     }
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("every verdict is written down and the failures are proposed", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("every verdict is written down and the failures are proposed", async () => {
     const d = bank();
     const r = reviewers(d);
     const cap = capture();
@@ -338,9 +319,7 @@ describe("the regate", () => {
     expect(out.split(`  ${ids[1]}  unnatural`).length - 1).toBe(1);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("withdraw appends the proposals and publishes them", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("withdraw appends the proposals and publishes them", async () => {
     const d = bank();
     reviewers(d);
     capture();
@@ -372,9 +351,7 @@ describe("the regate", () => {
     expect(readFileSync(path.join(d, withdrawn.LEDGER_NAME), "utf8")).toBe(after);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("a regate stopped by its ceiling carries on where it stopped", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("a regate stopped by its ceiling carries on where it stopped", async () => {
     const d = bank();
     const r = reviewers(d);
     capture();
@@ -390,9 +367,7 @@ describe("the regate", () => {
     expect([...regate.loadRegated().keys()]).toEqual(_ids(d));
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("an outage decides nothing", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("an outage decides nothing", async () => {
     const d = bank();
     const r = reviewers(d);
     capture();
@@ -405,9 +380,7 @@ describe("the regate", () => {
     expect(withdrawn.load()).toEqual({});
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("a gate that could not answer every trial decides nothing", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("a gate that could not answer every trial decides nothing", async () => {
     const d = bank();
     const r = reviewers(d);
     capture();
@@ -416,9 +389,7 @@ describe("the regate", () => {
     expect(regate.loadRegated().has(_ids(d)[0])).toBe(false);
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("an overruled or withdrawn question is left alone", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("an overruled or withdrawn question is left alone", async () => {
     const d = bank();
     const r = reviewers(d);
     capture();

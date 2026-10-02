@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import * as batch from "../bjt/batch.ts";
+import * as cli from "../bjt/cli/index.ts";
 import * as config from "../bjt/config.ts";
 import { loadSeedJson } from "../bjt/generators/base.ts";
 import { dumps } from "../bjt/pyjson.ts";
@@ -12,10 +13,6 @@ import * as withdrawn from "../bjt/withdrawn.ts";
 import { capture, setConfig, tmpPath } from "./helpers.ts";
 
 type Item = Record<string, any>;
-
-/** Not ported yet: the CLI. Imported by a name tsc does not resolve, so this
- *  file type-checks before bjt/cli/index.ts exists. */
-const CLI_MODULE = "../bjt/cli/index.ts";
 
 describe("seeds", () => {
   test("examples come from the batches in the generators shape", () => {
@@ -95,9 +92,7 @@ describe("seeds", () => {
     expect(seeds.bootstrap({ seedsDir: target }).skipped).toBeFalsy();
   });
 
-  // needs bjt/cli (ported later)
-  test.skip("the cli bootstraps and reports", async () => {
-    const cli: any = await import(CLI_MODULE);
+  test("the cli bootstraps and reports", async () => {
     const cap = capture();
     setConfig({ SEEDS_DIR: path.join(tmpPath(), "seeds") });
     expect(await cli.main({ argv: ["seeds", "--bootstrap"] })).toBe(0);
