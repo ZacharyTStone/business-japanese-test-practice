@@ -1,0 +1,399 @@
+{
+  "bundle_version": 2,
+  "item_type": "shiryou_choudokkai",
+  "level": "J3",
+  "generated_at": "2026-10-02T04:41:14+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "81a2e12c4c",
+      "item_type": "shiryou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "schedule_sheet+junior_to_senior+find_the_conflict@J3",
+        "setting": "schedule_sheet",
+        "relation": "junior_to_senior",
+        "function": "find_the_conflict",
+        "level": "J3",
+        "channel": "phone"
+      },
+      "topic": "予定表の重複予約を電話で確認する",
+      "stem": "後輩が予定表を見ながら先輩に電話でこう尋ねました。先輩「15日10時、ABC商事さんとみどり産業さんが重なっていますね。みどり産業さんとはもう16日の13時に変更してもらいました。かえで商会さんは17日に延期になったので、16日は空いています。」みどり産業と実際に会うのはいつですか。",
+      "options": [
+        {
+          "text": "10月14日10時",
+          "role": "reads_wrong_row",
+          "why": "同じ第2応接室が使われるABC商事の別日の行で、みどり産業とは無関係の時間帯。"
+        },
+        {
+          "text": "10月15日10時",
+          "role": "ignores_the_spoken_change",
+          "why": "予定表に元々書かれていた重複中の時間で、変更後の時間を反映していない。"
+        },
+        {
+          "text": "10月17日",
+          "role": "wrong_timeframe",
+          "why": "これはかえで商会が延期になった日で、みどり産業の約束が移った日ではない。"
+        },
+        {
+          "text": "10月16日13時",
+          "role": "correct",
+          "why": "先輩の発言で、重複していたみどり産業との約束は16日13時に変更されたと述べられている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "予定表では15日10時にABC商事とみどり産業の予約が重複している。先輩の電話で、みどり産業との約束は16日13時に変更されたと分かる。10月15日10時は変更前の値で誤り、10月14日10時はABC商事の別行を読み違えたもの、10月17日はかえで商会が延期になった日であり、みどり産業とは関係ない。予定表だけでは変更後の時間が分からず、電話だけではどの予約が重複していたか分からない。",
+      "explanation_en": "The sheet shows a double booking; the call reveals which appointment moved and to when, while the other date belongs to a different client's postponement.",
+      "vocab_notes": [
+        {
+          "term": "重複",
+          "reading": "じゅうふく",
+          "meaning": "duplication/overlap"
+        },
+        {
+          "term": "延期",
+          "reading": "えんき",
+          "meaning": "postponement"
+        },
+        {
+          "term": "応接室",
+          "reading": "おうせつしつ",
+          "meaning": "reception room"
+        }
+      ],
+      "audio": {
+        "narration": "e47e027fd06a1501",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "来客対応 予定表",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "10月14日(月)～10月16日(水)"
+            },
+            {
+              "label": "作成者",
+              "value": "後輩 中村"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "日付",
+                "時間",
+                "訪問先",
+                "場所"
+              ],
+              "rows": [
+                [
+                  "10/14(月)",
+                  "10:00",
+                  "ABC商事",
+                  "第2応接室"
+                ],
+                [
+                  "10/14(月)",
+                  "14:00",
+                  "さくら工業",
+                  "本社ロビー（元は第1会議室）"
+                ],
+                [
+                  "10/15(火)",
+                  "10:00",
+                  "ABC商事",
+                  "第2応接室"
+                ],
+                [
+                  "10/15(火)",
+                  "10:00",
+                  "みどり産業",
+                  "第1応接室"
+                ],
+                [
+                  "10/16(水)",
+                  "13:00",
+                  "かえで商会",
+                  "第3応接室"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "model_p_correct": 1.0
+    },
+    {
+      "id": "1d7ad8bafa",
+      "item_type": "shiryou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "quotation+peer_to_peer+choose_the_option@J3",
+        "setting": "quotation",
+        "relation": "peer_to_peer",
+        "function": "choose_the_option",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "展示会ノベルティの発注先を選ぶ",
+      "stem": "見積書を見ながら、同僚がこう言いました。「展示会は10月9日で、できれば早めに届いてほしいんですが、とにかくそれまでに間に合えば大丈夫です。予算は1個500円以内で、今回は250個以上まとめて発注します。さっき確認したら、タンブラーは単価が上がって550円になるそうです。」条件に合う品はどれですか。",
+      "options": [
+        {
+          "text": "ノベルティペン",
+          "role": "correct",
+          "why": "180円で予算内、数量300本で250個以上、納期10月5日で展示会に間に合う。"
+        },
+        {
+          "text": "トートバッグ",
+          "role": "reads_wrong_row",
+          "why": "単価460円・納期10月8日は条件に合うが、数量が150枚で250個に届かない。"
+        },
+        {
+          "text": "タンブラー",
+          "role": "ignores_the_spoken_change",
+          "why": "資料の480円のまま考えれば条件に合うように見えるが、実際は550円に値上がりしており予算をオーバーする。"
+        },
+        {
+          "text": "メモ帳",
+          "role": "surface_keyword_match",
+          "why": "納期10月3日で「早めに」という言葉に合うが、数量200冊で250個以上という条件を満たさない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "条件は「500円以内」「10月9日までに間に合う」「250個以上」の三つ。資料だけを見るとタンブラーも480円で条件を満たすように見えるが、同僚の発言で単価が550円に上がったと分かり除外される。トートバッグとメモ帳は数量が250個に届かず不合格。ノベルティペンだけが単価・数量・納期のすべてを満たす。資料だけでは値上げが分からず、話だけでは各品の単価・数量・納期が分からないため、両方を照らし合わせないと答えが決まらない。",
+      "explanation_en": "Only the pen meets all three spoken conditions once the tumbler's spoken price hike is applied; the other two fail on quantity alone.",
+      "vocab_notes": [
+        {
+          "term": "予算",
+          "reading": "よさん",
+          "meaning": "budget"
+        },
+        {
+          "term": "まとめて発注",
+          "reading": "まとめてはっちゅう",
+          "meaning": "to place a bulk order"
+        }
+      ],
+      "audio": {
+        "narration": "26c0ddb3c98e8b61",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "quote_order",
+          "title": "展示会ノベルティ 見積書",
+          "meta": [
+            {
+              "label": "宛先",
+              "value": "営業部 販促担当者様"
+            },
+            {
+              "label": "発行者",
+              "value": "ノベルティ工房 営業部 高橋"
+            },
+            {
+              "label": "発行日",
+              "value": "9月20日"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "品名",
+                "単価",
+                "数量",
+                "納期"
+              ],
+              "rows": [
+                [
+                  "ノベルティペン",
+                  "180円",
+                  "300本",
+                  "10月5日"
+                ],
+                [
+                  "タンブラー",
+                  "480円",
+                  "100個",
+                  "10月10日"
+                ],
+                [
+                  "トートバッグ",
+                  "460円",
+                  "150枚",
+                  "10月8日"
+                ],
+                [
+                  "メモ帳",
+                  "220円",
+                  "200冊",
+                  "10月3日"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    },
+    {
+      "id": "4f749dbe58",
+      "item_type": "shiryou_choudokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "video_shared_doc+peer_to_peer+find_the_date@J3",
+        "setting": "video_shared_doc",
+        "relation": "peer_to_peer",
+        "function": "find_the_date",
+        "level": "J3",
+        "channel": "video"
+      },
+      "topic": "倉庫予約の重なりと延期連絡",
+      "stem": "同僚がオンライン会議で予定表を画面に映しながらこう言いました。「4日の第一倉庫、C社さんとB社さんが重なっている件ですが、C社さんの納品はけっきょく延期になって、D社さんと同じ日に入ることになりました。場所は第一倉庫のまま変わりません。」C社の納品はいつになりますか。",
+      "options": [
+        {
+          "text": "10月4日",
+          "role": "ignores_the_spoken_change",
+          "why": "予定表に元々書かれている仮予約の日付で、口頭で延期になったことを反映していない。"
+        },
+        {
+          "text": "10月2日",
+          "role": "reads_wrong_row",
+          "why": "隣のA社の納品立会いの日付で、C社の行ではない。"
+        },
+        {
+          "text": "10月9日",
+          "role": "correct",
+          "why": "C社の納品はD社と同じ日に延期されたと話されており、予定表でD社の行は10月9日にあたる。"
+        },
+        {
+          "text": "9月30日",
+          "role": "wrong_timeframe",
+          "why": "これは同じC社の検品がすでに完了した日付で、これから行う納品立会いの日ではない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "予定表では10月4日に第一倉庫でB社とC社の予定が重なっており、C社は「仮」とされている。話し手はこの重なりを解消するため、C社の納品をD社と同じ日、つまり10月9日に延期すると伝えている。10月4日は延期前の資料の値のままで誤り。9月30日はC社の別の作業（検品）の完了日であり、これから行う納品とは別物。10月2日はA社の行を誤って読んだもの。資料だけでは重なりの解消先が分からず、音声だけではD社の日付が10月9日だと分からない。",
+      "explanation_en": "The chart shows a double booking on the 4th; the colleague resolves it by moving C's delivery to the same date as D's slot, October 9.",
+      "vocab_notes": [
+        {
+          "term": "納品立会い",
+          "reading": "のうひんたちあい",
+          "meaning": "attending a delivery to confirm receipt"
+        },
+        {
+          "term": "仮予約",
+          "reading": "かりよやく",
+          "meaning": "provisional reservation"
+        }
+      ],
+      "audio": {
+        "narration": "fbafa2ed5f38fdc8",
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "10月 納品立会い予定表",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "9月30日（土）〜10月9日（月）"
+            },
+            {
+              "label": "作成者",
+              "value": "総務部 中村"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "日付",
+                "内容",
+                "場所",
+                "担当"
+              ],
+              "rows": [
+                [
+                  "9月30日（土）",
+                  "C社 検品（完了）",
+                  "第一倉庫",
+                  "高橋"
+                ],
+                [
+                  "10月2日（月）",
+                  "A社 納品立会い",
+                  "本社倉庫",
+                  "佐藤"
+                ],
+                [
+                  "10月4日（水）",
+                  "B社 納品立会い",
+                  "第一倉庫",
+                  "鈴木"
+                ],
+                [
+                  "10月4日（水）",
+                  "C社 納品立会い（仮）",
+                  "第一倉庫",
+                  "高橋"
+                ],
+                [
+                  "10月9日（月）",
+                  "D社 納品立会い",
+                  "第二倉庫",
+                  "佐藤"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "video",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "e47e027fd06a1501",
+      "item_id": "81a2e12c4c",
+      "kind": "narration",
+      "index": null,
+      "text": "後輩が予定表を見ながら先輩に電話でこう尋ねました。先輩「15日10時、ABC商事さんとみどり産業さんが重なっていますね。みどり産業さんとはもう16日の13時に変更してもらいました。かえで商会さんは17日に延期になったので、16日は空いています。」みどり産業と実際に会うのはいつですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "26c0ddb3c98e8b61",
+      "item_id": "1d7ad8bafa",
+      "kind": "narration",
+      "index": null,
+      "text": "見積書を見ながら、同僚がこう言いました。「展示会は10月9日で、できれば早めに届いてほしいんですが、とにかくそれまでに間に合えば大丈夫です。予算は1個500円以内で、今回は250個以上まとめて発注します。さっき確認したら、タンブラーは単価が上がって550円になるそうです。」条件に合う品はどれですか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fbafa2ed5f38fdc8",
+      "item_id": "4f749dbe58",
+      "kind": "narration",
+      "index": null,
+      "text": "同僚がオンライン会議で予定表を画面に映しながらこう言いました。「4日の第一倉庫、C社さんとB社さんが重なっている件ですが、C社さんの納品はけっきょく延期になって、D社さんと同じ日に入ることになりました。場所は第一倉庫のまま変わりません。」C社の納品はいつになりますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_phone_desk"
+  ]
+}

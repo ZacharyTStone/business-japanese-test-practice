@@ -209,8 +209,14 @@ def work_order(
     budget: int = DEFAULT_BUDGET,
     per_slot: int = DEFAULT_PER_SLOT,
     reading_min: int = DEFAULT_READING_MIN,
+    resting: Iterable[tuple[str, str]] = (),
 ) -> list[WorkItem]:
     """Fill the shelf furthest behind its share, until the budget runs out.
+
+    A shelf in `resting` — one that has written nothing night after night
+    (bjt/shelf_rest.py) — is passed over, and its share of the night goes to
+    the next shelf behind, so a shelf the generator cannot write does not take
+    every night's budget.
 
     Two passes of the same greedy rule. The first hands `reading_min` items to
     the reading shelves alone (furthest behind first among them); the second
@@ -223,7 +229,8 @@ def work_order(
     same plan, which is what makes it reviewable before it is executed.
     """
     assigned: dict[tuple[str, str], int] = {}
-    shelves = list(survey_result.shelves)
+    resting = set(resting)
+    shelves = [s for s in survey_result.shelves if (s.item_type, s.level) not in resting]
     budget = max(budget, 0)
 
     def by_type(item_type: str) -> int:
@@ -298,7 +305,8 @@ def work_order(
     ]
 
 
-def to_json(survey_result: Survey, order: list[WorkItem]) -> dict:
+def to_json(survey_result: Survey, order: list[WorkItem],
+            resting: Optional[dict] = None) -> dict:
     return {
         "shelves": [
             {
@@ -327,6 +335,10 @@ def to_json(survey_result: Survey, order: list[WorkItem]) -> dict:
         ],
         "planned_items": sum(w.n for w in order),
         "reading_items": sum(w.n for w in order if w.item_type in schemas.READING_TYPES),
+        "resting": [
+            {"item_type": t, "level": lvl, "until": until.isoformat()}
+            for (t, lvl), until in sorted((resting or {}).items())
+        ],
     }
 
 
@@ -354,8 +366,11 @@ def difficulty_coverage() -> tuple[int, int]:
     return have, total
 
 
-def render(survey_result: Survey, order: list[WorkItem]) -> str:
-    """The work order as something a person reads before approving it."""
+def render(survey_result: Survey, order: list[WorkItem],
+           resting: Optional[dict] = None) -> str:
+    """The work order as something a person reads before approving it.
+    `resting` (shelf → when it is tried again) says which shelves the order
+    passed over, and why."""
     lines: list[str] = []
     lines.append("The bank, shelf by shelf (items published / seed cells left)")
     lines.append("")
@@ -390,8 +405,16 @@ def render(survey_result: Survey, order: list[WorkItem]) -> str:
         )
     lines.append("")
 
+    if resting:
+        lines.append("Resting tonight — nothing written on their last nights, so the "
+                     "budget goes elsewhere (bjt/shelf_rest.py):")
+        for (item_type, level), until in sorted(resting.items()):
+            lines.append(f"   {item_type} {level}   tried again from {until:%Y-%m-%d}")
+        lines.append("")
+
     if not order:
-        lines.append("Nothing to write: every shelf is out of seed cells.")
+        lines.append("Nothing to write: every shelf is out of seed cells"
+                     + (" or resting." if resting else "."))
         return "\n".join(lines)
 
     reading = sum(w.n for w in order if w.item_type in schemas.READING_TYPES)

@@ -196,6 +196,15 @@ SCENE_ATTEMPTS = int(_env("BJT_SCENE_ATTEMPTS", "3"))
 # no stand-in: after this many its item stays unserved, and the summary says so.
 SCENE_LIFETIME_ATTEMPTS = int(_env("BJT_SCENE_LIFETIME_ATTEMPTS", "6"))
 
+# A shelf that has written nothing on this many nights in a row rests: the
+# work order passes it over for SHELF_REST_DAYS after its last miss, then tries
+# it once more (bjt/shelf_rest.py). Counted in the bucket, like the picture
+# refusals above. Without it, a shelf the generator cannot write stays furthest
+# behind and takes every night's budget: from 2026-09-28 three nights in a row
+# spent theirs on the same three shelves and wrote nothing. 0 turns it off.
+SHELF_REST_AFTER = int(_env("BJT_SHELF_REST_AFTER", "3"))
+SHELF_REST_DAYS = float(_env("BJT_SHELF_REST_DAYS", "7"))
+
 # The most per-item pictures one run may draft. A picture costs an image call
 # and a handful of vision calls per draft, so a night that found forty new
 # 画像把握 items in the tree must not draw forty pictures. Four is a night.

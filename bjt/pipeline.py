@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from . import batch as batchmod
-from . import config, publish, seedtable
+from . import config, publish, seedtable, shelf_rest
 from . import llm as llmmod
 from .fidelity import answerability, dedupe, difficulty, sanity, vocab
 from .generators import get_generator
@@ -385,6 +385,11 @@ class NightResult:
     failures: list[str] = field(default_factory=list)
     #: Why the run ended before its work order did, when it did.
     stopped: Optional[str] = None
+    #: (item type, level, outcome) for every shelf the night finished with:
+    #: `written` if it kept anything, `missed` if it tried and kept nothing.
+    #: A shelf a ceiling or the account stopped is not here — that was not
+    #: the shelf (bjt/shelf_rest.py).
+    outcomes: list[tuple[str, str, str]] = field(default_factory=list)
 
 
 def run_night(store, order, *, gate: bool = True, sanity_check: bool = True) -> NightResult:
@@ -411,6 +416,8 @@ def run_night(store, order, *, gate: bool = True, sanity_check: bool = True) -> 
             print(f"  stopping the run: {e}", file=sys.stderr)
             path, kept = e.path, e.kept
             night.stopped = str(e)
+            if path is not None:
+                night.outcomes.append((w.item_type, w.level, shelf_rest.WRITTEN))
             night.failures.append(
                 f"{w.item_type} {w.level} (stopped at {kept} of {w.n}) and everything after it: {e}")
         except LLMBillingError as e:
@@ -424,6 +431,10 @@ def run_night(store, order, *, gate: bool = True, sanity_check: bool = True) -> 
             # wrote, checked and reviewable.
             print(f"  skipped: {e}", file=sys.stderr)
             night.failures.append(f"{w.item_type} {w.level}: {e}")
+            # A generator the API refuses is the shelf's fault; missing seed
+            # files are the runner's, and say nothing about the shelf.
+            if isinstance(e, LLMError):
+                night.outcomes.append((w.item_type, w.level, shelf_rest.MISSED))
             continue
         finally:
             # The bill so far, after every shelf, so the log says where the
@@ -434,10 +445,13 @@ def run_night(store, order, *, gate: bool = True, sanity_check: bool = True) -> 
         if path is None:
             if night.stopped is None:
                 night.failures.append(f"{w.item_type} {w.level}: nothing passed the gates")
+                night.outcomes.append((w.item_type, w.level, shelf_rest.MISSED))
         else:
             sql, _ = publish.publish_bundle(path)
             print(f"  SQL → {sql}")
             night.written.append((w.item_type, w.level, kept, path))
+            if night.stopped is None:
+                night.outcomes.append((w.item_type, w.level, shelf_rest.WRITTEN))
         if night.stopped is not None:
             break
     return night

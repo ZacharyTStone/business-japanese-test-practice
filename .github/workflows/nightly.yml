@@ -213,7 +213,14 @@ jobs:
 
       # ---------------------------------------------------------- the survey
 
+      # The R2 pair lets the plan read the shelf ledger (bjt/shelf_rest.py), so
+      # it shows the order tonight will actually run: a shelf that has written
+      # nothing night after night is passed over, and the plan says so.
       - name: what the bank needs next
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           {
             echo '## The bank tonight'
@@ -418,6 +425,11 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          # The shelf ledger: read to rest a shelf that keeps writing nothing,
+          # and written with what each shelf did tonight (bjt/shelf_rest.py).
+          R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --summary summary.md
 
       # The manual alternative to the step above: the difficulty prior the

@@ -1,0 +1,635 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choudokkai",
+  "level": "J1",
+  "generated_at": "2026-10-02T04:41:14+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "23fd538a62",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "handover+other_department+reconcile_document@J1",
+        "setting": "handover",
+        "relation": "other_department",
+        "function": "reconcile_document",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "システム移行案件の引き継ぎ",
+      "stem": "データ移行の開始予定は、いつからになりましたか。",
+      "options": [
+        {
+          "text": "9月15日から",
+          "role": "stated_by_wrong_speaker",
+          "why": "経理部担当者がそう確認しているが、それはテスト環境構築の予定日であり、システム部担当者がその場で訂正している。"
+        },
+        {
+          "text": "10月8日から",
+          "role": "correct",
+          "why": "システム部担当者が、ベンダー側の人員不足でデータ移行の開始自体が1週間遅れ、10月8日からになったと明言している。"
+        },
+        {
+          "text": "10月1日から",
+          "role": "combines_wrong_pair",
+          "why": "報告書に書かれた当初の予定日のままで、会話で述べられたベンダー都合の1週間遅れを反映していない。"
+        },
+        {
+          "text": "10月15日から",
+          "role": "unsupported_but_plausible",
+          "why": "さらなる遅れとしてありそうな日付だが、会話にも報告書にも述べられていない。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "報告書ではデータ移行の開始予定は10月1日となっているが、会話でテスト環境構築の完了後、ベンダー側の人員不足によりデータ移行の開始自体が1週間遅れて10月8日になったと分かる。9月15日はテスト環境構築の予定日であり、経理部担当者が誤って結び付けたものをシステム部担当者が訂正している。10月15日はさらに遅れた場合の推測に過ぎず、根拠がない。報告書だけでは遅れが分からず、会話だけでは元の予定日が分からないため、両方を突き合わせないと正しい日付は選べない。",
+      "explanation_en": "The report lists an original start date; the conversation reveals a one-week vendor delay that pushes it back, and a colleague's misattributed date is corrected on the spot.",
+      "vocab_notes": [
+        {
+          "term": "検収",
+          "reading": "けんしゅう",
+          "meaning": "acceptance inspection"
+        },
+        {
+          "term": "人員不足",
+          "reading": "じんいんぶそく",
+          "meaning": "staff shortage"
+        },
+        {
+          "term": "引き継ぎ",
+          "reading": "ひきつぎ",
+          "meaning": "handover"
+        }
+      ],
+      "audio": {
+        "narration": "c16863511b844dc7",
+        "options": [],
+        "dialogue": [
+          "2b02bce288b43518",
+          "7afb4b86ec8df75b",
+          "3e61351755a4c0b7",
+          "894530015214ebfd",
+          "1febbc2c24f4b404",
+          "9cdc1f38f6cd06a5"
+        ]
+      },
+      "documents": [
+        {
+          "template": "progress_report",
+          "title": "顧客管理システム移行 進捗報告書",
+          "meta": [
+            {
+              "label": "報告者",
+              "value": "システム部 保田"
+            },
+            {
+              "label": "報告日",
+              "value": "9月20日"
+            },
+            {
+              "label": "案件",
+              "value": "顧客管理システム移行（経理部向け）"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "caption": "作業マイルストーン",
+              "columns": [
+                "項目",
+                "状況",
+                "予定日"
+              ],
+              "rows": [
+                [
+                  "要件定義",
+                  "完了",
+                  "8月31日"
+                ],
+                [
+                  "テスト環境構築",
+                  "遅延中",
+                  "9月15日"
+                ],
+                [
+                  "データ移行",
+                  "未着手",
+                  "10月1日開始"
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "システム部担当者",
+          "text": "この報告書の通り、データ移行は十月一日開始の予定でした。",
+          "clip_id": "2b02bce288b43518"
+        },
+        {
+          "speaker_role": "経理部担当者",
+          "text": "テスト環境の構築が九月十五日に終わる予定でしたが、それは今どうなっていますか。",
+          "clip_id": "7afb4b86ec8df75b"
+        },
+        {
+          "speaker_role": "システム部担当者",
+          "text": "先週ようやく完了しました。ただ、ベンダー側の人員不足で、データ移行の開始自体が一週間遅れて十月八日からになりました。",
+          "clip_id": "3e61351755a4c0b7"
+        },
+        {
+          "speaker_role": "経理部担当者",
+          "text": "では、データ移行は九月十五日からということですね？",
+          "clip_id": "894530015214ebfd"
+        },
+        {
+          "speaker_role": "システム部担当者",
+          "text": "いえ、九月十五日はテスト環境の予定日です。データ移行の開始は十月八日です。",
+          "clip_id": "1febbc2c24f4b404"
+        },
+        {
+          "speaker_role": "経理部担当者",
+          "text": "承知しました。十月八日から準備します。",
+          "clip_id": "9cdc1f38f6cd06a5"
+        }
+      ],
+      "scene_id": "scene_office_desk_pair",
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    },
+    {
+      "id": "2bb7e73bae",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "project_meeting+peer_to_peer+summarise_outcome@J1",
+        "setting": "project_meeting",
+        "relation": "peer_to_peer",
+        "function": "summarise_outcome",
+        "level": "J1",
+        "channel": "in_person"
+      },
+      "topic": "新製品発表会の会場と業者決定",
+      "stem": "会場と仕出し業者は、結局どうなりましたか。",
+      "options": [
+        {
+          "text": "会場は同僚Bの提案でBホールに変更され、仕出し業者はX社に決定した。",
+          "role": "stated_by_wrong_speaker",
+          "why": "Bホールを押さえて報告したのは同僚Aであり、同僚Bが提案したという事実はない。"
+        },
+        {
+          "text": "会場はBホールに変更され、仕出し業者は同僚Bが決定した。",
+          "role": "wrong_action_owner",
+          "why": "仕出し業者をX社に決めたのは山田であり、同僚Bではない。"
+        },
+        {
+          "text": "会場はBホールに変更され、仕出し業者はX社に決定した。",
+          "role": "correct",
+          "why": "Aホールが使えなくなったためBホールに変更され、未定だった仕出し業者は山田がX社に決めたと会話で述べられている。"
+        },
+        {
+          "text": "会場はAホールのままで、仕出し業者はX社に決定した。",
+          "role": "combines_wrong_pair",
+          "why": "仕出し業者の決定は会話の内容だが、会場は議事録どおりAホールのままとしており、変更の事実が反映されていない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "議事録では会場はAホールに決定済み、仕出し業者は未定のまま次回検討とされていた。会話で、Aホールが改装工事のため使えなくなり同僚AがBホールを押さえたこと、仕出し業者は山田がX社に決めたことが分かる。議事録だけでは変更を知りえず、会話だけでは元の会場が分からないため、両方を突き合わせて初めて結論が定まる。combines_wrong_pairは会場だけ古い情報のまま、wrong_action_ownerは決定者を取り違え、stated_by_wrong_speakerは提案者を取り違えている。",
+      "explanation_en": "The minutes fix the venue and leave the caterer open; the conversation reverses this: the venue changes due to renovation while the caterer is settled, and only combining both sources gives the true outcome.",
+      "vocab_notes": [
+        {
+          "term": "仕出し業者",
+          "reading": "しだしぎょうしゃ",
+          "meaning": "catering vendor"
+        },
+        {
+          "term": "押さえる",
+          "reading": "おさえる",
+          "meaning": "to reserve/secure (a venue)"
+        }
+      ],
+      "audio": {
+        "narration": "89720e51a9160978",
+        "options": [],
+        "dialogue": [
+          "ca8e43d4b5d3cad6",
+          "260597879e7e88df",
+          "0bf957ed219656f3",
+          "28346885e5f18f68",
+          "fd85153bd6e5a2f1",
+          "11e96cb2010d343e"
+        ]
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "新製品発表会 会場・準備 打ち合わせ 議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "9月5日（木）10時〜11時"
+            },
+            {
+              "label": "場所",
+              "value": "第二会議室"
+            },
+            {
+              "label": "出席者",
+              "value": "同僚A、同僚B、山田"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "numbered",
+              "items": [
+                "会場はAホールに決定。",
+                "予算は50万円以内とする。",
+                "仕出し業者は未定。次回までに検討する。"
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "同僚A",
+          "text": "議事録では会場はAホールに決まっていましたが、先週連絡があって、Aホールは改装工事で使えなくなったそうです。",
+          "clip_id": "ca8e43d4b5d3cad6"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "それは困りますね。代わりの案はあるんですか。",
+          "clip_id": "260597879e7e88df"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "Bホールを押さえました。広さも予算内に収まります。",
+          "clip_id": "0bf957ed219656f3"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "分かりました。仕出し業者はどうなりましたか。議事録では未定のままでしたが。",
+          "clip_id": "28346885e5f18f68"
+        },
+        {
+          "speaker_role": "同僚A",
+          "text": "それは山田さんがX社に決めたと聞いています。",
+          "clip_id": "fd85153bd6e5a2f1"
+        },
+        {
+          "speaker_role": "同僚B",
+          "text": "では、会場と仕出し、両方とも決まったということですね。",
+          "clip_id": "11e96cb2010d343e"
+        }
+      ],
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    },
+    {
+      "id": "dc756cc425",
+      "item_type": "sougou_choudokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "video_review+superior_to_subordinate+reconcile_document@J1",
+        "setting": "video_review",
+        "relation": "superior_to_subordinate",
+        "function": "reconcile_document",
+        "level": "J1",
+        "channel": "video"
+      },
+      "topic": "新人研修の会場担当の引き継ぎ",
+      "stem": "研修当日の会場対応は、誰が行うことになりましたか。",
+      "options": [
+        {
+          "text": "中村が行う。",
+          "role": "combines_wrong_pair",
+          "why": "議事録の担当者欄のままで、中村が出張で不在になるという会話の内容を反映していない。"
+        },
+        {
+          "text": "中村が出張を短縮して対応する。",
+          "role": "unsupported_but_plausible",
+          "why": "出張を切り上げて戻る可能性はあり得るが、会話ではそのような話は一切出ていない。"
+        },
+        {
+          "text": "佐藤が行う。",
+          "role": "correct",
+          "why": "中村が出張で当日不在になるため、部長が佐藤に当日対応を依頼し、佐藤も了承している。"
+        },
+        {
+          "text": "佐藤が昼食の手配も合わせて行う。",
+          "role": "wrong_action_owner",
+          "why": "昼食の手配は中村が出張前に済ませると述べており、佐藤が引き継いだのは会場対応だけである。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "議事録では会場の予約・当日対応・昼食の手配がすべて中村の担当とされているが、会話で中村が研修当日は出張で不在になることが分かり、部長が当日対応だけを佐藤に依頼している。昼食の手配は出張前に中村が済ませる予定なので変更されていない。議事録だけでは出張の事実が分からず、会話だけでは元の担当割り振りが分からないため、両方を照合しないと正解できない。",
+      "explanation_en": "The minutes assign everything to Nakamura, but the call reveals Nakamura will be away, so the manager moves only the on-site duty to Sato, leaving the lunch arrangement unchanged.",
+      "vocab_notes": [
+        {
+          "term": "引き継ぐ",
+          "reading": "ひきつぐ",
+          "meaning": "to take over / hand over (a task)"
+        },
+        {
+          "term": "手配",
+          "reading": "てはい",
+          "meaning": "arrangement, making arrangements"
+        }
+      ],
+      "audio": {
+        "narration": "a4e7430667229af8",
+        "options": [],
+        "dialogue": [
+          "6c56f26bb38d3038",
+          "d64533cf7fe8ccc5",
+          "e357a5e2ef1b42db",
+          "ef6bf54f12483df1",
+          "6b2ab03f77832a05",
+          "e33a1f16704f607c"
+        ]
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "新人研修 運営打ち合わせ 議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "9月5日 15時"
+            },
+            {
+              "label": "場所",
+              "value": "オンライン"
+            },
+            {
+              "label": "出席者",
+              "value": "部長、中村、佐藤"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "項目",
+                "担当"
+              ],
+              "rows": [
+                [
+                  "会場の予約",
+                  "中村"
+                ],
+                [
+                  "当日対応",
+                  "中村"
+                ],
+                [
+                  "昼食の手配",
+                  "中村"
+                ]
+              ]
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "研修は9月20日実施。",
+                "詳細は担当者が各自進めること。"
+              ]
+            }
+          ]
+        }
+      ],
+      "dialogue": [
+        {
+          "speaker_role": "部長",
+          "text": "議事録では、会場の予約と当日対応、それに昼食の手配まで、すべて中村さんになっていますね。",
+          "clip_id": "6c56f26bb38d3038"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "はい。ただ、中村さんは来週から出張で、研修当日は不在の予定です。",
+          "clip_id": "d64533cf7fe8ccc5"
+        },
+        {
+          "speaker_role": "部長",
+          "text": "それは困りますね。予約はもう済んでいるようですが、当日対応は佐藤さんにお願いできますか。",
+          "clip_id": "e357a5e2ef1b42db"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "承知しました。私が当日対応いたします。",
+          "clip_id": "ef6bf54f12483df1"
+        },
+        {
+          "speaker_role": "部下",
+          "text": "昼食の手配については、中村さんが出張前に済ませると言っていました。",
+          "clip_id": "6b2ab03f77832a05"
+        },
+        {
+          "speaker_role": "部長",
+          "text": "それはそのままで結構です。",
+          "clip_id": "e33a1f16704f607c"
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "c16863511b844dc7",
+      "item_id": "23fd538a62",
+      "kind": "narration",
+      "index": null,
+      "text": "データ移行の開始予定は、いつからになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "2b02bce288b43518",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "この報告書の通り、データ移行は十月一日開始の予定でした。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "7afb4b86ec8df75b",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "テスト環境の構築が九月十五日に終わる予定でしたが、それは今どうなっていますか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3e61351755a4c0b7",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "先週ようやく完了しました。ただ、ベンダー側の人員不足で、データ移行の開始自体が一週間遅れて十月八日からになりました。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "894530015214ebfd",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "では、データ移行は九月十五日からということですね？",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "1febbc2c24f4b404",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "いえ、九月十五日はテスト環境の予定日です。データ移行の開始は十月八日です。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9cdc1f38f6cd06a5",
+      "item_id": "23fd538a62",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "承知しました。十月八日から準備します。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "89720e51a9160978",
+      "item_id": "2bb7e73bae",
+      "kind": "narration",
+      "index": null,
+      "text": "会場と仕出し業者は、結局どうなりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "ca8e43d4b5d3cad6",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "議事録では会場はAホールに決まっていましたが、先週連絡があって、Aホールは改装工事で使えなくなったそうです。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "260597879e7e88df",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "それは困りますね。代わりの案はあるんですか。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "0bf957ed219656f3",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "Bホールを押さえました。広さも予算内に収まります。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "28346885e5f18f68",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "分かりました。仕出し業者はどうなりましたか。議事録では未定のままでしたが。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "fd85153bd6e5a2f1",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "それは山田さんがX社に決めたと聞いています。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "11e96cb2010d343e",
+      "item_id": "2bb7e73bae",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "では、会場と仕出し、両方とも決まったということですね。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a4e7430667229af8",
+      "item_id": "dc756cc425",
+      "kind": "narration",
+      "index": null,
+      "text": "研修当日の会場対応は、誰が行うことになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6c56f26bb38d3038",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "議事録では、会場の予約と当日対応、それに昼食の手配まで、すべて中村さんになっていますね。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "d64533cf7fe8ccc5",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "はい。ただ、中村さんは来週から出張で、研修当日は不在の予定です。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "e357a5e2ef1b42db",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "それは困りますね。予約はもう済んでいるようですが、当日対応は佐藤さんにお願いできますか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "ef6bf54f12483df1",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "承知しました。私が当日対応いたします。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "6b2ab03f77832a05",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "昼食の手配については、中村さんが出張前に済ませると言っていました。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "e33a1f16704f607c",
+      "item_id": "dc756cc425",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "それはそのままで結構です。",
+      "voice": "manager_m",
+      "channel": "video"
+    }
+  ],
+  "scenes": [
+    "scene_meeting_room_table",
+    "scene_office_desk_pair",
+    "scene_video_call_laptop"
+  ]
+}

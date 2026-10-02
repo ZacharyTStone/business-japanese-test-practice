@@ -6,6 +6,7 @@ and print.
 """
 from __future__ import annotations
 
+import datetime as dt
 import json
 import pathlib
 import sys
@@ -17,6 +18,7 @@ from .. import (
     pipeline,
     plan,
     schemas,
+    shelf_rest,
 )
 from .. import llm as llmmod
 from ..db import Store
@@ -127,12 +129,15 @@ def cmd_plan(args) -> int:
     before approving a night's spend, or just to see whether the library is the
     shape the practice queue needs it to be."""
     state = plan.survey()
+    resting, warning = shelf_rest.load(_now())
+    if warning:
+        print(warning, file=sys.stderr)
     order = plan.work_order(state, budget=args.budget, per_slot=args.per_slot,
-                            reading_min=args.reading_min)
+                            reading_min=args.reading_min, resting=resting)
     if args.json:
-        print(json.dumps(plan.to_json(state, order), ensure_ascii=False, indent=2))
+        print(json.dumps(plan.to_json(state, order, resting), ensure_ascii=False, indent=2))
     else:
-        print(plan.render(state, order))
+        print(plan.render(state, order, resting))
     return 0
 
 
@@ -150,9 +155,13 @@ def cmd_nightly(args) -> int:
     that writes exam content unattended is a safe thing to have."""
     budget, per_slot = clamp_night(args.budget, args.per_slot)
     state = plan.survey()
+    now = _now()
+    resting, warning = shelf_rest.load(now)
+    if warning:
+        print(warning, file=sys.stderr)
     order = plan.work_order(state, budget=budget, per_slot=per_slot,
-                            reading_min=args.reading_min)
-    print(plan.render(state, order))
+                            reading_min=args.reading_min, resting=resting)
+    print(plan.render(state, order, resting))
     print(f"\nCeilings this run: ${config.RUN_BUDGET_USD:.2f}, "
           f"{config.RUN_MAX_CALLS} calls, {config.RUN_MAX_MINUTES:g} minutes, "
           f"{config.MAX_TOKENS_CEILING} output tokens per call, effort at most "
@@ -167,6 +176,11 @@ def cmd_nightly(args) -> int:
     finally:
         store.close()
     written, failures = night.written, night.failures
+    # What each shelf did tonight, for the next night's work order: a shelf
+    # that keeps writing nothing rests rather than taking every budget.
+    warning = shelf_rest.record(night.outcomes, now)
+    if warning:
+        print(warning, file=sys.stderr)
 
     summary = _nightly_summary(written, failures, spend=llmmod.spend)
     print()
@@ -175,6 +189,11 @@ def cmd_nightly(args) -> int:
         pathlib.Path(args.summary).write_text(summary + "\n", encoding="utf-8")
     # Nothing written at all is worth a red run; a partial night is not.
     return 0 if written else 1
+
+
+def _now() -> dt.datetime:
+    """The clock the shelf ledger is read and written by; the tests' seam."""
+    return dt.datetime.now(dt.timezone.utc)
 
 
 def clamp_night(budget: int, per_slot: int) -> tuple[int, int]:

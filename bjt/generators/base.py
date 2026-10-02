@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from typing import Optional
 
 from .. import batch as batchmod
@@ -91,8 +92,10 @@ class Generator:
         ]
         return (
             "Every wrong option must be wrong for a specific, nameable reason drawn "
-            "from this fixed set of distractor roles. Use three DISTINCT roles for the "
-            "three distractors (do not reuse a role). Mark the correct option with role "
+            "from this fixed set of distractor roles. Write exactly FOUR options: the "
+            "correct one and three distractors with three DISTINCT roles (do not reuse a "
+            "role). The set below has more roles than that, so at least one goes unused "
+            "— never write one option per role. Mark the correct option with role "
             "'correct'. Every option also carries a `why`: one Japanese sentence naming "
             "the concrete reason THIS wording fails here — not a restatement of the role "
             "label.\n" + "\n".join(lines) + "\n\n"
@@ -295,9 +298,12 @@ class Generator:
             # item["item_type"]. Stamp it first, or the pruning below finds no
             # document and every blank callout costs the full three attempts.
             item["item_type"] = self.item_type
-            # A blank heading or callout is a model tic, not a fault in the
-            # item; drop it rather than spend an attempt asking for it back.
+            # Every block field is required, so the unused ones arrive empty;
+            # take them off first. Then a blank heading or callout is a model
+            # tic, not a fault in the item; drop it rather than spend an
+            # attempt asking for it back.
             for doc in schemas.documents_of(item):
+                render.drop_unused_fields(doc)
                 render.prune_empty_blocks(doc)
             # Numbers spelled out in kanji are the same kind of tic and get the
             # same answer: rewritten here rather than costing the draft, and
@@ -348,6 +354,12 @@ def repair_surplus_options(item: dict) -> list[str]:
     gate judge what is left. Returns the texts dropped, for the log. A draft
     with fewer than four options, or with no single correct one, is left alone
     for the validator to reject.
+
+    The 解説 was written about all five, so the sentences that quote a dropped
+    option go with it (`drop_sentences_about`). Left in, they described an
+    option the item no longer has, the proofreader rejected the draft as
+    `explanation_mismatch`, and the trim saved nothing: 表現読解 J3 lost every
+    draft that way on 2026-09-28 and 2026-10-01.
     """
     options = item.get("options")
     if not isinstance(options, list) or len(options) <= 4:
@@ -369,4 +381,48 @@ def repair_surplus_options(item: dict) -> list[str]:
             dropped.append(str((o or {}).get("text", "")) if isinstance(o, dict) else str(o))
     # Keep the model's own order for what survives.
     item["options"] = [o for o in options if any(o is k for k in kept)]
+    kept_texts = [str(o.get("text", "")) for o in kept if isinstance(o, dict)]
+    for field in ("explanation_ja", "explanation_en"):
+        if isinstance(item.get(field), str):
+            item[field] = drop_sentences_about(item[field], dropped, kept_texts)
     return dropped
+
+
+#: Quotation marks a 解説 quotes an option in: 「」『』 and the double quotes.
+_QUOTED = re.compile(r"「([^」]+)」|『([^』]+)』|“([^”]+)”|\"([^\"]+)\"")
+#: One sentence with its own ending and the space after it: up to 。！？, to
+#: .!? before a space (so 1.5 stays whole), or to a line break. The pieces
+#: join back into exactly the text they came from.
+_SENTENCE = re.compile(r".+?(?:[。！？]+|[.!?]+(?=\s|$)|\n|$)\s*", re.S)
+
+
+def _bare(text: str) -> str:
+    return text.strip().rstrip("。．.！!？?").strip()
+
+
+def drop_sentences_about(text: str, dropped: list[str], kept: list[str]) -> str:
+    """`text` without the sentences that quote a dropped option.
+
+    A sentence goes if it quotes something found in a dropped option and in no
+    kept one — a 解説 often quotes a fragment （「遅れられまして」）, not the whole
+    line — or carries a dropped option whole. Everything else stays, in order.
+    If that would leave nothing, the text is returned as it was, for the
+    proofreader to judge.
+    """
+    gone = [_bare(d) for d in dropped if _bare(d)]
+    if not gone:
+        return text
+    keep = [_bare(k) for k in kept]
+
+    def about_dropped(sentence: str) -> bool:
+        for match in _QUOTED.finditer(sentence):
+            quote = _bare(next(g for g in match.groups() if g))
+            if len(quote) >= 2 and any(quote in d for d in gone) and not any(quote in k for k in keep):
+                return True
+        return any(d in sentence for d in gone)
+
+    sentences = _SENTENCE.findall(text)
+    survivors = [s for s in sentences if not about_dropped(s)]
+    if len(survivors) == len(sentences) or not any(s.strip() for s in survivors):
+        return text
+    return "".join(survivors).strip()

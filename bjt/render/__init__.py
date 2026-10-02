@@ -21,6 +21,7 @@ from .document import (  # noqa: F401
     CALLOUT_TONES,
     CHART_KINDS,
     document_schema,
+    drop_unused_fields,
     prune_empty_blocks,
     text_of,
     validate_document,
