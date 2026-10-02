@@ -8,13 +8,16 @@
 # any doubt about whether it ran, and what makes it safe to run without being
 # asked:
 #
-#   by itself   after the `checks` workflow goes green on `main`. A merged
-#               nightly pull request is therefore live — items and their audio
-#               together — a few minutes after the merge, with nothing further
-#               to press. The owner asked for this (2026-09-18); the review
-#               gate is the pull request, and a merge is the decision to ship.
-#               Only a green run triggers it: a push that fails a check never
-#               reaches the database.
+#   by itself   after the `checks` workflow goes green on `main`. A pull
+#               request somebody merges is therefore live — items and their
+#               audio together — a few minutes after the merge, with nothing
+#               further to press. The owner asked for this (2026-09-18): a
+#               merge is the decision to ship. Only a green run triggers it: a
+#               push that fails a check never reaches the database.
+#   by the night  the nightly workflow starts it (as "by hand", no inputs)
+#               after merging its own pull request on green checks: a merge
+#               made with the workflow's token starts no `checks` run on `main`,
+#               so nothing else would.
 #   by hand     from the Actions tab, which is also the only way to add a
 #               tester (the form fields exist only there). From `main` only:
 #               the run form lets anybody with write access pick a branch,

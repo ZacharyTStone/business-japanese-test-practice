@@ -9,24 +9,35 @@
 #               This is the half that tells you the practice queue cannot
 #               interleave across types because sixteen of the shelves are empty.
 #   write     — actually generate, gate, check and commit those items, and open a
-#               pull request for a person to read. Runs only when the secrets it
-#               needs are present. A manual run can ask for the difficulty
+#               pull request that records the night. Runs only when the secrets
+#               it needs are present. A manual run can ask for the difficulty
 #               probe instead (the "probe" input, `bjt probe --all`): it
 #               measures the questions already in the bank rather than writing
 #               new ones, under the same ceilings, into the same kind of pull
 #               request.
+#   publish   — run the `checks` workflow on tonight's branch, and when every
+#               job is green, merge the pull request and start the **deploy
+#               database** workflow. A red check, or a `main` that moved while
+#               the night ran, leaves the pull request open with a comment
+#               saying why, for a person.
 #
 # Splitting it that way is deliberate. A job that does nothing until somebody
 # buys an API key is a job nobody notices has rotted; this one produces a true,
 # useful report from the first night, and grows teeth when the key arrives.
 #
-# **Why a pull request, in a repository whose rule is "work on main".** That rule
-# is about people writing code with no gate in front of them. This is a machine
-# writing exam content, which must be drafts only, with a reviewer publishing
-# them. A branch
-# that exists to be read before it lands is the gate, not a way around one.
-# Nothing here touches the database: it writes bundles and the SQL for them, and
-# applying that SQL stays a deliberate act somebody takes.
+# **Why a pull request, when nobody reviews it.** Until 2026-10-02 a person read
+# each night's pull request before merging it. The owner chose then to stop
+# reviewing nightly content by hand: every item has already passed the
+# answerability gate, the proofreader and the whole-batch checks, and the
+# `checks` workflow on the branch (the bank's sweeps, the schema and every
+# bundle applied twice to a local D1) is now the gate. The pull request stays
+# because it is the record: one per night, with the night's summary, that
+# can be read, reverted or withdrawn from (batches/withdrawn.txt) later.
+#
+# Why the night calls the checks and the deploy itself: a pull request opened,
+# and a merge made, with the workflow's own token start no other workflow, so
+# neither the pull request's checks nor the push to `main` would run. The
+# publish jobs below ask for both explicitly.
 #
 # Secrets, all optional, each unlocking one thing:
 #
@@ -141,8 +152,9 @@ concurrency:
   group: nightly
   cancel-in-progress: false
 
-# Nothing by default. The one job below asks for what its last step needs:
-# pushing tonight's branch and opening the pull request.
+# Nothing by default. Each job below asks for what it needs: the night for
+# pushing tonight's branch and opening the pull request, the checks for
+# reading, the merge for merging and starting the deploy.
 permissions:
   contents: read
 
@@ -157,6 +169,13 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    # What the publish jobs below need: tonight's branch, its pull request, and
+    # what `main` was when the branch was put on top of it. All empty when the
+    # night opened no pull request.
+    outputs:
+      branch: ${{ steps.pr.outputs.branch }}
+      pr: ${{ steps.pr.outputs.pr }}
+      base: ${{ steps.pr.outputs.base }}
     # A night is minutes, not hours. The morning of 2026-09-18 a single run
     # generated for two and a half hours. The process stops itself at
     # BJT_RUN_MAX_MINUTES (30) and keeps what it wrote; this clock, a little
@@ -555,7 +574,8 @@ jobs:
 
       # batches/scenes.sql is included when the scene step wrote it, so the
       # pull request also records which pictures the database was pointed at.
-      - name: open a pull request for somebody to read
+      - name: open the night's pull request
+        id: pr
         if: (steps.keys.outputs.go == 'true' || steps.keys.outputs.art == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -573,11 +593,11 @@ jobs:
           # new ones. The commit and the title say which; nothing else differs.
           if [ "${{ steps.keys.outputs.probe }}" = "true" ]; then
             subject="Measure the difficulty of the questions that have none"
-            body="Written by the difficulty probe (bjt probe --all). It sets model_p_correct on live questions that shipped without one; nothing is published until this is merged and the SQL is applied."
+            body="Written by the difficulty probe (bjt probe --all). It sets model_p_correct on live questions that shipped without one. The nightly workflow merges it once the checks pass on this branch, and the deploy applies the SQL."
             title="Difficulty probe: $(date -u +%Y-%m-%d)"
           else
             subject="Fill the emptiest shelves of the bank"
-            body="Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks; nothing is published until this is merged and the SQL is applied. Scene artwork, if any, passed the review gate and is already in the bucket."
+            body="Written by the nightly job. Every item passed the per-item answerability gate and the whole-batch checks. The nightly workflow merges it once the checks pass on this branch, and the deploy applies the SQL. Scene artwork, if any, passed the review gate and is already in the bucket."
             title="Nightly content: $(date -u +%Y-%m-%d)"
           fi
           git config user.name  "bjt nightly"
@@ -603,17 +623,21 @@ jobs:
             exit 1
           fi
           git push -u origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "base=$(git rev-parse "origin/$default")" >> "$GITHUB_OUTPUT"
           [ -f summary.md ] || echo "Nightly run: scene artwork only." > summary.md
           [ -f scenes.md ] && { echo; cat scenes.md; } >> summary.md
           cat summary.md >> "$GITHUB_STEP_SUMMARY"
           # The items are safe on the branch by now. If the repository does not
           # let Actions open pull requests, say so and how to fix it, and hand
           # over the link — a night's work is not lost over a settings toggle.
-          if ! gh pr create \
+          if url=$(gh pr create \
             --title "$title" \
             --body-file summary.md \
             --base "${{ github.event.repository.default_branch }}" \
-            --head "$branch"; then
+            --head "$branch"); then
+            echo "pr=$url" >> "$GITHUB_OUTPUT"
+          else
             {
               echo
               echo '### Pull request not opened'
@@ -627,3 +651,90 @@ jobs:
               echo 'permissions → "Allow GitHub Actions to create and approve pull requests".'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  # ------------------------------------------------------------- publishing
+  #
+  # The `checks` workflow, whole, on tonight's branch: the pipeline's tests and
+  # the bank's sweeps, every bundle through checkbatch, the schema with every
+  # batches/*.sql applied twice to a local D1, and the app. It is what a push to
+  # `main` would have run, run before the merge instead of after it.
+  verify:
+    name: the checks, on tonight's branch
+    needs: nightly
+    if: needs.nightly.outputs.pr != ''
+    permissions:
+      contents: read
+    uses: ./.github/workflows/checks.yml
+    with:
+      ref: ${{ needs.nightly.outputs.branch }}
+
+  # Green: merge, and start the deploy, which a merge made with this token
+  # would not start on its own. The deploy runs the commit `main` is at, so it
+  # is started only when that is the merge just made; a push that landed in
+  # between brings its own checks and deploy, which include tonight's bundles.
+  # A `main` that moved while the night ran is not merged into at all: the
+  # checks above saw tonight's branch on top of an older `main`, and the
+  # combination nobody has checked is for a person to merge.
+  publish:
+    name: merge tonight's pull request and deploy it
+    needs: [nightly, verify]
+    if: needs.nightly.outputs.pr != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ needs.nightly.outputs.pr }}
+      BRANCH: ${{ needs.nightly.outputs.branch }}
+      BASE: ${{ needs.nightly.outputs.base }}
+      DEFAULT: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: merge, then deploy
+        run: |
+          set -euo pipefail
+          now=$(gh api "repos/$GH_REPO/commits/$DEFAULT" --jq .sha)
+          if [ "$now" != "$BASE" ]; then
+            gh pr comment "$PR" --body "Not merged automatically: \`$DEFAULT\` moved while tonight's run was checking this branch, so the checks saw it on top of an older \`$DEFAULT\`. Merge it by hand; the push will run the checks and the deploy."
+            echo "### Not merged: $DEFAULT moved during the night ($PR)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # GitHub may still be working out whether it can merge; give it a
+          # moment rather than leave a green night unmerged.
+          for attempt in 1 2 3; do
+            if gh pr merge "$PR" --merge; then break; fi
+            if [ "$attempt" = 3 ]; then exit 1; fi
+            sleep 15
+          done
+          merged=$(gh pr view "$PR" --json mergeCommit --jq .mergeCommit.oid)
+          gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH" > /dev/null || true
+          head=$(gh api "repos/$GH_REPO/commits/$DEFAULT" --jq .sha)
+          if [ "$head" = "$merged" ]; then
+            gh workflow run deploy-db.yml --ref "$DEFAULT"
+            echo "### Merged $PR and started the deploy" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Merged $PR; $DEFAULT moved on since, and that push deploys it" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Red, or a merge GitHub refused: the pull request stays open, and says so
+  # where its reader will look.
+  held:
+    name: leave tonight's pull request for a person
+    needs: [nightly, verify, publish]
+    if: failure() && needs.nightly.outputs.pr != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ needs.nightly.outputs.pr }}
+      RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: say why it was not merged
+        run: |
+          gh pr comment "$PR" --body "Not merged automatically: the checks on this branch, or the merge itself, failed ($RUN). Nothing from it is live. Fix or close it by hand."
