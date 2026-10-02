@@ -142,6 +142,10 @@ export class GateResult {
  *  could change the verdict. The gate's early stop. */
 export type Decided = (correct: number, done: number, planned: number) => boolean;
 
+/** Python's OverflowError: `int()` of an infinite float. Not one of the
+ *  errors a trial is scored unanswered on, exactly as in Python. */
+class OverflowError extends PyError {}
+
 /** Python's `int(x)` of what a judge returned as its choice: a whole number
  *  as itself, a float cut toward zero, a numeral string read, a boolean as 0
  *  or 1; anything else the ValueError or TypeError `int()` raises. */
@@ -149,6 +153,7 @@ function _int(x: unknown): number {
   if (typeof x === "boolean") return x ? 1 : 0;
   if (typeof x === "number") {
     if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
+    if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
     return Math.trunc(x);
   }
   if (typeof x === "string") return toInt(x);
