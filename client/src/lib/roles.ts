@@ -22,8 +22,8 @@
  * have no rudeness to measure, so they are marked `manner: false` and the meter
  * steps aside for the advice.
  *
- * The table is typed over DISTRACTOR_ROLES, which `python -m bjt.client_constants`
- * generates from bjt/fidelity/roles.py: a role added there and not described
+ * The table is typed over DISTRACTOR_ROLES, which `node bjt/client_constants.ts`
+ * generates from bjt/fidelity/roles.ts: a role added there and not described
  * here is a type error.
  */
 import { type DistractorRole } from "./generated";

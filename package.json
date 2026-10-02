@@ -1,0 +1,26 @@
+{
+  "name": "bjt-pipeline",
+  "version": "0.1.0",
+  "description": "The item pipeline behind a BJT-format practice app: every problem type written, gated, checked and published as SQL",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "bjt": "node bjt/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0"
+  },
+  "devDependencies": {
+    "@types/node": "~22.20.5",
+    "eslint": "~10.11.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "~8.71.0",
+    "vitest": "~3.2.7"
+  }
+}

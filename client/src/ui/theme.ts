@@ -17,7 +17,7 @@
  * quieter second line, and the quieter line is the one the hero uses for the
  * countdown and the streak. On `accentDeep` white is 7.3:1 and `onAccentMuted`
  * is 5.9:1, so both clear 4.5:1 — the floor for 13px text — with room to spare.
- * `tests/test_theme_contrast.py` holds the tokens to that; the rule about which
+ * `client/src/ui/theme.test.ts` holds the tokens to that; the rule about which
  * fills carry text is one a reader has to keep, so it is written here.
  */
 import { StyleSheet, type TextStyle, type ViewStyle } from "react-native";

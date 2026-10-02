@@ -29,7 +29,7 @@ own design, contains no licensed text, and is committed at the repo root.
 
 ## Item shape
 
-`fewshot` examples use the same shape the model emits (see `bjt/schemas.py`):
+`fewshot` examples use the same shape the model emits (see `bjt/schemas.ts`):
 `stem`, `options` (each `{text, role, why}`, exactly one `role: "correct"`),
 `explanation_ja`, `explanation_en`, `topic`, `vocab_notes`. The 解説 in
 `explanation_ja` is the important part — it teaches the model the item shape —
@@ -37,7 +37,7 @@ and the per-option `why` is what teaches it to build a trap for a *nameable*
 reason rather than writing three vaguely worse answers.
 
 Six of the nine types carry more than a stem, because their stimulus is not one
-string. `bjt/schemas.py` is the authority; in summary:
+string. `bjt/schemas.ts` is the authority; in summary:
 
 | Type | Extra fields | What `stem` is |
 |---|---|---|
@@ -51,7 +51,7 @@ string. `bjt/schemas.py` is the authority; in summary:
 
 `dialogue` is `[{speaker_role, text}]` — roles, never personal names, because the
 role is what casts the voice. `document` / `documents` follow the shape in
-`bjt/render/document.py`: a template id, a title, header fields, and blocks.
+`bjt/render/document.ts`: a template id, a title, header fields, and blocks.
 `channel` is `in_person` / `phone` / `video` for anything spoken and `written`
 for 総合読解, which is never synthesised.
 

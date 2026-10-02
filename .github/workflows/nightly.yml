@@ -70,14 +70,14 @@
 #   R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY
 #                      an R2 token's S3 pair, which lets the job put approved
 #                      artwork in the media bucket and see what is already
-#                      there (bjt/r2.py). It is the one key that writes media:
+#                      there (bjt/r2.ts). It is the one key that writes media:
 #                      it lives here and in nobody's .env, and never in client/.
 #                      Pictures are drawn only when the bucket can be read: a
 #                      job that cannot see what is drawn would draw it all
 #                      again. And not while the bucket's scenes/ folder is
-#                      empty — that is a library not yet moved in (the
-#                      move-off-supabase workflow), not one to redraw.
-#   TYPESAFE_API_KEY   Jev, the prototype difficulty instrument (bjt/jev.py).
+#                      empty — that is a bucket that has lost its library, not
+#                      one to redraw.
+#   TYPESAFE_API_KEY   Jev, the prototype difficulty instrument (bjt/jev.ts).
 #                      With it a manual run can compare Jev with the probe's
 #                      own model ("compare_jev"), which writes nothing. Jev
 #                      becomes the probe only when the repository variable
@@ -206,7 +206,7 @@ jobs:
       # Which model measures difficulty, for tonight's items and a probe run
       # alike, so the bank carries one kind of rate. A repository variable, so
       # switching to Jev is a setting changed after reading a comparison run,
-      # not a code change; unset (empty here), config.py's default applies.
+      # not a code change; unset (empty here), config.ts's default applies.
       BJT_DIFFICULTY_MODEL: ${{ vars.BJT_DIFFICULTY_MODEL }}
     steps:
       # No token left in .git/config for the steps that run generated code
@@ -215,11 +215,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          python-version: "3.11"
-          cache: pip
-      - run: pip install -e ".[dev]"
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
 
       # One ledger for the whole night. The run's ceilings (BJT_RUN_BUDGET_USD,
       # the call count, the clock) are kept per process; with this file the
@@ -232,7 +233,7 @@ jobs:
 
       # ---------------------------------------------------------- the survey
 
-      # The R2 pair lets the plan read the shelf ledger (bjt/shelf_rest.py), so
+      # The R2 pair lets the plan read the shelf ledger (bjt/shelf_rest.ts), so
       # it shows the order tonight will actually run: a shelf that has written
       # nothing night after night is passed over, and the plan says so.
       - name: what the bank needs next
@@ -245,10 +246,10 @@ jobs:
             echo '## The bank tonight'
             echo
             echo '```'
-            python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN"
+            node bjt/main.ts plan --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          python -m bjt plan --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --json > plan.json
+          node bjt/main.ts plan --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --json > plan.json
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -301,7 +302,7 @@ jobs:
           # it again.
           drawn=0
           if [ "$HAVE_STORAGE" = "true" ]; then
-            drawn=$(python -c 'from bjt import scene_art; print(len(scene_art.Bucket().list()))' || echo error)
+            drawn=$(node --input-type=module -e 'const { Bucket } = await import("./bjt/scene_art.ts"); console.log((await new Bucket().list()).size)' || echo error)
           fi
           if [ "$probe" = "true" ]; then
             echo "art=false" >> "$GITHUB_OUTPUT"
@@ -319,8 +320,8 @@ jobs:
               elif [ "$drawn" = "error" ]; then
                 echo 'The media bucket could not be listed tonight (see this step'"'"'s log).'
               else
-                echo 'The bucket has no scene picture yet. If the library is still being moved in,'
-                echo 'run the **move off supabase** workflow; nothing is redrawn until it has.'
+                echo 'The bucket has no scene picture. A bucket that has lost its library is not'
+                echo 'one to redraw; nothing is drawn until the pictures are back.'
               fi
             } >> "$GITHUB_STEP_SUMMARY"
           elif [ "$HAVE_API_KEY" = "true" ] && [ "$HAVE_IMAGES" = "true" ]; then
@@ -393,11 +394,6 @@ jobs:
       # gets better with scale: the more people answer an item, the better the
       # queue knows how hard it is. One statement, as the service role, out of
       # hours — never on the path of somebody waiting for five questions.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        if: steps.keys.outputs.db == 'true'
-        with:
-          node-version: "22"
-
       - name: recount how hard each item is
         if: steps.keys.outputs.db == 'true' && github.event.inputs.compare_jev != 'true'
         working-directory: client
@@ -421,7 +417,7 @@ jobs:
           # commit: .gitignore already covers it, and the commit below adds only
           # batches/.
           echo "$SEEDS_TAR_B64" | base64 -d | tar xzf -
-          python -m bjt seeds
+          node bjt/main.ts seeds
 
       - name: build seeds from the reference batches
         if: steps.keys.outputs.write == 'true' && steps.keys.outputs.seeds != 'true' && github.event.inputs.dry_run != 'true'
@@ -429,7 +425,7 @@ jobs:
           # No licensed material tonight. The bank's own hand-written items are
           # the few-shot examples instead; the summary says so, so a reader of
           # the pull request knows what the model was shown.
-          python -m bjt seeds --bootstrap
+          node bjt/main.ts seeds --bootstrap
           {
             echo
             echo '### Seeds'
@@ -445,14 +441,14 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
           # The shelf ledger: read to rest a shelf that keeps writing nothing,
-          # and written with what each shelf did tonight (bjt/shelf_rest.py).
+          # and written with what each shelf did tonight (bjt/shelf_rest.ts).
           R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-        run: python -m bjt nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --summary summary.md
+        run: node bjt/main.ts nightly --budget "$BUDGET" --per-slot "$PER_SLOT" --reading-min "$READING_MIN" --summary summary.md
 
       # The manual alternative to the step above: the difficulty prior the
-      # bank's imported questions never got (bjt/backfill.py). The same run
+      # bank's imported questions never got (bjt/backfill.ts). The same run
       # ceilings as a night, from the env at the top of this job, and the same
       # artifact, checks and pull request below: it rewrites bundles and their
       # SQL, and nothing reaches the database until somebody merges. It skips
@@ -463,7 +459,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-        run: python -m bjt probe --all --summary summary.md
+        run: node bjt/main.ts probe --all --summary summary.md
 
       # The evidence for switching the probe to Jev: the default model and Jev
       # on the same sample of live questions, a type at a time, under the same
@@ -478,7 +474,7 @@ jobs:
           BJT_DIFFICULTY_MODEL: ""
         run: |
           status=0
-          python -m bjt probe --all --compare jev-latest --summary compare.md || status=$?
+          node bjt/main.ts probe --all --compare jev-latest --summary compare.md || status=$?
           if [ -f compare.md ]; then cat compare.md >> "$GITHUB_STEP_SUMMARY"; fi
           exit $status
 
@@ -507,7 +503,7 @@ jobs:
           for f in batches/*.json; do
             case "$f" in *.source.json) continue ;; esac
             echo "::group::$f"
-            python -m bjt checkbatch "$f"
+            node bjt/main.ts checkbatch "$f"
             echo "::endgroup::"
           done
 
@@ -538,7 +534,7 @@ jobs:
           if [ "${{ steps.keys.outputs.storage }}" = "true" ]; then upload="--upload --sql"; fi
           # A scene that fails every attempt is reported, not fatal: the app
           # ships items without pictures, and the next night tries again.
-          python -m bjt scenes --generate --provider openai ${{ steps.keys.outputs.only }} $upload --summary scenes.md || true
+          node bjt/main.ts scenes --generate --provider openai ${{ steps.keys.outputs.only }} $upload --summary scenes.md || true
           cat scenes.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -37,11 +37,11 @@ export * from "./db/record";
  * clip id is a hash of (voice, channel, text), so 「いち」 is synthesised once
  * and shared — which is why they are looked up by what is said rather than
  * arriving with the item. The four strings and the narrator's name are
- * `OPTION_LABELS` and `NARRATOR_VOICE` in bjt/tts/plan.py, which is where the
+ * `OPTION_LABELS` and `NARRATOR_VOICE` in bjt/tts/plan.ts, which is where the
  * clips come from; a test holds the two files equal.
  */
 // Numbers rather than letters: 「ビー」/「ディー」 are easily misheard for each
-// other, and 「デー」 sounds like "day". See OPTION_LABELS in bjt/tts/plan.py.
+// other, and 「デー」 sounds like "day". See OPTION_LABELS in bjt/tts/plan.ts.
 const OPTION_LABELS = ["いち", "に", "さん", "よん"];
 
 const NARRATOR_VOICE = "narrator_f";

@@ -48,7 +48,7 @@ concurrency:
 
 jobs:
   pipeline:
-    name: pytest — the item pipeline
+    name: vitest — the item pipeline
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -56,24 +56,25 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          python-version: "3.11"
-          cache: pip
-      - run: pip install -e ".[dev]"
-      - run: pytest -q
-      # Bugs, not style: undefined names, redefinitions, unused variables,
-      # comparisons that do not mean what they say. The rule set, and why it
-      # stops there, is [tool.ruff] in pyproject.toml. It runs even when a
-      # test failed, so one push reports both.
-      - name: ruff check
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm test
+      # Types, for the pipeline. Runs even when a test failed, so one push
+      # reports both.
+      - name: npm run typecheck
         if: ${{ !cancelled() }}
-        run: ruff check .
-      # Types, for the pipeline. Runs whatever the steps above said, for the
-      # same reason.
-      - name: mypy
+        run: npm run typecheck
+      # Bugs, not style: a promise nobody awaits, an await on something that
+      # is not one, a value never read. The rule set, and why it stops there,
+      # is eslint.config.mjs. Runs whatever the steps above said, for the same
+      # reason.
+      - name: npm run lint
         if: ${{ !cancelled() }}
-        run: mypy bjt
+        run: npm run lint
 
   bundles:
     name: checkbatch — every committed bundle
@@ -84,13 +85,14 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          python-version: "3.11"
-          cache: pip
-      - run: pip install -e ".[dev]"
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
       # Swept rather than named: a bundle added tomorrow is covered the moment
-      # it lands, which is the same rule tests/test_batch_checks.py follows.
+      # it lands, which is the same rule tests/batch_checks.test.ts follows.
       - name: check every bundle
         run: |
           shopt -s nullglob
@@ -99,7 +101,7 @@ jobs:
             case "$f" in *.source.json) continue ;; esac
             found=1
             echo "::group::$f"
-            python -m bjt checkbatch "$f"
+            node bjt/main.ts checkbatch "$f"
             echo "::endgroup::"
           done
           [ "$found" = 1 ] || { echo "no bundles found in batches/"; exit 1; }

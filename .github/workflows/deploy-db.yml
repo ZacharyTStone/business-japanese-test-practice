@@ -41,10 +41,10 @@
 #                voice they keep hearing. Runs only with a TTS key and the R2
 #                keys; without them the app keeps showing the text, which it
 #                was built to do. And only once some clip is live: a database
-#                with no live clip is one whose library has not been moved in
-#                yet (the move-off-supabase workflow), and recording it all
-#                again would replace every voice. A library started from
-#                nothing says so on the run form (`first_voice`).
+#                with no live clip has lost track of its library, and recording
+#                it all again would replace every voice a learner has heard. A
+#                library started from nothing says so on the run form
+#                (`first_voice`).
 #                The one exception is by hand: `remake_list` on the run form
 #                names a committed file of clip ids to record again, for clips
 #                made with a delivery that was wrong. It is blank on every
@@ -53,7 +53,7 @@
 #
 # Needs two secrets: CLOUDFLARE_API_TOKEN (a token allowed to edit D1) and
 # CLOUDFLARE_ACCOUNT_ID. The audio step additionally reads OPENAI_API_KEY (the
-# library's voice — the owner chose it, and bjt/tts/providers.py records that;
+# library's voice — the owner chose it, and bjt/tts/providers.ts records that;
 # the same key draws the scene artwork) and R2_ACCESS_KEY_ID +
 # R2_SECRET_ACCESS_KEY, an R2 token's S3 pair, the only key that may write to
 # the bucket. Those live here and in nobody's .env, and never in client/.
@@ -153,14 +153,14 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: "3.11"
-          cache: pip
-      - run: pip install -e ..
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      # The pipeline (`node bjt/main.ts …`): the tester SQL and the voices.
+      - run: npm ci
+        working-directory: .
 
       # No database yet is an ordinary state on an automatic run — every merge
       # to main would otherwise be a red workflow — and an error on a run
@@ -172,7 +172,7 @@ jobs:
             # The database has not been created yet, so there is nothing to
             # deploy to; wrangler.jsonc names it once it has.
             echo "go=false" >> "$GITHUB_OUTPUT"
-            echo '## Nothing deployed: `client/wrangler.jsonc` has no D1 database id yet. See cloudflare-migration.md.' >> "$GITHUB_STEP_SUMMARY"
+            echo '## Nothing deployed: `client/wrangler.jsonc` has no D1 database id yet. See README.md, Working on it.' >> "$GITHUB_STEP_SUMMARY"
             if [ "$BY_HAND" = "true" ]; then exit 1; fi
           elif [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
@@ -226,9 +226,9 @@ jobs:
           EMAIL=$(jq -r '.inputs.tester_email // ""' "$GITHUB_EVENT_PATH")
           NOTE=$(jq -r '.inputs.tester_note // ""' "$GITHUB_EVENT_PATH")
           echo "::add-mask::$EMAIL"
-          echo "::add-mask::$(python -c 'import sys; print(sys.argv[1].strip().lower())' "$EMAIL")"
+          echo "::add-mask::$(node -e 'console.log(process.argv[1].trim().toLowerCase())' "$EMAIL")"
           if [ -n "$NOTE" ]; then echo "::add-mask::$NOTE"; fi
-          python -m bjt tester "$EMAIL" --note "$NOTE" > "$RUNNER_TEMP/tester.sql"
+          node ../bjt/main.ts tester "$EMAIL" --note "$NOTE" > "$RUNNER_TEMP/tester.sql"
           $WRANGLER d1 execute "$DB" --remote --yes --file "$RUNNER_TEMP/tester.sql" > /dev/null
 
       # ---------------------------------------------------------- the audio
@@ -266,10 +266,9 @@ jobs:
             {
               echo '### No audio synthesised'
               echo
-              echo 'No clip is live in the database yet. If the library is still being moved'
-              echo 'in, run the **move off supabase** workflow first: recording now would'
-              echo 'replace every voice a learner has heard. A library started from nothing'
-              echo 'is the run form'"'"'s `first_voice`.'
+              echo 'No clip is live in the database. Recording now would replace every voice'
+              echo 'a learner has heard; find out why the database has no clip first. A library'
+              echo 'started from nothing is the run form'"'"'s `first_voice`.'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "go=true" >> "$GITHUB_OUTPUT"
@@ -306,7 +305,7 @@ jobs:
             # One bundle failing must not stop the rest: its clips are made on
             # the next run, and everything that did reach the bucket is pointed
             # at now.
-            python -m bjt synth "$f" --provider openai --have "$RUNNER_TEMP/have.txt" \
+            node bjt/main.ts synth "$f" --provider openai --have "$RUNNER_TEMP/have.txt" \
               "${remake[@]}" --upload --out "$out" || failed=1
             if [ -f "$out" ]; then
               (cd client && $WRANGLER d1 execute "$DB" --remote --yes --file "../$out")

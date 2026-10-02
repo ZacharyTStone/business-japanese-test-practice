@@ -3,7 +3,7 @@
 # One line per item:  <item id>  <reason>  <what is wrong, in one sentence>
 # The reason is one of the closed set a tester's report uses
 # (public.item_feedback.reason): unnatural, wrong_answer, ambiguous, unclear,
-# audio, other. bjt/withdrawn.py reads this file; see it for why an item is
+# audio, other. bjt/withdrawn.ts reads this file; see it for why an item is
 # withdrawn here rather than deleted from its bundle.
 #
 # What a line does:
@@ -13,7 +13,7 @@
 #   - `bjt plan`, the phrasebook, the scene job and `bjt synth` stop counting it,
 #     so the nightly planner sees the shelf as emptier and refills it.
 #   - `bjt checkbatch` stops holding it to the naturalness lint
-#     (bjt/fidelity/naturalness.py). Every item NOT listed here must pass that
+#     (bjt/fidelity/naturalness.ts). Every item NOT listed here must pass that
 #     lint, so a committed item with a mechanical tell has to be named here.
 #
 # Deleting a line does not put an item back: the bundle SQL never sets

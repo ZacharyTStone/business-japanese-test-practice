@@ -13,8 +13,8 @@ export type ClipUrl = (audioPath: string | null) => string | null;
 /** The types whose four options are heard rather than read — which on the exam
  *  is **all of 第1部 聴解**: the screen shows the picture and the bare numerals,
  *  the four candidates are read aloud, and in 総合聴解 there is nothing on the
- *  screen at all. Must agree with TYPE_AUDIO in bjt/tts/plan.py, which is where
- *  the clips come from (tests/test_media.py reads this set to check); an item
+ *  screen at all. Must agree with TYPE_AUDIO in bjt/tts/plan.ts, which is where
+ *  the clips come from (tests/media.test.ts reads this set to check); an item
  *  whose clips do not exist yet falls back to printed options on its own (see
  *  spokenOptionUrls). */
 export const SPOKEN_OPTION_TYPES = new Set([
@@ -32,7 +32,7 @@ export const SPOKEN_OPTION_TYPES = new Set([
  * narration and shown as numbers with a replay button, and the text stays
  * hidden until the answer is in. All four or none — a set where three are
  * spoken and one is printed would mark the odd one out, and the type table in
- * bjt/tts/plan.py is the only reason any other type would have option clips.
+ * bjt/tts/plan.ts is the only reason any other type would have option clips.
  */
 export function spokenOptionUrls(item: QueuedItem, clipUrl: ClipUrl): string[] | null {
   if (!SPOKEN_OPTION_TYPES.has(item.item_type)) return null;

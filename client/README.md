@@ -18,7 +18,7 @@ npm run build:web && npx wrangler dev   # the app and its Worker on one origin, 
 `wrangler dev` runs against a local D1: fill it once with `npx wrangler d1
 migrations apply business-japanese-drill --local` and each `../batches/*.sql`
 (scenes.sql first) with `npx wrangler d1 execute business-japanese-drill
---local --file`, and add yourself with `python -m bjt tester`. It also needs an
+--local --file`, and add yourself with `node bjt/main.ts tester`. It also needs an
 Access identity — an `"access": {"dev": {...}}` block in a local copy of
 `wrangler.jsonc`. Without a Worker to talk to (`npm run ios`, say) the app
 still starts and says what is missing rather than crashing.
@@ -147,7 +147,7 @@ src/lib/
   pace.ts           how long a reading question gets, and why
   levels.ts         the three section levels: order, names, and what moved
   roles.ts          distractor role → Japanese label + 失礼度メーター values
-  generated.ts      the role and tag lists, written by `python -m bjt.client_constants`
+  generated.ts      the role and tag lists, written by `node bjt/client_constants.ts`
   types.ts          the shapes the database returns
   session.ts        the practice → result handoff
 src/ui/             theme, shared components, icons, the meter, the radar, the face
@@ -216,8 +216,7 @@ database only through the Worker, as the learner").
 `expo export -p web` renders one HTML file per route into `dist/`, which the
 Worker serves as static assets; `/api/*` and `/media/*` run `worker/index.ts`
 first (`run_worker_first`). The database is D1 and the media are in R2, both
-bound in `wrangler.jsonc`; the step-by-step setup is in
-`cloudflare-migration.md` at the repository root.
+bound in `wrangler.jsonc`.
 
 It deploys as a **Worker** with static assets. Dashboard → **Workers & Pages →
 Create → Import a repository**, pick this repo, then:

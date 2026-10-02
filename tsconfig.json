@@ -1,0 +1,25 @@
+{
+  // The pipeline runs on Node's own TypeScript support (type stripping, Node
+  // 22.18 and later): no build step, `node bjt/main.ts <command>`. That is
+  // why imports name the `.ts` file and why only erasable syntax is allowed
+  // (no enums, namespaces or parameter properties). `npm run typecheck` is
+  // the type check; the app in client/ has its own.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["bjt/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+}

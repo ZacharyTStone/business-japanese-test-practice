@@ -1,6 +1,6 @@
 {
   "item_type": "gazou_haaku",
-  "_note": "Original design, not licensed material. The picture is the stimulus, so the `function` axis is WHAT IS BEING DONE in the picture — the action the correct description names. Ten items are ten different actions by construction, and the `setting` says where the action is drawn. There is no scene bank: every cell gets a picture of its own, drawn from the item's brief and reviewed against its four descriptions (bjt/scene_art.py). The `relation` is who is doing the action to whom; the person on the left of the arrow is the one the question asks about, and the picture must make that person the obvious subject.",
+  "_note": "Original design, not licensed material. The picture is the stimulus, so the `function` axis is WHAT IS BEING DONE in the picture — the action the correct description names. Ten items are ten different actions by construction, and the `setting` says where the action is drawn. There is no scene bank: every cell gets a picture of its own, drawn from the item's brief and reviewed against its four descriptions (bjt/scene_art.ts). The `relation` is who is doing the action to whom; the person on the left of the arrow is the one the question asks about, and the picture must make that person the obvious subject.",
   "levels": [
     "J3",
     "J2",

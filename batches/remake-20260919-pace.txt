@@ -5,7 +5,7 @@
 # audio with a 1.1x rate multiplier on the request and a house style that asked
 # for connected speech, everyday reductions and a rhythm that varies. The owner
 # heard the result and said it had stopped sounding like a Japanese person. Both
-# settings are out again; see bjt/tts/providers.py for why neither comes back.
+# settings are out again; see bjt/tts/providers.ts for why neither comes back.
 #
 # A clip id is a hash of (voice, channel, text), so the revert does not touch a
 # clip that already exists — these 24 keep the delivery they were made with
@@ -16,7 +16,7 @@
 # Computed offline as the clips present in batches/ at 48ee582 but not at
 # f8899a4 (the head of deploy run #15, the last run at the old voice).
 #
-#   python -m bjt synth batches/<bundle>.json --provider openai \
+#   node bjt/main.ts synth batches/<bundle>.json --provider openai \
 #       --have have.txt --remake batches/remake-20260919-pace.txt --upload
 #
 # Once these are re-made, uploaded and their SQL applied, this file has done its

@@ -7,7 +7,7 @@
  * to look at it) can lay one out without a phone. Paint is named by role
  * (`ink`, `grid`, `grey`…) and turned into the paper's colours by the drawer.
  *
- * The rules mirror bjt/render/chart.py, which is where a chart's shape is
+ * The rules mirror bjt/render/chart.ts, which is where a chart's shape is
  * enforced before it is ever published: the same axis arithmetic
  * (`niceTicks` ≡ `chart.axis`), the same way of printing a figure
  * (`formatValue` ≡ `chart.format_value`), and the same reading of a malformed

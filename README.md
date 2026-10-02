@@ -6,7 +6,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-private%20beta%20(testers%20only)-orange?style=flat-square" alt="Status: private beta" />
-  <img src="https://img.shields.io/badge/Python-item%20pipeline-3776AB?logo=python&logoColor=white&style=flat-square" alt="Python" />
+  <img src="https://img.shields.io/badge/TypeScript-item%20pipeline-3178C6?logo=typescript&logoColor=white&style=flat-square" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Claude%20API-structured%20output-D97757?logo=anthropic&logoColor=white&style=flat-square" alt="Claude API" />
   <img src="https://img.shields.io/badge/Cloudflare-D1%20%C2%B7%20R2-F38020?logo=cloudflare&logoColor=white&style=flat-square" alt="Cloudflare D1 and R2" />
   <img src="https://img.shields.io/badge/Expo-iOS%20%C2%B7%20Android%20%C2%B7%20Web-000020?logo=expo&logoColor=white&style=flat-square" alt="Expo" />
@@ -69,12 +69,12 @@ ships.
 
 ```mermaid
 flowchart LR
-    subgraph offline["Offline — GitHub Actions + Python (bjt/)"]
+    subgraph offline["Offline — GitHub Actions + TypeScript (bjt/)"]
         ST["seed table"] --> GEN["generator (Claude)"]
         GEN --> CHK["proofreader → gate → difficulty probe → batch checks"]
         CHK --> PR["pull request: JSON + SQL"]
     end
-    PR -->|"a person merges"| DEP["deploy: SQL, audio, pictures"]
+    PR -->|"merged once its checks pass"| DEP["deploy: SQL, audio, pictures"]
     DEP --> DB[("Cloudflare<br/>D1 · R2")]
     DB --- W["Worker<br/>queue · grading"]
     W -->|"a set of questions"| APP["Expo app<br/>web"]
@@ -83,7 +83,7 @@ flowchart LR
 
 Three programs that only meet in the database:
 
-1. **The pipeline** (`bjt/`, Python) writes questions, checks them, makes their
+1. **The pipeline** (`bjt/`, TypeScript on Node) writes questions, checks them, makes their
    audio and pictures, and outputs **bundles** (JSON) plus the **SQL** that
    publishes them. Runs locally or in GitHub Actions — never behind the app.
 2. **The database and its Worker** (`d1/`, `client/worker/`) — Cloudflare D1
@@ -116,7 +116,7 @@ time (30 min) — plus per-call output caps. Hitting one stops the run and keeps
 what it wrote.
 
 ```
-bjt/        the pipeline (Python)          d1/         the schema (SQLite migrations)
+bjt/        the pipeline (TypeScript)      d1/         the schema (SQLite migrations)
 seedtable/  variety axes (data)            client/     the app (Expo)
 batches/    published bundles + SQL        tests/      pipeline tests
 ```
@@ -338,7 +338,7 @@ questions. Clip ids hash (voice, channel, text): a shared line is one file, and
 a live clip is never re-made. 聴解 speaks stem + options, 聴読解 stem + dialogue,
 読解 nothing. Phone lines get a phone sound; the narrator never does.
 
-**Pictures** (`bjt/scene_art.py`, offline). A shared bank of 16 setting
+**Pictures** (`bjt/scene_art.ts`, offline). A shared bank of 16 setting
 pictures, plus one picture per 画像把握 question (which must let a reviewer pick
 the correct description every time). No text, logos or real faces; every draft
 is reviewed by a model and refusals are kept with reasons.
@@ -360,12 +360,14 @@ queue.
 
 * **nightly** (03:00 JST, or by hand from `main`) — survey the bank, recount question
   difficulty from all answers, write up to 3 questions, draw needed pictures,
-  open a PR. Manual options: **probe** (measure unrated questions) or
-  **compare_jev** (Jev vs the default probe; writes nothing). Work is saved as an
-  artifact before any push. **It never publishes.**
-* **checks** (every push to `main`, every PR) — pytest, ruff, mypy, schema
-  tests (and the app's generated database types), app typecheck, lint and
-  tests, checkbatch.
+  open a PR — the night's record — then run **checks** on that branch and, when
+  every job is green, merge it and start **deploy database**. A red check leaves
+  the PR open with a comment saying why. Manual options: **probe** (measure
+  unrated questions) or **compare_jev** (Jev vs the default probe; writes
+  nothing). Work is saved as an artifact before any push.
+* **checks** (every push to `main`, every PR, and each night's branch) — the
+  pipeline's vitest suite, typecheck and lint, schema tests (and the app's
+  generated database types), app typecheck, lint and tests, checkbatch.
 * **deploy database** (after green `checks` on a push to `main`, deploying
   that commit; or by hand from `main`) — migrations,
   every bundle's SQL, missing audio. Idempotent. Manual runs can add a tester
@@ -457,33 +459,34 @@ question; nothing acts on it automatically. A veto (for accounts with
 deploy builds the real one: every query the app makes, as a tester; privacy
 between users; testers-only access; the database refusing a grade it did not
 compute; bundles applying twice cleanly; the day's ceiling, vetoes and starting
-again. Before the move from Postgres, the TypeScript queue, grading, ladder and
-levels were replayed step by step against the old SQL functions over thousands
-of simulated answers, with no difference.
+again.
 
 ---
 
 ## 8. Working on it
 
+The pipeline is TypeScript that Node runs directly (Node 22.18 or later; no
+build step). `bjt <command>` below means `node bjt/main.ts <command>`, or
+`npm run bjt -- <command>`.
+
 **Offline** (no keys, no Cloudflare account):
 
 ```bash
-pip install -e ".[dev]"
-python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json --show
-python -m bjt plan
+npm ci
+node bjt/main.ts checkbatch batches/hatsugen_choukai_J2_001.json --show
+node bjt/main.ts plan
 ```
 
 **Before pushing:**
 
 ```bash
-pytest
-ruff check .
-cd client && npm install && npm run typecheck && npm test && npm run test:db
-python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json
+npm test && npm run typecheck && npm run lint
+cd client && npm install && npm run typecheck && npm test && npm run test:db && npm run lint
+node bjt/main.ts checkbatch batches/hatsugen_choukai_J2_001.json
 ```
 
-`pytest` also fails if a generated file is stale: regenerate with `python -m
-bjt.client_constants`. `CLAUDE.md` lists the decisions not to undo by accident.
+`npm test` also fails if a generated file is stale: regenerate with `node
+bjt/client_constants.ts`. `CLAUDE.md` lists the decisions not to undo by accident.
 
 **Running the app** needs a D1 database with the schema, an R2 bucket for the
 media, and Cloudflare Access as the sign-in, all bound to the Worker in
@@ -494,15 +497,16 @@ from `client/`, listing yourself as a tester first:
 npx wrangler d1 migrations apply business-japanese-drill --remote
 npx wrangler d1 execute business-japanese-drill --remote --file ../batches/scenes.sql
 for f in ../batches/*.sql; do npx wrangler d1 execute business-japanese-drill --remote --yes --file "$f"; done
-python -m bjt tester you@example.com > tester.sql
+node ../bjt/main.ts tester you@example.com > tester.sql
 npx wrangler d1 execute business-japanese-drill --remote --file tester.sql
 ```
 
 Locally, `npx wrangler dev` runs the Worker against a local D1 (`--local` on
 the commands above).
 
-The Cloudflare side, step by step, is in `cloudflare-migration.md`; the app's
-structure and local development are in `client/README.md`.
+The app's structure, local development and the Worker's dashboard settings
+are in `client/README.md`; the secrets each workflow reads are listed at the
+top of its file in `.github/workflows/`.
 
 **Generating** (needs `ANTHROPIC_API_KEY`, e.g. in `.env`):
 
@@ -535,7 +539,7 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 
 ### Configuration
 
-Environment variables (`bjt/config.py`; a root `.env` is loaded).
+Environment variables (`bjt/config.ts`; a root `.env` is loaded).
 
 | Variable | Default | Sets |
 |---|---|---|
@@ -564,14 +568,15 @@ gracefully without it.
 
 ```
 bjt/
-  cli/ (a module per group of commands) · config.py · llm.py (Claude wrapper + ceilings) · jev.py · http.py · files.py
-  generators/  one per type        schemas.py  item schemas, exam shares
-  seedtable.py · plan.py · pipeline.py · batch.py · publish.py · withdrawn.py · backfill.py · regate.py
+  main.ts (the entry point) · cli/ (a module per group of commands) · config.ts · llm.ts (Claude wrapper + ceilings) · jev.ts · http.ts · files.ts
+  py.ts · pyjson.ts · pyrandom.ts   Python's printing, JSON and seeded shuffles, which the committed files depend on
+  generators/  one per type        schemas.ts  item schemas, exam shares
+  seedtable.ts · plan.ts · pipeline.ts · batch.ts · publish.ts · withdrawn.ts · backfill.ts · regate.ts
   fidelity/    roles, proofreader, naturalness, gate, difficulty, discriminator, vocab, dedupe
   render/      document templates, charts, numerals
   tts/         audio planning, synthesis, phone channel, voices
-  scenes.py · scene_art.py        pictures
-  r2.py        the media bucket, over R2's S3 API
+  scenes.ts · scene_art.ts        pictures
+  r2.ts        the media bucket, over R2's S3 API
 d1/        migrations/ · refresh_item_stats.sql
 client/    the app (see client/README.md)
 tests/     pipeline tests and library-wide sweeps

@@ -2,7 +2,7 @@
  * A document stimulus, drawn to look like the thing it is.
  *
  * There are two renderers for one data model and that is deliberate.
- * `bjt/render/html.py` produces HTML — for the CLI preview and for anything that
+ * `bjt/render/html.ts` produces HTML — for the CLI preview and for anything that
  * wants a page. This one produces native views, because the app runs on iOS and
  * Android as well as the web and a WebView per question would be slow, would not
  * inherit the reader's text size, and would fight the scroll of the screen it
