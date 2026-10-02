@@ -505,10 +505,8 @@ export function render(surveyResult: Survey, order: readonly WorkItem[],
   lines.push("");
 
   if (truthy(resting)) {
-    // The printed path is the Python module's: the report is byte-identical
-    // to the one bjt/plan.py printed.
     lines.push("Resting tonight — nothing written on their last nights, so the " +
-               "budget goes elsewhere (bjt/shelf_rest.py):");
+               "budget goes elsewhere (bjt/shelf_rest.ts):");
     for (const [k, until] of _restingSorted(resting!)) {
       const [itemType, level] = shelfOf(k);
       lines.push(`   ${itemType} ${level}   tried again from ${isodateUtc(until)}`);

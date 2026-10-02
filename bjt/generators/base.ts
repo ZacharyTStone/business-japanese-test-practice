@@ -356,7 +356,7 @@ export class Generator {
     if (this.requires_cell && cell === null) {
       throw new ValueError(
         `${this.item_type} requires a seed-table cell; variety for this type `
-        + "comes from the table, not from the prompt (see bjt/seedtable.py)",
+        + "comes from the table, not from the prompt (see bjt/seedtable.ts)",
       );
     }
     if (level === null || !schemas.validLevel(level)) {

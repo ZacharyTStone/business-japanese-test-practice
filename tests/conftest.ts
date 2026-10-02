@@ -1,5 +1,5 @@
 /**
- * The shared fixtures of tests/conftest.py, as plain functions a test calls.
+ * The shared fixtures (pytest's, once), as plain functions a test calls.
  *
  * pytest's `no_network` (no credential in the environment, every network seam
  * refusing) is tests/setup.ts, which runs before every test by itself; what

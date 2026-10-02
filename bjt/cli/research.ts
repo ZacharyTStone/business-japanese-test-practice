@@ -370,7 +370,7 @@ export async function cmdQuality(args: Namespace): Promise<number> {
       }
     }
 
-    print("\n[4 · document templates] the shapes a 資料 is set in (bjt/render/templates.py):");
+    print("\n[4 · document templates] the shapes a 資料 is set in (bjt/render/templates.ts):");
     print(`  ${Object.keys(render.TEMPLATES).length} templates: ${Object.keys(render.TEMPLATES).join(", ")}`);
     print("  every document is held to its template's required fields by `bjt checkbatch`");
 

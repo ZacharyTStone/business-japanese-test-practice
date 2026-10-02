@@ -78,7 +78,7 @@ export const JUDGE_MODEL = env("BJT_JUDGE_MODEL", "claude-sonnet-5");
 export const SANITY_MODEL = env("BJT_SANITY_MODEL", "claude-haiku-4-5");
 
 // Set BJT_SANITY=0 to skip it. An item that is not checked is recorded as not
-// checked rather than as clean — see bjt/fidelity/sanity.py.
+// checked rather than as clean — see bjt/fidelity/sanity.ts.
 export const SANITY_ENABLED = flag("BJT_SANITY");
 
 // ----- the ceilings ------------------------------------------------------
@@ -89,9 +89,9 @@ export const SANITY_ENABLED = flag("BJT_SANITY");
 // others.
 
 // The most one process may spend — or one job, when BJT_SPEND_LEDGER names
-// the file its steps share (bjt/llm.py `Spend`); the call and minute ceilings
+// the file its steps share (bjt/llm.ts `Spend`); the call and minute ceilings
 // below are shared the same way — measured from the usage every response
-// reports and priced with the table in bjt/llm.py. Checked before each call;
+// reports and priced with the table in bjt/llm.ts. Checked before each call;
 // reached, the run stops with what it has (LLMSpendLimitError, which the
 // nightly loop treats like an empty account). Two dollars is a normal night
 // on Sonnet with room to spare, and below anything worth being angry about.
@@ -114,7 +114,7 @@ export const RUN_MAX_MINUTES = toFloat(env("BJT_RUN_MAX_MINUTES", "30"));
 // How long one API call may take before the SDK gives up on it, and how many
 // times it may retry a transient failure. A call that hangs is paid for in
 // minutes; a call retried many times is paid for in money. The retries are
-// made by bjt/llm.py, not the SDK, so each one is counted and checked against
+// made by bjt/llm.ts, not the SDK, so each one is counted and checked against
 // the ceilings above before it is sent.
 export const API_TIMEOUT_SECONDS = toFloat(env("BJT_API_TIMEOUT_SECONDS", "300"));
 export const API_MAX_RETRIES = toInt(env("BJT_API_MAX_RETRIES", "2"));
@@ -140,7 +140,7 @@ export const DB_PATH = env("BJT_DB_PATH", path.join(ROOT, "bjt.db"));
 export const SEEDS_DIR = env("BJT_SEEDS_DIR", path.join(ROOT, "seeds"));
 
 // The seed tables (場面×関係×機能×レベル). Our own design, not licensed — these
-// ARE committed, unlike seeds/. See bjt/seedtable.py.
+// ARE committed, unlike seeds/. See bjt/seedtable.ts.
 export const SEEDTABLE_DIR = env("BJT_SEEDTABLE_DIR", path.join(ROOT, "seedtable"));
 
 // Where batch runs write their bundles (the JSON the app ships with).
@@ -177,7 +177,7 @@ export const DIFFICULTY_TRIALS = toInt(env("BJT_DIFFICULTY_TRIALS", "5"));
 // A prototype, off unless asked for: BJT_DIFFICULTY_MODEL=jev-latest makes the
 // probe one call to TypeSafe AI's Jev, which returns a probability for every
 // option instead of an answer, and the probability it gives the key is the rate
-// (bjt/jev.py). DIFFICULTY_TRIALS does not apply to it. The key is read from
+// (bjt/jev.ts). DIFFICULTY_TRIALS does not apply to it. The key is read from
 // TYPESAFE_API_KEY when the call is made, as the Anthropic SDK reads its own.
 // `bjt probe --compare jev-latest` sets the two instruments side by side and
 // writes nothing, which is the evidence to read before letting it write a rate.
@@ -185,7 +185,7 @@ export const JEV_URL = env("BJT_JEV_URL", "https://api.typesafe.ai/v1/systemone"
 
 // Set BJT_DIFFICULTY=0 to skip it. An item that was not probed carries the
 // gate's full-view rate, which is the honest fallback rather than a made-up
-// number — see bjt/fidelity/difficulty.py.
+// number — see bjt/fidelity/difficulty.ts.
 export const DIFFICULTY_ENABLED = flag("BJT_DIFFICULTY");
 
 // The image model that draws the scene bank, and how hard it tries. Medium is a
@@ -201,14 +201,14 @@ export const SCENE_ATTEMPTS = toInt(env("BJT_SCENE_ATTEMPTS", "3"));
 // marker per refused draft), because the runner forgets everything each
 // night and the bucket is the only record it has. Without it, a scene the
 // reviewer always refuses would be redrawn every week for ever; with it, six
-// refusals (two weeks) and the scene ships on its stand-in (bjt/scenes.py
+// refusals (two weeks) and the scene ships on its stand-in (bjt/scenes.ts
 // STAND_INS) until somebody draws it by hand. A per-item picture (画像把握) has
 // no stand-in: after this many its item stays unserved, and the summary says so.
 export const SCENE_LIFETIME_ATTEMPTS = toInt(env("BJT_SCENE_LIFETIME_ATTEMPTS", "6"));
 
 // A shelf that has written nothing on this many nights in a row rests: the
 // work order passes it over for SHELF_REST_DAYS after its last miss, then tries
-// it once more (bjt/shelf_rest.py). Counted in the bucket, like the picture
+// it once more (bjt/shelf_rest.ts). Counted in the bucket, like the picture
 // refusals above. Without it, a shelf the generator cannot write stays furthest
 // behind and takes every night's budget: from 2026-09-28 three nights in a row
 // spent theirs on the same three shelves and wrote nothing. 0 turns it off.

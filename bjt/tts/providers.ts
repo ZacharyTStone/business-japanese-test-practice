@@ -384,9 +384,10 @@ export class GoogleProvider implements Provider {
   async synthesize(text: string, voice: string, opts: { instructions?: string } = {}): Promise<Uint8Array> {
     const cls = this.constructor as typeof GoogleProvider;
     _cast("Google Cloud", cls.VOICE_IDS, voice);
-    // The client library is not installed (see the class comment).
-    throw new RuntimeError("pip install 'bjt-practice[tts-google]' to use this provider",
-                           { cause: new ModuleNotFoundError("No module named 'google'") });
+    // The client library is not part of the pipeline (see the class comment).
+    throw new RuntimeError(
+      "the Google Cloud voice needs Google's text-to-speech client, which this pipeline does not include",
+      { cause: new ModuleNotFoundError("no Google Cloud text-to-speech client") });
   }
 
   /** Wrap the text, expressing the pronunciation dictionary as `<sub>`.

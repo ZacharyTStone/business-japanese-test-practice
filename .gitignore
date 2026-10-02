@@ -5,14 +5,8 @@ seeds/
 *.db
 bjt.db
 
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-build/
-dist/
+# The pipeline's packages (npm ci at the root).
+node_modules/
 
 # local env (contains your API key)
 .env
@@ -32,5 +26,3 @@ media/
 
 # macOS
 .DS_Store
-
-node_modules/
