@@ -28,7 +28,7 @@
  * module (`llm.reviewSceneImage`, `llm.answerFromImage`) and the image API and
  * the bucket through `http` / `r2`, so a test replaces them there.
  */
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 import * as config from "./config.ts";
@@ -36,11 +36,12 @@ import { writeAtomic } from "./files.ts";
 import * as http from "./http.ts";
 import * as llm from "./llm.ts";
 import {
-  errText, get, has, KeyError, len, PyError, repr, RuntimeError, sorted, str, SystemExit, thousands, toInt, truthy,
+  errText, get, has, KeyError, PyError, replace, repr, RuntimeError, sorted, str, SystemExit, thousands, toInt, truthy,
   TypeError_, ValueError,
 } from "./py.ts";
 import * as r2 from "./r2.ts";
 import * as scenes from "./scenes.ts";
+import * as providers from "./tts/providers.ts";
 
 // ----- image providers ------------------------------------------------------
 
@@ -171,21 +172,13 @@ export class OpenAIImageProvider implements ImageProvider {
       }
       throw exc;
     }
-    let b64: unknown;
     try {
-      b64 = _sub(_sub(_sub(data, "data"), 0), "b64_json");
+      return providers._b64decode(_sub(_sub(_sub(data, "data"), 0), "b64_json"));
     } catch (exc) {
+      // A reply without the picture where it should be, or something other
+      // than text there. Text that does not decode (binascii.Error, a
+      // ValueError) is not caught, as in Python.
       if (exc instanceof KeyError || exc instanceof IndexError || exc instanceof TypeError_) {
-        throw new RuntimeError(`unexpected response from the image API: ${errText(exc)}`, { cause: exc });
-      }
-      throw exc;
-    }
-    try {
-      return _b64decode(b64);
-    } catch (exc) {
-      // `base64.b64decode(None)` is a TypeError, caught as above; data that
-      // does not decode (binascii.Error, a ValueError) is not.
-      if (exc instanceof TypeError_) {
         throw new RuntimeError(`unexpected response from the image API: ${errText(exc)}`, { cause: exc });
       }
       throw exc;
@@ -581,7 +574,7 @@ export function select(
  * not hold tonight, and the run's own ceilings still do.
  */
 export async function lifetimeLedger(
-  bucket: Bucket,
+  bucket: Pick<Bucket, "configured" | "refusals" | "recordRefusal">,
   opts: { record: boolean },
 ): Promise<[Record<string, number>, OnReject | null, string | null]> {
   if (!bucket.configured) {
@@ -806,13 +799,7 @@ export function without(survey: scenes.Scene[], paths: ReadonlySet<string>): sce
   if (paths.size === 0) {
     return survey;
   }
-  return survey.map((s) => (s.path !== null && paths.has(s.path) ? _replace(s, { path: null }) : s));
-}
-
-/** `dataclasses.replace(scene, **changes)`: a copy of the scene, its class
- *  and getters kept, with some fields changed. */
-function _replace(s: scenes.Scene, changes: { path: string | null }): scenes.Scene {
-  return Object.assign(Object.create(Object.getPrototypeOf(s)), s, changes);
+  return survey.map((s) => (s.path !== null && paths.has(s.path) ? replace(s, { path: null }) : s));
 }
 
 /** A request the server refused (bjt/http.ts). Named here too because the
@@ -921,80 +908,11 @@ function _sub(obj: unknown, key: string | number): unknown {
     if (!has(obj, key)) throw new KeyError(repr(key));
     return (obj as Record<string, unknown>)[key];
   }
-  if (Array.isArray(obj) || typeof obj === "string") {
-    throw new TypeError_(`${_typeName(obj)} indices must be integers or slices, not str`);
+  if (Array.isArray(obj)) {
+    throw new TypeError_("list indices must be integers or slices, not str");
+  }
+  if (typeof obj === "string") {
+    throw new TypeError_("string indices must be integers, not 'str'");
   }
   throw new TypeError_(`'${_typeName(obj)}' object is not subscriptable`);
-}
-
-/** The base64 alphabet's values; anything else is not part of the data. */
-const _B64_VALUES: ReadonlyMap<string, number> = new Map(
-  [..."ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"].map((c, i) => [c, i]),
-);
-
-/** Python's binascii.Error, a ValueError. */
-class BinasciiError extends ValueError {}
-
-/** `base64.b64decode(s)` (not validating), as binascii decodes it: a
- *  character outside the alphabet is skipped, a pad ends the data once a
- *  quantum has two characters, and data left over that is not a whole number
- *  of bytes is an error. Node's decoder accepts what Python refuses. */
-export function _b64decode(s: unknown): Uint8Array {
-  if (typeof s !== "string") {
-    throw new TypeError_(`argument should be a bytes-like object or ASCII string, not '${_typeName(s)}'`);
-  }
-  if (new RegExp("[^\\x00-\\x7f]").test(s)) {
-    throw new ValueError("string argument should contain only ASCII characters");
-  }
-  const out: number[] = [];
-  let quadPos = 0;
-  let leftchar = 0;
-  let pads = 0;
-  for (const ch of s) {
-    if (ch === "=") {
-      // (A pad counts only once two characters of the quantum are in.)
-      if (quadPos >= 2 && quadPos + ++pads >= 4) {
-        // A pad sequence means we should not parse more input.
-        return Uint8Array.from(out);
-      }
-      continue;
-    }
-    const v = _B64_VALUES.get(ch);
-    if (v === undefined) continue;
-    pads = 0;
-    switch (quadPos) {
-      case 0:
-        quadPos = 1;
-        leftchar = v;
-        break;
-      case 1:
-        quadPos = 2;
-        out.push((leftchar << 2) | (v >> 4));
-        leftchar = v & 0x0f;
-        break;
-      case 2:
-        quadPos = 3;
-        out.push((leftchar << 4) | (v >> 2));
-        leftchar = v & 0x03;
-        break;
-      default:
-        quadPos = 0;
-        out.push((leftchar << 6) | v);
-        leftchar = 0;
-    }
-  }
-  if (quadPos !== 0) {
-    if (quadPos === 1) {
-      throw new BinasciiError(
-        `Invalid base64-encoded string: number of data characters (${len(s.replace(/[^A-Za-z0-9+/]/g, ""))}) `
-        + "cannot be 1 more than a multiple of 4");
-    }
-    throw new BinasciiError("Incorrect padding");
-  }
-  return Uint8Array.from(out);
-}
-
-/** Whether a local file is there (`Path.exists()`). */
-export function _exists(p: string): boolean {
-  return existsSync(p);
 }

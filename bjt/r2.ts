@@ -28,7 +28,7 @@
  */
 import { createHash, createHmac } from "node:crypto";
 import * as http from "./http.ts";
-import { len, PyError, sorted, splitWs, str, strip, truthy, ValueError } from "./py.ts";
+import { len, PyError, RuntimeError, sorted, splitWs, str, strip, truthy, ValueError } from "./py.ts";
 
 export const DEFAULT_BUCKET = "business-japanese-drill-media";
 export const REGION = "auto";
@@ -163,7 +163,7 @@ export function sign(
 // ----- the three calls -----------------------------------------------------------
 
 /** The bucket already holds an object at that key, and it was not replaced. */
-export class AlreadyExists extends PyError {}
+export class AlreadyExists extends RuntimeError {}
 
 export async function _request(
   creds: Credentials,

@@ -7,7 +7,11 @@
  */
 import { describe, expect, test } from "vitest";
 import * as http from "../bjt/http.ts";
+import * as r2 from "../bjt/r2.ts";
+import * as scene_art from "../bjt/scene_art.ts";
 import { patch } from "./helpers.ts";
+
+const CREDS = new r2.Credentials({ account_id: "acct", access_key_id: "k", secret_access_key: "s" });
 
 type Reply = Uint8Array | Error;
 
@@ -100,5 +104,25 @@ describe("http", () => {
 
   test("an unfaked request is refused by the test setup", async () => {
     await expect(http.request("GET", "https://x.example/p")).rejects.toThrow(/fake it in the test/);
+  });
+
+  test("the bucket listing survives a dropped request", async () => {
+    const w = wire();
+    const listing = bytes('<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+                          + "<IsTruncated>false</IsTruncated><Contents><Key>scenes/a.webp</Key></Contents>"
+                          + "</ListBucketResult>");
+    w.replies = [status(502), listing];
+    const bucket = new scene_art.Bucket({ creds: CREDS });
+    expect(await bucket.list()).toEqual(new Set(["a.webp"]));
+  });
+
+  /** A retried upload that had in fact arrived would come back as "already
+   *  there" — and be counted as live when it is tonight's file. */
+  test("an upload is never sent twice", async () => {
+    const w = wire();
+    w.replies = [status(503)];
+    const bucket = new scene_art.Bucket({ creds: CREDS });
+    await expect(bucket.upload("a.webp", bytes("x"), "image/webp")).rejects.toBeInstanceOf(http.RequestFailed);
+    expect(w.sent.length).toBe(1);
   });
 });
