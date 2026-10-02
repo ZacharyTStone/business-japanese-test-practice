@@ -14,20 +14,28 @@ run the checks below before every push, not just when a change looks risky.
 All of these run offline — no API key, no Cloudflare account, no network:
 
 ```bash
-pytest                                  # the item pipeline
-ruff check .                            # bugs only: undefined names, unused variables, bad comparisons
+npm test                                # the item pipeline (vitest; `npm ci` first, at the root)
+npm run typecheck                       # types: a null where a value is needed, a list where a bool is
+npm run lint                            # bugs only: a promise nobody awaits, a value never read
 cd client && npm run typecheck          # the app, the Worker, its tests
 cd client && npm test                   # the pure parts: the practice reducer, the clock, the roles, the Worker's
 cd client && npm run test:db            # every Worker query + the schema's promises, on a local D1 with the bank
 cd client && npm run lint               # the rules of hooks
-mypy bjt                                # types: a None where a value is needed, a list where a bool is
-python -m bjt checkbatch batches/hatsugen_choukai_J2_001.json   # the reference batch
+node bjt/main.ts checkbatch batches/hatsugen_choukai_J2_001.json   # the reference batch
 ```
 
-`pytest` fails until a generated file is regenerated with the change that
-stales it: `python -m bjt.client_constants` (the app's distractor roles and
+The pipeline is TypeScript run by Node itself (22.18 or later strips the
+types; there is no build step): `bjt <command>` in this file means
+`node bjt/main.ts <command>`. It was ported from Python on 2026-10-02 and
+still writes what the Python wrote, byte for byte — `bjt/py.ts`,
+`bjt/pyjson.ts` and `bjt/pyrandom.ts` keep Python's printing, rounding,
+JSON and seeded shuffles, because committed bundles, SQL and clip ids depend
+on them. Use them rather than JavaScript's own wherever output is written.
+
+`npm test` fails until a generated file is regenerated with the change that
+stales it: `node bjt/client_constants.ts` (the app's distractor roles and
 tag names, from `bjt/` and `seedtable/`). After anything that touches the
-library, run `python -m bjt plan` (not a check) to see whether the bank is
+library, run `node bjt/main.ts plan` (not a check) to see whether the bank is
 still the shape the queue needs. `npm run test:db` builds a local D1
 (Miniflare, the same SQLite D1 runs) the way the deploy builds the real one —
 every migration in `d1/migrations`, `d1/triggers.sql`, then every
@@ -51,7 +59,7 @@ accident is not.
   **nightly** workflow at 03:00 JST); content ships as reviewable SQL
   (`bjt publish`). A night is very cheap: three items at most, reading first,
   never more than fifty cents (`BJT_RUN_BUDGET_USD` and the `max_usd` default in
-  `nightly.yml`, both pinned at or below 0.5 by `tests/test_ceilings.py`). A
+  `nightly.yml`, both pinned at or below 0.5 by `tests/ceilings.test.ts`). A
   manual run can ask for the difficulty probe (`bjt probe --all`) instead. The
   nightly job opens a pull request — the night's record and, with Dependabot's
   weekly pull request of pinned-action updates, the only exception to
@@ -65,7 +73,7 @@ accident is not.
   `checks` is green on `main`, the deploy runs by itself, deploys exactly the
   commit `checks` passed, and publishes the items and their audio together; by
   hand it runs only from `main`.
-- **A run's ceilings are checked before the call, not after.** `bjt/llm.py`
+- **A run's ceilings are checked before the call, not after.** `bjt/llm.ts`
   prices each response from its reported usage (a timed-out request at its
   output ceiling, an unknown model at 15/75 per MTok) and refuses the next
   request once the process — or, with `BJT_SPEND_LEDGER`, the job's bjt steps
@@ -92,7 +100,7 @@ accident is not.
   2026-09-28 three nights spent their budget on the same three shelves and
   wrote nothing. Each night records what each shelf did — `written` or
   `missed` — as an empty marker under `nightly/shelves/` in the media bucket
-  (`bjt/shelf_rest.py`; the Worker serves only `audio/` and `scenes/`). After
+  (`bjt/shelf_rest.ts`; the Worker serves only `audio/` and `scenes/`). After
   `BJT_SHELF_REST_AFTER` (3) misses in a row the work order passes the shelf
   over for `BJT_SHELF_REST_DAYS` (7) after its last miss, then tries it once
   more; one written night clears it. A night stopped by a ceiling or the
@@ -109,7 +117,7 @@ accident is not.
   outsider about one's own people) is cast in `staff_to_client`'s voice, so no
   role is recast; a test requires every relation to have a voice.
 - **The gate sees the whole stimulus; the cold view withholds the half the type
-  tests** (`bjt/fidelity/answerability.py`). Full view: every document and every
+  tests** (`bjt/fidelity/answerability.ts`). Full view: every document and every
   dialogue turn. Cold view: a document type's document without the audio, a
   dialogue type's question without the conversation, 総合読解's question without the
   passage, a stem-only type's options alone. This enforces "the answer needs
@@ -119,10 +127,10 @@ accident is not.
   it. A trial the judge did not answer ends the gate as `unchecked`: never
   kept, and nothing passed to the next draft.
 - **A rejected draft's reason goes to the next draft on that shelf.** The gate,
-  the proofreader and the dedupe check each give one sentence and `run_batch`
+  the proofreader and the dedupe check each give one sentence and `runBatch`
   passes it on, so a shelf's second and third drafts are not written blind. A
   draft with a fifth option is trimmed, not regenerated, and the 解説 sentences
-  that quote the trimmed option go with it (`drop_sentences_about`) — left in,
+  that quote the trimmed option go with it (`dropSentencesAbout`) — left in,
   they cost the draft at the proofreader as `explanation_mismatch`. The prompt
   asks for exactly four options and says at least one role goes unused, since
   every type offers four or more.
@@ -130,37 +138,37 @@ accident is not.
   are what grow the API's compiled grammar: the chart's four took the 総合聴読解
   schema past it, and from 2026-09-28 every request was refused "Schema is too
   complex" before a token was written. A document block requires every field
-  and sends the unused ones empty; `render.drop_unused_fields` strips them as
+  and sends the unused ones empty; `render.dropUnusedFields` strips them as
   the draft arrives, so nothing downstream sees the padding. A test holds the
   document types to it.
 - **A distractor is wrong the way people are wrong.** Over-politeness is wording
   people really use somewhere more formal, or a 二重敬語 people really say — never
   an invented stack (させていただかせていただく is the commonest).
-  `bjt/fidelity/naturalness.py` holds the rules: every generator is told them
+  `bjt/fidelity/naturalness.ts` holds the rules: every generator is told them
   (`PROMPT`); a draft tripping the mechanical half (invented keigo, a 〇〇
   placeholder, brackets in something heard, a 場面把握 narration that says the
   answer) is sent back with the reason; the proofreader has `unnatural_japanese`
-  and `situation_incoherent`; `check_bundle` fails any served item with a tell,
+  and `situation_incoherent`; `checkBundle` fails any served item with a tell,
   so a committed one is withdrawn or CI fails. 語彙・文法's `nonexistent_form` is the
   one deliberate non-word and is exempt. Widen a pattern only against a line
   from a real item, adding the line that must still pass beside it
-  (`tests/test_naturalness.py`).
-- **No tell a learner can pass a type on.** `check_bundle` asserts the key is
+  (`tests/naturalness.test.ts`).
+- **No tell a learner can pass a type on.** `checkBundle` asserts the key is
   not systematically the longest or shortest option, but a bundle is two to six
   items, so a habit across a whole type (e.g. a fully-specified key among terse
-  distractors) needs the per-type library sweep in `tests/test_batch_checks.py`
+  distractors) needs the per-type library sweep in `tests/batch_checks.test.ts`
   — the library is what a learner meets. Fix it by specifying the distractors,
   never by trimming the answer.
-- **The discriminator sees what the learner sees.** `render_for_discriminator`
+- **The discriminator sees what the learner sees.** `renderForDiscriminator`
   carries the 資料 and the 会話, not just stem and options; otherwise 状況把握, 資料聴読解,
   総合聴読解 and 総合読解 (55 of the exam's 80 questions) are rated on a fragment.
-  Conversely, `run_discriminator` refuses a comparison where our items carry a
+  Conversely, `runDiscriminator` refuses a comparison where our items carry a
   stimulus the official samples lack: `bjt discriminate` folds the judge's tells
   back into the generator prompt, and a tell about `seeds/official/` lacking a
   transcribed 資料 would teach it to stop writing documents.
 - **A chart is data, and every reader sees its figures.** Only templates with
   `charts=True` (`figures`, `progress_report`) carry one, one per document.
-  `document.text_of` writes each figure beside its label for the gate, the
+  `document.textOf` writes each figure beside its label for the gate, the
   proofreader, the probe and the discriminator; the app prints every bar's
   figure, and a line is asked about by its shape; the unit is exempt from the
   numeral rule (else 千円 becomes 1000円); a block type the app does not draw fails
@@ -168,24 +176,24 @@ accident is not.
 - **A printed number is written with digits, and the whole screen agrees.**
   「十時〜十二時」 or 「数量二百個」 is not what comes off an office printer; kanji numerals
   belong to vertical prose and to names (第一会議室, 第三回, 一覧).
-  `bjt/render/numerals.py` holds the rule; `batch.normalise_numerals` applies it
+  `bjt/render/numerals.ts` holds the rule; `batch.normaliseNumerals` applies it
   wherever an item enters a bundle; the document schema quotes it to the
   generator; an offline check re-runs the converter and fails a bundle it can
   still move. It covers the 資料 *and* a document type's printed options, stem and
   解説: when 資料聴読解 offers 「七十点」 for a figure read off a table, two notations for
-  one number make it arithmetic instead of reading. Anything `bjt/tts/plan.py`
+  one number make it arithmetic instead of reading. Anything `bjt/tts/plan.ts`
   synthesises is untouched — a clip id hashes its text, and a live clip is never
   re-made — so a narrated stem still reads 「三時から」. The converter only moves a
   number with a counter after it: that spares 一覧 and 第一会議室 but misses 「×十二の」 and
   「三百から二百を引いて」. Widening it would cost 「二、三日」 and 「一覧」, so
-  `numerals.mixed_notation` reports a sentence with both notations and the batch
+  `numerals.mixedNotation` reports a sentence with both notations and the batch
   check warns — not fails, since only a reader can tell 「二案」 (a count) from 「案二」
   (a label).
 - **`items.model_p_correct` is a property of the question, never of a person**:
   how often a model answered the item correctly at generation time — the
   difficulty probe (a weaker model, `BJT_DIFFICULTY_MODEL`) when it ran, else
   the answerability gate. With `BJT_DIFFICULTY_MODEL=jev-…` (a prototype,
-  opt-in, `bjt/jev.py`) it is instead the probability Jev puts on the key in one
+  opt-in, `bjt/jev.ts`) it is instead the probability Jev puts on the key in one
   call — a different number, so the bank carries one kind, not a mixture; read
   `bjt probe --compare` before switching. It is not an ability estimate, nothing
   about anybody is derived from it, and it is never displayed.
@@ -197,7 +205,7 @@ accident is not.
   generator writes an English `image_brief` with the four descriptions; the
   scene job draws one picture per item under `pic_<item id>` and refuses it
   unless a reviewer shown the picture and the four descriptions picks the marked
-  one every time (`bjt/scene_art.py`). `item_types.needs_picture` makes
+  one every time (`bjt/scene_art.ts`). `item_types.needs_picture` makes
   the queue hold the item back until `scenes.image_path` is set; every
   other type ships without a picture. A picture refused
   `BJT_SCENE_LIFETIME_ATTEMPTS` times over its life (the bucket's `rejected/`
@@ -205,19 +213,19 @@ accident is not.
   and the job checks the run's ceilings before every image) is given up on: a bank scene then shows its stand-in
   (`scenes.STAND_INS`); a per-item picture's item stays unserved.
 - **The voice is OpenAI, cast by role, and a live clip is never re-made.**
-  `bjt/tts/providers.py` records the provider as `DEFAULT` and the seven roles
+  `bjt/tts/providers.ts` records the provider as `DEFAULT` and the seven roles
   as `VOICE_IDS`, and neither follows whichever key is set: a different voice
   every question turns listening into speaker identification. Recast a role
   before its clips are live or not at all. `bjt synth --upload` requires
   `--have` and never uploads over a file already in the bucket, except the ids
   `--remake` names; such a file is counted live.
-- **Spoken formulas are spelled one way.** `bjt/phrasebook.py` shows the spoken
+- **Spoken formulas are spelled one way.** `bjt/phrasebook.ts` shows the spoken
   types the stock lines in the wording the library already has a clip for, so
   「少々お待ちください。」 is one file, not five. A nudge, never a quota: a distractor that
   must be wrong in a particular way is still written fresh.
 - **第1部 speaks its options.** All three 聴解 types read their four candidates
   aloud instead of printing them, as the exam does (the picture and bare
-  numerals; in 総合聴解, nothing). `TYPE_AUDIO` in `bjt/tts/plan.py` and
+  numerals; in 総合聴解, nothing). `TYPE_AUDIO` in `bjt/tts/plan.ts` and
   `SPOKEN_OPTION_TYPES` in `client/src/lib/playlist.ts` must agree. An item without its
   option clips yet falls back to printed options, so this ships progressively.
 - **A spoken option is introduced by its number.** 「いち」「に」「さん」「よん」 play before
@@ -225,7 +233,7 @@ accident is not.
   sentences test memory, not listening. Numbers, not letters (「ビー」/「ディー」 are
   confused, 「デー」 sounds like "day"; いち / に / さん / よん share no sound), and the
   badges say 1–4 everywhere, as the exam's answer sheet does. Four clips serve
-  the whole library, not four per item: `OPTION_LABELS` in `bjt/tts/plan.py`, in
+  the whole library, not four per item: `OPTION_LABELS` in `bjt/tts/plan.ts`, in
   the narrator's voice and room tone whatever the item's channel, found by the
   app on the same four strings (`OPTION_LABELS` in `client/src/lib/db.ts`, which
   a test holds equal). All four or none: until they are synthesised the run is
@@ -290,7 +298,7 @@ accident is not.
 - **The set is shaped like the exam, and so is the bank.** The exam's 80
   questions: 聴解 25 (場面把握 5 / 発言聴解 10 / 総合聴解 10), 聴読解 25 (状況把握 5 / 資料聴読解 10 /
   総合聴読解 10), 読解 30 (語彙・文法 10 / 表現読解 10 / 総合読解 10), held in
-  `item_types.exam_questions` (d1/migrations) and `bjt.schemas.EXAM_QUESTIONS`, which a
+  `item_types.exam_questions` (d1/migrations) and `EXAM_QUESTIONS` in `bjt/schemas.ts`, which a
   test holds equal. The nightly planner fills the shelf furthest behind its
   **share**, not the one with fewest items, and the queue carries a section
   term so a set of ten leans 3 / 3 / 4.
@@ -354,12 +362,12 @@ accident is not.
   window, so a goal of five hundred fetches everything there is, not five
   hundred rows; the bank is the real limit.
 - **Every distractor role has its own feedback, and the app's list of roles is
-  generated.** `python -m bjt.client_constants` writes
-  `client/src/lib/generated.ts` from `bjt/fidelity/roles.py` and the seed tables
+  generated.** `node bjt/client_constants.ts` writes
+  `client/src/lib/generated.ts` from `bjt/fidelity/roles.ts` and the seed tables
   (the Japanese name of every tag, for the progress screen); `roles.ts` is a
   `Record` over the generated roles, so a role with no sentence (falling through
   to 「この場面に合わない」) is a type error, and a stale file fails
-  `tests/test_client_constants.py`. Write every verdict out: a label with でした
+  `tests/client_constants.test.ts`. Write every verdict out: a label with でした
   glued on is ungrammatical whenever the label ends in a verb. The comprehension
   roles are `manner: false`, and the 失礼度メーター steps aside for them — a misread
   table offends nobody.
@@ -415,7 +423,7 @@ accident is not.
   team did not sign for this app, is a 401, not a pass. (`ctx.access` would say
   the same, but a Worker with static assets never receives it.) The clips and pictures are R2 objects under the paths the
   database holds (`client/worker/media.ts`); the pipeline writes them there
-  (`bjt/r2.py`).
+  (`bjt/r2.ts`).
 - **Testers only, for now, and the Worker is the door.** `testers` lists who
   may use the app by sign-in email (Cloudflare Access in front of the whole
   site, matched on the same email). Every query from an address not on the
@@ -457,7 +465,7 @@ accident is not.
   that keeps an in-app veto alive across deploys — so putting one back is a
   hand-written update. Everything that counts the library as a learner meets it
   (`bjt plan`, the phrasebook, the scene job, `bjt synth`, the library sweeps in
-  the tests) reads it through `withdrawn.live_items` / `live_bundle`. A test
+  the tests) reads it through `withdrawn.liveItems` / `liveBundle`. A test
   holds the committed SQL to what `bjt publish` writes from the ledger, so a
   line added and not published fails. `bjt importbatch` skips the proofreader
   and the gate; `bjt regate` puts those questions through both after the fact,

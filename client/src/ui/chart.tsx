@@ -8,7 +8,7 @@
  * graph.
  *
  * Like every block it is data, never a picture: the pipeline ships categories
- * and numbers (enforced by bjt/render/chart.py before anything is published)
+ * and numbers (enforced by bjt/render/chart.ts before anything is published)
  * and the app draws them, so the chart is as sharp at any size as the text
  * around it. ui/plot.ts does the geometry; this file turns its marks into
  * react-native-svg and dresses them in the paper's ink — solid, grey and open

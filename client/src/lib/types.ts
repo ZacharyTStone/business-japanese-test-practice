@@ -32,7 +32,7 @@ export type DialogueTurn = {
 };
 
 /** A block of a document stimulus. One shape with optional fields rather than a
- *  union, matching what the database stores — see bjt/render/document.py, which
+ *  union, matching what the database stores — see bjt/render/document.ts, which
  *  is where the shape is enforced before an item is ever published. */
 export type DocBlock = {
   type:

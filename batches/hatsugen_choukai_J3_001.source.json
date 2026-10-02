@@ -1,5 +1,5 @@
 {
-  "_note": "Author-composed reference batch — ten 発言聴解 items at J3 (the basic level), written by hand the same way the J2 reference batch was: original compositions, NOT official BJT material. J3 items use simpler, more formulaic keigo per the J3 CAN-DO descriptor (see bjt/levels.py) — routine, predictable situations rather than the status- and uchi/soto-sensitive judgment calls J2 tests. `bjt importbatch` turns this file into the shippable bundle next to it.",
+  "_note": "Author-composed reference batch — ten 発言聴解 items at J3 (the basic level), written by hand the same way the J2 reference batch was: original compositions, NOT official BJT material. J3 items use simpler, more formulaic keigo per the J3 CAN-DO descriptor (see bjt/levels.ts) — routine, predictable situations rather than the status- and uchi/soto-sensitive judgment calls J2 tests. `bjt importbatch` turns this file into the shippable bundle next to it.",
   "item_type": "hatsugen_choukai",
   "level": "J3",
   "source": "author-composed",

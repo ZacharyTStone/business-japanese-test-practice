@@ -77,7 +77,7 @@ export function GradientCard({
         {/* Two soft lights, low on the right, where no text sits. They are
             what stops a flat fill reading as a coloured rectangle; at this
             opacity they take nothing measurable off the contrast of the
-            lines in the top-left corner (see tests/test_theme_contrast.py). */}
+            lines in the top-left corner (see client/src/ui/theme.test.ts). */}
         <Circle cx="88%" cy="112%" r="52%" fill="rgba(255,255,255,0.09)" />
         <Circle cx="104%" cy="18%" r="26%" fill="rgba(255,255,255,0.06)" />
       </Svg>

@@ -1,7 +1,7 @@
 /**
  * The chart's arithmetic: reading a block, printing a figure, choosing the
  * gridlines, and the sentence a screen reader hears. The expected values are
- * what bjt/render/chart.py gives for the same input (`format_value`, `axis`),
+ * what bjt/render/chart.ts gives for the same input (`formatValue`, `axis`),
  * because the page and the phone are meant to draw the same chart.
  */
 import { describe, expect, it } from "vitest";

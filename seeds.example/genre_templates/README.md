@@ -1,6 +1,6 @@
 # Genre templates
 
-**The structure now lives in the repository, not here.** `bjt/render/templates.py`
+**The structure now lives in the repository, not here.** `bjt/render/templates.ts`
 declares the eight document templates — 社外メール, メールのやりとり, 社内通知,
 議事録, 予定表, 進捗報告書, 見積書・注文書, 掲示・案内 — each with the header
 fields it cannot do without and the ways it is allowed to vary. That is our own
