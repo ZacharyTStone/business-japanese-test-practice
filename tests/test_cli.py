@@ -1,6 +1,8 @@
 """CLI orchestration: official-item normalization, generate+gate+store wiring,
 and the argparse guard."""
 import copy
+import json
+import pathlib
 
 import pytest
 
@@ -162,7 +164,19 @@ def test_tester_remove_and_bad_input(capsys):
     assert cli.main(["tester", "not-an-email"]) == 2
 
 
-def test_probe_dry_run_names_the_items_with_no_prior_and_spends_nothing(capsys, monkeypatch):
+def _unmeasured_copy(tmp_path):
+    """A committed bundle as it was before the probe measured it. The bank's
+    own bundles gain `model_p_correct` as the probe runs (2026-10-02 measured
+    this one), so a test about unmeasured items makes its own."""
+    bundle = json.loads(pathlib.Path("batches/sougou_dokkai_J1_001.json").read_text(encoding="utf-8"))
+    for item in bundle["items"]:
+        item.pop("model_p_correct", None)
+    dst = tmp_path / "b.json"
+    dst.write_text(json.dumps(bundle, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return dst
+
+
+def test_probe_dry_run_names_the_items_with_no_prior_and_spends_nothing(capsys, monkeypatch, tmp_path):
     """A catch-up pass over the committed bank. The dry run is what makes it
     safe to look before spending, since the real one calls a model per item."""
     from bjt.fidelity import difficulty
@@ -171,7 +185,7 @@ def test_probe_dry_run_names_the_items_with_no_prior_and_spends_nothing(capsys, 
         raise AssertionError("--dry-run must not reach the model")
     monkeypatch.setattr(difficulty, "measure", explode)
 
-    assert cli.main(["probe", "batches/sougou_dokkai_J1_001.json", "--dry-run"]) == 0
+    assert cli.main(["probe", str(_unmeasured_copy(tmp_path)), "--dry-run"]) == 0
     out = capsys.readouterr().out
     assert "without a difficulty signal" in out
     assert "would measure" in out
@@ -180,13 +194,9 @@ def test_probe_dry_run_names_the_items_with_no_prior_and_spends_nothing(capsys, 
 def test_probe_leaves_the_bundle_alone_when_nothing_could_be_measured(capsys, monkeypatch, tmp_path):
     """A fabricated prior is worse than none — the queue would trust it — so a
     probe that cannot run writes nothing and says so."""
-    import shutil
-
     from bjt.fidelity import difficulty
 
-    src = "batches/sougou_dokkai_J1_001.json"
-    dst = tmp_path / "b.json"
-    shutil.copy(src, dst)
+    dst = _unmeasured_copy(tmp_path)
     before = dst.read_text(encoding="utf-8")
 
     monkeypatch.setattr(difficulty, "measure",
