@@ -20,8 +20,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
-import { call, isConfigured, SIGN_OUT_URL } from "./api";
-import { signOutOfWorker } from "./authClient";
+import { call, isConfigured } from "./api";
+import { signOutOfEverything } from "./authClient";
 import { errorText } from "./errors";
 
 /** The signed-in learner, in the shape the screens already read
@@ -109,14 +109,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
 
       async signOut() {
+        if (Platform.OS === "web" && typeof window !== "undefined") {
+          // Out of the Worker's own sign-in and, if it is there, out of
+          // Access; then the app starts again from the top. Nothing on screen
+          // changes until then, so the door never flashes "can't connect"
+          // while the sign-out is on its way.
+          await signOutOfEverything();
+          window.location.replace("/");
+          return;
+        }
+        // A native build has no sign-in yet (blockers.md #4, step 3).
         setSession(null);
         setIsTester(null);
-        if (Platform.OS === "web" && typeof window !== "undefined") {
-          // Out of the Worker's own sign-in, and — while Access still stands
-          // in front of the site — out of Access too.
-          await signOutOfWorker();
-          window.location.assign(SIGN_OUT_URL);
-        }
       },
 
       retry() {

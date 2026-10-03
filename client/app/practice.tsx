@@ -148,10 +148,17 @@ export default function Practice() {
   const reduced = useReducedMotion();
   // The last button sits above the home indicator, not under it.
   const insets = useSafeAreaInsets();
-  const split = splitLayout(useWindowDimensions().width);
+  const wideNow = splitLayout(useWindowDimensions().width);
 
   const { index, items, chosen, graded, showDetails, optionsAsText } = state;
   const item = items[index];
+  // One or two columns is decided when a question starts and kept until the
+  // next. Crossing the breakpoint mid-question — a window resized, a tablet
+  // turned — would otherwise rebuild the question: its clip would play again
+  // from the start, a replay nobody recorded, and the exam plays once.
+  const [layout, setLayout] = useState<{ id: string | undefined; split: boolean }>({ id: item?.id, split: wideNow });
+  if (layout.id !== item?.id) setLayout({ id: item?.id, split: wideNow });
+  const split = layout.id === item?.id ? layout.split : wideNow;
   // A new question starts at the top: the verdict scrolled the last one down to
   // its explanation, and the next question opening there would open on its
   // options with its scene above the fold.

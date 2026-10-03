@@ -12,12 +12,15 @@ describe("the way back from a sign-in", () => {
     expect(signInRefusal("?next=/practice")).toBeNull();
   });
 
-  it("reads the tester list's refusal as not listed", () => {
-    // worker/auth.ts returns false from the user hook; Better Auth reports it so.
-    expect(signInRefusal("?error=unable_to_create_user")).toBe("not_listed");
+  it("reads the tester list's own refusal as not listed", () => {
+    // worker/auth.ts throws this code from the sign-up and session hooks.
+    expect(signInRefusal("?error=not_on_tester_list")).toBe("not_listed");
   });
 
-  it("reads anything else as a failure to try again", () => {
+  it("never tells a listed tester they are not listed because something else failed", () => {
+    // What a database hiccup while making the account looks like.
+    expect(signInRefusal("?error=unable_to_create_user")).toBe("failed");
+    expect(signInRefusal("?error=email_not_verified")).toBe("failed");
     expect(signInRefusal("?error=state_mismatch")).toBe("failed");
     expect(signInRefusal("?error=internal_server_error")).toBe("failed");
   });

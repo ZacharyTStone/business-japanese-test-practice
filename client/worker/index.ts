@@ -24,7 +24,7 @@ import { toApiError } from "./core/errors";
 import { isRefusal, notATester, type Refusal } from "./identity";
 import { serveMedia } from "./media";
 import { queries } from "./queries";
-import { whoIsAsking } from "./who";
+import { whoIsAsking, withCookies } from "./who";
 
 export interface Env extends AuthEnv {
   ASSETS: Fetcher;
@@ -75,8 +75,8 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
   const name = new URL(request.url).pathname.replace(/^\/api\/q\//, "");
   if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "POST only" } }, 405);
 
-  const email = await whoIsAsking(request, env, ctx);
-  if (isRefusal(email)) return refuse(email);
+  const caller = await whoIsAsking(request, env, ctx);
+  if (isRefusal(caller)) return refuse(caller);
 
   let args: Record<string, unknown> = {};
   try {
@@ -88,7 +88,7 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     // No body, or not JSON: the query is asked with no arguments, and one that
     // needs them says which.
   }
-  return runQuery(env.DB, email, name, args);
+  return withCookies(await runQuery(env.DB, caller.email, name, args), caller);
 }
 
 /** The sign-in's own routes. Before its secrets are set there is no sign-in,
@@ -102,9 +102,9 @@ async function handleAuth(request: Request, env: Env): Promise<Response> {
 /** A clip or a picture, for somebody signed in: the clips are the bank read
  *  aloud, and the bank is not public. */
 async function handleMedia(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const email = await whoIsAsking(request, env, ctx);
-  if (isRefusal(email)) return new Response(email.message, { status: email.status, headers: { "cache-control": "no-store" } });
-  return serveMedia(request, env);
+  const caller = await whoIsAsking(request, env, ctx);
+  if (isRefusal(caller)) return new Response(caller.message, { status: caller.status, headers: { "cache-control": "no-store" } });
+  return withCookies(await serveMedia(request, env), caller);
 }
 
 export default {

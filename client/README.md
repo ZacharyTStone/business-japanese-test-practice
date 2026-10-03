@@ -39,23 +39,35 @@ GOOGLE_CLIENT_SECRET=<its secret>
 and `http://localhost:8787/api/auth/callback/google` among that client's
 redirect URIs (Google Cloud Console → Credentials). Then "Continue with
 Google" on the sign-in screen goes to Google and comes back signed in, as it
-will on the deployed site once Access is off. Without the file there is no
-sign-in at all, and every query answers `signed_out`.
+will on the deployed site once Access is off; "Sign out" ends the session and
+comes back to the same screen. Open the app at exactly the address
+`BETTER_AUTH_URL` names (`localhost`, not `127.0.0.1`): the sign-in's cookies
+belong to one host. Without the file there is no sign-in at all, and every
+query answers `sign_in_not_configured`.
 
 ## Android
 
 `eas.json` has two profiles: `preview` builds an APK to install straight onto
-a tester's phone, `production` the bundle Google Play takes. A build needs the
-Worker's address, as an EAS environment variable rather than a file in the
-repository. It can be made now, but it cannot sign in until the Worker has its
-own sign-in (blockers.md #4):
+a tester's phone, `production` the bundle Google Play takes. Each builds from
+the EAS environment of the same name, and each needs the Worker's address
+there, as an EAS environment variable rather than a file in the repository:
 
 ```bash
 npx eas-cli init                                    # once: the project id goes into app.json
-npx eas-cli env:create --environment preview --name EXPO_PUBLIC_API_BASE \
-  --value https://<the Worker's host> --visibility plaintext
+for env in preview production; do
+  npx eas-cli env:create --environment $env --name EXPO_PUBLIC_API_BASE \
+    --value https://<the Worker's host> --visibility plaintext
+done
 npx eas-cli build -p android --profile preview      # an APK, linked when it is done
 ```
+
+A build can be made now, but it cannot sign in yet: it says so on the sign-in
+screen. The Worker is ready for it — it takes a phone's signed session token
+as `Authorization: Bearer`, and a Google ID token issued for the Web client at
+`/api/auth/sign-in/social` — and the app's half is blockers.md #4, step 3:
+Google's Credential Manager on the phone, the token kept in secure storage and
+sent on every query, clip and picture, and an Android OAuth client in Google
+Cloud for the package `app.businessjapanesedrill` and both signing keys.
 
 ## Nothing to choose
 

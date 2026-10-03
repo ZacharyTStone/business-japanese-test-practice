@@ -80,17 +80,41 @@ In order, each its own pull request:
    and after Access comes off. The tester list is the door twice over: a
    sign-up from an address it does not name, or one Google has not verified,
    is refused before Better Auth writes a row, and every query meets the list
-   again in `core/caller.ts`. An account joins the existing `users` row by its
-   verified address, so nobody's history moves. Clips and pictures are checked
-   by the Worker now too; they were only behind Access. Until the four secrets
-   below are set there is no sign-in, and nothing changes.
+   again in `core/caller.ts`; an account whose address later leaves the list
+   gets no new session. An account joins the existing `users` row by its
+   verified address, so nobody's history moves. Better Auth's tables keep
+   sign-in state only: no Google tokens, no photo, no IP address or browser.
+   Only the routes the app uses answer, and they are rate-limited. Clips and
+   pictures are checked by the Worker now too; they were only behind Access.
+   The server half of step 3 is in too: a phone's signed session token is
+   taken as `Authorization: Bearer`. Until the four secrets below are set there
+   is no sign-in, and nothing changes.
 2. **Access comes off the app**, once a Google sign-in has been seen to work.
    A small pull request then drops the Access fallback and Access's sign-out
    hop.
-3. **Android.** Native Google sign-in (Credential Manager, in a thin module of
-   our own) that hands the Worker a Google ID token: no browser on the way, so
-   no custom scheme to claim. And short-lived signed URLs for clips and
-   pictures, which a native player cannot fetch with a cookie.
+3. **Android.** Until this lands, an Android build says on its sign-in screen
+   that signing in from the app is not ready, and points to the web.
+   - In Google Cloud: a second OAuth client, type **Android**, for the package
+     `app.businessjapanesedrill`, once with the SHA-1 of the EAS upload
+     keystore (`npx eas-cli credentials -p android`) and once with the SHA-1
+     of Play App Signing's key (Play Console → Test and release → App
+     integrity), when the app is on Play. It has no secret and the Worker
+     never sees its id: it only lets Google issue tokens to this app.
+   - In the app: native Google sign-in (Credential Manager's
+     `GetSignInWithGoogleOption`, in a thin Expo module of our own, with
+     `serverClientId` set to the **Web** client's id, so the ID token is
+     issued for the client the Worker already checks). No browser on the way,
+     so no custom scheme to claim. The app posts the token to
+     `/api/auth/sign-in/social` (`{ provider: "google", idToken: { token } }`),
+     keeps the signed session token the Worker answers with in secure storage
+     (`expo-secure-store`), and sends it as `Authorization: Bearer` with no
+     cookies on every query, sign-out included. Clips and pictures take the
+     same header (`expo-audio`'s and `Image`'s `source.headers`), or
+     short-lived signed URLs if a player cannot send one.
+   - Sign-out on a phone posts `/api/auth/sign-out` with the token, then
+     forgets it.
+   - It needs a device to test on; it cannot be built or tried without the
+     Android SDK.
 
 **Next step: switch step 1 on.**
 
@@ -119,8 +143,9 @@ After any change to sign-in, on the deployed URL:
   the tester list", and no `auth_users` or `users` row is made for it.
 - A listed address signs in with Google and lands on home, with the same
   history as before the switch, and the same on a second device.
-- Signing out (account screen) ends the session; the next visit shows the
-  sign-in screen. A session lasts 30 days from its last use.
+- Signing out (account screen) ends the session and lands on the sign-in
+  screen, and so does the next visit. A session lasts 30 days from its last
+  use: the Worker renews it on the answers to queries, not only on sign-in.
 - While Access is still in front, all of this happens behind Access's own
   sign-in, and an expired Access session shows "sign in again".
 
@@ -135,16 +160,18 @@ registered trademark: it may describe the exam format in prose, never name the
 product), and asks Android for nothing but the network and audio settings (no
 microphone, no background playback, no storage). `client/eas.json` has two
 Android profiles: `preview`, an APK to install directly on a tester's phone,
-and `production`, the bundle Google Play takes. No build has been made yet,
-and one made now could not sign in: that waits for native Google sign-in
-(#4, step 3).
+and `production`, the bundle Google Play takes; each builds from the EAS
+environment of the same name. No build has been made yet, and one made now
+could not sign in: that waits for native Google sign-in (#4, step 3).
 
 **Next step for an Android tester build, after that.** With an Expo account,
 in `client/`: `npx eas-cli init` (writes the project id into `app.json`), then
 `npx eas-cli env:create --environment preview --name EXPO_PUBLIC_API_BASE
---value https://<the Worker's host> --visibility plaintext`, then
-`npx eas-cli build -p android --profile preview`, and install the APK it links
-to.
+--value https://<the Worker's host> --visibility plaintext`, and the same with
+`--environment production` (a `production` build without it opens on the
+"not configured" notice), then `npx eas-cli build -p android --profile
+preview`, and install the APK it links to. The Android OAuth client in #4,
+step 3 needs this build's keystore SHA-1.
 
 **Next step for the stores.** Apple Developer and Google Play accounts, then
 the `production` profile per platform. Before either submission, work that is

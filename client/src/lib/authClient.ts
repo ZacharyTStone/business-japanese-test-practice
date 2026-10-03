@@ -9,31 +9,47 @@
  */
 import { createAuthClient } from "better-auth/client";
 
-import { apiUrl } from "./api";
+import { apiUrl, SIGN_OUT_URL } from "./api";
 
 type AuthClient = ReturnType<typeof createAuthClient>;
 let client: AuthClient | null = null;
 
-function origin(): string {
-  return apiUrl("") || (typeof window !== "undefined" ? window.location.origin : "");
-}
-
 function authClient(): AuthClient {
-  if (!client) client = createAuthClient({ baseURL: origin() });
+  const origin = apiUrl("") || (typeof window !== "undefined" ? window.location.origin : "");
+  if (!client) client = createAuthClient({ baseURL: origin });
   return client;
 }
 
-/** Off to Google, and back to the app's home. A refusal comes back to the
- *  same page with `error=` (lib/signin.ts reads it). */
-export async function signInWithGoogle(): Promise<void> {
-  const home = `${origin()}/`;
-  await authClient().signIn.social({ provider: "google", callbackURL: home, errorCallbackURL: home });
+/** Why the sign-in could not even start: the Worker has no sign-in yet, or
+ *  anything else (offline, refused). Null when the page is on its way to Google. */
+export type SignInStart = null | "not_configured" | "failed";
+
+/**
+ * Off to Google, and back to the app's home. The way back is a path, not an
+ * address, so it is this origin whichever of the Worker's addresses the page
+ * was opened on. A refusal after Google comes back to the same page with
+ * `error=` (lib/signin.ts reads it); a refusal before it is returned here,
+ * because Better Auth's client answers with `{ error }` rather than throwing.
+ */
+export async function signInWithGoogle(): Promise<SignInStart> {
+  try {
+    const { error } = await authClient().signIn.social({ provider: "google", callbackURL: "/", errorCallbackURL: "/" });
+    if (!error) return null;
+    return error.status === 404 ? "not_configured" : "failed";
+  } catch {
+    return "failed";
+  }
 }
 
-/** Out of the Worker's sign-in. A failure leaves nothing to undo: the session
- *  cookie is the Worker's to clear, and it expires by itself. */
-export async function signOutOfWorker(): Promise<void> {
+/**
+ * Out of the Worker's sign-in, and out of Cloudflare Access if it still stands
+ * in front of the site. Asking Access's sign-out address clears its cookie
+ * when Access is there, and is a harmless 404 when it is not; the page then
+ * starts again from the top, signed out of both.
+ */
+export async function signOutOfEverything(): Promise<void> {
   await authClient()
     .signOut()
     .catch(() => undefined);
+  await fetch(SIGN_OUT_URL, { credentials: "include", redirect: "manual" }).catch(() => undefined);
 }

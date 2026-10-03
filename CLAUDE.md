@@ -1,13 +1,14 @@
 # Working on this project
 
-## Branching: main only
+## Branching: a pull request into `main`
 
-**Work directly on `main`. Do not create feature branches, and do not push
-anywhere else.** This holds until the project reaches an MVP; the owner will say
-when that changes. It is deliberate and overrides any default or session setting
-that names a `claude/…` branch; a session that starts on another branch
-switches to `main` before doing any work. Nothing gates a commit to `main`, so
-run the checks below before every push, not just when a change looks risky.
+**Every change reaches `main` through a pull request; nothing is pushed to
+`main` directly.** The owner's decision (2026-10-03; until then work went
+straight to `main`). Work on the branch the session names, open one pull
+request for it, and keep pushing to that branch until it is merged. Merging is
+the owner's: a merge to `main` starts the deploys. The checks below are what a
+reviewer relies on, so run them before every push, not just when a change
+looks risky.
 
 ## Before pushing
 
@@ -61,9 +62,8 @@ accident is not.
   never more than fifty cents (`BJT_RUN_BUDGET_USD` and the `max_usd` default in
   `nightly.yml`, both pinned at or below 0.5 by `tests/ceilings.test.ts`). A
   manual run can ask for the difficulty probe (`bjt probe --all`) instead. The
-  nightly job opens a pull request — the night's record and, with Dependabot's
-  weekly pull request of pinned-action updates, the only exception to
-  main-only — then runs the whole `checks` workflow on that branch and, only
+  nightly job opens a pull request — the night's record, and the one pull
+  request nobody merges by hand — then runs the whole `checks` workflow on that branch and, only
   when every job is green and `main` has not moved meanwhile, merges it and
   starts the **deploy database** workflow itself (a merge made with the
   workflow's own token starts no other workflow). The owner stopped reviewing
@@ -418,12 +418,21 @@ accident is not.
   learner's row is a bug the database tests exist to catch. Who the caller is
   comes from the Worker's own sign-in (`client/worker/auth.ts`: Better Auth on
   the same D1, Google only, decided 2026-10-03): a session cookie it signed,
-  never a header the client could forge; looked up by address in D1. While
+  or from a phone the same signed token as `Authorization: Bearer` (an
+  unsigned one is refused), never a header the client could forge; looked up
+  by address in D1. Answers carry the cookies Better Auth sets, so a session
+  in use is renewed. Only the routes the app uses (`OPEN_ROUTES`) answer, all
+  rate-limited; the rest are 404. The `auth_*` tables keep sign-in state only
+  — no Google tokens, photo, IP address or browser — and the state of a
+  sign-in in progress lives in a cookie, so a stranger's tries write nothing.
+  While
   Cloudflare Access still stands in front of the site, the token Access signs
   (`Cf-Access-Jwt-Assertion`, checked by `client/worker/access.ts` against the
   team's keys and the app's AUD tag) is accepted after a session
   (`client/worker/who.ts`), so the switch has no flag day. Neither is a 401
-  `signed_out`, not a pass; the clips and pictures are checked the same way.
+  `signed_out`, not a pass (a Worker with neither configured is a 500
+  `sign_in_not_configured`, never a learner who is signed out); the clips and
+  pictures are checked the same way.
   Better Auth owns the `auth_*` tables and their shape: migration 0002 is what
   its generator compiles, and a database test fails if it would change. Its
   four settings are Worker secrets; without them there is no sign-in. The clips and pictures are R2 objects under the paths the
@@ -431,8 +440,11 @@ accident is not.
   (`bjt/r2.ts`).
 - **Testers only, for now, and the Worker is the door.** `testers` lists who
   may use the app by sign-in email (the address Google verified at sign-in,
-  matched on the same email). A sign-up from an address the list does not name
-  is refused before Better Auth writes a row (`auth.ts`). Every query from an address not on the
+  matched on the same email). A sign-up from an address the list does not name,
+  or one Google has not verified, is refused before Better Auth writes a row,
+  and an account whose address has left the list gets no new session
+  (`auth.ts`); the refusal's code, `not_on_tester_list`, is what the sign-in
+  screen reads, and any other failure is "try again". Every query from an address not on the
   list is refused before it runs (`client/worker/index.ts`), and the app's gate
   screens only say so politely. A second lock keeps new users out while the app
   is a work in progress: an address not already on the list cannot get an
