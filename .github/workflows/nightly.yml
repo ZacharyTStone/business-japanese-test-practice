@@ -107,8 +107,12 @@ on:
   # The Sunday bank-scene run below keys on the scheduled event, so it is back
   # with the schedule; a manual run with "scenes" ticked still draws them.
   schedule:
-    # 18:00 UTC = 03:00 JST, while nobody is practising.
-    - cron: "0 18 * * *"
+    # 16:17 UTC = 01:17 JST, so the night is over before anybody practises.
+    # GitHub starts a scheduled run late, worst at the top of the hour: the
+    # 18:00 UTC schedule ran 2.5 to 4.5 hours late every night in late
+    # September (05:30 to 07:40 JST, with the deploy after it). An odd minute
+    # and two hours' head start keep even that delay before 06:00 JST.
+    - cron: "17 16 * * *"
   workflow_dispatch:
     inputs:
       budget:

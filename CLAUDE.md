@@ -56,7 +56,7 @@ accident is not.
 
 - **Nothing is generated while somebody is practising**, so the running cost is
   zero. Generation is a batch job (`bjt batch`, or `bjt nightly` from the
-  **nightly** workflow at 03:00 JST); content ships as reviewable SQL
+  **nightly** workflow at 01:17 JST); content ships as reviewable SQL
   (`bjt publish`). A night is very cheap: three items at most, reading first,
   never more than fifty cents (`BJT_RUN_BUDGET_USD` and the `max_usd` default in
   `nightly.yml`, both pinned at or below 0.5 by `tests/ceilings.test.ts`). A

@@ -324,8 +324,12 @@ export function sampleCells(
 
 type RunBatchOpts = { gate?: boolean; sanityCheck?: boolean; force?: boolean; out?: string | null };
 
+/** [bundle path, items kept, why the shelf's last draft was turned down].
+ *  The third is null when the last draft was kept, or nothing said why. */
+export type ShelfResult = [string | null, number, (string | null)?];
+
 /**
- * Generate, gate and bundle one batch. Returns [bundle path, items kept].
+ * Generate, gate and bundle one batch. Returns a `ShelfResult`.
  *
  * A function of its own so the nightly run can write several batches in one
  * process against one open store — reopening it per shelf would re-read the
@@ -342,7 +346,7 @@ async function _runBatchImpl(
   level: string,
   n: number,
   opts: RunBatchOpts = {},
-): Promise<[string | null, number]> {
+): Promise<ShelfResult> {
   const gate = opts.gate ?? true;
   const sanityCheck = opts.sanityCheck ?? true;
   const force = opts.force ?? false;
@@ -413,6 +417,11 @@ async function _runBatchImpl(
     }
     if (!kept) {
       print(`  [${keptItems.length}/${n}] dropped — ${detail}`);
+      if (reason !== null) {
+        // What the next draft is told. "verdict=discarded:leaky" alone
+        // says that the options gave the answer away, not how.
+        print(`        why: ${reason}`);
+      }
       strikes += 1;
       feedback = reason;
       continue;
@@ -444,7 +453,7 @@ async function _runBatchImpl(
   if (stop !== null) {
     throw new ShelfStopped(stop, path, keptN);
   }
-  return [path, keptN];
+  return [path, keptN, feedback];
 }
 
 /** `runBatch` itself; `runNight` calls it through `seams.runBatch`, which is
@@ -455,7 +464,7 @@ export async function runBatch(
   level: string,
   n: number,
   opts: RunBatchOpts = {},
-): Promise<[string | null, number]> {
+): Promise<ShelfResult> {
   return seams.runBatch(store, itemType, level, n, opts);
 }
 
@@ -575,8 +584,9 @@ export async function runNight(
     const before = llmmod.state.spend.usd;
     let path: string | null;
     let kept: number;
+    let why: string | null = null;
     try {
-      [path, kept] = await seams.runBatch(
+      [path, kept, why = null] = await seams.runBatch(
         store, w.item_type, w.level, w.n, { gate, sanityCheck, force: false },
       );
     } catch (e) {
@@ -618,7 +628,10 @@ export async function runNight(
     }
     if (path === null) {
       if (night.stopped === null) {
-        night.failures.push(`${w.item_type} ${w.level}: nothing passed the gates`);
+        // With the last draft's reason, so the night's pull request says
+        // how a shelf failed and not only that it did.
+        night.failures.push(`${w.item_type} ${w.level}: nothing passed the gates`
+                            + (why ? ` — the last draft: ${slice(why, 0, 600)}` : ""));
         night.outcomes.push([w.item_type, w.level, shelf_rest.MISSED]);
       }
     } else {

@@ -8,6 +8,7 @@ import * as config from "../bjt/config.ts";
 import { loadSeedJson } from "../bjt/generators/base.ts";
 import { dumps } from "../bjt/pyjson.ts";
 import * as regate from "../bjt/regate.ts";
+import * as schemas from "../bjt/schemas.ts";
 import * as seeds from "../bjt/seeds.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
 import { capture, setConfig, tmpPath } from "./helpers.ts";
@@ -29,6 +30,23 @@ describe("seeds", () => {
         expect(item["explanation_ja"] && item["options"].length).toBeTruthy();
         expect(item["options"].filter((o: Item) => o["role"] === "correct").length).toBe(1);
         expect(item["options"].every((o: Item) => Boolean(o["why"]))).toBe(true);
+      }
+    }
+  });
+
+  test("every example is an item its generator could have written", () => {
+    // The prompt says "match this item shape", so an example in the bundle's
+    // shape (documents as a list, clip ids on the turns, the measured rate)
+    // taught the wrong one; the document types failed their own validation.
+    const examples = seeds.examplesFromBatches();
+    expect("sougou_dokkai" in examples && "shiryou_choudokkai" in examples).toBe(true);
+    for (const [itemType, items] of Object.entries(examples)) {
+      for (const item of items) {
+        expect(schemas.validateItem(itemType, item), `${itemType}: ${item["topic"]}`).toEqual([]);
+        expect(item).not.toHaveProperty("model_p_correct");
+        for (const turn of item["dialogue"] ?? []) {
+          expect(Object.keys(turn).sort()).toEqual(["speaker_role", "text"]);
+        }
       }
     }
   });
