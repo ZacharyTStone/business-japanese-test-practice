@@ -106,7 +106,8 @@ Three programs that only meet in the database:
 
 **Hosting:** everything the app touches is on **Cloudflare**: the web app and
 its API on **Workers**, the data in **D1**, the clips and pictures in **R2**,
-sign-in by **Access**; jobs on **GitHub Actions**. Paid APIs: **Anthropic**
+sign-in with **Google** through the Worker's own Better Auth (Cloudflare
+**Access** in front until it is switched off); jobs on **GitHub Actions**. Paid APIs: **Anthropic**
 (writing and review), **OpenAI** (voices, pictures), and optionally **TypeSafe
 AI** (Jev, a difficulty-probe prototype).
 
@@ -127,8 +128,9 @@ batches/    published bundles + SQL        tests/      pipeline tests
 
 **Getting in.** First launch shows one explanation screen (your answers set your
 level; questions aim at your mistakes; your part is to answer). Sign-in is
-Cloudflare Access, in front of the whole site. Only listed testers get in;
-others see "not open yet". The Worker enforces this — the screens only explain
+"Continue with Google", run by the Worker itself (`client/worker/auth.ts`).
+Only listed testers get in; any other Google account sees "not open yet", and
+no account is made for it. The Worker enforces this — the screens only explain
 it.
 
 **Home.** One button, a ring for today's progress, a streak, and an exam
@@ -393,13 +395,15 @@ functions is TypeScript in `client/worker/core/`, one file per job.
 | Bank | `items`, `item_options`, `item_types`, `bundles`, `scenes`, `audio_clips` |
 | Learner | `profiles`, `section_levels`, `practice_sessions`, `attempts`, `review_schedule`, `review_notes` |
 | Shared stats | `item_stats` (read only by the queue) |
-| Who | `users` (one per signed-in address) |
+| Who | `users` (one per signed-in address); `auth_*` (sign-in state, Better Auth's own) |
 | Access | `testers`, `entitlements` (ad-free unlock) |
 | Quality | `item_feedback`, `item_vetoes` |
 
-**Access.** Cloudflare Access signs everybody in; the Worker turns away every
-query from an address not in `testers`, and makes no account for one
-(`core/caller.ts`). The app can only name a query (`worker/queries.ts`), never
+**Access.** The Worker signs everybody in with Google (`worker/auth.ts`) and
+refuses a sign-up from an address not in `testers`; it also turns away every
+query from such an address, and makes no account for one (`core/caller.ts`).
+While Cloudflare Access still stands in front, its token is accepted too
+(`worker/who.ts`). The app can only name a query (`worker/queries.ts`), never
 send SQL, and every query reads and writes only the caller's own rows. Content
 is written only by the deploy workflow.
 
@@ -488,9 +492,9 @@ node bjt/main.ts checkbatch batches/hatsugen_choukai_J2_001.json
 `npm test` also fails if a generated file is stale: regenerate with `node
 bjt/client_constants.ts`. `CLAUDE.md` lists the decisions not to undo by accident.
 
-**Running the app** needs a D1 database with the schema, an R2 bucket for the
-media, and Cloudflare Access as the sign-in, all bound to the Worker in
-`client/wrangler.jsonc`. The deploy workflow does the database part; by hand,
+**Running the app** needs a D1 database with the schema and an R2 bucket for
+the media, both bound to the Worker in `client/wrangler.jsonc`, and the
+sign-in's four secrets (`client/README.md`). The deploy workflow does the database part; by hand,
 from `client/`, listing yourself as a tester first:
 
 ```bash

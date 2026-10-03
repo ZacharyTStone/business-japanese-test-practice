@@ -2,31 +2,37 @@
  * The app's one Worker: the web build, the API and the media, on one origin.
  *
  *   /api/q/<name>   a query from worker/queries.ts, as the signed-in learner
+ *   /api/auth/...   the sign-in itself: Better Auth, with Google (worker/auth.ts)
  *   /media/...      a clip or a picture from R2 (worker/media.ts)
  *   anything else   the static web build, served by the assets binding
  *
  * `run_worker_first` in wrangler.jsonc sends only /api/* and /media/* here;
  * every other request is served from the assets without running this code.
- * Cloudflare Access sits in front of all of it, so nothing on this origin is
- * reachable without signing in; behind it, the tester list in D1 is the door
+ * The web build holds no data, so the assets need no door. The queries and
+ * the media check who is asking themselves (who.ts) — a session this Worker
+ * signed in, or, while Cloudflare Access still stands in front of the site,
+ * the token Access signed — and behind that the tester list in D1 is the door
  * every query passes (core/caller.ts).
  *
- * Same origin, so there is no CORS to configure and the Access cookie rides
+ * Same origin, so there is no CORS to configure and the session cookie rides
  * along with every request the app makes.
  */
-import { accessEmail } from "./access";
+import type { AuthEnv } from "./auth";
+import { authFor } from "./auth";
 import { resolveLearner } from "./core/caller";
 import { toApiError } from "./core/errors";
-import { isRefusal, notATester, signedInEmail, type Refusal } from "./identity";
+import { isRefusal, notATester, type Refusal } from "./identity";
 import { serveMedia } from "./media";
 import { queries } from "./queries";
+import { whoIsAsking } from "./who";
 
-export interface Env {
+export interface Env extends AuthEnv {
   ASSETS: Fetcher;
   DB: D1Database;
   MEDIA: R2Bucket;
   /** `<team>.cloudflareaccess.com` and the Access application's AUD tag
-   *  (wrangler.jsonc `vars`): whose signature, for which app, a token needs. */
+   *  (wrangler.jsonc `vars`): whose signature, for which app, a token needs,
+   *  while Access is still in front of the site. */
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
 }
@@ -69,11 +75,7 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
   const name = new URL(request.url).pathname.replace(/^\/api\/q\//, "");
   if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "POST only" } }, 405);
 
-  // ctx.access when the runtime hands it over; on a Worker with static assets
-  // it never does, and the token Access signed says the same (access.ts).
-  const email = ctx.access
-    ? signedInEmail(true, (await ctx.access.getIdentity())?.email)
-    : await accessEmail(request, { teamDomain: env.ACCESS_TEAM_DOMAIN, aud: env.ACCESS_AUD }, Date.now());
+  const email = await whoIsAsking(request, env, ctx);
   if (isRefusal(email)) return refuse(email);
 
   let args: Record<string, unknown> = {};
@@ -89,11 +91,28 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
   return runQuery(env.DB, email, name, args);
 }
 
+/** The sign-in's own routes. Before its secrets are set there is no sign-in,
+ *  and the app goes on as Access lets it (auth.ts). */
+async function handleAuth(request: Request, env: Env): Promise<Response> {
+  const auth = authFor(env);
+  if (!auth) return json({ error: { code: "sign_in_not_configured", message: "The sign-in is not set up" } }, 404);
+  return auth.handler(request);
+}
+
+/** A clip or a picture, for somebody signed in: the clips are the bank read
+ *  aloud, and the bank is not public. */
+async function handleMedia(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const email = await whoIsAsking(request, env, ctx);
+  if (isRefusal(email)) return new Response(email.message, { status: email.status, headers: { "cache-control": "no-store" } });
+  return serveMedia(request, env);
+}
+
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname.startsWith("/api/q/")) return handleApi(request, env, ctx);
-    if (pathname.startsWith("/media/")) return serveMedia(request, env);
+    if (pathname.startsWith("/api/auth/")) return handleAuth(request, env);
+    if (pathname.startsWith("/media/")) return handleMedia(request, env, ctx);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

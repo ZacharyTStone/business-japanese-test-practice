@@ -29,6 +29,8 @@ describe("errorKind", () => {
     expect(errorKind({ name: "AuthSessionMissingError", message: "Auth session missing!" })).toBe(
       "session_expired"
     );
+    // Nobody signed in at all (worker/who.ts): the door offers the sign-in.
+    expect(errorKind({ code: "signed_out", message: "Not signed in" })).toBe("session_expired");
   });
   it("tells a refresh token the server refused from one it could not reach", () => {
     // The first needs the password again; the second only needs the network.

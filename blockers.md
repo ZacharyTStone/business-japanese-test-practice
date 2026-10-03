@@ -60,48 +60,72 @@ outstanding.
 **Next step.** Run **deploy database** by hand with `remake_list` set to that
 file, check the run summary, then delete the file.
 
-## 4. Sign-in is Cloudflare Access, for listed testers only
+## 4. Sign-in moves from Cloudflare Access to the Worker's own
 
 **Where it stands.** Cloudflare Access stands in front of the whole Worker (the
 web app, its API and its media), with a policy that names the addresses
 allowed in. The Worker looks the signed-in address up in D1 and answers only
 an address in `testers`, making an account for it on its first visit
-(`client/worker/core/caller.ts`). There is no password form, no Google button
-and no anonymous path in the app. Access is a gate for known people in a
+(`client/worker/core/caller.ts`). Access is a gate for known people in a
 browser: it has no native path, nothing that refreshes a session, and a login
 page that is not one for the public.
 
-**Decided (2026-10-03): the Worker gets a sign-in of its own.** Better Auth,
-running in the Worker on the same D1 (it has a D1 driver of its own), with its
-Expo plugin on Android. In order, each its own pull request:
+**Decided (2026-10-03): the Worker gets a sign-in of its own, Google only to
+start.** Better Auth, in the Worker, on the same D1 (`client/worker/auth.ts`).
+In order, each its own pull request:
 
-1. Sign-in on the Worker, beside Access. The web keeps a same-origin cookie;
-   the app keeps its session in secure storage, and both refresh. The tester
-   list stays the door: a sign-up from an address it does not name is refused
-   before any account exists, and an account joins the existing `users` row by
-   its verified address, so nobody's history moves. Which sign-in methods it
-   offers is still to decide.
-2. Clips and pictures through short-lived signed URLs, so neither a player nor
-   an image needs a header, and prefetching works on every platform.
-3. An Android App Link (a verified https link) for any sign-in that goes
-   through a browser and back, rather than a custom scheme any app can claim.
-4. Access comes off the app once 1 to 3 are proven, and the checks below are
-   run again.
+1. **In code: the Worker's own sign-in, and Google on the web.** The Worker
+   asks who is calling in this order: a session it signed in itself, else the
+   token Access signed (`client/worker/who.ts`), so it works the same before
+   and after Access comes off. The tester list is the door twice over: a
+   sign-up from an address it does not name, or one Google has not verified,
+   is refused before Better Auth writes a row, and every query meets the list
+   again in `core/caller.ts`. An account joins the existing `users` row by its
+   verified address, so nobody's history moves. Clips and pictures are checked
+   by the Worker now too; they were only behind Access. Until the four secrets
+   below are set there is no sign-in, and nothing changes.
+2. **Access comes off the app**, once a Google sign-in has been seen to work.
+   A small pull request then drops the Access fallback and Access's sign-out
+   hop.
+3. **Android.** Native Google sign-in (Credential Manager, in a thin module of
+   our own) that hands the Worker a Google ID token: no browser on the way, so
+   no custom scheme to claim. And short-lived signed URLs for clips and
+   pictures, which a native player cannot fetch with a cookie.
 
-**Next step, when the app opens.** Drop the tester check from the door in
-`core/caller.ts`; the sign-in above is already one the public can use.
+**Next step: switch step 1 on.**
+
+- Google Cloud Console → APIs & Services: an OAuth consent screen, External,
+  left in **Testing** with each tester added as a test user (a second list in
+  front of `testers`). Then Credentials → Create OAuth client → **Web
+  application**, with the authorised JavaScript origin `https://<the Worker's
+  host>` and the redirect URI `https://<the Worker's host>/api/auth/callback/google`.
+- Four Worker **secrets** (Workers & Pages → the Worker → Settings → Variables
+  and Secrets, type Secret; or `npx wrangler secret put <NAME>` in `client/`):
+  `BETTER_AUTH_URL` (`https://<the Worker's host>`), `BETTER_AUTH_SECRET`
+  (`openssl rand -base64 32`), `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+  Secrets rather than vars: a deploy keeps secrets and replaces vars with
+  `wrangler.jsonc`'s.
+- Access still answers first on the deployed site, so to see Google sign-in
+  before Access comes off, run it locally (`client/README.md`, "Signing in
+  locally"), with `http://localhost:8787/api/auth/callback/google` added to
+  the same client's redirect URIs. Then take Access off the app and run the
+  checks below.
 
 After any change to sign-in, on the deployed URL:
 
-- A fresh browser gets Cloudflare's sign-in page, and nothing of the app.
-- An address the Access policy does not name cannot reach the app at all.
-- A named address that `testers` does not have sees the "not open yet"
-  screen, every query is refused, and no account is made for it.
-- The account's history is the same after a refresh and on a second device.
-- Signing out (account screen) ends the Access session; the next visit asks
-  again.
-- An expired Access session shows "sign in again", and the button brings the
-  learner back signed in.
+- A fresh browser gets the app's sign-in screen and nothing of the bank: every
+  query and every clip answers 401 `signed_out`.
+- A Google account whose address `testers` does not have comes back to "not on
+  the tester list", and no `auth_users` or `users` row is made for it.
+- A listed address signs in with Google and lands on home, with the same
+  history as before the switch, and the same on a second device.
+- Signing out (account screen) ends the session; the next visit shows the
+  sign-in screen. A session lasts 30 days from its last use.
+- While Access is still in front, all of this happens behind Access's own
+  sign-in, and an expired Access session shows "sign in again".
+
+**Next step, when the app opens.** Drop the tester check from the door in
+`core/caller.ts`, and take the consent screen out of Testing.
 
 ## 5. No store builds
 
@@ -112,8 +136,8 @@ product), and asks Android for nothing but the network and audio settings (no
 microphone, no background playback, no storage). `client/eas.json` has two
 Android profiles: `preview`, an APK to install directly on a tester's phone,
 and `production`, the bundle Google Play takes. No build has been made yet,
-and one made now could not sign in: that waits for the Worker's own sign-in
-(#4, step 1).
+and one made now could not sign in: that waits for native Google sign-in
+(#4, step 3).
 
 **Next step for an Android tester build, after that.** With an Expo account,
 in `client/`: `npx eas-cli init` (writes the project id into `app.json`), then

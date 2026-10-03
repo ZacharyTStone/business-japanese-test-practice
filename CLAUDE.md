@@ -416,17 +416,23 @@ accident is not.
   query is a new entry there (with its case in `test/queries.db.test.ts`).
   Every query filters on the caller's own id; a query that could read another
   learner's row is a bug the database tests exist to catch. Who the caller is
-  comes from Cloudflare Access: the token it signs on every request
-  (`Cf-Access-Jwt-Assertion`), checked by `client/worker/access.ts` against the
-  team's keys and the app's AUD tag (`vars` in `wrangler.jsonc`), never a header
-  the client could forge; looked up by address in D1. No token, or one the
-  team did not sign for this app, is a 401, not a pass. (`ctx.access` would say
-  the same, but a Worker with static assets never receives it.) The clips and pictures are R2 objects under the paths the
+  comes from the Worker's own sign-in (`client/worker/auth.ts`: Better Auth on
+  the same D1, Google only, decided 2026-10-03): a session cookie it signed,
+  never a header the client could forge; looked up by address in D1. While
+  Cloudflare Access still stands in front of the site, the token Access signs
+  (`Cf-Access-Jwt-Assertion`, checked by `client/worker/access.ts` against the
+  team's keys and the app's AUD tag) is accepted after a session
+  (`client/worker/who.ts`), so the switch has no flag day. Neither is a 401
+  `signed_out`, not a pass; the clips and pictures are checked the same way.
+  Better Auth owns the `auth_*` tables and their shape: migration 0002 is what
+  its generator compiles, and a database test fails if it would change. Its
+  four settings are Worker secrets; without them there is no sign-in. The clips and pictures are R2 objects under the paths the
   database holds (`client/worker/media.ts`); the pipeline writes them there
   (`bjt/r2.ts`).
 - **Testers only, for now, and the Worker is the door.** `testers` lists who
-  may use the app by sign-in email (Cloudflare Access in front of the whole
-  site, matched on the same email). Every query from an address not on the
+  may use the app by sign-in email (the address Google verified at sign-in,
+  matched on the same email). A sign-up from an address the list does not name
+  is refused before Better Auth writes a row (`auth.ts`). Every query from an address not on the
   list is refused before it runs (`client/worker/index.ts`), and the app's gate
   screens only say so politely. A second lock keeps new users out while the app
   is a work in progress: an address not already on the list cannot get an

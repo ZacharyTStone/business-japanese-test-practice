@@ -113,6 +113,11 @@ const S = {
   // the door, while the app is in testing
   gate_title: ["ログインしてください", "Sign in to continue"],
   gate_sign_in: ["ログイン", "Sign in"],
+  // The Worker's own sign-in (worker/auth.ts): Google, and why it came back.
+  gate_google: ["Googleでログイン", "Continue with Google"],
+  gate_google_body: ["登録したGoogleアカウントでログインしてください。", "Sign in with the Google account you were registered with."],
+  gate_refused: ["このGoogleアカウントは、まだテスト参加者に登録されていません。別のアカウントでお試しください。", "That Google account isn't on the tester list. Try another account."],
+  gate_failed: ["ログインできませんでした。もう一度お試しください。", "Sign-in didn't go through. Please try again."],
   closed_title: ["まだ公開していません", "Not open yet"],
   closed_body: ["{email} はテスト参加者に登録されていません。別のアカウントで入る場合は、いったんログアウトしてください。", "{email} is not on the tester list. To use another account, sign out first."],
 

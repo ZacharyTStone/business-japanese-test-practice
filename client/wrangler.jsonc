@@ -4,6 +4,9 @@
   // does not go in a product name, slug, or identifier.
   "name": "business-japanese-test-practice",
   "compatibility_date": "2026-09-14",
+  // AsyncLocalStorage, which Better Auth keeps a request's context in
+  // (worker/auth.ts). The one Node API it needs; nothing else is switched on.
+  "compatibility_flags": ["nodejs_als"],
 
   // The API and the media (worker/index.ts). Everything else is the static
   // web build below, served without running this script.

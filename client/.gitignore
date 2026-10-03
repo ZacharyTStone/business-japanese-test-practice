@@ -7,3 +7,7 @@ web-build/
 # Contains your project URL and anon key. Copy .env.example instead.
 .env
 .env.local
+
+# The sign-in's local secrets for `wrangler dev` (README.md, Signing in locally).
+.dev.vars
+.dev.vars.*

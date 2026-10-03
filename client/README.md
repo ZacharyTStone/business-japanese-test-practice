@@ -2,9 +2,10 @@
 
 Expo (React Native) — one codebase for iOS, Android and web. Web ships first:
 the app talks to the database through the Cloudflare Worker it is served from
-(`worker/`), signed in by Cloudflare Access. Access is a browser sign-in with no
-native path, so it is being replaced by a sign-in on the Worker itself
-(blockers.md #4); Android builds with EAS (`eas.json`) once that lands.
+(`worker/`), and signs in with Google through the Worker's own sign-in
+(`worker/auth.ts`, Better Auth on the same D1). Cloudflare Access still stands
+in front of the site until it is switched off (blockers.md #4); Android builds
+with EAS (`eas.json`) and signs in once native Google sign-in lands.
 
 ```bash
 cd client
@@ -19,10 +20,27 @@ npm run build:web && npx wrangler dev   # the app and its Worker on one origin, 
 `wrangler dev` runs against a local D1: fill it once with `npx wrangler d1
 migrations apply business-japanese-drill --local` and each `../batches/*.sql`
 (scenes.sql first) with `npx wrangler d1 execute business-japanese-drill
---local --file`, and add yourself with `node bjt/main.ts tester`. It also needs an
-Access identity — an `"access": {"dev": {...}}` block in a local copy of
-`wrangler.jsonc`. Without a Worker to talk to (`npm run ios`, say) the app
-still starts and says what is missing rather than crashing.
+--local --file`, and add yourself with `node bjt/main.ts tester`. Without a
+Worker to talk to (`npm run ios`, say) the app still starts and says what is
+missing rather than crashing.
+
+### Signing in locally
+
+The sign-in needs four settings, kept out of the repository in
+`client/.dev.vars` (gitignored; `wrangler dev` reads it):
+
+```
+BETTER_AUTH_URL=http://localhost:8787
+BETTER_AUTH_SECRET=<openssl rand -base64 32>
+GOOGLE_CLIENT_ID=<the Web OAuth client's id>
+GOOGLE_CLIENT_SECRET=<its secret>
+```
+
+and `http://localhost:8787/api/auth/callback/google` among that client's
+redirect URIs (Google Cloud Console → Credentials). Then "Continue with
+Google" on the sign-in screen goes to Google and comes back signed in, as it
+will on the deployed site once Access is off. Without the file there is no
+sign-in at all, and every query answers `signed_out`.
 
 ## Android
 
@@ -62,9 +80,10 @@ The app opens only to a signed-in user whose email is on the tester list
 (`testers` in D1), and it is the Worker that decides: every query from an
 address not on the list is refused before it runs, and no account is made for
 it (`worker/core/caller.ts`). `src/ui/gate.tsx` is the screens that say so —
-"sign in again" for an expired Access session, or "not open yet" with the
-account named — and `src/lib/auth.tsx` asks `whoami`, the one query that
-answers. Neither is what keeps anybody out; a client that skipped both would
+"Continue with Google", or "not open yet" with the account named — and
+`src/lib/auth.tsx` asks `whoami`, the one query that answers. A Google
+account the list does not name never becomes an account at all
+(`worker/auth.ts`). Neither is what keeps anybody out; a client that skipped both would
 be refused all the same.
 
 ## Anonymous first, when the app opens
@@ -149,7 +168,8 @@ app/                expo-router screens
 src/lib/
   i18n.tsx          the words on the furniture, ja/en; questions stay Japanese
   api.ts            the one way to the database: a named query, sent to the Worker
-  auth.tsx          who this is (Cloudflare Access, via the Worker) and the tester check
+  auth.tsx          who this is (asked of the Worker) and the tester check
+  authClient.ts     signing in with Google, and out, from the web (worker/auth.ts)
   db.ts             every query the app makes, through one module (db/: practice,
                     record, profile, media; db/shape.ts the tested joins)
   outbox.ts         answers that could not be sent, kept until the database takes them
@@ -168,7 +188,7 @@ src/lib/
   session.ts        the practice → result handoff
 src/ui/             theme, shared components, icons, the meter, the radar, the face
   welcome.tsx       the first-launch explanation
-  gate.tsx          "sign in again" (an expired Access session) and "not open yet"
+  gate.tsx          "Continue with Google", and "not open yet"
   keys.ts           answering with 1–4 and Enter, on the one platform with a keyboard
 ```
 
@@ -203,11 +223,14 @@ write the schema refuses, or one learner seeing another's rows fails CI.
 
 `worker/` is the server half: one Worker serves the static build, the API
 (`/api/q/<name>`) and the media (`/media/audio/…`, `/media/scenes/…`) on one
-origin, so there is no CORS and the Access cookie rides along.
+origin, so there is no CORS and the session cookie rides along. It also runs
+the sign-in (`/api/auth/…`).
 
 ```
 worker/
   index.ts      routing; the static build is everything except /api and /media
+  auth.ts       the sign-in: Better Auth on D1, Google, the tester list at sign-up
+  who.ts        who is asking: a session it signed in, else Access's token
   access.ts     the token Cloudflare Access signed: whose, for which app, in date
   identity.ts   the address it names, or why there is none
   queries.ts    every query the app may ask for, by name — its arguments, checked
@@ -245,12 +268,13 @@ Create → Import a repository**, pick this repo, then:
 | Deploy command | `npx wrangler deploy` *(the default)* |
 
 Build-time environment variable: `NODE_VERSION=22`. Nothing about the database
-is baked into the bundle: the app asks its own origin. The Worker has no
-secrets at all; its bindings (D1, R2) are in `wrangler.jsonc`, and who is
-asking comes from the token Cloudflare Access signs, checked against the two
-plain `vars` there (the team domain and the Access application's AUD tag,
-both shown when Access is turned on for the Worker). **No key is ever set as
-a variable here.**
+is baked into the bundle: the app asks its own origin. Its bindings (D1, R2)
+are in `wrangler.jsonc`. The sign-in's four settings (`BETTER_AUTH_URL`,
+`BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) are Worker
+**secrets**, never `vars`: a deploy keeps secrets and replaces vars with the
+file's. While Access is still in front, its token is checked against the two
+plain `vars` there (the team domain and the Access application's AUD tag).
+**No key is ever set as a plain variable.**
 
 `build:web` is `expo export` plus one copy: Expo writes the not-found page as
 `+not-found.html`, and `not_found_handling: "404-page"` looks for `404.html`.
