@@ -67,35 +67,29 @@ web app, its API and its media), with a policy that names the addresses
 allowed in. The Worker looks the signed-in address up in D1 and answers only
 an address in `testers`, making an account for it on its first visit
 (`client/worker/core/caller.ts`). There is no password form, no Google button
-and no anonymous path in the app. Access is a browser sign-in, so a native
-build signs in through the same Access page in a browser tab, and the Worker
-hands the app the token through a one-time code (`client/worker/native.ts`);
-the app then sends it as `cf-access-token`, which Access accepts in place of
-the cookie. The code exchange, `/auth/native/token`, is the one path the app
-reaches before it has a token, so Access must let it through: until a Bypass
-policy covers exactly that path, a native sign-in fails at the last step.
+and no anonymous path in the app. Access is a gate for known people in a
+browser: it has no native path, nothing that refreshes a session, and a login
+page that is not one for the public.
 
-**Next step for Android.** In Zero Trust → Access → Applications, add a
-self-hosted application for `<the Worker's host>/auth/native/token` alone with
-a Bypass policy (Everyone). Nothing else on the host changes, and the Worker
-gives that path nothing but a token for a valid code and its secret. Then check
-it took: `curl -i -X POST https://<the Worker's host>/auth/native/token -d '{}'`
-must answer the Worker's own `400` with `sign_in_failed`, not a redirect to
-Access's sign-in page. If Access protects the Worker by name (Workers & Pages →
-the Worker → Access) rather than by hostname, a path's bypass may not reach
-under it; the documentation does not say. If the check fails, protect the
-hostname instead (a self-hosted application on the host, the same policy) and
-keep the bypass on the path.
+**Decided (2026-10-03): the Worker gets a sign-in of its own.** Better Auth,
+running in the Worker on the same D1 (it has a D1 driver of its own), with its
+Expo plugin on Android. In order, each its own pull request:
 
-What PKCE does not stop is another app on the same phone starting a sign-in
-of its own on the `bizjadrill://` scheme, which any app may claim. For a tester
-build that is accepted; before the app is public, an Android App Link (a
-verified https link back) closes it.
+1. Sign-in on the Worker, beside Access. The web keeps a same-origin cookie;
+   the app keeps its session in secure storage, and both refresh. The tester
+   list stays the door: a sign-up from an address it does not name is refused
+   before any account exists, and an account joins the existing `users` row by
+   its verified address, so nobody's history moves. Which sign-in methods it
+   offers is still to decide.
+2. Clips and pictures through short-lived signed URLs, so neither a player nor
+   an image needs a header, and prefetching works on every platform.
+3. An Android App Link (a verified https link) for any sign-in that goes
+   through a browser and back, rather than a custom scheme any app can claim.
+4. Access comes off the app once 1 to 3 are proven, and the checks below are
+   run again.
 
 **Next step, when the app opens.** Drop the tester check from the door in
-`core/caller.ts`, and a sign-in that is not an allow-list — an auth library on
-the Worker (accounts on the same user ids), since Access's own login page is
-for known people, not the public.
+`core/caller.ts`; the sign-in above is already one the public can use.
 
 After any change to sign-in, on the deployed URL:
 
@@ -108,10 +102,6 @@ After any change to sign-in, on the deployed URL:
   again.
 - An expired Access session shows "sign in again", and the button brings the
   learner back signed in.
-- On Android: the first launch offers the sign-in, the button opens Access in
-  a browser tab and comes back signed in; an address `testers` does not have
-  is told "not open yet" in the tab, and no code is made for it; signing out
-  opens Access's sign-out in the tab, and the next sign-in asks again.
 
 ## 5. No store builds
 
@@ -121,14 +111,16 @@ registered trademark: it may describe the exam format in prose, never name the
 product), and asks Android for nothing but the network and audio settings (no
 microphone, no background playback, no storage). `client/eas.json` has two
 Android profiles: `preview`, an APK to install directly on a tester's phone,
-and `production`, the bundle Google Play takes. No build has been made yet.
+and `production`, the bundle Google Play takes. No build has been made yet,
+and one made now could not sign in: that waits for the Worker's own sign-in
+(#4, step 1).
 
-**Next step for an Android tester build.** With an Expo account, in `client/`:
-`npx eas-cli init` (writes the project id into `app.json`), then
+**Next step for an Android tester build, after that.** With an Expo account,
+in `client/`: `npx eas-cli init` (writes the project id into `app.json`), then
 `npx eas-cli env:create --environment preview --name EXPO_PUBLIC_API_BASE
 --value https://<the Worker's host> --visibility plaintext`, then
 `npx eas-cli build -p android --profile preview`, and install the APK it links
-to. The Access bypass in #4 has to be in place first.
+to.
 
 **Next step for the stores.** Apple Developer and Google Play accounts, then
 the `production` profile per platform. Before either submission, work that is

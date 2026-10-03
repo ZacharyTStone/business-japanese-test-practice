@@ -63,16 +63,11 @@ export function teamHost(teamDomain: string): string {
   return teamDomain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
 }
 
-/** The token Access put on the request: its header, else the one a native
- *  build sends itself, else its cookie (the same token each time; the browser
- *  sends the cookie on every same-origin request, and a native build, which
- *  has no cookie, sends `cf-access-token`, which Access accepts in its place —
- *  see native.ts). Whichever it is, it is checked the same way. */
+/** The token Access put on the request: its header, else its cookie (same
+ *  token; the browser sends the cookie on every same-origin request). */
 export function accessToken(request: Request): string | null {
   const header = request.headers.get("cf-access-jwt-assertion")?.trim();
   if (header) return header;
-  const native = request.headers.get("cf-access-token")?.trim();
-  if (native) return native;
   for (const part of (request.headers.get("cookie") ?? "").split(";")) {
     const [name, ...rest] = part.trim().split("=");
     if (name === "CF_Authorization" && rest.length) return rest.join("=").trim() || null;

@@ -421,12 +421,7 @@ accident is not.
   team's keys and the app's AUD tag (`vars` in `wrangler.jsonc`), never a header
   the client could forge; looked up by address in D1. No token, or one the
   team did not sign for this app, is a 401, not a pass. (`ctx.access` would say
-  the same, but a Worker with static assets never receives it.) A native build,
-  which has no cookie, signs in on the same Access page in a browser tab and is
-  handed that token through a one-time code with PKCE (`client/worker/native.ts`);
-  it sends it as `cf-access-token`, checked like the cookie. `/auth/native/token`
-  is the one path Access lets through unsigned, and gives out nothing but a
-  token for a valid code and its secret; a non-tester gets no code. The clips and pictures are R2 objects under the paths the
+  the same, but a Worker with static assets never receives it.) The clips and pictures are R2 objects under the paths the
   database holds (`client/worker/media.ts`); the pipeline writes them there
   (`bjt/r2.ts`).
 - **Testers only, for now, and the Worker is the door.** `testers` lists who

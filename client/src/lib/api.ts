@@ -8,21 +8,15 @@
  *
  * On the web the Worker is the origin the app was loaded from, so a request
  * carries the Cloudflare Access cookie and there is nothing to configure. A
- * native build has no such origin and no cookie: it is given the Worker's
- * address (`EXPO_PUBLIC_API_BASE`), signs in through Access in a browser tab
- * (lib/nativeAuth.ts), and sends the token it comes back with as
- * `cf-access-token`, which Access takes in place of the cookie.
+ * native build would need `EXPO_PUBLIC_API_BASE` — and a sign-in Access does
+ * not give it — so for now the app is a web app.
  *
  * A failure throws one shape — `code`, `message`,
  * `details`, `hint` — so `errorText` and `errorKind` read it unchanged.
  */
 import { Platform } from "react-native";
 
-import { nativeSignedOut } from "./signin";
-
 const BASE = (process.env.EXPO_PUBLIC_API_BASE ?? "").replace(/\/+$/, "");
-
-const NATIVE = Platform.OS !== "web";
 
 /** True when there is a Worker to talk to. Screens check this and show setup
  *  instructions rather than a stack trace, so a fresh native checkout runs. */
@@ -36,20 +30,6 @@ export function apiUrl(path: string): string {
   return `${BASE}${path}`;
 }
 
-/** The token a native build signed in with (lib/nativeAuth.ts), or null. The
- *  web never sets it: there the cookie does this job. */
-let nativeToken: string | null = null;
-
-export function setNativeToken(token: string | null): void {
-  nativeToken = token;
-}
-
-/** What a request to the Worker carries besides its own headers: on a native
- *  build, the token; on the web, nothing, since the cookie goes by itself. */
-export function authHeaders(): Record<string, string> {
-  return NATIVE && nativeToken ? { "cf-access-token": nativeToken } : {};
-}
-
 export type ApiError = { code: string; message: string; details: string | null; hint: string | null };
 
 const EXPIRED: ApiError = {
@@ -59,20 +39,10 @@ const EXPIRED: ApiError = {
   hint: null,
 };
 
-/** A native build that has not signed in on this device yet: the door offers
- *  the sign-in, worded as a first one rather than as an expiry. */
-const SIGNED_OUT: ApiError = {
-  code: "signed_out",
-  message: "Not signed in on this device",
-  details: null,
-  hint: null,
-};
-
 export async function call<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
-  if (NATIVE && !nativeToken) throw SIGNED_OUT;
   const res = await fetch(apiUrl(`/api/q/${name}`), {
     method: "POST",
-    headers: { "content-type": "application/json", ...authHeaders() },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({ args }),
     credentials: "include",
     // An expired Access session answers with a redirect to Cloudflare's
@@ -81,10 +51,6 @@ export async function call<T>(name: string, args: Record<string, unknown> = {}):
     redirect: "manual",
   });
   if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) throw EXPIRED;
-  // A native fetch cannot be stopped at the redirect: it arrives at Access's
-  // sign-in page instead, or at a bare refusal (lib/signin.ts). Any 401 there
-  // is the token turned away, and signing in again is the way back.
-  if (NATIVE && (res.status === 401 || nativeSignedOut(res.status, res.headers.get("content-type")))) throw EXPIRED;
 
   let body: { data?: unknown; error?: ApiError } | null = null;
   try {

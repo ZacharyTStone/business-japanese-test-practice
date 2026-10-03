@@ -8,12 +8,11 @@
  */
 import { clearPreloadedSource, preload } from "expo-audio";
 import { useEffect, useRef, useState, type Dispatch, type RefObject } from "react";
-import { Image, Platform } from "react-native";
+import { Image } from "react-native";
 
 import { flushAnswers } from "../../lib/answers";
 import { setSize } from "../../lib/day";
 import {
-  audioSource,
   clipUrl,
   fetchDay,
   fetchOptionLabels,
@@ -132,7 +131,7 @@ export function usePracticeLoad(userId: string | null, dispatch: Dispatch<Practi
       cancelled = true;
       for (const url of warmed) {
         try {
-          void Promise.resolve(clearPreloadedSource(audioSource(url))).catch(() => undefined);
+          void Promise.resolve(clearPreloadedSource(url)).catch(() => undefined);
         } catch {
           // Nothing held for it.
         }
@@ -176,14 +175,12 @@ function warm(queue: QueuedItem[], spokenLabels: string[] | null): string[] {
   for (const it of queue) {
     for (const url of playlistFor(it, spokenLabels, clipUrl)) urls.add(url);
     const scene = sceneUrl(it.scene_image_path);
-    // On the web only: a prefetch cannot carry the sign-in token a native
-    // build needs (lib/db/media.ts), so there the picture loads when shown.
-    if (scene && Platform.OS === "web") Image.prefetch(scene).catch(() => false);
+    if (scene) Image.prefetch(scene).catch(() => false);
   }
   const asked: string[] = [];
   for (const url of urls) {
     try {
-      void Promise.resolve(preload(audioSource(url))).catch(() => undefined);
+      void Promise.resolve(preload(url)).catch(() => undefined);
       asked.push(url);
     } catch {
       // No preloading here: the clip is fetched when it plays, as before.

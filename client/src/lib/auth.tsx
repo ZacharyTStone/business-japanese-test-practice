@@ -16,17 +16,12 @@
  * An Access session runs out after a while. The next request then answers
  * `session_expired` (lib/api.ts), and the door offers to sign in again, which
  * is a reload: Access shows its own sign-in page and comes back here.
- *
- * A native build has no page to reload. It signs in through Access in a
- * browser tab and keeps the token on the device (lib/nativeAuth.ts); until it
- * has one, every request answers `signed_out`, and the door offers the tab.
  */
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
 import { call, isConfigured, SIGN_OUT_URL } from "./api";
 import { errorText } from "./errors";
-import { restoreSignIn, signIn as nativeSignIn, signOut as nativeSignOut, type SignInResult } from "./nativeAuth";
 
 /** The signed-in learner, in the shape the screens already read
  *  (`session?.user.id`). */
@@ -48,9 +43,6 @@ type AuthState = {
   email: string | null;
   /** Out of Cloudflare Access, and so out of the app. */
   signOut: () => Promise<void>;
-  /** A native build's sign-in, through Access in a browser tab, and then the
-   *  question asked again. Never called on the web, where a reload is it. */
-  signIn: () => Promise<SignInResult>;
   /** Ask again. `error` is never cleared on its own, so this is the way back
    *  from a cold-start hiccup. A failed check sets `error` and leaves
    *  `isTester` alone, so it never reads as "not a tester". */
@@ -76,9 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     let cancelled = false;
-    // A native build first puts back the token this device signed in with.
-    (Platform.OS === "web" ? Promise.resolve() : restoreSignIn())
-      .then(() => call<WhoAmI>("whoami"))
+    call<WhoAmI>("whoami")
       .then((me) => {
         if (cancelled) return;
         setFailure(null);
@@ -120,26 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async signOut() {
         setSession(null);
         setIsTester(null);
-        if (Platform.OS === "web") {
-          if (typeof window !== "undefined") window.location.assign(SIGN_OUT_URL);
-          return;
-        }
-        // Asked again with no token, the answer is `signed_out`, and the door
-        // offers the sign-in.
-        await nativeSignOut();
-        setFailure(null);
-        setLoading(true);
-        setAttempt((n) => n + 1);
-      },
-
-      async signIn() {
-        const result = await nativeSignIn();
-        if (result === "signed_in") {
-          setFailure(null);
-          setLoading(true);
-          setAttempt((n) => n + 1);
-        }
-        return result;
+        if (Platform.OS === "web" && typeof window !== "undefined") window.location.assign(SIGN_OUT_URL);
       },
 
       retry() {

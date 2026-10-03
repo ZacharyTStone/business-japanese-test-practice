@@ -8,9 +8,6 @@
  *
  *   SignInAgainScreen  the Access session ran out while the app was open. A
  *                 reload takes the learner through Access's sign-in and back.
- *                 On a native build, which has no page to reload, the same
- *                 sign-in opens in a browser tab (lib/nativeAuth.ts) — and it
- *                 is also the first screen there, before any sign-in at all.
  *   ClosedScreen  Access let this account in, and the database says it is not
  *                 on the tester list. Says which account, so a person who
  *                 signed in with the wrong one can see that, and offers the
@@ -20,7 +17,7 @@
  * the same check the database makes here, so a client that skipped these
  * screens would see nothing anyway. They exist to say so politely.
  */
-import React, { useState } from "react";
+import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
@@ -30,33 +27,19 @@ import { space, type } from "./theme";
 
 export function SignInAgainScreen() {
   const { t } = useLang();
-  const { failure, signIn } = useAuth();
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-  // A native build that has never signed in on this device is not "expired".
-  const first = (failure as { code?: unknown } | null)?.code === "signed_out";
-
-  async function onPress() {
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined") window.location.reload();
-      return;
-    }
-    setBusy(true);
-    setFailed(false);
-    const result = await signIn();
-    setBusy(false);
-    // Signed in, the door opens by itself; a closed tab is no failure.
-    setFailed(result === "failed");
-  }
-
   return (
     <ScreenMessage>
       <View style={styles.card}>
         <IconBadge name="user" tone="violet" />
         <Text style={type.h2}>{t("gate_title")}</Text>
-        <Text style={type.small}>{t(first ? "gate_first_body" : "err_session_expired")}</Text>
-        <Button label={t("gate_sign_in")} icon="user" disabled={busy} onPress={() => void onPress()} />
-        {failed ? <Text style={type.small}>{t("gate_failed")}</Text> : null}
+        <Text style={type.small}>{t("err_session_expired")}</Text>
+        <Button
+          label={t("gate_sign_in")}
+          icon="user"
+          onPress={() => {
+            if (Platform.OS === "web" && typeof window !== "undefined") window.location.reload();
+          }}
+        />
       </View>
     </ScreenMessage>
   );

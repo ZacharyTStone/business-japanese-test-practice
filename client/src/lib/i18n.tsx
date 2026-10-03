@@ -113,9 +113,6 @@ const S = {
   // the door, while the app is in testing
   gate_title: ["ログインしてください", "Sign in to continue"],
   gate_sign_in: ["ログイン", "Sign in"],
-  // A native build's first screen, before any sign-in on the device.
-  gate_first_body: ["登録したメールアドレスでログインしてください。ブラウザが開きます。", "Sign in with your registered email address. A browser tab will open."],
-  gate_failed: ["ログインできませんでした。もう一度お試しください。", "Sign-in didn't go through. Please try again."],
   closed_title: ["まだ公開していません", "Not open yet"],
   closed_body: ["{email} はテスト参加者に登録されていません。別のアカウントで入る場合は、いったんログアウトしてください。", "{email} is not on the tester list. To use another account, sign out first."],
 

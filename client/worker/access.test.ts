@@ -151,17 +151,6 @@ describe("who is asking", () => {
     expect(accessToken(request({}))).toBeNull();
   });
 
-  it("reads the token a native build sends, after Access's own header", () => {
-    expect(accessToken(request({ "cf-access-token": "g.h.i" }))).toBe("g.h.i");
-    expect(accessToken(request({ "cf-access-jwt-assertion": "a.b.c", "cf-access-token": "g.h.i" }))).toBe("a.b.c");
-  });
-
-  it("checks a native build's token as it checks Access's own", async () => {
-    expect(await accessEmail(request({ "cf-access-token": await sign(ours, good()) }), CONFIG, NOW, source)).toBe("me@example.com");
-    const forged = await sign(theirs, good(), { kid: "ours" });
-    expect(await accessEmail(request({ "cf-access-token": forged }), CONFIG, NOW, source)).toMatchObject({ code: "access_invalid" });
-  });
-
   it("gives the signed-in address, lower-cased", async () => {
     const r = request({ "cf-access-jwt-assertion": await sign(ours, good()) });
     expect(await accessEmail(r, CONFIG, NOW, source)).toBe("me@example.com");

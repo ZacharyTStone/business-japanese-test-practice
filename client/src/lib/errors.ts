@@ -48,7 +48,6 @@ export function errorKind(e: unknown): ErrorKind {
   if (code === "invalid_credentials" || WRONG_PASSWORD.test(text)) return "wrong_password";
   if (
     code === "session_expired" ||
-    code === "signed_out" ||
     code === "PGRST301" ||
     code === "PGRST303" ||
     name === "AuthSessionMissingError" ||

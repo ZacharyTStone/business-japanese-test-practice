@@ -13,8 +13,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     // Only these reach the script first; every other path is an asset.
-    // /auth/* is a native build's sign-in (worker/native.ts).
-    "run_worker_first": ["/api/*", "/media/*", "/auth/*"],
+    "run_worker_first": ["/api/*", "/media/*"],
 
     // expo-router exports one HTML file per route, so a miss is a genuine miss
     // and should say so. `npm run build:web` leaves a 404.html for this to

@@ -14,7 +14,7 @@ import { type AudioStatus, useAudioPlayer, useAudioPlayerStatus } from "expo-aud
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { audioSource, clipUrl } from "../lib/db";
+import { clipUrl } from "../lib/db";
 import { useLang } from "../lib/i18n";
 import type { DialogueTurn } from "../lib/types";
 import { Icon } from "./icons";
@@ -69,7 +69,7 @@ export function MiniPlay({
    *  counts a spoken option heard again before the answer as a replay. */
   onPlay?: () => void;
 }) {
-  const player = useAudioPlayer(audioSource(url));
+  const player = useAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
   const playing = status.playing;
   const owner = React.useRef({}).current;
@@ -290,8 +290,7 @@ function useClipQueue(
   const firstPlayable = () => Math.max(0, urls.findIndex(Boolean));
   const [at, setAt] = React.useState(firstPlayable);
   const [running, setRunning] = React.useState(autoplay && urls.some(Boolean));
-  const clip = urls[at];
-  const player = useAudioPlayer(clip ? audioSource(clip) : null, { updateInterval: STATUS_INTERVAL_MS });
+  const player = useAudioPlayer(urls[at] ?? null, { updateInterval: STATUS_INTERVAL_MS });
   const status = useAudioPlayerStatus(player);
   const owner = React.useRef({}).current;
 
