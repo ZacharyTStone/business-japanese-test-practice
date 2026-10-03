@@ -7,14 +7,18 @@
  * a column list.
  *
  * On the web the Worker is the origin the app was loaded from, so a request
- * carries the Cloudflare Access cookie and there is nothing to configure. A
- * native build would need `EXPO_PUBLIC_API_BASE` — and a sign-in Access does
- * not give it — so for now the app is a web app.
+ * carries the session cookie (or, while it still stands in front of the
+ * site, Cloudflare Access's) and there is nothing to configure. A native
+ * build is told the Worker's address by `EXPO_PUBLIC_API_BASE`, and says who
+ * it is with the session token it keeps (lib/phoneSession.ts) instead of a
+ * cookie.
  *
  * A failure throws one shape — `code`, `message`,
  * `details`, `hint` — so `errorText` and `errorKind` read it unchanged.
  */
 import { Platform } from "react-native";
+
+import { authHeaders, credentialsMode, loadToken } from "./phoneSession";
 
 const BASE = (process.env.EXPO_PUBLIC_API_BASE ?? "").replace(/\/+$/, "");
 
@@ -40,11 +44,12 @@ const EXPIRED: ApiError = {
 };
 
 export async function call<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+  await loadToken();
   const res = await fetch(apiUrl(`/api/q/${name}`), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...authHeaders() },
     body: JSON.stringify({ args }),
-    credentials: "include",
+    credentials: credentialsMode,
     // An expired Access session answers with a redirect to Cloudflare's
     // sign-in page, on another origin, which fetch cannot follow. Stopped
     // here, it reads as what it is rather than as "offline".

@@ -10,7 +10,9 @@
  *
  * A clip's id hashes its text and voice, and a live clip is never re-made, so
  * a clip is served as immutable. A picture can be redrawn under its own name
- * (`bjt scenes --force`), so it is cached for a day.
+ * (`bjt scenes --force`), so it is cached for a day. Both are `private`: only
+ * a signed-in person is served one (index.ts), so no shared cache may keep a
+ * copy to hand to anybody else.
  */
 
 const BUCKETS = new Set(["audio", "scenes"]);
@@ -41,7 +43,7 @@ export function parseMediaPath(pathname: string): MediaKey | null {
 }
 
 export function cacheControl(bucket: string): string {
-  return bucket === "audio" ? "public, max-age=31536000, immutable" : "public, max-age=86400";
+  return bucket === "audio" ? "private, max-age=31536000, immutable" : "private, max-age=86400";
 }
 
 const TYPES: Record<string, string> = {

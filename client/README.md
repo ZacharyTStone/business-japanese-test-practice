@@ -1,9 +1,12 @@
 # The study app
 
-Expo (React Native) — one codebase for iOS, Android and web. Web ships first,
-and for now web is the only target: the app talks to the database through the
-Cloudflare Worker it is served from (`worker/`), signed in by Cloudflare Access,
-which a native build has no way through yet.
+Expo (React Native) — one codebase for iOS, Android and web. Web ships first:
+the app talks to the database through the Cloudflare Worker it is served from
+(`worker/`), and signs in with Google through the Worker's own sign-in
+(`worker/auth.ts`, Better Auth on the same D1). Cloudflare Access still stands
+in front of the site until it is switched off (blockers.md #4). Android builds
+with EAS (`eas.json`) and signs in with Google's own account sheet
+(Credential Manager, `modules/google-sign-in`), into the same Worker.
 
 ```bash
 cd client
@@ -18,10 +21,75 @@ npm run build:web && npx wrangler dev   # the app and its Worker on one origin, 
 `wrangler dev` runs against a local D1: fill it once with `npx wrangler d1
 migrations apply business-japanese-drill --local` and each `../batches/*.sql`
 (scenes.sql first) with `npx wrangler d1 execute business-japanese-drill
---local --file`, and add yourself with `node bjt/main.ts tester`. It also needs an
-Access identity — an `"access": {"dev": {...}}` block in a local copy of
-`wrangler.jsonc`. Without a Worker to talk to (`npm run ios`, say) the app
-still starts and says what is missing rather than crashing.
+--local --file`, and add yourself with `node bjt/main.ts tester`. Without a
+Worker to talk to (`npm run ios`, say) the app still starts and says what is
+missing rather than crashing.
+
+### Signing in locally
+
+The sign-in needs four settings, kept out of the repository in
+`client/.dev.vars` (gitignored; `wrangler dev` reads it):
+
+```
+BETTER_AUTH_URL=http://localhost:8787
+BETTER_AUTH_SECRET=<openssl rand -base64 32>
+GOOGLE_CLIENT_ID=<the Web OAuth client's id>
+GOOGLE_CLIENT_SECRET=<its secret>
+```
+
+and `http://localhost:8787/api/auth/callback/google` among that client's
+redirect URIs (Google Cloud Console → Credentials). Then "Continue with
+Google" on the sign-in screen goes to Google and comes back signed in, as it
+will on the deployed site once Access is off; "Sign out" ends the session and
+comes back to the same screen. Open the app at exactly the address
+`BETTER_AUTH_URL` names (`localhost`, not `127.0.0.1`): the sign-in's cookies
+belong to one host. Without the file there is no sign-in at all, and every
+query answers `sign_in_not_configured`.
+
+## Android
+
+`eas.json` has two profiles: `preview` builds an APK to install straight onto
+a tester's phone, `production` the bundle Google Play takes. Each builds from
+the EAS environment of the same name, and each needs two values there, as EAS
+environment variables rather than files in the repository: the Worker's
+address, and the Google **Web** client's id (public: it is in every Google
+sign-in address; the same value as the Worker's `GOOGLE_CLIENT_ID`):
+
+```bash
+npx eas-cli init                                    # once: the project id goes into app.json
+for env in preview production; do
+  npx eas-cli env:create --environment $env --name EXPO_PUBLIC_API_BASE \
+    --value https://<the Worker's host> --visibility plaintext
+  npx eas-cli env:create --environment $env --name EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID \
+    --value <the Web client's id> --visibility plaintext
+done
+npx eas-cli build -p android --profile preview      # an APK, linked when it is done
+```
+
+How a phone signs in, with no browser on the way:
+
+1. "Continue with Google" opens Google's account sheet through Credential
+   Manager (`modules/google-sign-in`, a small Expo module of our own: the free
+   React Native libraries wrap Google's deprecated SDK). It answers with an ID
+   token issued for the Web client, with a fresh nonce in it.
+2. `src/lib/phoneSignIn.ts` posts both to the Worker's
+   `/api/auth/sign-in/social`, which checks the token's signature, issuer,
+   audience and nonce, and the tester list, exactly as for the web.
+3. The Worker answers with a signed session token (`set-auth-token`), kept
+   in the system's encrypted storage (`src/lib/phoneSession.ts`,
+   expo-secure-store, excluded from backups) and sent as `Authorization:
+   Bearer` with every query, clip and picture. A phone sends no cookies.
+4. Signing out ends that session on the Worker, forgets the token, and
+   forgets the chosen account, so the next sign-in asks which one.
+
+For Google to hand the token to this app at all, Google Cloud needs an
+**Android** OAuth client for the package `app.businessjapanesedrill` and the
+SHA-1 of the key the APK is signed with (`npx eas-cli credentials -p
+android`), and later a second for Play App Signing's key (Play Console → Test
+and release → App integrity). It has no secret, and neither the app nor the
+Worker uses its id: it only vouches for the app. blockers.md #4, step 3 has
+the checklist. `modules/` is the app's only native code; `expo prebuild`
+writes `android/`, which is not committed (EAS makes its own).
 
 ## Nothing to choose
 
@@ -46,10 +114,25 @@ The app opens only to a signed-in user whose email is on the tester list
 (`testers` in D1), and it is the Worker that decides: every query from an
 address not on the list is refused before it runs, and no account is made for
 it (`worker/core/caller.ts`). `src/ui/gate.tsx` is the screens that say so —
-"sign in again" for an expired Access session, or "not open yet" with the
-account named — and `src/lib/auth.tsx` asks `whoami`, the one query that
-answers. Neither is what keeps anybody out; a client that skipped both would
+"Continue with Google", or "not open yet" with the account named — and
+`src/lib/auth.tsx` asks `whoami`, the one query that answers. A Google
+account the list does not name never becomes an account at all
+(`worker/auth.ts`). Neither is what keeps anybody out; a client that skipped both would
 be refused all the same.
+
+## Privacy, and leaving
+
+`/privacy` is the privacy policy, readable without signing in (the store
+listing and Google's consent screen link to it), in both languages
+(`src/lib/privacy.ts`). It says only what the code keeps, so a change to what
+is kept changes it too. The operator's name and contact address are blank
+until the owner fills them in (`PRIVACY_OPERATOR`, `PRIVACY_CONTACT`); the
+page says "to be added" meanwhile.
+
+"Delete account", at the bottom of the account screen, deletes the account
+and everything about it in one all-or-nothing batch on the Worker
+(`worker/core/profile.ts`), the Google sign-in with it, and signs out. The web
+version has the same screen, which is the "web link" Google Play asks for.
 
 ## Anonymous first, when the app opens
 
@@ -130,10 +213,16 @@ app/                expo-router screens
   history.tsx       the latest answers, wrong ones by default, each with a note
   vocab.tsx         the words of the questions that caught you
   words.tsx         every word of every question answered, with an example
+  privacy.tsx       the privacy policy: public, past the welcome screen and the door
 src/lib/
   i18n.tsx          the words on the furniture, ja/en; questions stay Japanese
   api.ts            the one way to the database: a named query, sent to the Worker
-  auth.tsx          who this is (Cloudflare Access, via the Worker) and the tester check
+  auth.tsx          who this is (asked of the Worker) and the tester check
+  authClient.ts     signing in with Google, and out, from the web (worker/auth.ts)
+  phoneSignIn.ts    signing in with Google, and out, on a phone (modules/google-sign-in)
+  phoneSession.ts   a phone's session token: kept, and sent with queries, clips and pictures
+  signin.ts         the plain half of both: refusals read, the bearer header
+  privacy.ts        the privacy policy's text, ja/en, held to what the code keeps
   db.ts             every query the app makes, through one module (db/: practice,
                     record, profile, media; db/shape.ts the tested joins)
   outbox.ts         answers that could not be sent, kept until the database takes them
@@ -152,8 +241,11 @@ src/lib/
   session.ts        the practice → result handoff
 src/ui/             theme, shared components, icons, the meter, the radar, the face
   welcome.tsx       the first-launch explanation
-  gate.tsx          "sign in again" (an expired Access session) and "not open yet"
+  gate.tsx          "Continue with Google", and "not open yet"
+  privacyLink.tsx   the link to /privacy, on the sign-in and account screens
   keys.ts           answering with 1–4 and Enter, on the one platform with a keyboard
+modules/
+  google-sign-in/   Credential Manager's Google sign-in, as an Expo module (Android)
 ```
 
 On the web this is a drill somebody does at a desk between two other tabs, so
@@ -187,11 +279,14 @@ write the schema refuses, or one learner seeing another's rows fails CI.
 
 `worker/` is the server half: one Worker serves the static build, the API
 (`/api/q/<name>`) and the media (`/media/audio/…`, `/media/scenes/…`) on one
-origin, so there is no CORS and the Access cookie rides along.
+origin, so there is no CORS and the session cookie rides along. It also runs
+the sign-in (`/api/auth/…`).
 
 ```
 worker/
   index.ts      routing; the static build is everything except /api and /media
+  auth.ts       the sign-in: Better Auth on D1, Google, the tester list at sign-up
+  who.ts        who is asking: a session it signed in, else Access's token
   access.ts     the token Cloudflare Access signed: whose, for which app, in date
   identity.ts   the address it names, or why there is none
   queries.ts    every query the app may ask for, by name — its arguments, checked
@@ -229,12 +324,13 @@ Create → Import a repository**, pick this repo, then:
 | Deploy command | `npx wrangler deploy` *(the default)* |
 
 Build-time environment variable: `NODE_VERSION=22`. Nothing about the database
-is baked into the bundle: the app asks its own origin. The Worker has no
-secrets at all; its bindings (D1, R2) are in `wrangler.jsonc`, and who is
-asking comes from the token Cloudflare Access signs, checked against the two
-plain `vars` there (the team domain and the Access application's AUD tag,
-both shown when Access is turned on for the Worker). **No key is ever set as
-a variable here.**
+is baked into the bundle: the app asks its own origin. Its bindings (D1, R2)
+are in `wrangler.jsonc`. The sign-in's four settings (`BETTER_AUTH_URL`,
+`BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) are Worker
+**secrets**, never `vars`: a deploy keeps secrets and replaces vars with the
+file's. While Access is still in front, its token is checked against the two
+plain `vars` there (the team domain and the Access application's AUD tag).
+**No key is ever set as a plain variable.**
 
 `build:web` is `expo export` plus one copy: Expo writes the not-found page as
 `+not-found.html`, and `not_found_handling: "404-page"` looks for `404.html`.

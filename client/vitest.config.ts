@@ -8,8 +8,9 @@
  * Some of those modules import React Native, or a library built on it, for
  * what they draw; the test only ever reads their plain half. Stubs stand in
  * for React Native, react-native-svg and the safe-area library (src/test/),
- * and for AsyncStorage, where the language choice is kept — enough for the
- * module to load, nothing that pretends to render.
+ * for AsyncStorage, where the language choice is kept, and for SecureStore,
+ * where a phone keeps its sign-in — enough for the module to load, nothing
+ * that pretends to render.
  */
 import { defineConfig } from "vitest/config";
 
@@ -27,6 +28,7 @@ export default defineConfig({
     // Exact names only: "react-native" must not swallow "react-native-svg".
     alias: [
       { find: /^@react-native-async-storage\/async-storage$/, replacement: stub("async-storage-stub.ts") },
+      { find: /^expo-secure-store$/, replacement: stub("secure-store-stub.ts") },
       { find: /^react-native$/, replacement: stub("react-native-stub.ts") },
       { find: /^react-native-svg$/, replacement: stub("native-modules-stub.ts") },
       { find: /^react-native-safe-area-context$/, replacement: stub("native-modules-stub.ts") },

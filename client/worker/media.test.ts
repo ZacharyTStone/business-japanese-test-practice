@@ -24,7 +24,14 @@ describe("a /media/ path", () => {
 
   it("keeps a clip forever and a picture for a day", () => {
     expect(cacheControl("audio")).toContain("immutable");
-    expect(cacheControl("scenes")).toBe("public, max-age=86400");
+    expect(cacheControl("scenes")).toBe("private, max-age=86400");
+  });
+
+  it("lets no shared cache keep what only a signed-in person may fetch", () => {
+    for (const bucket of ["audio", "scenes"]) {
+      expect(cacheControl(bucket)).toMatch(/^private,/);
+      expect(cacheControl(bucket)).not.toContain("public");
+    }
   });
 
   it("knows the types the pipeline writes", () => {

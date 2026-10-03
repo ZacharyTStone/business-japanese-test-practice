@@ -11,6 +11,12 @@
  * profile beside it, so there is never one without the other. An
  * address that is not listed gets no account at all, so nothing about it is
  * stored: the second lock that kept strangers out of a work in progress.
+ *
+ * For a Google sign-in (the Worker's own, worker/auth.ts) the account is made
+ * only while that sign-in exists. Deleting an account deletes its sign-in
+ * too (core/profile.ts), but a second device's session is vouched for by a
+ * signed cookie for up to five minutes without the database being asked; in
+ * those minutes it must not make the deleted account again.
  */
 import { first, stmt, type Db } from "./sql";
 
@@ -35,7 +41,11 @@ export function dailyMax(l: Learner): number {
 
 type TesterRow = { unlimited: number; may_veto: number; max_daily_goal: number | null };
 
-export async function resolveLearner(db: Db, rawEmail: string, newId: () => string = () => crypto.randomUUID()): Promise<Learner> {
+export async function resolveLearner(
+  db: Db,
+  rawEmail: string,
+  { viaSession = false, newId = () => crypto.randomUUID() }: { viaSession?: boolean; newId?: () => string } = {}
+): Promise<Learner> {
   const email = rawEmail.trim().toLowerCase();
   const [testerRes, userRes] = await db.batch([
     stmt(db, "select unlimited, may_veto, max_daily_goal from testers where email = ?", email),
@@ -44,7 +54,10 @@ export async function resolveLearner(db: Db, rawEmail: string, newId: () => stri
   const tester = (testerRes.results?.[0] as TesterRow | undefined) ?? null;
   let userId = ((userRes.results?.[0] as { id: string } | undefined) ?? null)?.id ?? null;
 
-  if (tester && !userId) {
+  const signInExists = async () =>
+    !viaSession || (await first(db, 'select 1 as ok from "auth_users" where "email" = ?', email)) !== null;
+
+  if (tester && !userId && (await signInExists())) {
     // First sign-in of a listed address: the account and its profile, in one
     // go, so there is never a user without a profile.
     const id = newId();

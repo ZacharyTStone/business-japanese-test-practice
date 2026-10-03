@@ -126,6 +126,26 @@ export const PAGE_MAX_WIDTH = 720;
  *  desktop or tablet. Spread into a `contentContainerStyle`. */
 export const page: ViewStyle = { width: "100%", maxWidth: PAGE_MAX_WIDTH, alignSelf: "center" };
 
+/** From this window width the practice screen sets a question's answers beside
+ *  what it gives you to read and hear, rather than under it (`splitLayout`).
+ *  One 720-point column leaves most of a laptop screen empty, and a long
+ *  passage pushes the options below the fold while the reading clock runs. A
+ *  phone, a portrait tablet or a narrow window keeps the one column. */
+export const SPLIT_MIN_WIDTH = 1024;
+
+/** The answer column of the split layout: the option cards and the verdict, at
+ *  about a phone's width, which is what they were drawn for. */
+export const ANSWER_COLUMN_WIDTH = 420;
+
+/** The split layout at its widest: the reading column at the page's cap, the
+ *  gap, and the answer column. A wider window centres it. */
+export const SPLIT_MAX_WIDTH = PAGE_MAX_WIDTH + space.xl + ANSWER_COLUMN_WIDTH;
+
+/** Whether a window this wide gets the split layout. */
+export function splitLayout(windowWidth: number): boolean {
+  return windowWidth >= SPLIT_MIN_WIDTH;
+}
+
 /** The smallest thing a thumb is asked to hit, per both platforms' guidelines.
  *  A text link reaches it with vertical padding, not `hitSlop`, which web ignores. */
 export const MIN_TOUCH = 44;

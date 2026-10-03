@@ -27,7 +27,7 @@ import { friendlyError } from "../lib/errors";
 import { useLang } from "../lib/i18n";
 import { Icon, type IconName } from "./icons";
 import { usePressScale, useReducedMotion } from "./motion";
-import { badge, card, colors, motion, radius, shadow, space, tabular, type } from "./theme";
+import { badge, card, colors, motion, page, radius, shadow, space, tabular, type } from "./theme";
 import type { BadgeTone } from "./theme";
 
 export { AdSlot } from "./ad";
@@ -469,7 +469,9 @@ const styles = StyleSheet.create({
   // No horizontal padding: the screen owns its gutter, and a header that added
   // its own would sit a notch further in than the cards under it.
   header: { flexDirection: "row", alignItems: "center", gap: space.md, paddingBottom: space.xs },
-  screenMessage: { flex: 1, paddingHorizontal: space.lg, gap: space.lg },
+  // The page's column, like every other screen: on a wide window a sign-in
+  // button the width of the monitor is not something a pointer finds.
+  screenMessage: { ...page, flex: 1, paddingHorizontal: space.lg, gap: space.lg },
   chip: {
     paddingVertical: space.sm,
     paddingHorizontal: space.lg,

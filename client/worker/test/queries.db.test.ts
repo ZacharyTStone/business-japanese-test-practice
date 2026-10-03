@@ -219,6 +219,40 @@ describe("every Worker query, as a tester", () => {
     expect(await run("profile")).toMatchObject({ display_name: "テスト", target_level: "J2" });
   });
 
+  it("deletes an account and everything about it, and nobody else's", async () => {
+    const leaving = address("worker-leaving");
+    await addTester(bank.db, leaving);
+    // Answers inside a session, a note and a report: what cascades, and the
+    // answer-to-session link that must go before its session does.
+    const me = await run<{ user_id: string }>("whoami", {}, leaving);
+    const session = await run<{ id: string }>("startSession", {}, leaving);
+    for (const [it, chosen] of [[first, first.correct_index], [second, (second.correct_index + 1) % 4]] as const) {
+      await run("recordAttempt", { itemId: it.id, chosenIndex: chosen, sessionId: session.id, elapsedMs: 1000, thinkMs: null, replays: 0, peeked: false, standsFor: null }, leaving);
+    }
+    await run("saveNote", { itemId: second.id, note: "敬語" }, leaving);
+    await run("reportItem", { itemId: first.id, reason: "unclear", note: "" }, leaving);
+    const otherBefore = (await run<{ attempts: unknown[] }>("history", { limit: 50 }, other)).attempts.length;
+
+    // The address on the screen must be this account's.
+    await expect(run("deleteAccount", { email: other }, leaving)).rejects.toMatchObject({ error: { code: "invalid_argument" } });
+    expect((await run<{ attempts: unknown[] }>("history", { limit: 50 }, leaving)).attempts.length).toBe(2);
+
+    expect(await run("deleteAccount", { email: leaving.toUpperCase() }, leaving)).toEqual({ attempts: 2, deleted: true });
+    for (const table of ["attempts", "practice_sessions", "review_schedule", "review_notes", "section_levels", "item_feedback"]) {
+      const left = await bank.db.prepare(`select count(*) as n from ${table} where user_id = ?`).bind(me.user_id).first<{ n: number }>();
+      expect(left?.n, table).toBe(0);
+    }
+    for (const table of ["users", "profiles"]) {
+      const left = await bank.db.prepare(`select count(*) as n from ${table} where id = ?`).bind(me.user_id).first<{ n: number }>();
+      expect(left?.n, table).toBe(0);
+    }
+    expect((await run<{ attempts: unknown[] }>("history", { limit: 50 }, other)).attempts.length).toBe(otherBefore);
+    // Still listed, so the address may come back: to a new, empty account.
+    const again = await run<{ user_id: string }>("whoami", {}, leaving);
+    expect(again.user_id).not.toBe(me.user_id);
+    expect((await run<{ attempts: unknown[] }>("history", { limit: 50 }, leaving)).attempts).toEqual([]);
+  });
+
   it("has a case for every query", () => {
     expect(Object.keys(queries).filter((name) => !covered.has(name))).toEqual([]);
   });

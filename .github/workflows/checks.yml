@@ -13,8 +13,11 @@
 #
 # The **nightly** workflow also calls this one, on the branch it just pushed
 # (`ref`), before it merges its own pull request: a pull request the workflow
-# opens with its own token starts no workflow of its own, so the night asks
-# for the checks itself, and merges only on green.
+# opens with its own token never runs this workflow's jobs, so the night asks
+# for the checks itself, and merges only on green. GitHub still records a
+# `pull_request` run for that pull request, held for approval with no jobs,
+# which ends as a failure when the pull request closes. That red run is not
+# a verdict; the night's own run of these jobs is.
 #
 # Every job here is offline. No API key, no Cloudflare account, no network calls.
 name: checks

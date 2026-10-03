@@ -191,8 +191,10 @@ export async function cmdPlan(args: Namespace): Promise<number> {
  * there is no fast path for being a robot.
  *
  * Nothing here publishes to a database. It writes bundles and their SQL into
- * the tree, and a person reads the diff. That review is the only reason a job
- * that writes exam content unattended is a safe thing to have.
+ * the tree; the nightly workflow merges them only when the whole `checks`
+ * workflow is green on their branch (2026-10-02: the gate, the proofreader,
+ * the batch checks and `checks` are the review), and a red check leaves the
+ * pull request for a person.
  */
 export async function cmdNightly(args: Namespace): Promise<number> {
   const [budget, perSlot] = clampNight(args.budget, args.per_slot);
@@ -294,8 +296,9 @@ export function _nightlySummary(
   lines.push(
     "",
     "Every item passed the per-item answerability gate and the whole-batch "
-    + "checks. Nothing is published until somebody merges this and applies the "
-    + "SQL — read a few of the items before you do.",
+    + "checks. The nightly workflow merges this once the checks pass on this "
+    + "branch, and the deploy applies the SQL; a red check leaves it open, "
+    + "with a comment saying why.",
   );
   return lines.join("\n");
 }

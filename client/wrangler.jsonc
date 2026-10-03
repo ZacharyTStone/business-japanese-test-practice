@@ -4,6 +4,9 @@
   // does not go in a product name, slug, or identifier.
   "name": "business-japanese-test-practice",
   "compatibility_date": "2026-09-14",
+  // AsyncLocalStorage, which Better Auth keeps a request's context in
+  // (worker/auth.ts). The one Node API it needs; nothing else is switched on.
+  "compatibility_flags": ["nodejs_als"],
 
   // The API and the media (worker/index.ts). Everything else is the static
   // web build below, served without running this script.
@@ -46,12 +49,15 @@
     }
   ],
 
-  // Who is asking: the token Cloudflare Access signs on every request it lets
-  // through, checked by worker/access.ts against these two — the team whose
-  // keys must have signed it, and the Access application it must be for (its
-  // AUD tag). Neither is a secret: both are written in every token the browser
-  // holds. Left empty, every query is refused. No secrets: what a person may
-  // see is the tester list in D1.
+  // Who is asking: a session the Worker's own sign-in made (worker/auth.ts),
+  // whose four settings are Worker *secrets*, set in the dashboard or with
+  // `wrangler secret put` and never here (a deploy replaces vars, and keeps
+  // secrets). While Cloudflare Access still stands in front of the site, also
+  // the token Access signs, checked by worker/access.ts against these two:
+  // the team whose keys must have signed it, and the Access application it
+  // must be for (its AUD tag). Neither is a secret: both are written in every
+  // token the browser holds. With neither the sign-in nor these, every query
+  // is refused. What a person may see is the tester list in D1.
   "vars": {
     "ACCESS_TEAM_DOMAIN": "crimson-voice-2494.cloudflareaccess.com",
     "ACCESS_AUD": "389ce98e459bc80833ee3c9cde1bf75389241d720edb8a4a1421b0e73afbf63b"
