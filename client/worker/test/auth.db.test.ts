@@ -7,20 +7,25 @@
  * Google callback makes — and the cookie is signed as Better Auth signs it.
  * What is proven is everything after Google: who gets an account and a
  * session, what is kept about them, which credential speaks for whom, and that
- * the schema is the one Better Auth wants.
+ * the schema is the one Better Auth wants. A phone's sign-in is driven from
+ * the outside, through the route the app posts to, with an ID token signed by
+ * a key the test serves as Google's: Better Auth's own check of the
+ * signature, issuer, audience and nonce runs as it does for real.
  */
 import { getMigrations } from "better-auth/db/migration";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { forgetKeys } from "../access";
 import { AUTH_TABLES, authFor, authOptions, type AuthEnv } from "../auth";
 import { isRefusal } from "../identity";
 import { whoIsAsking, type Caller, type WhoEnv } from "../who";
 import { addTester, address, openBank, type Bank } from "./d1";
-import { accessTokenFor, AUD, keyPair, keysOf, sessionCookie, TEAM, type Pair } from "./tokens";
+import { accessTokenFor, AUD, googleIdTokenFor, keyPair, keysOf, sessionCookie, TEAM, type Pair } from "./tokens";
 
 const SECRET = "a-test-secret-that-is-long-enough-0123456789";
 const BASE = "https://app.example";
+const WEB_CLIENT = "web-client.apps.googleusercontent.com";
+const GOOGLE_KEYS = "https://www.googleapis.com/oauth2/v3/certs";
 const NOW = Date.now();
 
 describe("the Worker's own sign-in", () => {
@@ -37,7 +42,7 @@ describe("the Worker's own sign-in", () => {
       DB: bank.db,
       BETTER_AUTH_URL: BASE,
       BETTER_AUTH_SECRET: SECRET,
-      GOOGLE_CLIENT_ID: "web-client.apps.googleusercontent.com",
+      GOOGLE_CLIENT_ID: WEB_CLIENT,
       GOOGLE_CLIENT_SECRET: "google-secret",
       ACCESS_TEAM_DOMAIN: TEAM,
       ACCESS_AUD: AUD,
@@ -222,5 +227,82 @@ describe("the Worker's own sign-in", () => {
     const access = await accessTokenFor(ours, tester, NOW);
     expect(emailOf(await ask({ "cf-access-jwt-assertion": access }, bare))).toBe(tester);
     expect(await ask({}, bare)).toMatchObject({ code: "signed_out" });
+  });
+
+  describe("a phone's sign-in", () => {
+    let google: Pair;
+    beforeAll(async () => {
+      google = await keyPair("google");
+      // Google's keys, served from the test: everything else goes out as usual.
+      const real = globalThis.fetch;
+      vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        return url === GOOGLE_KEYS ? Promise.resolve(Response.json({ keys: [google.jwk] })) : real(input, init);
+      });
+    });
+    afterAll(() => vi.restoreAllMocks());
+
+    /** What lib/phoneSignIn.ts posts: no cookie, no Origin, as React Native
+     *  sends it with `credentials: "omit"`. */
+    const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+      auth().handler(
+        new Request(`${BASE}/api/auth${path}`, {
+          method: "POST",
+          headers: { "content-type": "application/json", ...headers },
+          body: JSON.stringify(body),
+        })
+      );
+    const signInWith = (token: string, nonce?: string) => post("/sign-in/social", { provider: "google", idToken: { token, nonce } });
+
+    it("turns Google's ID token into a session token the phone sends as a bearer", async () => {
+      const listed = address("phone");
+      await addTester(bank.db, listed);
+      const token = await googleIdTokenFor(google, { aud: WEB_CLIENT, email: listed, nonce: "nonce-1" }, Date.now());
+      const res = await signInWith(token, "nonce-1");
+      expect(res.status).toBe(200);
+      const bearer = res.headers.get("set-auth-token");
+      expect(bearer).toBeTruthy();
+      expect(emailOf(await ask({ authorization: `Bearer ${bearer}` }))).toBe(listed);
+      // The ID token is not kept, any more than a web sign-in's.
+      const account = await bank.db
+        .prepare(`select a."idToken" from "${AUTH_TABLES.account}" a join "${AUTH_TABLES.user}" u on u."id" = a."userId" where u."email" = ?`)
+        .bind(listed)
+        .first<{ idToken: string | null }>();
+      expect(account).toEqual({ idToken: null });
+    });
+
+    it("refuses a token for another client, another nonce, or not signed by Google", async () => {
+      const listed = address("phone-forged");
+      await addTester(bank.db, listed);
+      const androidClient = await googleIdTokenFor(google, { aud: "android-client.apps.googleusercontent.com", email: listed }, Date.now());
+      expect((await signInWith(androidClient)).status).toBe(401);
+      const nonced = await googleIdTokenFor(google, { aud: WEB_CLIENT, email: listed, nonce: "the-phone-s" }, Date.now());
+      expect((await signInWith(nonced, "another")).status).toBe(401);
+      const stranger = await keyPair("google");
+      const forged = await googleIdTokenFor(stranger, { aud: WEB_CLIENT, email: listed }, Date.now());
+      expect((await signInWith(forged)).status).toBe(401);
+      expect(await rows(AUTH_TABLES.user, listed)).toBe(0);
+    });
+
+    it("refuses an address the tester list does not name with the code the app reads, and writes nothing", async () => {
+      const outsider = address("phone-stranger");
+      const token = await googleIdTokenFor(google, { aud: WEB_CLIENT, email: outsider }, Date.now());
+      const res = await signInWith(token);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toMatchObject({ code: "not_on_tester_list" });
+      expect(res.headers.get("set-auth-token")).toBeNull();
+      expect(await rows(AUTH_TABLES.user, outsider)).toBe(0);
+    });
+
+    it("signs a phone out by its bearer alone, and the token is nobody after", async () => {
+      const listed = address("phone-out");
+      await addTester(bank.db, listed);
+      const res = await signInWith(await googleIdTokenFor(google, { aud: WEB_CLIENT, email: listed }, Date.now()));
+      const bearer = res.headers.get("set-auth-token") ?? "";
+      expect(emailOf(await ask({ authorization: `Bearer ${bearer}` }))).toBe(listed);
+      const out = await post("/sign-out", {}, { authorization: `Bearer ${bearer}` });
+      expect(out.status).toBe(200);
+      expect(await ask({ authorization: `Bearer ${bearer}` })).toMatchObject({ code: "signed_out" });
+    });
   });
 });

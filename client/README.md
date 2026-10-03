@@ -4,8 +4,9 @@ Expo (React Native) — one codebase for iOS, Android and web. Web ships first:
 the app talks to the database through the Cloudflare Worker it is served from
 (`worker/`), and signs in with Google through the Worker's own sign-in
 (`worker/auth.ts`, Better Auth on the same D1). Cloudflare Access still stands
-in front of the site until it is switched off (blockers.md #4); Android builds
-with EAS (`eas.json`) and signs in once native Google sign-in lands.
+in front of the site until it is switched off (blockers.md #4). Android builds
+with EAS (`eas.json`) and signs in with Google's own account sheet
+(Credential Manager, `modules/google-sign-in`), into the same Worker.
 
 ```bash
 cd client
@@ -49,25 +50,46 @@ query answers `sign_in_not_configured`.
 
 `eas.json` has two profiles: `preview` builds an APK to install straight onto
 a tester's phone, `production` the bundle Google Play takes. Each builds from
-the EAS environment of the same name, and each needs the Worker's address
-there, as an EAS environment variable rather than a file in the repository:
+the EAS environment of the same name, and each needs two values there, as EAS
+environment variables rather than files in the repository: the Worker's
+address, and the Google **Web** client's id (public: it is in every Google
+sign-in address; the same value as the Worker's `GOOGLE_CLIENT_ID`):
 
 ```bash
 npx eas-cli init                                    # once: the project id goes into app.json
 for env in preview production; do
   npx eas-cli env:create --environment $env --name EXPO_PUBLIC_API_BASE \
     --value https://<the Worker's host> --visibility plaintext
+  npx eas-cli env:create --environment $env --name EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID \
+    --value <the Web client's id> --visibility plaintext
 done
 npx eas-cli build -p android --profile preview      # an APK, linked when it is done
 ```
 
-A build can be made now, but it cannot sign in yet: it says so on the sign-in
-screen. The Worker is ready for it — it takes a phone's signed session token
-as `Authorization: Bearer`, and a Google ID token issued for the Web client at
-`/api/auth/sign-in/social` — and the app's half is blockers.md #4, step 3:
-Google's Credential Manager on the phone, the token kept in secure storage and
-sent on every query, clip and picture, and an Android OAuth client in Google
-Cloud for the package `app.businessjapanesedrill` and both signing keys.
+How a phone signs in, with no browser on the way:
+
+1. "Continue with Google" opens Google's account sheet through Credential
+   Manager (`modules/google-sign-in`, a small Expo module of our own: the free
+   React Native libraries wrap Google's deprecated SDK). It answers with an ID
+   token issued for the Web client, with a fresh nonce in it.
+2. `src/lib/phoneSignIn.ts` posts both to the Worker's
+   `/api/auth/sign-in/social`, which checks the token's signature, issuer,
+   audience and nonce, and the tester list, exactly as for the web.
+3. The Worker answers with a signed session token (`set-auth-token`), kept
+   in the system's encrypted storage (`src/lib/phoneSession.ts`,
+   expo-secure-store, excluded from backups) and sent as `Authorization:
+   Bearer` with every query, clip and picture. A phone sends no cookies.
+4. Signing out ends that session on the Worker, forgets the token, and
+   forgets the chosen account, so the next sign-in asks which one.
+
+For Google to hand the token to this app at all, Google Cloud needs an
+**Android** OAuth client for the package `app.businessjapanesedrill` and the
+SHA-1 of the key the APK is signed with (`npx eas-cli credentials -p
+android`), and later a second for Play App Signing's key (Play Console → Test
+and release → App integrity). It has no secret, and neither the app nor the
+Worker uses its id: it only vouches for the app. blockers.md #4, step 3 has
+the checklist. `modules/` is the app's only native code; `expo prebuild`
+writes `android/`, which is not committed (EAS makes its own).
 
 ## Nothing to choose
 
@@ -182,6 +204,9 @@ src/lib/
   api.ts            the one way to the database: a named query, sent to the Worker
   auth.tsx          who this is (asked of the Worker) and the tester check
   authClient.ts     signing in with Google, and out, from the web (worker/auth.ts)
+  phoneSignIn.ts    signing in with Google, and out, on a phone (modules/google-sign-in)
+  phoneSession.ts   a phone's session token: kept, and sent with queries, clips and pictures
+  signin.ts         the plain half of both: refusals read, the bearer header
   db.ts             every query the app makes, through one module (db/: practice,
                     record, profile, media; db/shape.ts the tested joins)
   outbox.ts         answers that could not be sent, kept until the database takes them
@@ -202,6 +227,8 @@ src/ui/             theme, shared components, icons, the meter, the radar, the f
   welcome.tsx       the first-launch explanation
   gate.tsx          "Continue with Google", and "not open yet"
   keys.ts           answering with 1–4 and Enter, on the one platform with a keyboard
+modules/
+  google-sign-in/   Credential Manager's Google sign-in, as an Expo module (Android)
 ```
 
 On the web this is a drill somebody does at a desk between two other tabs, so

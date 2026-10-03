@@ -2,6 +2,10 @@ node_modules/
 .expo/
 dist/
 web-build/
+# Made by `expo prebuild` (EAS makes its own); the app's own native code is
+# under modules/.
+/android/
+/ios/
 *.log
 
 # Contains your project URL and anon key. Copy .env.example instead.

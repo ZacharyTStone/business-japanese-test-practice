@@ -15,6 +15,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { clipUrl } from "../lib/db";
+import { clipSource } from "../lib/phoneSession";
 import { useLang } from "../lib/i18n";
 import type { DialogueTurn } from "../lib/types";
 import { Icon } from "./icons";
@@ -69,7 +70,7 @@ export function MiniPlay({
    *  counts a spoken option heard again before the answer as a replay. */
   onPlay?: () => void;
 }) {
-  const player = useAudioPlayer(url);
+  const player = useAudioPlayer(clipSource(url));
   const status = useAudioPlayerStatus(player);
   const playing = status.playing;
   const owner = React.useRef({}).current;
@@ -290,7 +291,8 @@ function useClipQueue(
   const firstPlayable = () => Math.max(0, urls.findIndex(Boolean));
   const [at, setAt] = React.useState(firstPlayable);
   const [running, setRunning] = React.useState(autoplay && urls.some(Boolean));
-  const player = useAudioPlayer(urls[at] ?? null, { updateInterval: STATUS_INTERVAL_MS });
+  const current = urls[at];
+  const player = useAudioPlayer(current ? clipSource(current) : null, { updateInterval: STATUS_INTERVAL_MS });
   const status = useAudioPlayerStatus(player);
   const owner = React.useRef({}).current;
 

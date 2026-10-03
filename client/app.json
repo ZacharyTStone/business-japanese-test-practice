@@ -42,7 +42,8 @@
           "enableBackgroundPlayback": false,
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

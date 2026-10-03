@@ -2,20 +2,21 @@
  * Who the user is — and, while the app is in testing, whether they are allowed
  * in at all.
  *
- * Cloudflare Access is the sign-in. It stands in front of the whole site, so
- * nobody reaches this code without having signed in with an address the
- * Access policy names; there is no password form in the app. What is left to
- * ask is who that is to the database, which the Worker answers from the
- * Access identity (`whoami`, worker/queries.ts): the user id, the email, and
+ * Google is the sign-in, through the Worker's own (worker/auth.ts): on the
+ * web a session cookie (lib/authClient.ts), on a phone a session token it
+ * keeps (lib/phoneSignIn.ts). There is no password form in the app. What is
+ * left to ask is who that is to the database, which the Worker answers from
+ * the session (`whoami`, worker/queries.ts): the user id, the email, and
  * whether the tester list has the address.
  *
- * The database, not this file, is what keeps anybody out: every row-level
- * policy requires `is_tester()`, so a client that skipped the check here would
- * simply see nothing. `isTester` exists to say so politely.
+ * The Worker, not this file, is what keeps anybody out: it refuses every query
+ * from an address the tester list does not name, so a client that skipped the
+ * check here would simply see nothing. `isTester` exists to say so politely.
  *
- * An Access session runs out after a while. The next request then answers
- * `session_expired` (lib/api.ts), and the door offers to sign in again, which
- * is a reload: Access shows its own sign-in page and comes back here.
+ * Nobody signed in is `signed_out`, and the door offers Google. While
+ * Cloudflare Access still stands in front of the site, an Access session that
+ * ran out answers `session_expired` (lib/api.ts), and signing in again is a
+ * reload through Access's own page.
  */
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
@@ -23,6 +24,7 @@ import { Platform } from "react-native";
 import { call, isConfigured } from "./api";
 import { signOutOfEverything } from "./authClient";
 import { errorText } from "./errors";
+import { signOutOnPhone } from "./phoneSignIn";
 
 /** The signed-in learner, in the shape the screens already read
  *  (`session?.user.id`). */
@@ -42,7 +44,8 @@ type AuthState = {
   /** Whether the signed-in account is on the tester list. null until asked. */
   isTester: boolean | null;
   email: string | null;
-  /** Out of Cloudflare Access, and so out of the app. */
+  /** Out of the session (and, while it stands, Cloudflare Access), back to
+   *  the sign-in screen. */
   signOut: () => Promise<void>;
   /** Ask again. `error` is never cleared on its own, so this is the way back
    *  from a cold-start hiccup. A failed check sets `error` and leaves
@@ -118,9 +121,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           window.location.replace("/");
           return;
         }
-        // A native build has no sign-in yet (blockers.md #4, step 3).
+        // A phone: out of the Worker's session, the token forgotten, then
+        // ask again, which is the sign-in screen.
+        await signOutOnPhone();
         setSession(null);
         setIsTester(null);
+        setEmail(null);
+        setFailure(null);
+        setLoading(true);
+        setAttempt((n) => n + 1);
       },
 
       retry() {

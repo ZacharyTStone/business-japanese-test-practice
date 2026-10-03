@@ -420,7 +420,10 @@ accident is not.
   the same D1, Google only, decided 2026-10-03): a session cookie it signed,
   or from a phone the same signed token as `Authorization: Bearer` (an
   unsigned one is refused), never a header the client could forge; looked up
-  by address in D1. Answers carry the cookies Better Auth sets, so a session
+  by address in D1. A phone gets its token by handing the Worker a Google ID
+  token for the Web client, from Credential Manager
+  (`client/modules/google-sign-in`, the app's only native code), keeps it in
+  SecureStore, and sends no cookies (`client/src/lib/phoneSession.ts`). Answers carry the cookies Better Auth sets, so a session
   in use is renewed. Only the routes the app uses (`OPEN_ROUTES`) answer, all
   rate-limited; the rest are 404. The `auth_*` tables keep sign-in state only
   — no Google tokens, photo, IP address or browser — and the state of a

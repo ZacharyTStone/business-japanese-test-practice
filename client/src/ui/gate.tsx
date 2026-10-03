@@ -10,8 +10,8 @@
  *                 and what went wrong if a sign-in came back refused. While
  *                 Access still stands in front of the site, an Access session
  *                 that ran out is the same screen, and a reload takes the
- *                 learner through Access's sign-in and back. A native build
- *                 says its sign-in is not ready yet.
+ *                 learner through Access's sign-in and back. On a phone,
+ *                 Google's own account sheet (lib/phoneSignIn.ts).
  *   ClosedScreen  somebody is signed in, and the Worker says the address is
  *                 not on the tester list. Says which account, so a person who
  *                 signed in with the wrong one can see that, and offers the
@@ -26,8 +26,9 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../lib/auth";
 import { signInWithGoogle, type SignInStart } from "../lib/authClient";
-import { useLang } from "../lib/i18n";
-import { signInRefusal } from "../lib/signin";
+import { useLang, type Key } from "../lib/i18n";
+import { signInOnPhone } from "../lib/phoneSignIn";
+import { signInRefusal, type PhoneSignInRefusal } from "../lib/signin";
 import { Button, IconBadge, ScreenMessage } from "./components";
 import { space, type } from "./theme";
 
@@ -39,21 +40,9 @@ export function SignInAgainScreen() {
   // session that ran out: the Worker's own sign-in is the way in.
   const signedOut = (failure as { code?: unknown } | null)?.code === "signed_out";
 
-  if (web && signedOut) return <GoogleSignIn />;
-
-  // A native build has no sign-in of its own yet (blockers.md #4, step 3):
-  // say so, rather than draw a button that cannot do anything.
-  if (!web) {
-    return (
-      <ScreenMessage>
-        <View style={styles.card}>
-          <IconBadge name="user" tone="violet" />
-          <Text style={type.h2}>{t("gate_title")}</Text>
-          <Text style={type.small}>{t("gate_native_pending")}</Text>
-        </View>
-      </ScreenMessage>
-    );
-  }
+  // A phone has no Access in front of it: Google is the only way in.
+  if (!web) return <PhoneGoogleSignIn />;
+  if (signedOut) return <GoogleSignIn />;
 
   return (
     <ScreenMessage>
@@ -71,7 +60,6 @@ export function SignInAgainScreen() {
  *  way back from Google says so in the address (lib/signin.ts), and a try
  *  that could not even start says so here. */
 function GoogleSignIn() {
-  const { t } = useLang();
   const [busy, setBusy] = useState(false);
   const [start, setStart] = useState<SignInStart>(null);
   const refused = signInRefusal(window.location.search);
@@ -95,13 +83,50 @@ function GoogleSignIn() {
     }
   }
 
+  return <GoogleCard body={body} busy={busy} onPress={() => void onPress()} />;
+}
+
+/** The same button on a phone: Google's account sheet, then the Worker, then
+ *  the door asks who this is again. Closing the sheet says nothing. */
+function PhoneGoogleSignIn() {
+  const { retry } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [refused, setRefused] = useState<PhoneSignInRefusal | null>(null);
+  const body: Key =
+    refused === "not_listed"
+      ? "gate_refused"
+      : refused === "no_account"
+        ? "gate_no_account"
+        : refused === "not_configured"
+          ? "gate_not_configured"
+          : refused === "failed"
+            ? "gate_failed"
+            : "gate_google_body";
+
+  async function onPress() {
+    setBusy(true);
+    setRefused(null);
+    const why = await signInOnPhone();
+    if (why === null) {
+      retry();
+      return;
+    }
+    setRefused(why);
+    setBusy(false);
+  }
+
+  return <GoogleCard body={body} busy={busy} onPress={() => void onPress()} />;
+}
+
+function GoogleCard({ body, busy, onPress }: { body: Key; busy: boolean; onPress: () => void }) {
+  const { t } = useLang();
   return (
     <ScreenMessage>
       <View style={styles.card}>
         <IconBadge name="user" tone="violet" />
         <Text style={type.h2}>{t("gate_title")}</Text>
         <Text style={type.small}>{t(body)}</Text>
-        <Button label={t("gate_google")} icon="user" disabled={busy} onPress={() => void onPress()} />
+        <Button label={t("gate_google")} icon="user" disabled={busy} onPress={onPress} />
       </View>
     </ScreenMessage>
   );
