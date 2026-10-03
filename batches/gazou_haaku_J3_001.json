@@ -1,0 +1,171 @@
+{
+  "bundle_version": 2,
+  "item_type": "gazou_haaku",
+  "level": "J3",
+  "generated_at": "2026-10-03T19:18:12+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "2b3e3869ff",
+      "item_type": "gazou_haaku",
+      "level": "J3",
+      "seed_cell": {
+        "id": "corridor+peer_to_peer+carrying_boxes@J3",
+        "setting": "corridor",
+        "relation": "peer_to_peer",
+        "function": "carrying_boxes",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "オフィス移転に伴う什器の運搬",
+      "stem": "矢印の左側の人は何をしていますか。",
+      "options": [
+        {
+          "text": "搬入口でトラックから段ボール箱を降ろしています。",
+          "role": "adjacent_setting",
+          "why": "場面はエレベーターホールであり、トラックや搬入口の扉は描かれていない。"
+        },
+        {
+          "text": "段ボール箱を両手で抱えてエレベーターのほうへ歩いています。",
+          "role": "correct",
+          "why": "左の人が段ボール箱を両腕で抱え、体をエレベーターのドアのほうへ向けて歩き出している。"
+        },
+        {
+          "text": "台車に段ボール箱を乗せて押して運んでいます。",
+          "role": "different_action",
+          "why": "台車は描かれておらず、左の人は箱を両手で直接抱えている。"
+        },
+        {
+          "text": "エレベーターの扉を押さえています。",
+          "role": "wrong_participants",
+          "why": "扉を手で押さえているのは右の人で、左の人は箱を抱えたまま歩いている。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "左の人が段ボール箱を両手で抱え、エレベーターの扉のほうへ体を向けて歩いているので、正解は「段ボール箱を抱えてエレベーターのほうへ歩いている」。台車は絵の中に存在せず、別の運び方を示す選択肢は誤り。扉を押さえているのは右の人であり、左の人の動作として述べるのは人物の取り違え。また場面はエレベーターホールであり、トラックや搬入口は描かれていないため、その選択肢も誤りとなる。",
+      "explanation_en": "The left colleague is carrying a cardboard box with both hands toward the elevator doors; no cart, no door-holding by that person, and no loading dock are shown, so the other three options fail.",
+      "vocab_notes": [
+        {
+          "term": "段ボール箱",
+          "reading": "だんぼーるばこ",
+          "meaning": "cardboard box"
+        },
+        {
+          "term": "搬入口",
+          "reading": "はんにゅうぐち",
+          "meaning": "loading/delivery entrance"
+        },
+        {
+          "term": "台車",
+          "reading": "だいしゃ",
+          "meaning": "hand cart/dolly"
+        },
+        {
+          "term": "エレベーターホール",
+          "reading": "えれべーたーほーる",
+          "meaning": "elevator hall/lobby"
+        }
+      ],
+      "audio": {
+        "narration": "c064ca96bc75914f",
+        "options": [
+          "f3afb28806141469",
+          "d62b5c4039bf1d96",
+          "928767f56e8b66ef",
+          "969b493125a98d0c"
+        ],
+        "dialogue": []
+      },
+      "channel": "in_person",
+      "image_brief": "An office building elevator hall with closed elevator doors in the background and a smooth tiled floor. Two colleagues in business casual attire stand in the hallway. The person on the left holds a medium-sized closed cardboard box against their chest with both arms, body turned and a foot stepping toward the elevator doors. The person on the right stands beside the elevator doors, one hand pressed flat against the edge of the open door to hold it, the other hand empty at their side, looking toward the left colleague. There is no cart, no trolley, no truck, and no loading dock visible; the floor and walls are plain with no signs or readable text.",
+      "scene_id": "pic_2b3e3869ff",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "c064ca96bc75914f",
+      "item_id": "2b3e3869ff",
+      "kind": "narration",
+      "index": null,
+      "text": "矢印の左側の人は何をしていますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "2b3e3869ff",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "f3afb28806141469",
+      "item_id": "2b3e3869ff",
+      "kind": "option",
+      "index": 0,
+      "text": "搬入口でトラックから段ボール箱を降ろしています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "2b3e3869ff",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d62b5c4039bf1d96",
+      "item_id": "2b3e3869ff",
+      "kind": "option",
+      "index": 1,
+      "text": "段ボール箱を両手で抱えてエレベーターのほうへ歩いています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "2b3e3869ff",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "928767f56e8b66ef",
+      "item_id": "2b3e3869ff",
+      "kind": "option",
+      "index": 2,
+      "text": "台車に段ボール箱を乗せて押して運んでいます。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "2b3e3869ff",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "969b493125a98d0c",
+      "item_id": "2b3e3869ff",
+      "kind": "option",
+      "index": 3,
+      "text": "エレベーターの扉を押さえています。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "pic_2b3e3869ff"
+  ]
+}
