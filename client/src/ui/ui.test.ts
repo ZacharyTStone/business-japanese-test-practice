@@ -1,7 +1,7 @@
 /**
- * The arithmetic inside two of the drawn pieces, loaded through the React
- * Native stub (vitest.config.ts): what the radar says aloud, and how much the
- * tab bar grows for larger text.
+ * The arithmetic inside a few of the drawn pieces, loaded through the React
+ * Native stub (vitest.config.ts): what the radar says aloud, how much the
+ * tab bar grows for larger text, and which windows split the practice screen.
  */
 import { describe, expect, it } from "vitest";
 
@@ -9,7 +9,7 @@ import { tr } from "../lib/i18n";
 import type { TypeStat } from "../lib/types";
 import { radarDescription } from "./radar";
 import { labelGrowth, TAB_LABEL } from "./tabbar";
-import { colors, type } from "./theme";
+import { ANSWER_COLUMN_WIDTH, colors, PAGE_MAX_WIDTH, space, SPLIT_MIN_WIDTH, splitLayout, type } from "./theme";
 
 function stat(label_ja: string, answered: number, accuracy: number | null): TypeStat {
   return {
@@ -49,5 +49,20 @@ describe("the tab bar", () => {
 describe("the theme, through the stub", () => {
   it("loads as written", () => {
     expect(type.small.color).toBe(colors.muted);
+  });
+});
+
+describe("the split practice screen", () => {
+  it("is for a laptop's window, never a phone's or a portrait tablet's", () => {
+    for (const width of [320, 375, 430, 768, 834, SPLIT_MIN_WIDTH - 1]) expect(splitLayout(width)).toBe(false);
+    for (const width of [SPLIT_MIN_WIDTH, 1280, 1440, 2560]) expect(splitLayout(width)).toBe(true);
+  });
+
+  it("leaves the reading column room for the scene's picture where it starts", () => {
+    // The window less the page's padding, the gap and the answer column; the
+    // scene picture is drawn at most 480 wide (SceneCard).
+    const reading = SPLIT_MIN_WIDTH - 2 * space.lg - space.xl - ANSWER_COLUMN_WIDTH;
+    expect(reading).toBeGreaterThanOrEqual(480);
+    expect(reading).toBeLessThanOrEqual(PAGE_MAX_WIDTH);
   });
 });

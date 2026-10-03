@@ -3,22 +3,27 @@
  *
  *   /api/q/<name>   a query from worker/queries.ts, as the signed-in learner
  *   /media/...      a clip or a picture from R2 (worker/media.ts)
+ *   /auth/native/   a native build's sign-in, through Access (worker/native.ts)
  *   anything else   the static web build, served by the assets binding
  *
- * `run_worker_first` in wrangler.jsonc sends only /api/* and /media/* here;
- * every other request is served from the assets without running this code.
- * Cloudflare Access sits in front of all of it, so nothing on this origin is
- * reachable without signing in; behind it, the tester list in D1 is the door
- * every query passes (core/caller.ts).
+ * `run_worker_first` in wrangler.jsonc sends only /api/*, /media/* and
+ * /auth/* here; every other request is served from the assets without running
+ * this code. Cloudflare Access sits in front of all of it, so nothing on this
+ * origin is reachable without signing in — but for /auth/native/token, which
+ * trades a one-time code for the token and nothing else (native.ts says why);
+ * behind it, the tester list in D1 is the door every query passes
+ * (core/caller.ts).
  *
  * Same origin, so there is no CORS to configure and the Access cookie rides
- * along with every request the app makes.
+ * along with every request the app makes. A native build has no cookie and
+ * sends the same token as `cf-access-token` (access.ts).
  */
 import { accessEmail } from "./access";
 import { resolveLearner } from "./core/caller";
 import { toApiError } from "./core/errors";
 import { isRefusal, notATester, signedInEmail, type Refusal } from "./identity";
 import { serveMedia } from "./media";
+import { handleNative } from "./native";
 import { queries } from "./queries";
 
 export interface Env {
@@ -94,6 +99,9 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname.startsWith("/api/q/")) return handleApi(request, env, ctx);
     if (pathname.startsWith("/media/")) return serveMedia(request, env);
+    if (pathname.startsWith("/auth/native/")) {
+      return handleNative(request, { db: env.DB, access: { teamDomain: env.ACCESS_TEAM_DOMAIN, aud: env.ACCESS_AUD } });
+    }
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

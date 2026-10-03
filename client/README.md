@@ -1,9 +1,11 @@
 # The study app
 
 Expo (React Native) — one codebase for iOS, Android and web. Web ships first,
-and for now web is the only target: the app talks to the database through the
-Cloudflare Worker it is served from (`worker/`), signed in by Cloudflare Access,
-which a native build has no way through yet.
+and Android builds with EAS (`eas.json`). On the web the app talks to the
+database through the Cloudflare Worker it is served from (`worker/`), signed in
+by Cloudflare Access; a native build signs in through the same Access in a
+browser tab and talks to the same Worker by its address (`EXPO_PUBLIC_API_BASE`)
+— `worker/native.ts` says how.
 
 ```bash
 cd client
@@ -22,6 +24,24 @@ migrations apply business-japanese-drill --local` and each `../batches/*.sql`
 Access identity — an `"access": {"dev": {...}}` block in a local copy of
 `wrangler.jsonc`. Without a Worker to talk to (`npm run ios`, say) the app
 still starts and says what is missing rather than crashing.
+
+## Android
+
+`eas.json` has two profiles: `preview` builds an APK to install straight onto
+a tester's phone, `production` the bundle Google Play takes. A build needs the
+Worker's address, as an EAS environment variable rather than a file in the
+repository:
+
+```bash
+npx eas-cli init                                    # once: the project id goes into app.json
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_API_BASE \
+  --value https://<the Worker's host> --visibility plaintext
+npx eas-cli build -p android --profile preview      # an APK, linked when it is done
+```
+
+Signing in needs one Cloudflare setting first: a Bypass policy on
+`/auth/native/token` alone, the one request the app makes before it has a
+token (blockers.md #4). Everything else stays behind Access.
 
 ## Nothing to choose
 
