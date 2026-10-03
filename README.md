@@ -99,7 +99,7 @@ Three programs that only meet in the database:
 
 | When | What happens |
 |---|---|
-| 03:00 JST | The **nightly** workflow writes up to 3 questions (≤ $0.50) and opens a pull request, the night's record. |
+| 01:17 JST | The **nightly** workflow writes up to 3 questions (≤ $0.50) and opens a pull request, the night's record. |
 | Minutes later | It runs **checks** on that branch; when every job is green it merges the pull request and starts **deploy database**, which applies migrations, runs every bundle's SQL, and makes missing audio. A red check leaves the pull request open for the owner. |
 | Any time | A learner presses the button; the Worker builds a set of 10 and the database grades each answer. |
 | 15 answers | Nothing more is served, and the database accepts nothing more, until midnight in Japan. |
@@ -358,7 +358,7 @@ queue.
 
 **Workflows:**
 
-* **nightly** (03:00 JST, or by hand from `main`) — survey the bank, recount question
+* **nightly** (01:17 JST, or by hand from `main`) — survey the bank, recount question
   difficulty from all answers, write up to 3 questions, draw needed pictures,
   open a PR — the night's record — then run **checks** on that branch and, when
   every job is green, merge it and start **deploy database**. A red check leaves
