@@ -12,6 +12,7 @@
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { Platform } from "react-native";
 
 export type Lang = "ja" | "en";
 export const LANGS: Lang[] = ["ja", "en"];
@@ -115,6 +116,8 @@ const S = {
   gate_sign_in: ["ログイン", "Sign in"],
   // The Worker's own sign-in (worker/auth.ts): Google, and why it came back.
   gate_google: ["Googleでログイン", "Continue with Google"],
+  // The public privacy page (app/privacy.tsx), and the links to it.
+  title_privacy: ["プライバシーポリシー", "Privacy policy"],
   gate_google_body: ["登録したGoogleアカウントでログインしてください。", "Sign in with the Google account you were registered with."],
   gate_refused: ["このGoogleアカウントは、まだテスト参加者に登録されていません。別のアカウントでお試しください。", "That Google account isn't on the tester list. Try another account."],
   gate_failed: ["ログインできませんでした。もう一度お試しください。", "Sign-in didn't go through. Please try again."],
@@ -177,6 +180,18 @@ const S = {
   acc_reset_do: ["消す", "Erase it"],
   acc_reset_busy: ["消しています…", "Erasing…"],
   acc_reset_done: ["{n}問の記録を消しました。", "{n} answer erased.|{n} answers erased."],
+  // Leaving: the account and everything about it (worker/core/profile.ts).
+  acc_delete: ["アカウントを削除", "Delete account"],
+  acc_delete_body: [
+    "このアカウントと、このアプリが持っているあなたの情報（解答の記録・設定・メモ・問題の報告）をすべて削除します。",
+    "Deletes this account and everything the app holds about you: your answers, settings, notes and question reports.",
+  ],
+  acc_delete_confirm: [
+    "本当に削除しますか。元には戻せません。削除するとログアウトします。",
+    "Really delete it? This cannot be undone, and you will be signed out.",
+  ],
+  acc_delete_do: ["削除する", "Delete it"],
+  acc_delete_busy: ["削除しています…", "Deleting…"],
   cancel: ["やめる", "Cancel"],
 
   // countdown
@@ -458,10 +473,20 @@ const LangContext = createContext<LangContextValue>({
   t: (key, vars) => tr("ja", key, vars),
 });
 
+/** The first render's language. On the web it must be the static HTML's,
+ *  which is built in Japanese (app/+html.tsx), or the public pages that render
+ *  text there (app/privacy.tsx) do not match it and React draws the page
+ *  again; the device's language follows a moment later. A phone has no static
+ *  HTML and starts in its own. */
+function firstLang(): Lang {
+  return Platform.OS === "web" ? "ja" : deviceLang();
+}
+
 export function LangProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(deviceLang);
+  const [lang, setLangState] = useState<Lang>(firstLang);
 
   useEffect(() => {
+    if (Platform.OS === "web") setLangState(deviceLang());
     AsyncStorage.getItem(STORAGE_KEY)
       .then((saved) => {
         if (saved === "ja" || saved === "en") setLangState(saved);

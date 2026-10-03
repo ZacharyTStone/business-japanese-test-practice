@@ -17,7 +17,8 @@
  * existing `users` row, found by the verified address, so nobody's history
  * moves when they first sign in this way. Better Auth's own tables are named
  * `auth_*` and hold sign-in state only — no Google tokens, no addresses or
- * user agents, no photo: an identity-only sign-in reads none of them back.
+ * user agents, no name or photo: an identity-only sign-in reads none of them
+ * back, and the privacy policy (src/lib/privacy.ts) says so.
  *
  * Google is the only way in for now (2026-10-03): one tap on Android, one
  * button on the web, no password and no emailed code.
@@ -93,6 +94,10 @@ function refuse(code: "email_not_verified" | "not_on_tester_list"): never {
   throw new APIError("FORBIDDEN", { code, message: code === "not_on_tester_list" ? "Not on the tester list" : "Email not verified" });
 }
 
+/** Nothing of the Google profile but the address: the name column cannot be
+ *  null, so it is kept empty. */
+const NO_PROFILE = { name: "", image: null };
+
 /** Nothing of Google's tokens is kept: the sign-in is identity only. */
 const NO_TOKENS = {
   accessToken: null,
@@ -146,10 +151,10 @@ export function authOptions(env: Required<AuthEnv>): BetterAuthOptions {
           before: async (user) => {
             const why = await refusalFor(db, user.email, user.emailVerified);
             if (why) refuse(why);
-            return { data: { ...user, image: null } };
+            return { data: { ...user, ...NO_PROFILE } };
           },
         },
-        update: { before: async (user) => ({ data: { ...user, image: null } }) },
+        update: { before: async (user) => ({ data: { ...user, ...NO_PROFILE } }) },
       },
       account: {
         create: { before: async (account) => ({ data: { ...account, ...NO_TOKENS } }) },

@@ -119,7 +119,7 @@ describe("who is asking, when the sign-in is missing or broken", () => {
   it("falls back to Access when the sign-in cannot answer", async () => {
     const cookie = await sessionCookie("a-session-token-of-some-length-000000", SECRET);
     const access = await accessTokenFor(ours, "me@example.com", NOW);
-    expect(await ask({ ...FULL, ...ACCESS }, { cookie, "cf-access-jwt-assertion": access })).toEqual({ email: "me@example.com", cookies: [] });
+    expect(await ask({ ...FULL, ...ACCESS }, { cookie, "cf-access-jwt-assertion": access })).toEqual({ email: "me@example.com", cookies: [], viaSession: false });
     expect(await ask({ ...FULL, ...ACCESS }, { cookie })).toMatchObject({ status: 503, code: "sign_in_unavailable" });
   });
 

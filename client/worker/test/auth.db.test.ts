@@ -18,6 +18,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { forgetKeys } from "../access";
 import { AUTH_TABLES, authFor, authOptions, type AuthEnv } from "../auth";
 import { isRefusal } from "../identity";
+import { runQuery } from "../index";
 import { whoIsAsking, type Caller, type WhoEnv } from "../who";
 import { addTester, address, openBank, type Bank } from "./d1";
 import { accessTokenFor, AUD, googleIdTokenFor, keyPair, keysOf, sessionCookie, TEAM, type Pair } from "./tokens";
@@ -93,13 +94,17 @@ describe("the Worker's own sign-in", () => {
     expect(m.toBeAdded.map((t) => t.table)).toEqual([]);
   });
 
-  it("makes an account for a listed address Google has verified, and keeps no photo", async () => {
+  it("makes an account for a listed address Google has verified, and keeps no name or photo", async () => {
     const ctx = await context();
-    const user = await ctx.internalAdapter.createUser({ email: tester.toUpperCase(), name: "T", emailVerified: true, image: "https://photo.example/me.jpg" });
+    const user = await ctx.internalAdapter.createUser({ email: tester.toUpperCase(), name: "Taro Tester", emailVerified: true, image: "https://photo.example/me.jpg" });
     expect(user.email).toBe(tester);
     expect(await rows(AUTH_TABLES.user, tester)).toBe(1);
-    const row = await bank.db.prepare(`select "image" from "${AUTH_TABLES.user}" where "email" = ?`).bind(tester).first<{ image: string | null }>();
-    expect(row?.image).toBeNull();
+    const row = await bank.db.prepare(`select "name", "image" from "${AUTH_TABLES.user}" where "email" = ?`).bind(tester).first();
+    expect(row).toEqual({ name: "", image: null });
+    // Nor when Better Auth would update it from a later sign-in.
+    await ctx.internalAdapter.updateUser(user.id, { name: "Taro", image: "https://photo.example/new.jpg" });
+    const later = await bank.db.prepare(`select "name", "image" from "${AUTH_TABLES.user}" where "email" = ?`).bind(tester).first();
+    expect(later).toEqual({ name: "", image: null });
   });
 
   it("refuses an address the tester list does not name, with the code the app reads, and writes nothing", async () => {
@@ -227,6 +232,36 @@ describe("the Worker's own sign-in", () => {
     const access = await accessTokenFor(ours, tester, NOW);
     expect(emailOf(await ask({ "cf-access-jwt-assertion": access }, bare))).toBe(tester);
     expect(await ask({}, bare)).toMatchObject({ code: "signed_out" });
+  });
+
+  it("deletes the sign-in with the account, and a second device's cached session cannot make it again", async () => {
+    const leaving = address("signin-leaving-for-good");
+    await addTester(bank.db, leaving);
+    const { cookie } = await signIn(leaving);
+    // The second device has also been vouched for by the five-minute cookie.
+    const first = (await ask({ cookie })) as Caller;
+    const cached = first.cookies.map((c) => c.slice(0, c.indexOf(";"))).find((c) => c.includes("session_data="));
+    expect(cached).toBeTruthy();
+    const query = async (name: string, args: Record<string, unknown> = {}) => {
+      const res = await runQuery(bank.db, leaving, name, args, { viaSession: true });
+      return { status: res.status, body: (await res.json()) as { data?: unknown; error?: { code: string } } };
+    };
+    expect((await query("whoami")).status).toBe(200);
+
+    const userId = (await bank.db.prepare(`select "id" from "${AUTH_TABLES.user}" where "email" = ?`).bind(leaving).first<{ id: string }>())?.id;
+    expect((await query("deleteAccount", { email: leaving })).body.data).toMatchObject({ deleted: true });
+    expect(await rows(AUTH_TABLES.user, leaving)).toBe(0);
+    const sessions = await bank.db.prepare(`select count(*) as n from "${AUTH_TABLES.session}" where "userId" = ?`).bind(userId).first<{ n: number }>();
+    expect(sessions?.n).toBe(0);
+
+    // Without the cache the session is gone at once.
+    expect(await ask({ cookie })).toMatchObject({ code: "signed_out" });
+    // With it, the Worker still hears the address for a few minutes; it gets
+    // no account back, only the door.
+    const ghost = await ask({ cookie: `${cookie}; ${cached}` });
+    expect(emailOf(ghost)).toBe(leaving);
+    expect((await query("whoami")).body.error).toMatchObject({ code: "not_a_tester" });
+    expect(await rows("users", leaving)).toBe(0);
   });
 
   describe("a phone's sign-in", () => {

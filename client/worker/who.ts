@@ -28,9 +28,12 @@ import { isRefusal, signedInEmail, type Refusal } from "./identity";
 
 export type WhoEnv = AuthEnv & { ACCESS_TEAM_DOMAIN?: string; ACCESS_AUD?: string };
 
-/** The address asking, and the `Set-Cookie` values to send back with the
- *  answer (empty unless the session was renewed or its cache refreshed). */
-export type Caller = { email: string; cookies: string[] };
+/** The address asking, the `Set-Cookie` values to send back with the answer
+ *  (empty unless the session was renewed or its cache refreshed), and whether
+ *  it came through the Worker's own sign-in rather than Access: an account
+ *  for a Google sign-in is made only while its sign-in exists
+ *  (core/caller.ts). */
+export type Caller = { email: string; cookies: string[]; viaSession: boolean };
 
 /** Nobody signed in: no session, and no token from Access. */
 export const signedOut: Refusal = { status: 401, code: "signed_out", message: "Not signed in" };
@@ -66,7 +69,7 @@ export async function whoIsAsking(
       const { headers, response } = await auth.api.getSession({ headers: request.headers, returnHeaders: true });
       if (response) {
         const email = signedInEmail(true, response.user.email);
-        return isRefusal(email) ? email : { email, cookies: headers.getSetCookie() };
+        return isRefusal(email) ? email : { email, cookies: headers.getSetCookie(), viaSession: true };
       }
     } catch {
       // The sign-in could not answer (its database, say): Access may still.
@@ -78,11 +81,11 @@ export async function whoIsAsking(
   // it never does, and the token Access signed says the same (access.ts).
   if (ctx?.access) {
     const email = signedInEmail(true, (await ctx.access.getIdentity())?.email);
-    return isRefusal(email) ? email : { email, cookies: [] };
+    return isRefusal(email) ? email : { email, cookies: [], viaSession: false };
   }
   if (accessToken(request)) {
     const email = await accessEmail(request, { teamDomain: env.ACCESS_TEAM_DOMAIN, aud: env.ACCESS_AUD }, now, keys);
-    if (!isRefusal(email)) return { email, cookies: [] };
+    if (!isRefusal(email)) return { email, cookies: [], viaSession: false };
     if (!auth) return email;
   }
   return checked ? signedOut : unavailable;

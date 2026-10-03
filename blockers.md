@@ -170,8 +170,9 @@ After any change to sign-in, on the deployed URL:
 **Where it stands.** The web build deploys to Cloudflare Workers as static
 assets. `app.json` carries bundle identifiers without "BJT" in them (a
 registered trademark: it may describe the exam format in prose, never name the
-product), and asks Android for nothing but the network and audio settings (no
-microphone, no background playback, no storage). `client/eas.json` has two
+product), and asks Android for nothing but the network, the audio settings and
+vibration (the buzz after an answer) — no microphone, no background playback,
+no storage. `client/eas.json` has two
 Android profiles: `preview`, an APK to install directly on a tester's phone,
 and `production`, the bundle Google Play takes; each builds from the EAS
 environment of the same name. No build has been made yet. Android signs in
@@ -185,14 +186,26 @@ on the "not configured" notice), then `npx eas-cli build -p android
 --profile preview`, and install the APK it links to. The Android OAuth client
 in #4 needs this build's keystore SHA-1.
 
-**Next step for the stores.** Apple Developer and Google Play accounts, then
-the `production` profile per platform. Before either submission, work that is
-not blocked and not done: a
-privacy policy (the app collects an email address and answers), a store
-description that describes the exam format without using the trademark as a
-name, and screenshots. The start screen (`client/src/ui/welcome.tsx`) already
-tells listeners that the voices are synthesised, which OpenAI's usage policies
-ask of an app that plays its speech to people.
+**Next step for Google Play.** What the store asks of the app is in code:
+the privacy policy at `/privacy` (`client/src/lib/privacy.ts`), "Delete
+account" on the account screen and on the web, and a draft listing with the
+Data safety answers (`client/store-listing.md`). The start screen
+(`client/src/ui/welcome.tsx`) already tells listeners that the voices are
+synthesised, which OpenAI's usage policies ask of an app that plays its speech
+to people. What is left is the owner's:
+
+- A Google Play developer account, then the `production` profile.
+- The operator's name and a contact address for the privacy policy
+  (`PRIVACY_OPERATOR` and `PRIVACY_CONTACT` in `client/src/lib/privacy.ts`):
+  the page says "to be added" until then, and Play wants both.
+- `/privacy` public: it is once Access comes off (#4, step 2); before that, an
+  Access application for `<the Worker's host>/privacy` with a Bypass policy.
+  The page's text is in its static HTML, so it reads without its scripts.
+- Read the policy and the listing draft, and change what is not right: they
+  are drafts written from the code, not legal advice.
+- Screenshots from the `preview` build on a phone (two to eight, portrait).
+
+iOS is not in scope for now: the owner chose Android and the web (2026-10-03).
 
 ## 6. Nightly pull requests need a repository setting
 

@@ -30,6 +30,7 @@ import { useLang, type Key } from "../lib/i18n";
 import { signInOnPhone } from "../lib/phoneSignIn";
 import { signInRefusal, type PhoneSignInRefusal } from "../lib/signin";
 import { Button, IconBadge, ScreenMessage } from "./components";
+import { PrivacyLink } from "./privacyLink";
 import { space, type } from "./theme";
 
 export function SignInAgainScreen() {
@@ -127,6 +128,7 @@ function GoogleCard({ body, busy, onPress }: { body: Key; busy: boolean; onPress
         <Text style={type.h2}>{t("gate_title")}</Text>
         <Text style={type.small}>{t(body)}</Text>
         <Button label={t("gate_google")} icon="user" disabled={busy} onPress={onPress} />
+        <PrivacyLink />
       </View>
     </ScreenMessage>
   );

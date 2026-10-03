@@ -51,6 +51,16 @@ export async function resetProgress(): Promise<ResetCounts> {
   return call<ResetCounts>("resetProgress");
 }
 
+/**
+ * Delete the account and everything the app holds about the learner
+ * (worker/core/profile.ts): all or nothing, like starting again, and the
+ * sign-in with it. `email` is the address on the screen; the Worker deletes
+ * nothing unless it is the signed-in account's.
+ */
+export async function deleteAccount(email: string): Promise<{ attempts: number; deleted: boolean }> {
+  return call<{ attempts: number; deleted: boolean }>("deleteAccount", { email });
+}
+
 /** The ad-free unlock. Absence of a row is the normal case.
  *
  *  A revoked entitlement keeps its row rather than being deleted — a refund

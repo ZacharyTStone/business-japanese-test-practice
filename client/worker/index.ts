@@ -48,20 +48,20 @@ function refuse(r: Refusal): Response {
 }
 
 /** One named query, as `email`. Exported for the tests, which run it against
- *  a local D1 without an Access in front. */
+ *  a local D1 without a sign-in in front. `viaSession`: the address came
+ *  from the Worker's own sign-in, not Access (who.ts). */
 export async function runQuery(
   db: D1Database,
   email: string,
   name: string,
   args: Record<string, unknown>,
-  now = Date.now(),
-  random: (id: string) => number = Math.random
+  { now = Date.now(), random = Math.random, viaSession = false }: { now?: number; random?: (id: string) => number; viaSession?: boolean } = {}
 ): Promise<Response> {
   if (!Object.prototype.hasOwnProperty.call(queries, name)) {
     return json({ error: { code: "unknown_query", message: `no query named ${name}` } }, 404);
   }
   try {
-    const learner = await resolveLearner(db, email);
+    const learner = await resolveLearner(db, email, { viaSession });
     if (!learner.isTester) return refuse(notATester(email));
     const data = await queries[name]({ db, learner, now, random }, args);
     return json({ data: data ?? null });
@@ -88,7 +88,7 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     // No body, or not JSON: the query is asked with no arguments, and one that
     // needs them says which.
   }
-  return withCookies(await runQuery(env.DB, caller.email, name, args), caller);
+  return withCookies(await runQuery(env.DB, caller.email, name, args, { viaSession: caller.viaSession }), caller);
 }
 
 /** The sign-in's own routes. Before its secrets are set there is no sign-in,

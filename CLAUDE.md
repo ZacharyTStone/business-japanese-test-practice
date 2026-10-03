@@ -376,11 +376,18 @@ accident is not.
 
 - **An answer given is history.** A trigger on `attempts` refuses every update,
   and no query deletes one: a way to delete would open the door to "delete the
-  ones I got wrong". The one removal is `resetProgress()` (`core/profile.ts`),
-  shaped so it cannot be that: no arguments, the learner read from the session,
-  the whole history or none of it — answers, sessions, the spacing schedule,
-  the review notes and the three section levels. Settings, entitlements and
-  item reports are not progress and are left alone. An answer carries only
+  ones I got wrong". The two removals are shaped so they cannot be that: no
+  argument picks rows, the learner is read from the session, and it is the
+  whole or none of it. `resetProgress()` (`core/profile.ts`) takes the history
+  — answers, sessions, the spacing schedule, the review notes and the three
+  section levels; settings, entitlements and item reports are not progress
+  and are left alone. `deleteAccount()` takes everything: the answers first
+  (a session going would otherwise update its answers, which the trigger
+  refuses), then the `users` row, which cascades to the rest, then the
+  Google sign-in, so no device stays signed in; its one argument is the
+  address on the screen, as a confirmation, and a mismatch deletes nothing.
+  The store requires it of an app that makes accounts; the tester row
+  stays, as the owner's list. An answer carries only
   `item_id`, `chosen_index`, `session_id`, `elapsed_ms`, `think_ms`,
   `replays`, `peeked`, `stands_for` from the app — not `answered_at`, which the
   day's door and the ladder both read and the Worker's clock writes. Of its own
@@ -452,7 +459,9 @@ accident is not.
   screens only say so politely. A second lock keeps new users out while the app
   is a work in progress: an address not already on the list cannot get an
   account at all — `resolveLearner()` (`core/caller.ts`) makes the account and
-  its profile on a listed address's first visit and on nobody else's. An empty
+  its profile on a listed address's first visit and on nobody else's, and for
+  a Google sign-in only while that sign-in exists, so a second device's
+  cached session cannot remake an account just deleted. An empty
   list means nobody gets in. Opening the app later is dropping the list from
   that door, with a public sign-in in front of it. Never add a query that
   answers a non-tester while this holds. Reading nothing and not existing are
@@ -502,6 +511,9 @@ accident is not.
 - **The one screen that explains any of this is the start screen**
   (`client/src/ui/welcome.tsx`), shown once on first launch. Everything else
   serves questions; a feature that needs explaining elsewhere does not belong.
+  The privacy policy (`/privacy`, `client/src/lib/privacy.ts`) is the one
+  other page of prose, public, and says only what the code keeps: a change to
+  what is kept is a change to it.
 - **No ads during practice.** `AdSlot`'s placement type has exactly two members,
   so the type checker enforces it. Do not widen it.
 - **No estimated BJT score, anywhere.** Generated items have no IRT calibration;

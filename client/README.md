@@ -120,6 +120,20 @@ account the list does not name never becomes an account at all
 (`worker/auth.ts`). Neither is what keeps anybody out; a client that skipped both would
 be refused all the same.
 
+## Privacy, and leaving
+
+`/privacy` is the privacy policy, readable without signing in (the store
+listing and Google's consent screen link to it), in both languages
+(`src/lib/privacy.ts`). It says only what the code keeps, so a change to what
+is kept changes it too. The operator's name and contact address are blank
+until the owner fills them in (`PRIVACY_OPERATOR`, `PRIVACY_CONTACT`); the
+page says "to be added" meanwhile.
+
+"Delete account", at the bottom of the account screen, deletes the account
+and everything about it in one all-or-nothing batch on the Worker
+(`worker/core/profile.ts`), the Google sign-in with it, and signs out. The web
+version has the same screen, which is the "web link" Google Play asks for.
+
 ## Anonymous first, when the app opens
 
 The schema is shaped for a public app that signs everybody in before it shows
@@ -199,6 +213,7 @@ app/                expo-router screens
   history.tsx       the latest answers, wrong ones by default, each with a note
   vocab.tsx         the words of the questions that caught you
   words.tsx         every word of every question answered, with an example
+  privacy.tsx       the privacy policy: public, past the welcome screen and the door
 src/lib/
   i18n.tsx          the words on the furniture, ja/en; questions stay Japanese
   api.ts            the one way to the database: a named query, sent to the Worker
@@ -207,6 +222,7 @@ src/lib/
   phoneSignIn.ts    signing in with Google, and out, on a phone (modules/google-sign-in)
   phoneSession.ts   a phone's session token: kept, and sent with queries, clips and pictures
   signin.ts         the plain half of both: refusals read, the bearer header
+  privacy.ts        the privacy policy's text, ja/en, held to what the code keeps
   db.ts             every query the app makes, through one module (db/: practice,
                     record, profile, media; db/shape.ts the tested joins)
   outbox.ts         answers that could not be sent, kept until the database takes them
@@ -226,6 +242,7 @@ src/lib/
 src/ui/             theme, shared components, icons, the meter, the radar, the face
   welcome.tsx       the first-launch explanation
   gate.tsx          "Continue with Google", and "not open yet"
+  privacyLink.tsx   the link to /privacy, on the sign-in and account screens
   keys.ts           answering with 1–4 and Enter, on the one platform with a keyboard
 modules/
   google-sign-in/   Credential Manager's Google sign-in, as an Expo module (Android)

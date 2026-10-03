@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { Pressable, Text } from "react-native";
@@ -76,6 +76,11 @@ export default function RootLayout() {
   );
 }
 
+/** Pages anybody may read: no introduction, no door. The privacy policy is
+ *  linked from the store listing and Google's consent screen, and is read
+ *  before signing in, not after. */
+const PUBLIC_PATHS = new Set(["/privacy"]);
+
 /** Its own component so the titles can follow the language. */
 function Navigator() {
   const { t } = useLang();
@@ -84,14 +89,14 @@ function Navigator() {
   // flash of an app nobody has been introduced to yet.
   const welcome = useWelcome();
   const auth = useAuth();
-  if (!welcome.ready) return <Loading />;
-  if (!welcome.seen) return <WelcomeScreen onStart={welcome.dismiss} />;
+  const open = PUBLIC_PATHS.has(usePathname());
+  if (!open && !welcome.ready) return <Loading />;
+  if (!open && !welcome.seen) return <WelcomeScreen onStart={welcome.dismiss} />;
 
-  // The door. Testers only, for now. Cloudflare Access has already signed the
-  // learner in before this page could load; what is left is the database's
-  // word on the account. Without a configured Worker the screens inside show
-  // the setup notice instead, so the door stands aside for them.
-  if (isConfigured) {
+  // The door. Testers only, for now: who is signed in, and the Worker's word
+  // on the account. Without a configured Worker the screens inside show the
+  // setup notice instead, so the door stands aside for them.
+  if (isConfigured && !open) {
     if (auth.loading) return <Loading />;
     // Only a confirmed `false` means the account is not approved.
     if (auth.isTester === false) return <ClosedScreen />;
@@ -132,6 +137,7 @@ function Navigator() {
             name="words"
             options={{ title: t("title_words"), headerLeft: () => <BackToRecord /> }}
           />
+          <Stack.Screen name="privacy" options={{ title: t("title_privacy") }} />
         </Stack>
   );
 }
