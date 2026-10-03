@@ -33,9 +33,10 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import * as batchmod from "./batch.ts";
 import * as config from "./config.ts";
 import { get, or, sorted, splitlines, strip, truthy } from "./py.ts";
-import { BUNDLE_FLOAT_KEYS, dumps, loads } from "./pyjson.ts";
+import { dumps, loads } from "./pyjson.ts";
 import * as regate from "./regate.ts";
 import * as withdrawn from "./withdrawn.ts";
 
@@ -116,6 +117,14 @@ function _unreadable(e: unknown): boolean {
  * shows the model all three registers instead of five J3s. Live questions
  * only, and none the regate failed (see the module docstring); both ledgers
  * are read from `batchDir`, beside the bundles they speak for.
+ *
+ * Each is turned back into what the generator emits (`batch.asGeneratorShape`)
+ * before it is an example, since the prompt asks the model to match the
+ * example's shape. A bundle item is not that shape: its documents are a list
+ * under `documents` where 状況把握, 資料聴読解 and 総合読解 write one `document`,
+ * its dialogue turns carry clip ids, and it carries the bank's measured
+ * `model_p_correct`. Copied as it was, every example of those three types
+ * failed its own type's validation.
  */
 export function examplesFromBatches(opts: { batchDir?: string | null } = {}): Record<string, Item[]> {
   const batchDir = or(opts.batchDir ?? null, config.BATCH_DIR) as string;
@@ -159,7 +168,8 @@ export function examplesFromBatches(opts: { batchDir?: string | null } = {}): Re
       }
     }
     out[itemType] = chosen.map((item) => Object.fromEntries(
-      Object.entries(item).filter(([k]) => !_NOT_AN_EXAMPLE_FIELD.includes(k))));
+      Object.entries(batchmod.asGeneratorShape({ ...item, "item_type": itemType }))
+        .filter(([k]) => !_NOT_AN_EXAMPLE_FIELD.includes(k))));
   }
   return out;
 }
@@ -186,10 +196,8 @@ export function bootstrap(opts: {
   mkdirSync(path.join(seedsDir, "vocab"), { recursive: true });
 
   for (const [itemType, examples] of Object.entries(examplesFromBatches({ batchDir: opts.batchDir ?? null }))) {
-    // An item's one float (`model_p_correct`) keeps its decimal point, as
-    // Python wrote it.
     writeFileSync(path.join(seedsDir, "fewshot", `${itemType}.json`),
-                  dumps(examples, { ensureAscii: false, indent: 2, floatKeys: BUNDLE_FLOAT_KEYS }) + "\n",
+                  dumps(examples, { ensureAscii: false, indent: 2 }) + "\n",
                   { encoding: "utf8" });
     result.fewshot[itemType] = examples.length;
   }
