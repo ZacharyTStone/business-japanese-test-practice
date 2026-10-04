@@ -228,10 +228,15 @@ names: none is seen by a learner, and changing the package means a new Android
 OAuth client. If it is to change, it must change before the first upload to
 Google Play, after which it is permanent.
 
-The name itself is not settled beyond doubt: **HORENSO®** is a registered
-trademark in Japan on another company's business app (Triple A Japan), and a
-"HORENSO" training platform for Japanese companies exists. A search on
-J-PlatPat before the first store upload is the check.
+**Horenso is a working name, for the tester phase only.** A J-PlatPat search
+(2026-10-04) found the identical mark **HORENSO** live in class 9
+("downloadable computer programs") for another company's app (登録6032213,
+株式会社トリプル・エージャパン, to 2028-03-30), plus ほうれんそう君 (5998123,
+class 9, employee-training software) and 真・報連相 (6305652, class 41). The
+owner chose to keep the name while the app is for testers only and to decide
+before anything public: **before a production store listing or opening the
+app beyond the tester list, rename, or get a 弁理士's opinion** (for example on
+a partial non-use cancellation of 6032213's broad class 9 goods).
 
 **Next step.** [landing/README.md](landing/README.md#putting-it-on-the-domain):
 merge, connect the landing Worker, then move the sign-in's redirect URI,

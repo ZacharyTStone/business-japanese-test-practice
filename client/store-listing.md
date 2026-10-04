@@ -13,6 +13,10 @@ would be refused.
 
 **App name** (30 characters at most; never "BJT", a registered trademark):
 
+Horenso is a working name for the closed testing track only: "HORENSO" is
+a registered mark in class 9 (blockers.md #7). Settle the name before a
+production listing.
+
 - ja-JP (default): Horenso：ビジネス日本語ドリル
 - en-US: Horenso: Business Japanese Drill
 
