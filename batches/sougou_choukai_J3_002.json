@@ -1,0 +1,283 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choukai",
+  "level": "J3",
+  "generated_at": "2026-10-04T19:41:27+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "476ba519b9",
+      "item_type": "sougou_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "video_meeting+junior_to_senior+next_step@J3",
+        "setting": "video_meeting",
+        "relation": "junior_to_senior",
+        "function": "next_step",
+        "level": "J3",
+        "channel": "video"
+      },
+      "topic": "提案資料の送付前の対応分担",
+      "stem": "この後、後輩はまず何をすることになりましたか。",
+      "options": [
+        {
+          "text": "先方に電話して資料の送付が遅れる旨を伝える",
+          "role": "unsupported_but_plausible",
+          "why": "ありそうな対応だが、会話では誰もその連絡をするとは言っていない。"
+        },
+        {
+          "text": "今月分の数字に差し替えて先方に送る",
+          "role": "superseded_by_later_turn",
+          "why": "後輩が最初にそのつもりを述べたが、数字がまだ確定していないとして先輩に止められている。"
+        },
+        {
+          "text": "資料の表紙のロゴを新しいものに差し替える",
+          "role": "correct",
+          "why": "先輩が数字の確認を終えるまで送付を保留すると決めたあと、後輩が自分の作業として申し出て先輩も了承している。"
+        },
+        {
+          "text": "課長に今月の数字の確認を取る",
+          "role": "stated_by_wrong_speaker",
+          "why": "数字を確認するのは先輩が自分で行うと述べており、後輩の作業ではない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "後輩は当初、今月分の数字に直してすぐ先方へ送るつもりだったが、先輩が「課長がまだ見直すと言っていた」として送付を止め、確認が済むまで自分が対応すると述べた。後輩はその間の作業として表紙のロゴの差し替えを申し出ており、これが次に行うことになる。数字の確認は先輩の担当であり、先方への連絡や電話の話は会話に出ていない。",
+      "explanation_en": "The junior's original plan to update the numbers and send is overridden mid-conversation; the senior will confirm the figures, and the junior's actual next task is replacing the logo.",
+      "vocab_notes": [
+        {
+          "term": "差し替える",
+          "reading": "さしかえる",
+          "meaning": "to replace/swap out"
+        },
+        {
+          "term": "最終確定",
+          "reading": "さいしゅうかくてい",
+          "meaning": "final confirmation"
+        }
+      ],
+      "audio": {
+        "narration": "e8ad7a499764a247",
+        "options": [
+          "4e653d4e910d41db",
+          "e365d9a573a15515",
+          "8caec5cb1295591e",
+          "c966576d70ecb1d9"
+        ],
+        "dialogue": [
+          "075598dea3e2a2c7",
+          "b708f38b3346076f",
+          "04ca6c6afa50edfd",
+          "9da23b40917a6855",
+          "817f8b43fa6c05b6",
+          "8e5c57edecb939c9",
+          "f0ed79bb8590a7dd",
+          "3e46c9b64ba89535"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "後輩",
+          "text": "お疲れさまです。明日の提案資料、ご確認いただけましたか。",
+          "clip_id": "075598dea3e2a2c7"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "見ました。数字のところ、先月の人数で止まっていますね。",
+          "clip_id": "b708f38b3346076f"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "あ、すみません。今月分に差し替えて先方に送ります。",
+          "clip_id": "04ca6c6afa50edfd"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "いえ、待ってください。今月の数字はまだ最終確定していなくて、課長が今週中に見直すと言っていました。",
+          "clip_id": "9da23b40917a6855"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "では、数字はそのままで送ってしまってよろしいでしょうか。",
+          "clip_id": "817f8b43fa6c05b6"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "いや、数字が変わる可能性があるので、送るのは待ちましょう。先に課長に確認してから、私から先方に連絡します。",
+          "clip_id": "8e5c57edecb939c9"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "承知しました。では私は表紙のロゴだけ新しいものに差し替えておきます。",
+          "clip_id": "f0ed79bb8590a7dd"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "お願いします。",
+          "clip_id": "3e46c9b64ba89535"
+        }
+      ],
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "e8ad7a499764a247",
+      "item_id": "476ba519b9",
+      "kind": "narration",
+      "index": null,
+      "text": "この後、後輩はまず何をすることになりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "075598dea3e2a2c7",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "お疲れさまです。明日の提案資料、ご確認いただけましたか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "b708f38b3346076f",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "見ました。数字のところ、先月の人数で止まっていますね。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "04ca6c6afa50edfd",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "あ、すみません。今月分に差し替えて先方に送ります。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "9da23b40917a6855",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "いえ、待ってください。今月の数字はまだ最終確定していなくて、課長が今週中に見直すと言っていました。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "817f8b43fa6c05b6",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "では、数字はそのままで送ってしまってよろしいでしょうか。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "8e5c57edecb939c9",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "いや、数字が変わる可能性があるので、送るのは待ちましょう。先に課長に確認してから、私から先方に連絡します。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "f0ed79bb8590a7dd",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 6,
+      "text": "承知しました。では私は表紙のロゴだけ新しいものに差し替えておきます。",
+      "voice": "manager_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "3e46c9b64ba89535",
+      "item_id": "476ba519b9",
+      "kind": "dialogue",
+      "index": 7,
+      "text": "お願いします。",
+      "voice": "staff_junior_m",
+      "channel": "video"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "476ba519b9",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4e653d4e910d41db",
+      "item_id": "476ba519b9",
+      "kind": "option",
+      "index": 0,
+      "text": "先方に電話して資料の送付が遅れる旨を伝える",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "476ba519b9",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e365d9a573a15515",
+      "item_id": "476ba519b9",
+      "kind": "option",
+      "index": 1,
+      "text": "今月分の数字に差し替えて先方に送る",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "476ba519b9",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8caec5cb1295591e",
+      "item_id": "476ba519b9",
+      "kind": "option",
+      "index": 2,
+      "text": "資料の表紙のロゴを新しいものに差し替える",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "476ba519b9",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c966576d70ecb1d9",
+      "item_id": "476ba519b9",
+      "kind": "option",
+      "index": 3,
+      "text": "課長に今月の数字の確認を取る",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_video_call_laptop"
+  ]
+}

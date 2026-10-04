@@ -1,0 +1,74 @@
+{
+  "bundle_version": 2,
+  "item_type": "hyougen",
+  "level": "J2",
+  "generated_at": "2026-10-04T19:40:28+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "9dd57c3533",
+      "item_type": "hyougen",
+      "level": "J2",
+      "seed_cell": {
+        "id": "video_call+peer_to_peer+chair_meeting@J2",
+        "setting": "video_call",
+        "relation": "peer_to_peer",
+        "function": "chair_meeting",
+        "level": "J2",
+        "channel": "video"
+      },
+      "topic": "オンライン会議で同僚が議論を整理して進行する",
+      "stem": "同僚同士のオンライン会議で、議論が長引いています。進行役を務める立場として、意見を整理し次の話題に移りたいとき、最も適切な表現はどれですか。",
+      "options": [
+        {
+          "text": "みなさんのご意見を申し上げていただけますか。",
+          "role": "wrong_honorific_direction",
+          "why": "「申し上げる」は自分の行為をへりくだる謙譲語で、相手の発言を促す表現に使うと敬意の向きが逆になる。"
+        },
+        {
+          "text": "もうこの話終わりでいいよね、次行こう。",
+          "role": "register_too_casual",
+          "why": "内容としては進行だが、オンライン会議という場での発言として崩れすぎており、議論をまとめる説明もない。"
+        },
+        {
+          "text": "恐れ入りますが、ここまでの意見をまとめさせていただいてもよろしいでしょうか。",
+          "role": "correct_keigo_wrong_speech_act",
+          "why": "敬語は整っているが、対等な同僚同士の会議で進行という本来の行為まで許可を求める形にしており、話が前に進まない。"
+        },
+        {
+          "text": "ここまでの意見をまとめると、A案とB案に絞れそうですね。次はコストも含めて比較していきましょうか。",
+          "role": "correct",
+          "why": "出た意見を簡潔に整理し、次に話す内容を具体的に示しており、同僚同士の進行役として自然な切り替え方になっている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "議論を整理して次に進める進行役の発言は、出た意見を要約し、次に話す内容を具体的に示す形にする。「まとめさせていただいてもよろしいでしょうか」は敬語としては正しいが、対等な同僚間の進行をわざわざ許可を求める行為に変えてしまい、話が進まない。「もうこの話終わりでいいよね」はくだけすぎて会議の進行発言としての体裁がない。「申し上げていただけますか」は謙譲語である「申し上げる」を相手の行為に向けており、敬意の向きが逆になっている。",
+      "explanation_en": "A peer facilitator summarizes the discussion and names the next topic directly, without turning facilitation into a permission request, using casual slang, or misdirecting humble language at the listener.",
+      "vocab_notes": [
+        {
+          "term": "進行役",
+          "reading": "しんこうやく",
+          "meaning": "meeting facilitator"
+        },
+        {
+          "term": "絞れる",
+          "reading": "しぼれる",
+          "meaning": "to be narrowed down (options)"
+        },
+        {
+          "term": "申し上げる",
+          "reading": "もうしあげる",
+          "meaning": "humble form of 'to say' (used for one's own speech)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "model_p_correct": 0.93
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}
