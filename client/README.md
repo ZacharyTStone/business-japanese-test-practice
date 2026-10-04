@@ -55,7 +55,7 @@ address, and the Google **Web** client's id (public: it is in every Google
 sign-in address; the same value as the Worker's `GOOGLE_CLIENT_ID`):
 
 ```bash
-npx eas-cli init                                    # once: the project id goes into app.json
+npx eas-cli login                                   # app.json already names the project (eas init, 2026-10-04)
 for env in preview production; do
   npx eas-cli env:create --environment $env --name EXPO_PUBLIC_API_BASE \
     --value https://<the Worker's host> --visibility plaintext
