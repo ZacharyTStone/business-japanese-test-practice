@@ -239,3 +239,17 @@ describe("theme contrast", () => {
     expect(r, `accentDeep on accentSoft is ${ratio(r)}:1`).toBeGreaterThanOrEqual(AA_SMALL_TEXT);
   });
 });
+
+describe("the icon is drawn in the app's own colours", () => {
+  // scripts/icons.mjs renders the PNGs; app.json fills the adaptive icon's
+  // background layer, which the script cannot, so the two are held to theme.ts.
+  test("the icon script and the adaptive icon's background use the accent", () => {
+    const c = tokens();
+    const script = readFileSync(path.join(CLIENT, "scripts", "icons.mjs"), "utf8");
+    const constant = (name: string) => new RegExp(`^const ${name} = "(#[0-9A-Fa-f]{6})";`, "m").exec(script)?.[1]?.toUpperCase();
+    expect(constant("ACCENT")).toBe(c.accent);
+    expect(constant("ACCENT_DEEP")).toBe(c.accentDeep);
+    const app = JSON.parse(readFileSync(path.join(CLIENT, "app.json"), "utf8"));
+    expect(app.expo.android.adaptiveIcon.backgroundColor.toUpperCase()).toBe(c.accent);
+  });
+});

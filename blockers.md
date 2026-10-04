@@ -204,6 +204,11 @@ to people. What is left is the owner's:
 - Read the policy and the listing draft, and change what is not right: they
   are drafts written from the code, not legal advice.
 - Screenshots from the `preview` build on a phone (two to eight, portrait).
+- A developer account opened as a personal one (not an organisation) must
+  run a closed test with at least twelve testers, opted in for fourteen days in
+  a row, before Play lets it apply for production; the console states the
+  current numbers. The icon and the feature graphic are in `client/store/`
+  (`client/scripts/icons.mjs` draws them, and the launcher icons).
 
 iOS is not in scope for now: the owner chose Android and the web (2026-10-03).
 

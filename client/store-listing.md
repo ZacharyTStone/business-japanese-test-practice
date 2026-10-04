@@ -64,6 +64,8 @@ what the questions are for, with the disclaimer:
 | Content rating | Education/reference; no violence, sexual content, gambling, user-to-user communication or location sharing |
 | Delete account URL | `https://<the Worker's host>/privacy` (its "How long, and deleting it" section says how, in the app, on the web, or by email) |
 | Screenshots | From the `preview` build on a phone: two to eight, portrait. Home, a listening question, a reading question with its clock, the verdict, the record. |
+| App icon | `store/icon-512.png` (512 × 512) |
+| Feature graphic | `store/feature-graphic.png` (1024 × 500, no words: Play prints the name beside it) |
 
 ## Data safety
 

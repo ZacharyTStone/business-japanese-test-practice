@@ -246,6 +246,8 @@ src/ui/             theme, shared components, icons, the meter, the radar, the f
   keys.ts           answering with 1–4 and Enter, on the one platform with a keyboard
 modules/
   google-sign-in/   Credential Manager's Google sign-in, as an Expo module (Android)
+scripts/icons.mjs   the icon, drawn once: every launcher, web and Play size from it
+store/              Play's 512 px icon and feature graphic (the listing: store-listing.md)
 ```
 
 On the web this is a drill somebody does at a desk between two other tabs, so
