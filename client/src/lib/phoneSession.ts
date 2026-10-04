@@ -14,7 +14,7 @@
  * on the Worker's origin and sends it by itself.
  */
 import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
+import { Platform, type ImageURISource } from "react-native";
 
 import { bearerHeaders } from "./signin";
 
@@ -68,6 +68,17 @@ export function clipSource(url: string): string | { uri: string; headers: Record
 }
 
 /** A picture, as React Native's Image takes it, on the same terms. */
-export function pictureSource(url: string): { uri: string; headers?: Record<string, string> } {
-  return onPhone ? { uri: url, headers: authHeaders() } : { uri: url };
+export function pictureSource(url: string): ImageURISource | ImageURISource[] {
+  return pictureSourceFor(url, onPhone ? authHeaders() : null);
+}
+
+/**
+ * On a phone, a one-element array. Image.android.js hands `headers` to the
+ * native view only from an array source; from a single object it drops them,
+ * the picture is asked for without the bearer, and the Worker answers 401 —
+ * the first Android build (2026-10-04) played every clip and showed no
+ * picture.
+ */
+export function pictureSourceFor(url: string, headers: Record<string, string> | null): ImageURISource | ImageURISource[] {
+  return headers ? [{ uri: url, headers }] : { uri: url };
 }

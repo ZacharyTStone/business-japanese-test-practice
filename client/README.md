@@ -86,8 +86,8 @@ For Google to hand the token to this app at all, Google Cloud needs an
 SHA-1 of the key the APK is signed with (`npx eas-cli credentials -p
 android`), and later a second for Play App Signing's key (Play Console → Test
 and release → App integrity). It has no secret, and neither the app nor the
-Worker uses its id: it only vouches for the app. blockers.md #4 ("Next step:
-Android") has the checklist. `modules/` is the app's only native code; `expo prebuild`
+Worker uses its id: it only vouches for the app. blockers.md #4 records the
+one made on 2026-10-04. `modules/` is the app's only native code; `expo prebuild`
 writes `android/`, which is not committed (EAS makes its own).
 
 The app is drawn light only (`userInterfaceStyle` in `app.json`; `theme.ts`
