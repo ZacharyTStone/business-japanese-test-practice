@@ -32,7 +32,7 @@
  * in src/lib/practice.ts. Loading the set, posting an answer and ending the set
  * are hooks under src/ui/practice/, and so are the cards the screen is made of.
  *
- * Three decisions worth stating:
+ * Four decisions worth stating:
  *
  * **The whole set is fetched up front** (usePracticeLoad). Someone practising
  * on the Yamanote line should not lose their set in a tunnel.
@@ -40,12 +40,18 @@
  * **Correctness comes back from the insert** (usePostAnswer), and an answer
  * that cannot be sent waits in the outbox rather than being graded here.
  *
+ * **On a wide window the answers sit beside the question** (`splitLayout` in
+ * theme.ts), as a test booklet's do: what you read and hear on the left, the
+ * options and the verdict on the right, each column scrolling by itself, so
+ * the options are in view all through a long passage. The scene, and every
+ * narrower window, keeps the one column.
+ *
  * **No ads here, ever.** Not in a break, not between the narration and the
  * options. See AdSlot: the placement type has no member for this screen.
  */
 import { useRouter, type ErrorBoundaryProps } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../src/lib/auth";
@@ -70,7 +76,7 @@ import { useFinishSet } from "../src/ui/practice/useFinishSet";
 import { usePostAnswer } from "../src/ui/practice/usePostAnswer";
 import { usePracticeLoad } from "../src/ui/practice/usePracticeLoad";
 import { VerdictPanel } from "../src/ui/practice/VerdictPanel";
-import { page, space, type } from "../src/ui/theme";
+import { page, space, splitLayout, type } from "../src/ui/theme";
 
 /**
  * What this screen shows instead of itself when it throws while drawing.
@@ -132,21 +138,33 @@ export default function Practice() {
   useFinishSet({ state, userId, sessionReady: load.sessionReady, levelsBefore: load.levelsBefore });
 
   // Brings the verdict on screen: on a long item it would otherwise appear
-  // below the fold of a phone, under the option that was just pressed.
+  // below the fold of a phone, under the option that was just pressed. In the
+  // split layout it is the answer column, where the verdict is.
   const scroller = useRef<ScrollView>(null);
+  /** The split layout's reading column, which scrolls by itself. */
+  const readScroller = useRef<ScrollView>(null);
   /** How tall the sticky counter is, so a scroll to the verdict clears it. */
   const headerHeight = useRef(0);
   const reduced = useReducedMotion();
   // The last button sits above the home indicator, not under it.
   const insets = useSafeAreaInsets();
+  const wideNow = splitLayout(useWindowDimensions().width);
 
   const { index, items, chosen, graded, showDetails, optionsAsText } = state;
   const item = items[index];
+  // One or two columns is decided when a question starts and kept until the
+  // next. Crossing the breakpoint mid-question — a window resized, a tablet
+  // turned — would otherwise rebuild the question: its clip would play again
+  // from the start, a replay nobody recorded, and the exam plays once.
+  const [layout, setLayout] = useState<{ id: string | undefined; split: boolean }>({ id: item?.id, split: wideNow });
+  if (layout.id !== item?.id) setLayout({ id: item?.id, split: wideNow });
+  const split = layout.id === item?.id ? layout.split : wideNow;
   // A new question starts at the top: the verdict scrolled the last one down to
   // its explanation, and the next question opening there would open on its
   // options with its scene above the fold.
   useEffect(() => {
     scroller.current?.scrollTo({ y: 0, animated: false });
+    readScroller.current?.scrollTo({ y: 0, animated: false });
   }, [item?.id]);
   // The options' two handlers, the same functions for the life of the screen,
   // so that an option card redraws when its own state changes and not on every
@@ -285,14 +303,138 @@ export default function Practice() {
     return false;
   }
 
+  // The parts of the question on screen, built once and arranged below: in one
+  // column, or in two on a wide window.
+  const header = (
+    <ProgressHeader
+      index={index}
+      total={items.length}
+      revealed={revealed}
+      retest={Boolean(item.stands_for)}
+      again={item.times_seen > 0}
+      clock={
+        clockSeconds > 0
+          ? { runKey: item.id, seconds: clockSeconds, running: view.clockRunning, onExpire: () => choose(NO_ANSWER) }
+          : null
+      }
+      onHeight={(h) => {
+        headerHeight.current = h;
+      }}
+    />
+  );
+
+  const strip = <SceneStrip item={item} big={stage === "scene"} />;
+
+  // Each stage of a question arrives rather than snaps: the scene card, then
+  // the question card in its place. The key is what makes the second one
+  // arrive too — same component, new content.
+  const question = (
+    <FadeIn key={`${item.id}-question`}>
+      <StimulusCard
+        item={item}
+        sceneImage={sceneImage}
+        playlist={playlist}
+        autoplay={stage === "listen"}
+        stemAsText={view.stemAsText}
+        dialogueAsText={view.dialogueAsText}
+        audioFailed={audioFailed}
+        onFinished={() => go("answer")}
+        onFailed={() => setAudioFailedFor(item.id)}
+        onReplay={() => dispatch({ type: "replayed" })}
+      />
+    </FadeIn>
+  );
+
+  // What happens next, as the screen actually does it: printed options wait
+  // for the audio to end, numbered ones can be pressed now.
+  const hint =
+    stage === "listen" ? (
+      <Text style={[type.small, shared.hint]}>
+        {view.optionTextHidden ? t("listen_hint_spoken") : t("listen_hint")}
+      </Text>
+    ) : null;
+
+  const answers = view.optionsShown ? (
+    <OptionList
+      item={item}
+      options={options}
+      view={view}
+      spokenOptions={spokenOptions}
+      optionsAsText={optionsAsText}
+      chosen={chosen}
+      canVeto={load.canVeto}
+      onChoose={onChoose}
+      onPlay={onPlayOption}
+      onToggleText={() => dispatch({ type: "toggleOptionsText" })}
+      onVetoed={vetoed}
+    />
+  ) : null;
+
+  const verdict =
+    revealed && graded ? (
+      <VerdictPanel
+        key={`${item.id}-verdict`}
+        item={item}
+        options={options}
+        graded={graded}
+        view={view}
+        chosen={chosen}
+        spokenOptions={spokenOptions}
+        narrationUrl={narrationUrl}
+        showDetails={showDetails}
+        sendError={sendError?.itemId === item.id ? sendError : null}
+        nextLabel={index + 1 >= items.length ? t("btn_result") : t("btn_next")}
+        onToggleDetails={() => dispatch({ type: "toggleDetails" })}
+        onResend={resend}
+        onNext={next}
+        onArrive={(y) => {
+          // Clear of the sticky counter, which would otherwise sit on top of
+          // the verdict's first line (in the split layout the counter is above
+          // the column, not over it) — and jumped rather than glided for
+          // somebody who has asked the OS for less motion.
+          const top = y - (split ? 0 : headerHeight.current) - space.sm;
+          scroller.current?.scrollTo({ y: Math.max(0, top), animated: !reduced });
+        }}
+      />
+    ) : null;
+
+  if (split && stage !== "scene") {
+    return (
+      <>
+        <Keys onKey={onKey} />
+        {/* The counter and the clock above both columns, so neither scrolls
+            them away; the reading column as wide as the one column would be. */}
+        <View style={[shared.split, { paddingBottom: insets.bottom }]}>
+          {header}
+          {strip}
+          <View style={shared.columns}>
+            <ScrollView ref={readScroller} style={shared.readColumn} contentContainerStyle={shared.column}>
+              {question}
+            </ScrollView>
+            <ScrollView
+              ref={scroller}
+              style={shared.answerColumn}
+              contentContainerStyle={shared.column}
+              keyboardShouldPersistTaps="handled"
+            >
+              {hint}
+              {answers}
+              {verdict}
+            </ScrollView>
+          </View>
+        </View>
+      </>
+    );
+  }
+
   return (
     <>
       <Keys onKey={onKey} />
       <ScrollView
         ref={scroller}
-        // The column is capped and centred on a wide window: a line of Japanese
-        // past about 720 points is too long to read, and an answer card that
-        // wide is not something a pointer finds.
+        // The column is capped and centred: a line of Japanese past about 720
+        // points is too long to read, and an answer card that wide is not
+        // something a pointer finds.
         contentContainerStyle={[shared.page, page, { paddingBottom: space.xxl + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         // The counter and the clock stay at the top while a long passage
@@ -300,27 +442,8 @@ export default function Practice() {
         // anybody.
         stickyHeaderIndices={[0]}
       >
-        <ProgressHeader
-          index={index}
-          total={items.length}
-          revealed={revealed}
-          retest={Boolean(item.stands_for)}
-          again={item.times_seen > 0}
-          clock={
-            clockSeconds > 0
-              ? { runKey: item.id, seconds: clockSeconds, running: view.clockRunning, onExpire: () => choose(NO_ANSWER) }
-              : null
-          }
-          onHeight={(h) => {
-            headerHeight.current = h;
-          }}
-        />
-
-        <SceneStrip item={item} big={stage === "scene"} />
-
-        {/* Each stage of a question arrives rather than snaps: the scene card,
-            then the question card in its place. The key is what makes the
-            second one arrive too — same component, new content. */}
+        {header}
+        {strip}
         {stage === "scene" ? (
           <FadeIn key={`${item.id}-scene`}>
             <SceneCard
@@ -331,71 +454,11 @@ export default function Practice() {
             />
           </FadeIn>
         ) : (
-          <FadeIn key={`${item.id}-question`}>
-            <StimulusCard
-              item={item}
-              sceneImage={sceneImage}
-              playlist={playlist}
-              autoplay={stage === "listen"}
-              stemAsText={view.stemAsText}
-              dialogueAsText={view.dialogueAsText}
-              audioFailed={audioFailed}
-              onFinished={() => go("answer")}
-              onFailed={() => setAudioFailedFor(item.id)}
-              onReplay={() => dispatch({ type: "replayed" })}
-            />
-          </FadeIn>
+          question
         )}
-
-        {/* What happens next, as the screen actually does it: printed options
-            wait for the audio to end, numbered ones can be pressed now. */}
-        {stage === "listen" ? (
-          <Text style={[type.small, shared.hint]}>
-            {view.optionTextHidden ? t("listen_hint_spoken") : t("listen_hint")}
-          </Text>
-        ) : null}
-
-        {view.optionsShown ? (
-          <OptionList
-            item={item}
-            options={options}
-            view={view}
-            spokenOptions={spokenOptions}
-            optionsAsText={optionsAsText}
-            chosen={chosen}
-            canVeto={load.canVeto}
-            onChoose={onChoose}
-            onPlay={onPlayOption}
-            onToggleText={() => dispatch({ type: "toggleOptionsText" })}
-            onVetoed={vetoed}
-          />
-        ) : null}
-
-        {revealed && graded ? (
-          <VerdictPanel
-            key={`${item.id}-verdict`}
-            item={item}
-            options={options}
-            graded={graded}
-            view={view}
-            chosen={chosen}
-            spokenOptions={spokenOptions}
-            narrationUrl={narrationUrl}
-            showDetails={showDetails}
-            sendError={sendError?.itemId === item.id ? sendError : null}
-            nextLabel={index + 1 >= items.length ? t("btn_result") : t("btn_next")}
-            onToggleDetails={() => dispatch({ type: "toggleDetails" })}
-            onResend={resend}
-            onNext={next}
-            onArrive={(y) => {
-              // Clear of the sticky counter, which would otherwise sit on top
-              // of the verdict's first line — and jumped rather than glided for
-              // somebody who has asked the OS for less motion.
-              const top = y - headerHeight.current - space.sm;
-              scroller.current?.scrollTo({ y: Math.max(0, top), animated: !reduced });
-            }}
-          />
-        ) : null}
+        {hint}
+        {answers}
+        {verdict}
       </ScrollView>
     </>
   );

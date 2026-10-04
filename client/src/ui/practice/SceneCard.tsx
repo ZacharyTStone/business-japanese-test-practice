@@ -6,6 +6,7 @@ import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { useLang } from "../../lib/i18n";
+import { pictureSource } from "../../lib/phoneSession";
 import { CHANNEL_KEY } from "../../lib/labels";
 import type { QueuedItem } from "../../lib/types";
 import { Button, Card } from "../components";
@@ -89,7 +90,7 @@ export function SceneImage({ uri }: { uri: string }) {
     // description would be of a stock illustration; for 画像把握 the picture IS
     // the question, and a description would be the answer.
     <Image
-      source={{ uri }}
+      source={pictureSource(uri)}
       style={styles.scene}
       resizeMode="cover"
       accessible={false}

@@ -197,6 +197,13 @@ export const queries: Record<string, Query> = {
     return profile.resetProgress(db, learner, now);
   },
 
+  // The address shown on the screen that asked, as a confirmation that the
+  // app is deleting the account it thinks it is: a mismatch deletes nothing.
+  async deleteAccount({ db, learner }, args) {
+    if (text(args, "email", 320).trim().toLowerCase() !== learner.email) bad("email", "the signed-in account's address");
+    return profile.deleteAccount(db, learner);
+  },
+
   async hasAdFree({ db, learner }) {
     return profile.hasAdFree(db, learner);
   },

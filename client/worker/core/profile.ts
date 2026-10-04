@@ -1,5 +1,5 @@
 /**
- * The learner's own row and the one way to start again.
+ * The learner's own row, the one way to start again, and the one way to leave.
  *
  * Of its profile a learner may change only `display_name`, `daily_goal`,
  * `exam_date` and `timed_reading` (what the column grants allowed); the
@@ -99,4 +99,31 @@ export async function startSession(db: Db, learner: Learner, now: number, newId:
 export async function finishSession(db: Db, learner: Learner, sessionId: string, now: number) {
   await run(db, "update practice_sessions set finished_at = ? where id = ? and user_id = ?", iso(now), sessionId, learner.userId);
   return null;
+}
+
+/**
+ * Delete this learner's account and everything about it, all or none: the
+ * answers, then the account itself, whose rows cascade to the rest (profile,
+ * sessions, the spacing schedule, review notes, section levels, the purchase,
+ * reports and vetoes), then the Google sign-in and its sessions, so no device
+ * stays signed in to it. The answers go first because a session going would
+ * otherwise clear each of its answers' session, an update
+ * `attempts_are_history` refuses.
+ *
+ * Like resetProgress it takes nothing that could pick which rows go, and the
+ * learner is read from the session. The tester row stays: it is the owner's
+ * list of who may come in, not the learner's data, and the address can sign
+ * in again to a new, empty account. A veto already made stays made: the
+ * question stays unpublished; only who made it goes.
+ */
+export async function deleteAccount(db: Db, learner: Learner) {
+  const uid = learner.userId;
+  const [attempts, users] = await db.batch([
+    stmt(db, "delete from attempts where user_id = ?", uid),
+    stmt(db, "delete from users where id = ?", uid),
+    stmt(db, 'delete from "auth_users" where "email" = ?', learner.email),
+  ]);
+  // D1 counts the rows a delete cascades to as changes too, so only whether
+  // the account went is reported, not a count of anything else.
+  return { attempts: attempts.meta.changes, deleted: users.meta.changes > 0 };
 }

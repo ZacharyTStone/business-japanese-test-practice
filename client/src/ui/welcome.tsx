@@ -118,6 +118,7 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
         <Button label={t("wel_start")} icon="play" onPress={onStart} />
         <Text style={[type.small, styles.footnote]}>{t("wel_testers_note")}</Text>
         <Text style={[type.small, styles.footnote]}>{t("wel_honesty")}</Text>
+        <Text style={[type.small, styles.footnote]}>{t("wel_voices")}</Text>
       </FadeIn>
     </ScrollView>
   );

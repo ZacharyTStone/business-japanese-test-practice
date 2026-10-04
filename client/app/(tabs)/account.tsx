@@ -22,6 +22,7 @@ import { useAuth } from "../../src/lib/auth";
 import {
   fetchDay,
   fetchProfile,
+  deleteAccount,
   fetchSectionLevels,
   resetProgress,
   updateProfile,
@@ -46,13 +47,14 @@ import {
   ScreenMessage,
   SectionLabel,
 } from "../../src/ui/components";
+import { PrivacyLink } from "../../src/ui/privacyLink";
 import { ScreenGate } from "../../src/ui/screen";
 import { useTabClearance } from "../../src/ui/tabbar";
 import { colors, space, type } from "../../src/ui/theme";
 
 /** The cards a save can fail under, so the failure is said in the card whose
  *  control it came from. */
-type SettingCard = "exam" | "goal" | "timer" | "reset";
+type SettingCard = "exam" | "goal" | "timer" | "reset" | "delete";
 
 type Savers = {
   exam: SettingSaver<string | null>;
@@ -92,6 +94,8 @@ function Account() {
   const [confirming, setConfirming] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [wiped, setWiped] = useState<number | null>(null);
+  /** Deleting the account, asked in place the same way. */
+  const [leaving, setLeaving] = useState<"closed" | "asked" | "busy">("closed");
 
   // One saver per setting, made once (lib/save.ts): a press shows at once,
   // there is never more than one write out, the last press is the one
@@ -190,6 +194,23 @@ function Account() {
     } finally {
       setWiping(false);
     }
+  }
+
+  async function leave() {
+    if (leaving === "busy" || !email) return;
+    setLeaving("busy");
+    setFailed(null);
+    try {
+      await deleteAccount(email);
+    } catch (e) {
+      setFailed({ card: "delete", error: e });
+      setLeaving("asked");
+      return;
+    }
+    // The sign-in went with the account; signing out clears what the device
+    // still holds of it, and lands on the sign-in screen.
+    await signOut();
+    router.replace("/");
   }
 
   function retry() {
@@ -360,8 +381,9 @@ function Account() {
           {confirming ? (
             <>
               <Text style={[type.body, { color: colors.wrong }]}>{t("acc_reset_confirm")}</Text>
-              {/* The one red button in the app, and only once it has been
-                  asked for: the press after this one is the one that erases. */}
+              {/* One of the app's two red buttons (deleting the account is the
+                  other), and only once it has been asked for: the press after
+                  this one is the one that erases. */}
               <Button
                 label={wiping ? t("acc_reset_busy") : t("acc_reset_do")}
                 tone="danger"
@@ -399,6 +421,33 @@ function Account() {
           router.replace("/");
         }}
       />
+
+      {/* Last on the screen, and asked in place like starting again. The store
+          requires it of an app that makes accounts; the Worker deletes, in
+          one all-or-nothing batch, and takes the sign-in with it. */}
+      <View style={{ gap: space.md }}>
+        <SectionLabel>{t("acc_delete")}</SectionLabel>
+        <Card style={{ gap: space.md }}>
+          <Text style={type.small}>{t("acc_delete_body")}</Text>
+          {leaving === "closed" ? (
+            <Button label={t("acc_delete")} tone="secondary" onPress={() => setLeaving("asked")} />
+          ) : (
+            <>
+              <Text style={[type.body, { color: colors.wrong }]}>{t("acc_delete_confirm")}</Text>
+              <Button
+                label={leaving === "busy" ? t("acc_delete_busy") : t("acc_delete_do")}
+                tone="danger"
+                disabled={leaving === "busy" || !email}
+                onPress={leave}
+              />
+              <Button label={t("cancel")} tone="secondary" disabled={leaving === "busy"} onPress={() => setLeaving("closed")} />
+            </>
+          )}
+          {failed?.card === "delete" ? <InlineError error={failed.error} /> : null}
+        </Card>
+      </View>
+
+      <PrivacyLink />
     </ScrollView>
   );
 }

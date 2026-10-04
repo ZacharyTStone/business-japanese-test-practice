@@ -29,6 +29,7 @@ import type { TypePace } from "../../lib/pace";
 import { playlistFor } from "../../lib/playlist";
 import type { PracticeAction } from "../../lib/practice";
 import { isConfigured } from "../../lib/api";
+import { clipSource, onPhone } from "../../lib/phoneSession";
 import type { QueuedItem, SectionLevel } from "../../lib/types";
 
 export type PracticeLoad = {
@@ -131,7 +132,7 @@ export function usePracticeLoad(userId: string | null, dispatch: Dispatch<Practi
       cancelled = true;
       for (const url of warmed) {
         try {
-          void Promise.resolve(clearPreloadedSource(url)).catch(() => undefined);
+          void Promise.resolve(clearPreloadedSource(clipSource(url))).catch(() => undefined);
         } catch {
           // Nothing held for it.
         }
@@ -174,13 +175,16 @@ function warm(queue: QueuedItem[], spokenLabels: string[] | null): string[] {
   const urls = new Set<string>();
   for (const it of queue) {
     for (const url of playlistFor(it, spokenLabels, clipUrl)) urls.add(url);
+    // React Native cannot prefetch a picture with a header, and a phone's
+    // pictures need the bearer: on a phone each loads when first shown and
+    // stays in the image cache from then on.
     const scene = sceneUrl(it.scene_image_path);
-    if (scene) Image.prefetch(scene).catch(() => false);
+    if (scene && !onPhone) Image.prefetch(scene).catch(() => false);
   }
   const asked: string[] = [];
   for (const url of urls) {
     try {
-      void Promise.resolve(preload(url)).catch(() => undefined);
+      void Promise.resolve(preload(clipSource(url))).catch(() => undefined);
       asked.push(url);
     } catch {
       // No preloading here: the clip is fetched when it plays, as before.
