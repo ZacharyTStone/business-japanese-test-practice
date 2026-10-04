@@ -253,3 +253,14 @@ describe("the icon is drawn in the app's own colours", () => {
     expect(app.expo.android.adaptiveIcon.backgroundColor.toUpperCase()).toBe(c.accent);
   });
 });
+
+describe("the app is light on Android too", () => {
+  // app.json's userInterfaceStyle reaches Android only through expo-system-ui,
+  // which no file imports, so a sweep for unused dependencies would remove it.
+  test("a light-only app keeps expo-system-ui", () => {
+    const app = JSON.parse(readFileSync(path.join(CLIENT, "app.json"), "utf8"));
+    const pkg = JSON.parse(readFileSync(path.join(CLIENT, "package.json"), "utf8"));
+    expect(app.expo.userInterfaceStyle).toBe("light");
+    expect(Object.keys(pkg.dependencies)).toContain("expo-system-ui");
+  });
+});

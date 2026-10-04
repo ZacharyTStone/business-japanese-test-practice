@@ -91,6 +91,14 @@ Worker uses its id: it only vouches for the app. blockers.md #4, step 3 has
 the checklist. `modules/` is the app's only native code; `expo prebuild`
 writes `android/`, which is not committed (EAS makes its own).
 
+The app is drawn light only (`userInterfaceStyle` in `app.json`; `theme.ts`
+has one palette). On Android that setting does nothing without
+expo-system-ui, which nothing imports: `expo prebuild` reads the setting
+through it, and the app then keeps Android's own layers light on a phone in
+dark mode: the window behind every screen, seen during a transition or as the
+keyboard opens, and a text field's cursor and selection.
+`src/ui/theme.test.ts` fails if the package goes while the setting stays.
+
 ## Nothing to choose
 
 There is no level picker, no section picker, no problem-type picker, no
