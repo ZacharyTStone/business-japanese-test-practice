@@ -1,0 +1,19 @@
+{
+  // The landing page: files only, no script, no database, no bucket, no
+  // secrets. It cannot read or write anything of the app's, which is the
+  // point of keeping it a Worker of its own rather than a route in the app's.
+  "name": "horenso-landing",
+  "compatibility_date": "2026-09-14",
+
+  "assets": {
+    "directory": "./public",
+    // A miss is a genuine miss, and public/404.html says so.
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+
+  // The root domain. The app's Worker takes app.gethorenso.com the same way,
+  // in client/wrangler.jsonc. www and horensoapp.com are redirect rules in the
+  // dashboard (README.md), not hostnames of this Worker.
+  "routes": [{ "pattern": "gethorenso.com", "custom_domain": true }]
+}

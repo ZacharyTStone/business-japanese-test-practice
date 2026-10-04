@@ -216,6 +216,30 @@ token instead would let that run go ahead, at the cost of a new secret.
 
 ---
 
+## 7. The new domain is bought and not yet in use
+
+**Where it stands.** The product is **Horenso** (2026-10-04): the app's name,
+its start screen, the privacy policy and the store listing say so. The
+domains `gethorenso.com` (the landing page; the app on `app.gethorenso.com`)
+and `horensoapp.com` (a redirect) were bought through Cloudflare Registrar the
+same day, and the code names them. The bundle identifier, package
+(`app.businessjapanesedrill`), slug, Worker, database and bucket keep their old
+names: none is seen by a learner, and changing the package means a new Android
+OAuth client. If it is to change, it must change before the first upload to
+Google Play, after which it is permanent.
+
+The name itself is not settled beyond doubt: **HORENSO®** is a registered
+trademark in Japan on another company's business app (Triple A Japan), and a
+"HORENSO" training platform for Japanese companies exists. A search on
+J-PlatPat before the first store upload is the check.
+
+**Next step.** [landing/README.md](landing/README.md#putting-it-on-the-domain):
+merge, connect the landing Worker, then move the sign-in's redirect URI,
+`BETTER_AUTH_URL` and the phone build's `EXPO_PUBLIC_API_BASE` to
+`app.gethorenso.com` together.
+
+---
+
 ## Not a blocker: ads
 
 `AdSlot` renders only in development, and its placement type has exactly two

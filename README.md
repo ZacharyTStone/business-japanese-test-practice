@@ -1,4 +1,4 @@
-<h1 align="center">ビジネス日本語ドリル</h1>
+<h1 align="center">Horenso</h1>
 
 <p align="center">
   <strong>An adaptive practice app for the BJT Business Japanese Proficiency Test — and the LLM pipeline that writes, checks, and grades its questions.</strong>
@@ -106,7 +106,9 @@ Three programs that only meet in the database:
 
 **Hosting:** everything the app touches is on **Cloudflare**: the web app and
 its API on **Workers**, the data in **D1**, the clips and pictures in **R2**,
-sign-in with **Google** through the Worker's own Better Auth; jobs on **GitHub Actions**. Paid APIs: **Anthropic**
+sign-in with **Google** through the Worker's own Better Auth; jobs on **GitHub Actions**.
+The landing page (`landing/`) is a second Worker, files only, on
+`gethorenso.com`; the app is on `app.gethorenso.com`. Paid APIs: **Anthropic**
 (writing and review), **OpenAI** (voices, pictures), and optionally **TypeSafe
 AI** (Jev, a difficulty-probe prototype).
 
@@ -581,13 +583,15 @@ bjt/
   r2.ts        the media bucket, over R2's S3 API
 d1/        migrations/ · refresh_item_stats.sql
 client/    the app (see client/README.md)
+landing/   the landing page, static files (see landing/README.md)
 tests/     pipeline tests and library-wide sweeps
 ```
 
 ---
 
-**Naming.** "BJT" is a registered trademark, used only to describe the exam
-format; it is not in the product name. This project is independent of the exam's
+**Naming.** The product is **Horenso** (報連相: 報告・連絡・相談, the first habit a
+Japanese office teaches; chosen 2026-10-04). "BJT" is a registered trademark,
+used only to describe the exam format; it is not in the product name. This project is independent of the exam's
 organiser, and every question is an original composition — no past-paper text.
 
 **License.** All rights reserved ([LICENSE](LICENSE)). The source is published to
