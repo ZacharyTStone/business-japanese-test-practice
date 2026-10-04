@@ -1,9 +1,10 @@
 /**
  * Sign-in, on the Worker itself: Better Auth, on the same D1, with Google.
  *
- * Cloudflare Access was the sign-in until 2026-10-03 (blockers.md #4): a gate
- * for known people in a browser, with no native path and nothing that keeps a
- * session alive. This replaces it with an ordinary account sign-in that the
+ * Cloudflare Access was the sign-in until 2026-10-03, and stood in front of
+ * the site as a fallback until 2026-10-04 (blockers.md #4): a gate for known
+ * people in a browser, with no native path and nothing that keeps a session
+ * alive. This replaced it with an ordinary account sign-in that the
  * web and the phone share — on the web a session cookie on this origin, on a
  * phone the same signed session token sent as `Authorization: Bearer` (the
  * bearer plugin) — and that renews itself while it is used.
@@ -24,8 +25,8 @@
  * button on the web, no password and no emailed code.
  *
  * Unconfigured — any of the four settings below missing — this is null, and
- * the Worker goes on accepting only what Access signs, exactly as before. So
- * the code can ship before the secrets exist, and Access can come off after.
+ * every query and clip answers `sign_in_not_configured` (who.ts): the four
+ * Worker secrets are the sign-in.
  */
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { APIError } from "better-auth/api";

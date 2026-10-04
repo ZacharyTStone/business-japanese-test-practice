@@ -7,8 +7,7 @@
  * a column list.
  *
  * On the web the Worker is the origin the app was loaded from, so a request
- * carries the session cookie (or, while it still stands in front of the
- * site, Cloudflare Access's) and there is nothing to configure. A native
+ * carries the session cookie and there is nothing to configure. A native
  * build is told the Worker's address by `EXPO_PUBLIC_API_BASE`, and says who
  * it is with the session token it keeps (lib/phoneSession.ts) instead of a
  * cookie.
@@ -36,13 +35,6 @@ export function apiUrl(path: string): string {
 
 export type ApiError = { code: string; message: string; details: string | null; hint: string | null };
 
-const EXPIRED: ApiError = {
-  code: "session_expired",
-  message: "Cloudflare Access session expired",
-  details: null,
-  hint: null,
-};
-
 export async function call<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
   await loadToken();
   const res = await fetch(apiUrl(`/api/q/${name}`), {
@@ -50,12 +42,7 @@ export async function call<T>(name: string, args: Record<string, unknown> = {}):
     headers: { "content-type": "application/json", ...authHeaders() },
     body: JSON.stringify({ args }),
     credentials: credentialsMode,
-    // An expired Access session answers with a redirect to Cloudflare's
-    // sign-in page, on another origin, which fetch cannot follow. Stopped
-    // here, it reads as what it is rather than as "offline".
-    redirect: "manual",
   });
-  if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) throw EXPIRED;
 
   let body: { data?: unknown; error?: ApiError } | null = null;
   try {
@@ -63,14 +50,8 @@ export async function call<T>(name: string, args: Record<string, unknown> = {}):
   } catch {
     body = null;
   }
-  // Access itself may answer an expired session with a bare 401 page rather
-  // than a redirect; the Worker's own 401s carry a JSON error.
-  if (res.status === 401 && !body?.error) throw EXPIRED;
   if (!res.ok || !body || body.error) {
     throw body?.error ?? { code: String(res.status), message: `HTTP ${res.status}`, details: null, hint: null };
   }
   return body.data as T;
 }
-
-/** Where to go to sign out of Cloudflare Access (and so out of the app). */
-export const SIGN_OUT_URL = "/cdn-cgi/access/logout";

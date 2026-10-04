@@ -106,8 +106,7 @@ Three programs that only meet in the database:
 
 **Hosting:** everything the app touches is on **Cloudflare**: the web app and
 its API on **Workers**, the data in **D1**, the clips and pictures in **R2**,
-sign-in with **Google** through the Worker's own Better Auth (Cloudflare
-**Access** in front until it is switched off); jobs on **GitHub Actions**. Paid APIs: **Anthropic**
+sign-in with **Google** through the Worker's own Better Auth; jobs on **GitHub Actions**. Paid APIs: **Anthropic**
 (writing and review), **OpenAI** (voices, pictures), and optionally **TypeSafe
 AI** (Jev, a difficulty-probe prototype).
 
@@ -402,8 +401,7 @@ functions is TypeScript in `client/worker/core/`, one file per job.
 **Access.** The Worker signs everybody in with Google (`worker/auth.ts`) and
 refuses a sign-up from an address not in `testers`; it also turns away every
 query from such an address, and makes no account for one (`core/caller.ts`).
-While Cloudflare Access still stands in front, its token is accepted too
-(`worker/who.ts`). The app can only name a query (`worker/queries.ts`), never
+A session is the only thing that speaks for anybody (`worker/who.ts`). The app can only name a query (`worker/queries.ts`), never
 send SQL, and every query reads and writes only the caller's own rows. Content
 is written only by the deploy workflow.
 

@@ -6,12 +6,10 @@
  * app — that is the welcome screen's job, and it has already happened by the
  * time either of these shows.
  *
- *   SignInAgainScreen  nobody is signed in: on the web, "Continue with Google",
- *                 and what went wrong if a sign-in came back refused. While
- *                 Access still stands in front of the site, an Access session
- *                 that ran out is the same screen, and a reload takes the
- *                 learner through Access's sign-in and back. On a phone,
- *                 Google's own account sheet (lib/phoneSignIn.ts).
+ *   SignInAgainScreen  nobody is signed in, or the sign-in ran out: on the
+ *                 web, "Continue with Google", and what went wrong if a
+ *                 sign-in came back refused. On a phone, Google's own account
+ *                 sheet (lib/phoneSignIn.ts).
  *   ClosedScreen  somebody is signed in, and the Worker says the address is
  *                 not on the tester list. Says which account, so a person who
  *                 signed in with the wrong one can see that, and offers the
@@ -34,27 +32,8 @@ import { PrivacyLink } from "./privacyLink";
 import { space, type } from "./theme";
 
 export function SignInAgainScreen() {
-  const { t } = useLang();
-  const { failure } = useAuth();
   const web = Platform.OS === "web" && typeof window !== "undefined";
-  // Nobody signed in at all (the Worker's `signed_out`), rather than an Access
-  // session that ran out: the Worker's own sign-in is the way in.
-  const signedOut = (failure as { code?: unknown } | null)?.code === "signed_out";
-
-  // A phone has no Access in front of it: Google is the only way in.
-  if (!web) return <PhoneGoogleSignIn />;
-  if (signedOut) return <GoogleSignIn />;
-
-  return (
-    <ScreenMessage>
-      <View style={styles.card}>
-        <IconBadge name="user" tone="violet" />
-        <Text style={type.h2}>{t("gate_title")}</Text>
-        <Text style={type.small}>{t("err_session_expired")}</Text>
-        <Button label={t("gate_sign_in")} icon="user" onPress={() => window.location.reload()} />
-      </View>
-    </ScreenMessage>
-  );
+  return web ? <GoogleSignIn /> : <PhoneGoogleSignIn />;
 }
 
 /** "Continue with Google", and why the last try did not end signed in: the

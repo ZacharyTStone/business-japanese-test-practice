@@ -2,9 +2,11 @@
  * Every Worker query, run as a tester against a real local D1 with the whole
  * published bank — the check that the app and the database still agree.
  *
- * Each call goes through `runQuery` exactly as a request does after Access
- * (index.ts): the address is resolved to an account, a caller not on the
- * tester list is refused, and the query runs as that learner. So a column that
+ * Each call goes through `runQuery` exactly as a request does after the
+ * sign-in (index.ts), with no sign-in to check (`checkSignIn: false`;
+ * test/auth.db.test.ts has that half): the address is resolved to an account,
+ * a caller not on the tester list is refused, and the query runs as that
+ * learner. So a column that
  * does not exist, a write the schema refuses, or a learner seeing another's
  * rows, fails here. A query with no case below fails the last test: a new
  * query is a new thing to prove.
@@ -26,7 +28,7 @@ describe("every Worker query, as a tester", () => {
 
   async function run<T = unknown>(name: string, args: Record<string, unknown> = {}, as = learner): Promise<T> {
     covered.add(name);
-    const res = await runQuery(bank.db, as, name, args);
+    const res = await runQuery(bank.db, as, name, args, { checkSignIn: false });
     const body = (await res.json()) as { data?: T; error?: unknown };
     if (body.error) throw { status: res.status, error: body.error };
     return body.data as T;
@@ -53,7 +55,7 @@ describe("every Worker query, as a tester", () => {
     const me = await run<{ user_id: string; email: string; is_tester: boolean }>("whoami");
     expect(me).toMatchObject({ email: learner, is_tester: true });
     expect(me.user_id).toMatch(/^[0-9a-f-]{36}$/);
-    // The same account every time, whatever case Access reports.
+    // The same account every time, whatever case the address arrives in.
     expect(await run("whoami", {}, learner.toUpperCase())).toEqual(me);
 
     await expect(run("whoami", {}, stranger)).rejects.toMatchObject({
@@ -66,7 +68,7 @@ describe("every Worker query, as a tester", () => {
   });
 
   it("refuses a query that does not exist", async () => {
-    const res = await runQuery(bank.db, learner, "dropEverything", {});
+    const res = await runQuery(bank.db, learner, "dropEverything", {}, { checkSignIn: false });
     expect(res.status).toBe(404);
   });
 

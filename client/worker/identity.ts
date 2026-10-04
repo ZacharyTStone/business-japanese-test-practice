@@ -1,31 +1,24 @@
 /**
- * Who is asking: the address Cloudflare Access signed in.
- *
- * Access stands in front of the whole Worker, so by the time a request
- * reaches this code a person has already signed in, and the token Access
- * signed says who (access.ts checks it). No token means Access did not run at
- * all — switched off, or a route it does not cover — and the answer is no,
- * never "let it through".
+ * Who is asking, in the words every route shares: the address a session
+ * names, or why there is none.
  *
  * The address is all this file decides. Which account it is, and whether the
  * tester list has it, is the database's to say (core/caller.ts): an address
  * the list does not name is refused before any query runs (index.ts).
  */
 
-/** `email` is set on a refusal of an address Access did sign in, so the app
+/** `email` is set on a refusal of an address that did sign in, so the app
  *  can say which account is not on the list. */
 export type Refusal = { status: 401 | 403 | 500 | 503; code: string; message: string; email?: string };
 
-/** The signed-in address, lower-cased, or why there is none. */
-export function signedInEmail(accessRan: boolean, email: string | null | undefined): string | Refusal {
-  if (!accessRan) {
-    return { status: 401, code: "access_missing", message: "Cloudflare Access did not run for this request" };
-  }
+/** Nobody signed in. The app offers Google. */
+export const signedOut: Refusal = { status: 401, code: "signed_out", message: "Not signed in" };
+
+/** The signed-in address, lower-cased, or nobody: a session without an
+ *  address speaks for no one. */
+export function signedInEmail(email: string | null | undefined): string | Refusal {
   const address = (email ?? "").trim().toLowerCase();
-  if (!address) {
-    return { status: 401, code: "session_expired", message: "Cloudflare Access session expired" };
-  }
-  return address;
+  return address || signedOut;
 }
 
 export function notATester(email: string): Refusal {

@@ -435,14 +435,14 @@ accident is not.
   rate-limited; the rest are 404. The `auth_*` tables keep sign-in state only
   — no Google tokens, photo, IP address or browser — and the state of a
   sign-in in progress lives in a cookie, so a stranger's tries write nothing.
-  While
-  Cloudflare Access still stands in front of the site, the token Access signs
-  (`Cf-Access-Jwt-Assertion`, checked by `client/worker/access.ts` against the
-  team's keys and the app's AUD tag) is accepted after a session
-  (`client/worker/who.ts`), so the switch has no flag day. Neither is a 401
-  `signed_out`, not a pass (a Worker with neither configured is a 500
-  `sign_in_not_configured`, never a learner who is signed out); the clips and
-  pictures are checked the same way.
+  Nothing else speaks for anybody (`client/worker/who.ts`): Cloudflare Access,
+  in front of the site until 2026-10-04, is gone, and a header or cookie it
+  would set is nobody. No session is a 401 `signed_out`, not a pass (a Worker
+  without the sign-in's secrets is a 500 `sign_in_not_configured`, never a
+  learner who is signed out); the clips and pictures are checked the same way.
+  An account is made only while its Google sign-in exists
+  (`resolveLearner`'s `checkSignIn`, on by default; only the database tests,
+  which have no sign-in, turn it off).
   Better Auth owns the `auth_*` tables and their shape: migration 0002 is what
   its generator compiles, and a database test fails if it would change. Its
   four settings are Worker secrets; without them there is no sign-in. The clips and pictures are R2 objects under the paths the

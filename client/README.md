@@ -3,8 +3,7 @@
 Expo (React Native) — one codebase for iOS, Android and web. Web ships first:
 the app talks to the database through the Cloudflare Worker it is served from
 (`worker/`), and signs in with Google through the Worker's own sign-in
-(`worker/auth.ts`, Better Auth on the same D1). Cloudflare Access still stands
-in front of the site until it is switched off (blockers.md #4). Android builds
+(`worker/auth.ts`, Better Auth on the same D1). Android builds
 with EAS (`eas.json`) and signs in with Google's own account sheet
 (Credential Manager, `modules/google-sign-in`), into the same Worker.
 
@@ -40,7 +39,7 @@ GOOGLE_CLIENT_SECRET=<its secret>
 and `http://localhost:8787/api/auth/callback/google` among that client's
 redirect URIs (Google Cloud Console → Credentials). Then "Continue with
 Google" on the sign-in screen goes to Google and comes back signed in, as it
-will on the deployed site once Access is off; "Sign out" ends the session and
+does on the deployed site; "Sign out" ends the session and
 comes back to the same screen. Open the app at exactly the address
 `BETTER_AUTH_URL` names (`localhost`, not `127.0.0.1`): the sign-in's cookies
 belong to one host. Without the file there is no sign-in at all, and every
@@ -87,8 +86,8 @@ For Google to hand the token to this app at all, Google Cloud needs an
 SHA-1 of the key the APK is signed with (`npx eas-cli credentials -p
 android`), and later a second for Play App Signing's key (Play Console → Test
 and release → App integrity). It has no secret, and neither the app nor the
-Worker uses its id: it only vouches for the app. blockers.md #4, step 3 has
-the checklist. `modules/` is the app's only native code; `expo prebuild`
+Worker uses its id: it only vouches for the app. blockers.md #4 ("Next step:
+Android") has the checklist. `modules/` is the app's only native code; `expo prebuild`
 writes `android/`, which is not committed (EAS makes its own).
 
 The app is drawn light only (`userInterfaceStyle` in `app.json`; `theme.ts`
@@ -296,8 +295,7 @@ the sign-in (`/api/auth/…`).
 worker/
   index.ts      routing; the static build is everything except /api and /media
   auth.ts       the sign-in: Better Auth on D1, Google, the tester list at sign-up
-  who.ts        who is asking: a session it signed in, else Access's token
-  access.ts     the token Cloudflare Access signed: whose, for which app, in date
+  who.ts        who is asking: a session it signed in, and nothing else
   identity.ts   the address it names, or why there is none
   queries.ts    every query the app may ask for, by name — its arguments, checked
   media.ts      the clips and pictures, from R2
@@ -338,8 +336,7 @@ is baked into the bundle: the app asks its own origin. Its bindings (D1, R2)
 are in `wrangler.jsonc`. The sign-in's four settings (`BETTER_AUTH_URL`,
 `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) are Worker
 **secrets**, never `vars`: a deploy keeps secrets and replaces vars with the
-file's. While Access is still in front, its token is checked against the two
-plain `vars` there (the team domain and the Access application's AUD tag).
+file's (`worker/test/wrangler.test.ts` fails if one is written there).
 **No key is ever set as a plain variable.**
 
 `build:web` is `expo export` plus one copy: Expo writes the not-found page as

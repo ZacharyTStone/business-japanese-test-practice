@@ -10,9 +10,8 @@
  * every other request is served from the assets without running this code.
  * The web build holds no data, so the assets need no door. The queries and
  * the media check who is asking themselves (who.ts) — a session this Worker
- * signed in, or, while Cloudflare Access still stands in front of the site,
- * the token Access signed — and behind that the tester list in D1 is the door
- * every query passes (core/caller.ts).
+ * signed in — and behind that the tester list in D1 is the door every query
+ * passes (core/caller.ts).
  *
  * Same origin, so there is no CORS to configure and the session cookie rides
  * along with every request the app makes.
@@ -30,11 +29,6 @@ export interface Env extends AuthEnv {
   ASSETS: Fetcher;
   DB: D1Database;
   MEDIA: R2Bucket;
-  /** `<team>.cloudflareaccess.com` and the Access application's AUD tag
-   *  (wrangler.jsonc `vars`): whose signature, for which app, a token needs,
-   *  while Access is still in front of the site. */
-  ACCESS_TEAM_DOMAIN?: string;
-  ACCESS_AUD?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -48,20 +42,20 @@ function refuse(r: Refusal): Response {
 }
 
 /** One named query, as `email`. Exported for the tests, which run it against
- *  a local D1 without a sign-in in front. `viaSession`: the address came
- *  from the Worker's own sign-in, not Access (who.ts). */
+ *  a local D1 without a sign-in in front: they pass `checkSignIn: false`, as
+ *  nothing else may (core/caller.ts). */
 export async function runQuery(
   db: D1Database,
   email: string,
   name: string,
   args: Record<string, unknown>,
-  { now = Date.now(), random = Math.random, viaSession = false }: { now?: number; random?: (id: string) => number; viaSession?: boolean } = {}
+  { now = Date.now(), random = Math.random, checkSignIn = true }: { now?: number; random?: (id: string) => number; checkSignIn?: boolean } = {}
 ): Promise<Response> {
   if (!Object.prototype.hasOwnProperty.call(queries, name)) {
     return json({ error: { code: "unknown_query", message: `no query named ${name}` } }, 404);
   }
   try {
-    const learner = await resolveLearner(db, email, { viaSession });
+    const learner = await resolveLearner(db, email, { checkSignIn });
     if (!learner.isTester) return refuse(notATester(email));
     const data = await queries[name]({ db, learner, now, random }, args);
     return json({ data: data ?? null });
@@ -71,11 +65,11 @@ export async function runQuery(
   }
 }
 
-async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function handleApi(request: Request, env: Env): Promise<Response> {
   const name = new URL(request.url).pathname.replace(/^\/api\/q\//, "");
   if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "POST only" } }, 405);
 
-  const caller = await whoIsAsking(request, env, ctx);
+  const caller = await whoIsAsking(request, env);
   if (isRefusal(caller)) return refuse(caller);
 
   let args: Record<string, unknown> = {};
@@ -88,11 +82,11 @@ async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Pro
     // No body, or not JSON: the query is asked with no arguments, and one that
     // needs them says which.
   }
-  return withCookies(await runQuery(env.DB, caller.email, name, args, { viaSession: caller.viaSession }), caller);
+  return withCookies(await runQuery(env.DB, caller.email, name, args), caller);
 }
 
 /** The sign-in's own routes. Before its secrets are set there is no sign-in,
- *  and the app goes on as Access lets it (auth.ts). */
+ *  and every query answers `sign_in_not_configured` (who.ts). */
 async function handleAuth(request: Request, env: Env): Promise<Response> {
   const auth = authFor(env);
   if (!auth) return json({ error: { code: "sign_in_not_configured", message: "The sign-in is not set up" } }, 404);
@@ -101,18 +95,18 @@ async function handleAuth(request: Request, env: Env): Promise<Response> {
 
 /** A clip or a picture, for somebody signed in: the clips are the bank read
  *  aloud, and the bank is not public. */
-async function handleMedia(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const caller = await whoIsAsking(request, env, ctx);
+async function handleMedia(request: Request, env: Env): Promise<Response> {
+  const caller = await whoIsAsking(request, env);
   if (isRefusal(caller)) return new Response(caller.message, { status: caller.status, headers: { "cache-control": "no-store" } });
   return withCookies(await serveMedia(request, env), caller);
 }
 
 export default {
-  async fetch(request, env, ctx): Promise<Response> {
+  async fetch(request, env): Promise<Response> {
     const { pathname } = new URL(request.url);
-    if (pathname.startsWith("/api/q/")) return handleApi(request, env, ctx);
+    if (pathname.startsWith("/api/q/")) return handleApi(request, env);
     if (pathname.startsWith("/api/auth/")) return handleAuth(request, env);
-    if (pathname.startsWith("/media/")) return handleMedia(request, env, ctx);
+    if (pathname.startsWith("/media/")) return handleMedia(request, env);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

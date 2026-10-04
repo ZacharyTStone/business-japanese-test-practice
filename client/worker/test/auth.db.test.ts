@@ -15,13 +15,12 @@
 import { getMigrations } from "better-auth/db/migration";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { forgetKeys } from "../access";
 import { AUTH_TABLES, authFor, authOptions, type AuthEnv } from "../auth";
 import { isRefusal } from "../identity";
 import { runQuery } from "../index";
-import { whoIsAsking, type Caller, type WhoEnv } from "../who";
+import { whoIsAsking, type Caller } from "../who";
 import { addTester, address, openBank, type Bank } from "./d1";
-import { accessTokenFor, AUD, googleIdTokenFor, keyPair, keysOf, sessionCookie, TEAM, type Pair } from "./tokens";
+import { googleIdTokenFor, keyPair, sessionCookie, type Pair } from "./tokens";
 
 const SECRET = "a-test-secret-that-is-long-enough-0123456789";
 const BASE = "https://app.example";
@@ -31,8 +30,7 @@ const NOW = Date.now();
 
 describe("the Worker's own sign-in", () => {
   let bank: Bank;
-  let env: WhoEnv & Required<AuthEnv>;
-  let ours: Pair;
+  let env: Required<AuthEnv>;
   const tester = address("signin");
   const otherTester = address("signin-other");
   const stranger = address("signin-stranger");
@@ -45,17 +43,12 @@ describe("the Worker's own sign-in", () => {
       BETTER_AUTH_SECRET: SECRET,
       GOOGLE_CLIENT_ID: WEB_CLIENT,
       GOOGLE_CLIENT_SECRET: "google-secret",
-      ACCESS_TEAM_DOMAIN: TEAM,
-      ACCESS_AUD: AUD,
     };
-    ours = await keyPair("ours");
-    forgetKeys();
     await addTester(bank.db, tester);
     await addTester(bank.db, otherTester);
   });
 
   afterAll(async () => {
-    forgetKeys();
     await bank?.dispose();
   });
 
@@ -80,8 +73,8 @@ describe("the Worker's own sign-in", () => {
     return { cookie: await sessionCookie(session.token, SECRET), token: session.token, userId: user.id };
   }
 
-  const ask = (headers: Record<string, string>, e: WhoEnv = env) =>
-    whoIsAsking(new Request(`${BASE}/api/q/whoami`, { method: "POST", headers }), e, undefined, NOW, keysOf(ours));
+  const ask = (headers: Record<string, string>, e: AuthEnv = env) =>
+    whoIsAsking(new Request(`${BASE}/api/q/whoami`, { method: "POST", headers }), e);
   const emailOf = (who: Caller | { code: string }) => ("email" in who ? who.email : who);
   /** The code a hook's refusal carries, as the Google callback reads it. */
   const codeOf = (e: unknown) => (e as { body?: { code?: string } }).body?.code;
@@ -176,12 +169,15 @@ describe("the Worker's own sign-in", () => {
     expect((await auth().handler(update)).status).toBe(404);
   });
 
-  it("knows a signed-in device by its session, whatever Access says", async () => {
+  it("knows a signed-in device by its session, and by nothing Access would have sent", async () => {
     const { cookie } = await signIn(otherTester);
     expect(emailOf(await ask({ cookie }))).toBe(otherTester);
-    // During the switch both can arrive; the session is the one asked first.
-    const access = await accessTokenFor(ours, tester, NOW);
-    expect(emailOf(await ask({ cookie, "cf-access-jwt-assertion": access }))).toBe(otherTester);
+    // Access is gone (2026-10-04): its header and cookie name nobody, beside
+    // a session or alone.
+    const access = { "cf-access-jwt-assertion": "a.b.c", "cf-access-authenticated-user-email": tester };
+    expect(emailOf(await ask({ cookie, ...access }))).toBe(otherTester);
+    expect(await ask(access)).toMatchObject({ code: "signed_out", status: 401 });
+    expect(await ask({ cookie: "CF_Authorization=a.b.c" })).toMatchObject({ code: "signed_out", status: 401 });
   });
 
   it("hands on the cookies that keep a session alive", async () => {
@@ -203,18 +199,6 @@ describe("the Worker's own sign-in", () => {
     expect(await ask({ authorization: `Bearer ${token}` })).toMatchObject({ code: "signed_out" });
   });
 
-  it("goes on taking the token Access signed while Access is still in front", async () => {
-    const access = await accessTokenFor(ours, tester, NOW);
-    expect(emailOf(await ask({ "cf-access-jwt-assertion": access }))).toBe(tester);
-    expect(emailOf(await ask({ cookie: `CF_Authorization=${access}` }))).toBe(tester);
-  });
-
-  it("calls a token Access no longer vouches for signed out, so the app offers Google", async () => {
-    const theirs = await keyPair("theirs");
-    const stale = await accessTokenFor(theirs, tester, NOW);
-    expect(await ask({ "cf-access-jwt-assertion": stale })).toMatchObject({ code: "signed_out", status: 401 });
-  });
-
   it("calls nobody signed in signed_out, and a forged cookie nobody", async () => {
     expect(await ask({})).toMatchObject({ code: "signed_out", status: 401 });
     const listed = address("signin-forged");
@@ -226,12 +210,10 @@ describe("the Worker's own sign-in", () => {
     expect(await ask({ cookie: forged })).toMatchObject({ code: "signed_out" });
   });
 
-  it("before its secrets are set, is not there at all, and Access alone decides", async () => {
-    const bare: WhoEnv = { DB: bank.db, ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD };
+  it("before its secrets are set, is not there at all, and says so", async () => {
+    const bare: AuthEnv = { DB: bank.db };
     expect(authFor(bare)).toBeNull();
-    const access = await accessTokenFor(ours, tester, NOW);
-    expect(emailOf(await ask({ "cf-access-jwt-assertion": access }, bare))).toBe(tester);
-    expect(await ask({}, bare)).toMatchObject({ code: "signed_out" });
+    expect(await ask({}, bare)).toMatchObject({ code: "sign_in_not_configured", status: 500 });
   });
 
   it("deletes the sign-in with the account, and a second device's cached session cannot make it again", async () => {
@@ -243,7 +225,7 @@ describe("the Worker's own sign-in", () => {
     const cached = first.cookies.map((c) => c.slice(0, c.indexOf(";"))).find((c) => c.includes("session_data="));
     expect(cached).toBeTruthy();
     const query = async (name: string, args: Record<string, unknown> = {}) => {
-      const res = await runQuery(bank.db, leaving, name, args, { viaSession: true });
+      const res = await runQuery(bank.db, leaving, name, args);
       return { status: res.status, body: (await res.json()) as { data?: unknown; error?: { code: string } } };
     };
     expect((await query("whoami")).status).toBe(200);

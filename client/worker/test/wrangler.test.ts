@@ -1,32 +1,28 @@
 /**
- * The Worker's Access settings are filled in, and filled in plausibly.
+ * No sign-in setting is written in wrangler.jsonc.
  *
- * `worker/access.ts` refuses every query when either is empty, which is the
- * safe failure but still an app that is down for everybody: the merge that
- * shipped the token check with both left blank did exactly that. These are the
- * two values the Worker pins — the team whose keys must sign a token, and the
- * Access application it must be for — so their shape is checked here, offline,
- * before a deploy can carry a blank or a typo.
+ * The sign-in's four settings are Worker secrets (worker/auth.ts). One put in
+ * `vars` instead would be committed — the client secret and the session key
+ * in the repository for anybody to read — and a deploy replaces `vars` with
+ * the file's, so it would also be the value that wins. Cloudflare Access's two
+ * settings went with Access (2026-10-04); a token it signs is nobody now.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 
 const WRANGLER = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..", "..", "wrangler.jsonc");
-
-function setting(name: string): string {
-  const text = readFileSync(WRANGLER, "utf8");
-  const found = [...text.matchAll(new RegExp(`^\\s*"${name}"\\s*:\\s*"([^"]*)"`, "gm"))].map((m) => m[1]);
-  expect(found.length, `${name} should be set once in wrangler.jsonc vars, found ${found.length}`).toBe(1);
-  return found[0];
-}
+const SECRETS = ["BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
 
 describe("wrangler.jsonc", () => {
-  test("the Access team domain is a team domain", () => {
-    expect(setting("ACCESS_TEAM_DOMAIN"), "ACCESS_TEAM_DOMAIN must be <team>.cloudflareaccess.com (Zero Trust → Settings)").toMatch(/^[a-z0-9-]+\.cloudflareaccess\.com$/);
+  const text = readFileSync(WRANGLER, "utf8");
+  const settings = [...text.matchAll(/^\s*"([A-Z][A-Z0-9_]*)"\s*:/gm)].map((m) => m[1]);
+
+  test("names none of the sign-in's secrets as a setting", () => {
+    for (const name of SECRETS) expect(settings, `${name} is a Worker secret; set it with wrangler secret put`).not.toContain(name);
   });
 
-  test("the Access AUD is an AUD tag", () => {
-    expect(setting("ACCESS_AUD"), "ACCESS_AUD must be the Access application's 64-character AUD tag (the Worker's Access tab)").toMatch(/^[0-9a-f]{64}$/);
+  test("no longer configures Cloudflare Access", () => {
+    expect(settings.filter((name) => name.startsWith("ACCESS_"))).toEqual([]);
   });
 });

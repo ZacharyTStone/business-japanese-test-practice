@@ -1,6 +1,6 @@
 /**
- * Who is asking, to the database: the account an Access-verified email
- * belongs to, and what its tester row allows.
+ * Who is asking, to the database: the account a signed-in email belongs
+ * to, and what its tester row allows.
  *
  * This is the door that row-level security used to be. Every query but
  * `whoami` refuses a caller who is not on the tester list (queries.ts), and
@@ -12,11 +12,12 @@
  * address that is not listed gets no account at all, so nothing about it is
  * stored: the second lock that kept strangers out of a work in progress.
  *
- * For a Google sign-in (the Worker's own, worker/auth.ts) the account is made
- * only while that sign-in exists. Deleting an account deletes its sign-in
- * too (core/profile.ts), but a second device's session is vouched for by a
+ * The account is made only while its Google sign-in (the Worker's own,
+ * worker/auth.ts) exists. Deleting an account deletes its sign-in too
+ * (core/profile.ts), but a second device's session is vouched for by a
  * signed cookie for up to five minutes without the database being asked; in
- * those minutes it must not make the deleted account again.
+ * those minutes it must not make the deleted account again. The database
+ * tests, which have no sign-in, pass `checkSignIn: false`; nothing else may.
  */
 import { first, stmt, type Db } from "./sql";
 
@@ -44,7 +45,7 @@ type TesterRow = { unlimited: number; may_veto: number; max_daily_goal: number |
 export async function resolveLearner(
   db: Db,
   rawEmail: string,
-  { viaSession = false, newId = () => crypto.randomUUID() }: { viaSession?: boolean; newId?: () => string } = {}
+  { checkSignIn = true, newId = () => crypto.randomUUID() }: { checkSignIn?: boolean; newId?: () => string } = {}
 ): Promise<Learner> {
   const email = rawEmail.trim().toLowerCase();
   const [testerRes, userRes] = await db.batch([
@@ -55,7 +56,7 @@ export async function resolveLearner(
   let userId = ((userRes.results?.[0] as { id: string } | undefined) ?? null)?.id ?? null;
 
   const signInExists = async () =>
-    !viaSession || (await first(db, 'select 1 as ok from "auth_users" where "email" = ?', email)) !== null;
+    !checkSignIn || (await first(db, 'select 1 as ok from "auth_users" where "email" = ?', email)) !== null;
 
   if (tester && !userId && (await signInExists())) {
     // First sign-in of a listed address: the account and its profile, in one
