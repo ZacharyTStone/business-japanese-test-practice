@@ -107,8 +107,8 @@ Three programs that only meet in the database:
 **Hosting:** everything the app touches is on **Cloudflare**: the web app and
 its API on **Workers**, the data in **D1**, the clips and pictures in **R2**,
 sign-in with **Google** through the Worker's own Better Auth; jobs on **GitHub Actions**.
-The landing page (`landing/`) is a second Worker, files only, on the root
-domain; the app is on `app.<domain>`. Paid APIs: **Anthropic**
+The landing page (`landing/`) is a second Worker, files only, on
+`gethorenso.com`; the app is on `app.gethorenso.com`. Paid APIs: **Anthropic**
 (writing and review), **OpenAI** (voices, pictures), and optionally **TypeSafe
 AI** (Jev, a difficulty-probe prototype).
 

@@ -10,9 +10,10 @@
     // A miss is a genuine miss, and public/404.html says so.
     "not_found_handling": "404-page",
     "html_handling": "auto-trailing-slash"
-  }
+  },
 
-  // The root domain, once it is bought (README.md says the order). The app's
-  // Worker takes app.<domain> the same way, in client/wrangler.jsonc.
-  // "routes": [{ "pattern": "<domain>", "custom_domain": true }]
+  // The root domain. The app's Worker takes app.gethorenso.com the same way,
+  // in client/wrangler.jsonc. www and horensoapp.com are redirect rules in the
+  // dashboard (README.md), not hostnames of this Worker.
+  "routes": [{ "pattern": "gethorenso.com", "custom_domain": true }]
 }

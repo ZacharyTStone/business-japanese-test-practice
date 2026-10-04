@@ -8,6 +8,13 @@
   // (worker/auth.ts). The one Node API it needs; nothing else is switched on.
   "compatibility_flags": ["nodejs_als"],
 
+  // Where the app is served: app.gethorenso.com (the root domain is the landing
+  // page, ../landing). workers.dev stays on, stated rather than defaulted:
+  // sign-in names that host until BETTER_AUTH_URL moves, and taking it away
+  // early would sign everybody out mid-move.
+  "routes": [{ "pattern": "app.gethorenso.com", "custom_domain": true }],
+  "workers_dev": true,
+
   // The API and the media (worker/index.ts). Everything else is the static
   // web build below, served without running this script.
   "main": "worker/index.ts",

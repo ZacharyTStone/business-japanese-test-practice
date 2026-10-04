@@ -56,13 +56,13 @@ what the questions are for, with the disclaimer:
 | --- | --- |
 | Category | Education |
 | Contact email | the owner's (the same as the privacy policy's) |
-| Website | `https://<domain>`, the landing page (`landing/`) |
-| Privacy policy | `https://app.<domain>/privacy` (`<domain>/privacy` redirects there) |
+| Website | `https://gethorenso.com`, the landing page (`landing/`) |
+| Privacy policy | `https://app.gethorenso.com/privacy` (`gethorenso.com/privacy` redirects there) |
 | Ads | No ads |
 | App access | Restricted: sign-in with a Google account on the tester list. Give the reviewers one: a Google account added to `testers` (`bjt tester <email>`) and to the consent screen's test users, with its password, and the steps "Continue with Google → choose the account". |
 | Target audience | 18 and over (adults preparing for a business exam; not for children) |
 | Content rating | Education/reference; no violence, sexual content, gambling, user-to-user communication or location sharing |
-| Delete account URL | `https://app.<domain>/privacy` (its "How long, and deleting it" section says how, in the app, on the web, or by email) |
+| Delete account URL | `https://app.gethorenso.com/privacy` (its "How long, and deleting it" section says how, in the app, on the web, or by email) |
 | Screenshots | From the `preview` build on a phone: two to eight, portrait. Home, a listening question, a reading question with its clock, the verdict, the record. |
 | App icon | `store/icon-512.png` (512 × 512) |
 | Feature graphic | `store/feature-graphic.png` (1024 × 500, no words: Play prints the name beside it) |
