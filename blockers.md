@@ -94,21 +94,21 @@ run, because the Android SDK and Google's Maven repository could not be
 reached where it was written: the first EAS build is its first compile, and a
 phone its first test.
 
-**Next step: switch Access off.** Until it is off, a tester passes Access's
-sign-in and then Google's.
+**Done 2026-10-04: Access is off the deployed site.** The Worker's Access
+setting now covers its preview URLs only, as an extra lock (Google sign-in
+cannot finish there: the redirect URI and `BETTER_AUTH_URL` name the
+deployed host). The Web client's secret was replaced the same day, since part
+of the first was shown in a browser assistant's log; only the new one should
+be listed on the client. On the deployed URL the owner signed in with Google,
+landed on home with the same history, signed out, and read `/privacy` without
+signing in.
 
-- Every tester's Google address on both lists first: a **test user** on the
-  consent screen (Google Auth Platform → Audience), or Google refuses them
-  while it is in Testing, and a row in `testers` (`bjt tester <email>` prints
-  the SQL; read it, then apply it with `wrangler d1 execute`).
-- Zero Trust → Access → Applications: remove (or disable) the application in
-  front of `<the Worker's host>`. That also makes `/privacy` public (#5).
-- Rotate the Web client's secret: part of it was shown in a browser
-  assistant's log while the client was made (2026-10-04). Add a new secret on
-  the client, put it in the Worker's `GOOGLE_CLIENT_SECRET`, then disable and
-  delete the old one.
+**Adding a tester** takes both lists: a **test user** on the consent screen
+(Google Auth Platform → Audience), or Google refuses them while it is in
+Testing, and a row in `testers` (`bjt tester <email>` prints the SQL; read it,
+then apply it with `wrangler d1 execute`).
 
-Then, on the deployed URL:
+Still to see on the deployed URL (the owner's account covered the third and fourth):
 
 - A fresh browser gets the app's sign-in screen and nothing of the bank: every
   query and every clip answers 401 `signed_out`.
@@ -152,16 +152,19 @@ vibration (the buzz after an answer) — no microphone, no background playback,
 no storage. `client/eas.json` has two
 Android profiles: `preview`, an APK to install directly on a tester's phone,
 and `production`, the bundle Google Play takes; each builds from the EAS
-environment of the same name. No build has been made yet. Android signs in
-with Google (#4, "Next step: Android").
+environment of the same name. The EAS project is
+`@tacocat42/business-japanese-drill` (2026-10-04; its id and owner are in
+`app.json`). No build has been made yet. Android signs in with Google (#4,
+"Next step: Android").
 
-**Next step for an Android tester build.** With an Expo account, in
-`client/`: `npx eas-cli init` (writes the project id into `app.json`), then
-the two EAS environment variables `client/README.md` (Android) lists, for
-`preview` and `production` alike (a build without the Worker's address opens
-on the "not configured" notice), then `npx eas-cli build -p android
---profile preview`, and install the APK it links to. The Android OAuth client
-in #4 needs this build's keystore SHA-1.
+**Next step for an Android tester build.** In `client/`, signed in with
+`npx eas-cli login`: the two EAS environment variables `client/README.md`
+(Android) lists, for `preview` and `production` alike (a build without the
+Worker's address opens on the "not configured" notice), then `npx eas-cli
+build -p android --profile preview`, letting it generate the keystore (the
+website can only upload one), and install the APK it links to. The Android
+OAuth client in #4 needs that keystore's SHA-1 (`npx eas-cli credentials -p
+android`, or the project's Credentials page).
 
 **Next step for Google Play.** What the store asks of the app is in code:
 the privacy policy at `/privacy` (`client/src/lib/privacy.ts`), "Delete

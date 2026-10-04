@@ -2,6 +2,7 @@
   "expo": {
     "name": "ビジネス日本語ドリル",
     "slug": "business-japanese-drill",
+    "owner": "tacocat42",
     "scheme": "bizjadrill",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -43,6 +44,11 @@
         }
       ],
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "71d401f3-6c9a-4540-9f7c-1f638459043d"
+      }
+    }
   }
 }
