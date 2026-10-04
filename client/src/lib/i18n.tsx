@@ -113,7 +113,6 @@ const S = {
 
   // the door, while the app is in testing
   gate_title: ["ログインしてください", "Sign in to continue"],
-  gate_sign_in: ["ログイン", "Sign in"],
   // The Worker's own sign-in (worker/auth.ts): Google, and why it came back.
   gate_google: ["Googleでログイン", "Continue with Google"],
   // The public privacy page (app/privacy.tsx), and the links to it.

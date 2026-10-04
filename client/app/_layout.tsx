@@ -100,7 +100,7 @@ function Navigator() {
     if (auth.loading) return <Loading />;
     // Only a confirmed `false` means the account is not approved.
     if (auth.isTester === false) return <ClosedScreen />;
-    // The Access session ran out: a reload is the way back through it.
+    // Nobody is signed in, or the sign-in ran out: the door offers Google.
     if (auth.failure != null && errorKind(auth.failure) === "session_expired") return <SignInAgainScreen />;
     // A question that failed to answer is not one that said no: say what is
     // wrong and offer the retry.

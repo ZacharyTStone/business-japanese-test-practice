@@ -9,7 +9,7 @@
  */
 import { createAuthClient } from "better-auth/client";
 
-import { apiUrl, SIGN_OUT_URL } from "./api";
+import { apiUrl } from "./api";
 
 type AuthClient = ReturnType<typeof createAuthClient>;
 let client: AuthClient | null = null;
@@ -41,15 +41,10 @@ export async function signInWithGoogle(): Promise<SignInStart> {
   }
 }
 
-/**
- * Out of the Worker's sign-in, and out of Cloudflare Access if it still stands
- * in front of the site. Asking Access's sign-out address clears its cookie
- * when Access is there, and is a harmless 404 when it is not; the page then
- * starts again from the top, signed out of both.
- */
-export async function signOutOfEverything(): Promise<void> {
+/** Out of the Worker's sign-in: the session ends and its cookies go. The
+ *  page then starts again from the top, at the sign-in screen. */
+export async function signOutOnWeb(): Promise<void> {
   await authClient()
     .signOut()
     .catch(() => undefined);
-  await fetch(SIGN_OUT_URL, { credentials: "include", redirect: "manual" }).catch(() => undefined);
 }

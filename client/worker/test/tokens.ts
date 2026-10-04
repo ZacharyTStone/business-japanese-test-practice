@@ -1,15 +1,9 @@
 /**
- * Credentials for the database tests, made the way the real ones are: an
- * Access token signed with a key the test hands to the check as the team's
- * (as access.test.ts does), a Google ID token signed with a key the test
- * serves as Google's, and a Better Auth session cookie signed with the auth
- * secret (HMAC-SHA256 of the token, as Better Auth signs it).
+ * Credentials for the sign-in tests, made the way the real ones are: a Google
+ * ID token signed with a key the test serves as Google's, and a Better Auth
+ * session cookie signed with the auth secret (HMAC-SHA256 of the token, as
+ * Better Auth signs it).
  */
-import type { KeySource } from "../access";
-
-export const TEAM = "drill.cloudflareaccess.com";
-export const AUD = "4714c1358e65fe4b408ad6d432a5f878f08194bdb4752441fd56faefa9b2b6f2";
-
 export type Pair = { privateKey: CryptoKey; jwk: JsonWebKey & { kid: string } };
 
 function b64url(data: Uint8Array | string): string {
@@ -27,19 +21,11 @@ export async function keyPair(kid: string): Promise<Pair> {
   return { privateKey: k.privateKey, jwk: { ...jwk, kid, alg: "RS256", use: "sig" } };
 }
 
-export const keysOf = (...pairs: Pair[]): KeySource => async () => pairs.map((p) => p.jwk);
-
 async function signed(key: Pair, claims: Record<string, unknown>): Promise<string> {
   const h = b64url(JSON.stringify({ alg: "RS256", kid: key.jwk.kid, typ: "JWT" }));
   const p = b64url(JSON.stringify(claims));
   const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key.privateKey, new TextEncoder().encode(`${h}.${p}`));
   return `${h}.${p}.${b64url(new Uint8Array(sig))}`;
-}
-
-/** A token Access would sign for `email`, valid an hour either side of `now`. */
-export async function accessTokenFor(key: Pair, email: string, now: number): Promise<string> {
-  const sec = Math.floor(now / 1000);
-  return signed(key, { aud: [AUD], email, exp: sec + 3600, iat: sec - 60, nbf: sec - 60, iss: `https://${TEAM}`, type: "app" });
 }
 
 /** The ID token Google's account sheet hands a phone (Credential Manager):

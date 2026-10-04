@@ -27,7 +27,7 @@ describe("the schema's promises", () => {
   async function learner(opts: Parameters<typeof addTester>[2] = {}): Promise<Learner> {
     const email = address("schema");
     await addTester(db, email, opts);
-    return resolveLearner(db, email);
+    return resolveLearner(db, email, { checkSignIn: false });
   }
 
   function answer(l: Learner, itemId: string, chosenIndex: number, now = Date.now(), extra: Partial<AttemptArgs> = {}) {
@@ -184,13 +184,13 @@ describe("the schema's promises", () => {
   // --- the door ---------------------------------------------------------------
 
   it("makes no account for an address that is not on the list, and closes the door on one taken off it", async () => {
-    const stranger = await resolveLearner(db, address("stranger"));
+    const stranger = await resolveLearner(db, address("stranger"), { checkSignIn: false });
     expect(stranger).toMatchObject({ userId: null, isTester: false });
     expect(await count("select count(*) as n from users where email = ?", stranger.email)).toBe(0);
 
     const l = await learner();
     await db.prepare("delete from testers where email = ?").bind(l.email).run();
-    const again = await resolveLearner(db, l.email);
+    const again = await resolveLearner(db, l.email, { checkSignIn: false });
     expect(again).toMatchObject({ userId: l.userId, isTester: false });
   });
 

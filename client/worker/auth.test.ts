@@ -4,12 +4,11 @@
  * is missing or broken. The sign-in itself, the tester list's hold on it and
  * the schema are test/auth.db.test.ts.
  */
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { forgetKeys } from "./access";
 import { AUTH_TABLES, authFor, authOptions, OPEN_ROUTES, refusalFor, SESSION_DAYS } from "./auth";
 import { whoIsAsking } from "./who";
-import { accessTokenFor, AUD, keyPair, keysOf, sessionCookie, TEAM, type Pair } from "./test/tokens";
+import { sessionCookie } from "./test/tokens";
 
 // Shaped like a D1 binding, so Better Auth takes it for one (it looks for
 // prepare, batch and exec), and refusing every call: a database that is down.
@@ -25,10 +24,9 @@ const FULL = {
   GOOGLE_CLIENT_ID: "web-client.apps.googleusercontent.com",
   GOOGLE_CLIENT_SECRET: "google-secret",
 };
-const NOW = Date.now();
 
 describe("the sign-in's settings", () => {
-  it("is not there until every setting is, so Access alone decides until then", () => {
+  it("is not there until every setting is", () => {
     expect(authFor({ DB })).toBeNull();
     for (const missing of ["BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"] as const) {
       expect(authFor({ ...FULL, [missing]: "" }), missing).toBeNull();
@@ -102,31 +100,26 @@ describe("the sign-in's settings", () => {
 });
 
 describe("who is asking, when the sign-in is missing or broken", () => {
-  let ours: Pair;
-  beforeAll(async () => {
-    ours = await keyPair("ours");
-  });
-  beforeEach(() => forgetKeys());
-
-  const ACCESS = { ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD };
   const ask = (env: Parameters<typeof whoIsAsking>[1], headers: Record<string, string> = {}) =>
-    whoIsAsking(new Request("https://app.example/api/q/whoami", { method: "POST", headers }), env, undefined, NOW, keysOf(ours));
+    whoIsAsking(new Request("https://app.example/api/q/whoami", { method: "POST", headers }), env);
 
-  it("says it is not set up, rather than signed out, when neither is configured", async () => {
+  it("says it is not set up, rather than signed out, when its secrets are missing", async () => {
     expect(await ask({ DB })).toMatchObject({ status: 500, code: "sign_in_not_configured" });
   });
 
-  it("falls back to Access when the sign-in cannot answer", async () => {
+  it("says it could not check, rather than signed out, when its database is down", async () => {
     const cookie = await sessionCookie("a-session-token-of-some-length-000000", SECRET);
-    const access = await accessTokenFor(ours, "me@example.com", NOW);
-    expect(await ask({ ...FULL, ...ACCESS }, { cookie, "cf-access-jwt-assertion": access })).toEqual({ email: "me@example.com", cookies: [], viaSession: false });
-    expect(await ask({ ...FULL, ...ACCESS }, { cookie })).toMatchObject({ status: 503, code: "sign_in_unavailable" });
+    expect(await ask(FULL, { cookie })).toMatchObject({ status: 503, code: "sign_in_unavailable" });
   });
 
-  it("without a sign-in of its own, lets Access's answer stand as before", async () => {
-    const theirs = await keyPair("theirs");
-    const forged = await accessTokenFor(theirs, "me@example.com", NOW);
-    expect(await ask({ DB, ...ACCESS }, { "cf-access-jwt-assertion": forged })).toMatchObject({ code: "access_invalid" });
-    expect(await ask({ DB, ...ACCESS })).toMatchObject({ code: "signed_out" });
+  it("takes nothing Cloudflare Access would have sent as anybody", async () => {
+    // Access's header and cookie, and the address header it adds: all nobody.
+    // No session cookie, so the database (which throws) is never asked.
+    const headers = {
+      "cf-access-jwt-assertion": "a.b.c",
+      "cf-access-authenticated-user-email": "me@example.com",
+      cookie: "CF_Authorization=a.b.c",
+    };
+    expect(await ask(FULL, headers)).toMatchObject({ status: 401, code: "signed_out" });
   });
 });

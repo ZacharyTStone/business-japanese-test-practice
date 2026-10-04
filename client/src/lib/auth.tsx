@@ -13,16 +13,13 @@
  * from an address the tester list does not name, so a client that skipped the
  * check here would simply see nothing. `isTester` exists to say so politely.
  *
- * Nobody signed in is `signed_out`, and the door offers Google. While
- * Cloudflare Access still stands in front of the site, an Access session that
- * ran out answers `session_expired` (lib/api.ts), and signing in again is a
- * reload through Access's own page.
+ * Nobody signed in is `signed_out`, and the door offers Google.
  */
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
 import { call, isConfigured } from "./api";
-import { signOutOfEverything } from "./authClient";
+import { signOutOnWeb } from "./authClient";
 import { errorText } from "./errors";
 import { signOutOnPhone } from "./phoneSignIn";
 
@@ -44,8 +41,7 @@ type AuthState = {
   /** Whether the signed-in account is on the tester list. null until asked. */
   isTester: boolean | null;
   email: string | null;
-  /** Out of the session (and, while it stands, Cloudflare Access), back to
-   *  the sign-in screen. */
+  /** Out of the session, back to the sign-in screen. */
   signOut: () => Promise<void>;
   /** Ask again. `error` is never cleared on its own, so this is the way back
    *  from a cold-start hiccup. A failed check sets `error` and leaves
@@ -82,8 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((e: unknown) => {
         if (cancelled) return;
-        // Access let them in, but the Worker has no account for the address:
-        // that is a "no", not a failure to ask.
+        // Signed in, but the tester list does not name the address: that is
+        // a "no", not a failure to ask.
         const fields = e && typeof e === "object" ? (e as { code?: unknown; details?: unknown }) : {};
         if (fields.code === "not_a_tester") {
           setFailure(null);
@@ -113,11 +109,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       async signOut() {
         if (Platform.OS === "web" && typeof window !== "undefined") {
-          // Out of the Worker's own sign-in and, if it is there, out of
-          // Access; then the app starts again from the top. Nothing on screen
-          // changes until then, so the door never flashes "can't connect"
-          // while the sign-out is on its way.
-          await signOutOfEverything();
+          // Out of the Worker's own sign-in; then the app starts again from
+          // the top. Nothing on screen changes until then, so the door never
+          // flashes "can't connect" while the sign-out is on its way.
+          await signOutOnWeb();
           window.location.replace("/");
           return;
         }
