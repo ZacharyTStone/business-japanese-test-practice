@@ -76,7 +76,7 @@ const S = {
   explanation: ["解説", "Explanation"],
 
   // welcome — the only screen in the app that explains anything
-  wel_kicker: ["ビジネス日本語ドリル", "Business Japanese drill"],
+  wel_kicker: ["Horenso — ビジネス日本語ドリル", "Horenso — Business Japanese drill"],
   wel_title: ["選ぶのは、こちらの仕事です", "The choosing is our job"],
   wel_lead: ["あなたの答えから、いまのレベルと弱いところを読み取って、次に出す問題を決めます。レベルも、種類も、難しさも、選ぶところはありません。", "We read your level and your weak spots out of your answers, and pick what comes next. There is no level, type or difficulty to choose."],
   wel_p1_title: ["レベルは、分野ごとに答えが決めます", "Your answers set the level, section by section"],

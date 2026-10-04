@@ -34,10 +34,10 @@ const SECTIONS: Bilingual[] = [
     title: ["このポリシーについて", "About this policy"],
     paragraphs: [
       [
-        "「ビジネス日本語ドリル」（以下「本アプリ」）が、どの情報を、何のために、どのように扱うかを説明します。本アプリはウェブ版とAndroid版があり、どちらも同じ方法で情報を扱います。",
+        "「Horenso」（以下「本アプリ」）が、どの情報を、何のために、どのように扱うかを説明します。本アプリはウェブ版とAndroid版があり、どちらも同じ方法で情報を扱います。",
       ],
       [
-        "This explains what information Business Japanese Drill (“the app”) handles, why, and how. The app runs on the web and on Android, and both handle information the same way.",
+        "This explains what information Horenso (“the app”) handles, why, and how. The app runs on the web and on Android, and both handle information the same way.",
       ],
     ],
   },
