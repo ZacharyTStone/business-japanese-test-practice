@@ -1,7 +1,7 @@
 # The landing page
 
 What somebody sees at the root domain before they have an account: what
-Horenso is, how it works, what it will not do, and a link to sign in. The app
+Horenso is, a sample question, the exam it covers, and a link to sign in. The app
 itself is on `app.gethorenso.com`, served by the app's own Worker (`client/`).
 
 It is a separate Worker made of files only (`wrangler.jsonc` has no script, no
