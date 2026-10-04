@@ -216,6 +216,26 @@ token instead would let that run go ahead, at the cost of a new secret.
 
 ---
 
+## 7. The name has no domain yet
+
+**Where it stands.** The product is **Horenso** (2026-10-04): the app's name,
+its start screen, the privacy policy and the store listing say so. The bundle
+identifier, package (`app.businessjapanesedrill`), slug, Worker, database and
+bucket keep their old names: none is seen by a learner, and changing the
+package means a new Android OAuth client. If it is to change, it must change
+before the first upload to Google Play, after which it is permanent. The
+landing page is written (`landing/`) and not deployed: its links to the app go
+through `landing/public/_redirects`, which names the placeholder
+`app.horenso.example`.
+
+**Next step.** Buy the domain, then follow
+[landing/README.md](landing/README.md#putting-it-on-the-domain): one pull
+request names it, both Workers take their hostnames, and the sign-in's redirect
+URI, `BETTER_AUTH_URL` and the phone build's `EXPO_PUBLIC_API_BASE` move to
+`app.<domain>` together.
+
+---
+
 ## Not a blocker: ads
 
 `AdSlot` renders only in development, and its placement type has exactly two

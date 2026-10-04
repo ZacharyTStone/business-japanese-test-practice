@@ -1,0 +1,6 @@
+# The one place the app's address is written. The page links to /app and
+# /privacy, and these send them on, so moving the app is a change to this file.
+# app.horenso.example is a placeholder (.example never resolves): replace it
+# with the real app host before this site is connected to a domain.
+/app       https://app.horenso.example/        302
+/privacy   https://app.horenso.example/privacy 302
