@@ -1,0 +1,278 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choukai",
+  "level": "J1",
+  "generated_at": "2026-10-05T22:44:45+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "dd945a7ce3",
+      "item_type": "sougou_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "conference_call+junior_to_senior+what_changed@J1",
+        "setting": "conference_call",
+        "relation": "junior_to_senior",
+        "function": "what_changed",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "役員体制案の変更点",
+      "stem": "前回の役員体制案から、何が変わりましたか。",
+      "options": [
+        {
+          "text": "取締役は六名に減り、監査役は新たに迎えず顧問弁護士が兼任することになった。",
+          "role": "correct",
+          "why": "後輩が経営会議の結果として報告した最終案で、取締役は六名、監査役は社外招聘をやめて現職の顧問弁護士が兼任すると述べている。"
+        },
+        {
+          "text": "取締役を八名から五名に減らすことになった。",
+          "role": "superseded_by_later_turn",
+          "why": "五名案は経営会議で一度出たものの、株主の反発が予想されるとして六名に修正されており、最終案ではない。"
+        },
+        {
+          "text": "新しい監査役として社外から弁護士を招聘することになった。",
+          "role": "surface_keyword_match",
+          "why": "弁護士という語は出てくるが、実際は社外から新たに招くのではなく、既存の顧問弁護士が監査役を兼任する話である。"
+        },
+        {
+          "text": "先輩が、監査役を顧問弁護士に兼任させる案を提案した。",
+          "role": "stated_by_wrong_speaker",
+          "why": "兼任案を報告したのは後輩で、先輩は報告を聞いて人件費削減の狙いだと感想を述べただけである。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "前回案は監査役を社外から一名招聘し取締役は八名を維持する内容だった。最終的には、取締役は五名案が一度検討されたものの株主の反発を懸念して六名に落ち着き、監査役は社外から新たに迎えるのではなく現職の顧問弁護士が兼任する形に変わった。五名案は途中で修正されており、兼任案は後輩が報告した内容であって先輩が提案したものではない。弁護士という語を使った選択肢も、実際には新規招聘ではなく既存顧問の兼任であり、事実と異なる。",
+      "explanation_en": "The final plan settles on six directors (not five, which was floated and revised) and has the existing legal advisor take on the auditor role rather than hiring a new outside auditor; the proposal came from the junior's report, not the senior's suggestion.",
+      "vocab_notes": [
+        {
+          "term": "監査役",
+          "reading": "かんさやく",
+          "meaning": "company auditor (board-level oversight role)"
+        },
+        {
+          "term": "取締役",
+          "reading": "とりしまりやく",
+          "meaning": "director (board member)"
+        },
+        {
+          "term": "兼任",
+          "reading": "けんにん",
+          "meaning": "to hold a post concurrently"
+        },
+        {
+          "term": "招聘",
+          "reading": "しょうへい",
+          "meaning": "to invite/recruit (a person to a position)"
+        }
+      ],
+      "audio": {
+        "narration": "9327c4850de72c57",
+        "options": [
+          "b360b9e9cfaf82e5",
+          "6f2b59a728411e18",
+          "8de877effd2c3b5b",
+          "d64bf718bf9a04c2"
+        ],
+        "dialogue": [
+          "435280fa25813318",
+          "bd564e8efb2cdb8a",
+          "eb9927bd090e87e2",
+          "7ae6f7abb68a30f6",
+          "1e2b07f55179fe8b",
+          "cdeeedc7f89211d7",
+          "267d733f7763bdf4"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "後輩",
+          "text": "お疲れさまです。前回ご説明した役員体制案について、変更がありましたのでご報告します。",
+          "clip_id": "435280fa25813318"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "お願いします。前回は社外から監査役を一名招聘し、取締役は八名を維持するという内容でしたね。",
+          "clip_id": "bd564e8efb2cdb8a"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "はい、そうでした。昨日の経営会議で、取締役を八名から五名に減らす案が出たのですが、株主からの反発が予想されるとのことで、結局六名に落ち着きました。",
+          "clip_id": "eb9927bd090e87e2"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "監査役のほうは、社外招聘のままですか。",
+          "clip_id": "7ae6f7abb68a30f6"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "いえ、そちらも変わりまして、社外から新たに迎えるのではなく、現在の顧問弁護士に監査役を兼任していただくことになりました。",
+          "clip_id": "1e2b07f55179fe8b"
+        },
+        {
+          "speaker_role": "先輩",
+          "text": "なるほど、人件費を抑える狙いですね。株主総会での承認はこれからですか。",
+          "clip_id": "cdeeedc7f89211d7"
+        },
+        {
+          "speaker_role": "後輩",
+          "text": "はい、来月の総会にかけることになります。",
+          "clip_id": "267d733f7763bdf4"
+        }
+      ],
+      "scene_id": "scene_phone_desk",
+      "channel": "phone",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "9327c4850de72c57",
+      "item_id": "dd945a7ce3",
+      "kind": "narration",
+      "index": null,
+      "text": "前回の役員体制案から、何が変わりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "435280fa25813318",
+      "item_id": "dd945a7ce3",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "お疲れさまです。前回ご説明した役員体制案について、変更がありましたのでご報告します。",
+      "voice": "manager_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "bd564e8efb2cdb8a",
+      "item_id": "dd945a7ce3",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "お願いします。前回は社外から監査役を一名招聘し、取締役は八名を維持するという内容でしたね。",
+      "voice": "staff_junior_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "eb9927bd090e87e2",
+      "item_id": "dd945a7ce3",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "はい、そうでした。昨日の経営会議で、取締役を八名から五名に減らす案が出たのですが、株主からの反発が予想されるとのことで、結局六名に落ち着きました。",
+      "voice": "manager_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "7ae6f7abb68a30f6",
+      "item_id": "dd945a7ce3",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "監査役のほうは、社外招聘のままですか。",
+      "voice": "staff_junior_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "1e2b07f55179fe8b",
+      "item_id": "dd945a7ce3",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "いえ、そちらも変わりまして、社外から新たに迎えるのではなく、現在の顧問弁護士に監査役を兼任していただくことになりました。",
+      "voice": "manager_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "cdeeedc7f89211d7",
+      "item_id": "dd945a7ce3",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "なるほど、人件費を抑える狙いですね。株主総会での承認はこれからですか。",
+      "voice": "staff_junior_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "267d733f7763bdf4",
+      "item_id": "dd945a7ce3",
+      "kind": "dialogue",
+      "index": 6,
+      "text": "はい、来月の総会にかけることになります。",
+      "voice": "manager_m",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "dd945a7ce3",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "b360b9e9cfaf82e5",
+      "item_id": "dd945a7ce3",
+      "kind": "option",
+      "index": 0,
+      "text": "取締役は六名に減り、監査役は新たに迎えず顧問弁護士が兼任することになった。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "dd945a7ce3",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6f2b59a728411e18",
+      "item_id": "dd945a7ce3",
+      "kind": "option",
+      "index": 1,
+      "text": "取締役を八名から五名に減らすことになった。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "dd945a7ce3",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8de877effd2c3b5b",
+      "item_id": "dd945a7ce3",
+      "kind": "option",
+      "index": 2,
+      "text": "新しい監査役として社外から弁護士を招聘することになった。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "dd945a7ce3",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "d64bf718bf9a04c2",
+      "item_id": "dd945a7ce3",
+      "kind": "option",
+      "index": 3,
+      "text": "先輩が、監査役を顧問弁護士に兼任させる案を提案した。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_phone_desk"
+  ]
+}
