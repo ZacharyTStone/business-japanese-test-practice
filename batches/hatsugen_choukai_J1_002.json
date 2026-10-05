@@ -1,0 +1,162 @@
+{
+  "bundle_version": 2,
+  "item_type": "hatsugen_choukai",
+  "level": "J1",
+  "generated_at": "2026-10-05T22:43:45+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "fe23b1473d",
+      "item_type": "hatsugen_choukai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "phone_internal+peer_to_peer+consult@J1",
+        "setting": "phone_internal",
+        "relation": "peer_to_peer",
+        "function": "consult",
+        "level": "J1",
+        "channel": "phone"
+      },
+      "topic": "経費精算のやり方について同僚に相談する",
+      "stem": "営業部の社員が、経理部の同僚に内線で電話をかけました。経費精算のやり方で分からないことがあり、相談したいと思っています。こんなとき、何と言いますか。",
+      "options": [
+        {
+          "text": "もしもし、営業部の山田です。今ちょっといいですか。経費精算のことで相談したいんですが。",
+          "role": "correct",
+          "why": "内線電話の型どおり部署名と名前を名乗ったうえで、相談したいという用件を簡潔に伝えており、同僚への依頼として過不足がない。"
+        },
+        {
+          "text": "お忙しいところ恐れ入りますが、経費精算の件につきましてご教示賜れますと幸いに存じます。",
+          "role": "over_polite_misfit",
+          "why": "「ご教示賜れますと幸いに存じます」は取引先に向けるような改まった敬語で、同じ社内の同僚に使うには堅すぎて不自然に響く。"
+        },
+        {
+          "text": "ねえ、経費精算のことなんだけど、ちょっと教えてくれない?",
+          "role": "phone_protocol_violation",
+          "why": "名乗りを省いていきなり用件に入っており、内線でも相手が誰からの電話か分からず、社内電話の基本の型を欠いている。"
+        },
+        {
+          "text": "あのさ、経費精算のやり方が全然わかんなくてさ、助けてよ。",
+          "role": "register_too_casual",
+          "why": "名乗りもなく「わかんなくてさ」「助けてよ」とくだけすぎており、同僚相手でも業務の電話としての丁寧さを欠いている。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "同僚への内線電話では、まず部署名と名前を名乗り、そのうえで用件を簡潔に伝えるのが基本の型である。正解はこの型を満たしており、相談したいという意図も明確である。名乗りを省いて用件から入る言い方は、電話を受けた相手が発信者を認識できず、内線電話の基本を欠く。くだけすぎた話し方は同僚相手でも業務連絡としての丁寧さが不足する。「ご教示賜れますと幸いに存じます」は取引先向けの改まった表現であり、同じ社内の同僚への相談としては過剰で場違いである。",
+      "explanation_en": "An internal call to a colleague needs a name-and-department greeting followed by a concise request; skipping the greeting, using overly casual slang, or using client-grade formal keigo on a peer all fail.",
+      "vocab_notes": [
+        {
+          "term": "内線",
+          "reading": "ないせん",
+          "meaning": "internal extension line (within the same company)"
+        },
+        {
+          "term": "ご教示賜れますと幸いに存じます",
+          "reading": "ごきょうじたまわれますとさいわいにぞんじます",
+          "meaning": "a very formal written-style request for guidance, typically used toward clients, not peers"
+        }
+      ],
+      "audio": {
+        "narration": "02cc5bc1ff5266a6",
+        "options": [
+          "cce827953218fa41",
+          "e7e048840c6878ab",
+          "4e1cdff413a2748f",
+          "68608c139c423abb"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_phone_desk",
+      "speaker_role": "営業部の社員",
+      "listener_role": "経理部の同僚",
+      "channel": "phone",
+      "model_p_correct": 0.86
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "02cc5bc1ff5266a6",
+      "item_id": "fe23b1473d",
+      "kind": "narration",
+      "index": null,
+      "text": "営業部の社員が、経理部の同僚に内線で電話をかけました。経費精算のやり方で分からないことがあり、相談したいと思っています。こんなとき、何と言いますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "fe23b1473d",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "cce827953218fa41",
+      "item_id": "fe23b1473d",
+      "kind": "option",
+      "index": 0,
+      "text": "もしもし、営業部の山田です。今ちょっといいですか。経費精算のことで相談したいんですが。",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "fe23b1473d",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e7e048840c6878ab",
+      "item_id": "fe23b1473d",
+      "kind": "option",
+      "index": 1,
+      "text": "お忙しいところ恐れ入りますが、経費精算の件につきましてご教示賜れますと幸いに存じます。",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "fe23b1473d",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4e1cdff413a2748f",
+      "item_id": "fe23b1473d",
+      "kind": "option",
+      "index": 2,
+      "text": "ねえ、経費精算のことなんだけど、ちょっと教えてくれない?",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "fe23b1473d",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "68608c139c423abb",
+      "item_id": "fe23b1473d",
+      "kind": "option",
+      "index": 3,
+      "text": "あのさ、経費精算のやり方が全然わかんなくてさ、助けてよ。",
+      "voice": "staff_mid_f",
+      "channel": "phone"
+    }
+  ],
+  "scenes": [
+    "scene_phone_desk"
+  ]
+}
