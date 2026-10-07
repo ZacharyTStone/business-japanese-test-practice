@@ -77,7 +77,11 @@ accident is not.
   prices each response from its reported usage (a timed-out request at its
   output ceiling, an unknown model at 15/75 per MTok) and refuses the next
   request once the process — or, with `BJT_SPEND_LEDGER`, the job's bjt steps
-  together — has spent `BJT_RUN_BUDGET_USD` (default $2), sent
+  together — has spent `BJT_RUN_BUDGET_USD` (default $2), or once what it has
+  spent plus the most that request can cost (`llm.worstCaseUsd`: its whole
+  output ceiling, its input at the cache-write price) would pass it, so a
+  run never ends above its budget (until 2026-10-06 the last response was
+  free, and a night ended at $0.54 of $0.50), sent
   `BJT_RUN_MAX_CALLS` requests (retries included; the SDK retries nothing
   itself), or run `BJT_RUN_MAX_MINUTES` (30). No call may ask for
   more than `BJT_MAX_TOKENS_CEILING` output or think above `BJT_EFFORT_CEILING`;
@@ -126,6 +130,13 @@ accident is not.
   verdict is by count over the planned trials, so stopping early never changes
   it. A trial the judge did not answer ends the gate as `unchecked`: never
   kept, and nothing passed to the next draft.
+- **Every generator is told how the cold view guesses** (`_coldTestSpec` in
+  `bjt/generators/base.ts`): plan four answers equally likely with the
+  withheld half unknown, never let the key be the single most typical,
+  concrete or appropriate one, and take the cold test before answering. It
+  asks for a tie, never for the key to be the unlikely option, which would be
+  a tell of its own. From 2026-10-02 to 10-06, 15 of 22 nightly drafts were
+  discarded as leaky, all at cold=100%.
 - **A rejected draft's reason goes to the next draft on that shelf.** The gate,
   the proofreader and the dedupe check each give one sentence and `runBatch`
   passes it on, so a shelf's second and third drafts are not written blind. A

@@ -10,6 +10,7 @@ import { deepcopy, replace, rstrip, sorted, truthy, ValueError, KeyError } from 
 import * as schemas from "../bjt/schemas.ts";
 import * as seedtable from "../bjt/seedtable.ts";
 import * as roles from "../bjt/fidelity/roles.ts";
+import * as answerability from "../bjt/fidelity/answerability.ts";
 import { GENERATORS, getGenerator } from "../bjt/generators/index.ts";
 import {
   _SENTENCE,
@@ -370,4 +371,18 @@ describe("generators", () => {
     expect(sp).toContain("must not orbit the correct one");
     expect(sp).toContain("no element of the correct description may appear in all three distractors");
   });
+
+  /** 2026-10-02 to 10-06: 15 of 22 nightly drafts leaked at the cold view.
+   *  Every generator is told how the cold test guesses and how to write for
+   *  it, in the words of the half its own cold view hides. */
+  test("every generator is told how to pass the cold test", () => {
+    for (const itemType of Object.keys(GENERATORS)) {
+      const sp = getGenerator(itemType).systemPrompt("J2");
+      expect(sp, itemType).toContain("The reviewer's cold test.");
+      expect(sp, itemType).toContain(`with ${answerability.withheldHalf(itemType)} hidden`);
+      // A tie, never "the key is the unlikely one": that would be a tell.
+      expect(sp, itemType).toContain("At least one distractor must be an equally good guess");
+    }
+  });
+
 });

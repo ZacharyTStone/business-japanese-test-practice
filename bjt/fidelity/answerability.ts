@@ -273,6 +273,21 @@ export const _WITHHELD: Record<string, string> = {
   sougou_dokkai: "the passage",
 };
 
+/** What the cold view hides for a type, in words a generator or a judge can
+ *  be told: the half the answer must depend on. */
+export function withheldHalf(itemType: string): string {
+  if (has(_WITHHELD, itemType)) {
+    return _WITHHELD[itemType];
+  }
+  if (itemType === "hatsugen_choukai") {
+    return "the situation";
+  }
+  if (itemType === "gazou_haaku") {
+    return "the picture";
+  }
+  return "the stem";
+}
+
 /** The full-view and cold-view prompts, worded for the item type. */
 export function questions(item: Record<string, any>): [string, string] {
   const itemType = get(item, "item_type", "");
@@ -369,7 +384,12 @@ export function leakDescription(itemType: string, opts: { result?: GateResult | 
     if (tells.length) {
       what += ". The reviewer's own words for how: " + [...new Set(tells)].map(
         (r) => `“${slice(r, 0, 240)}”`).join(" / ");
-      what += ". Rewrite the options so that reasoning no longer works";
+      // The next draft is a new item, not a repair of this one, so it is
+      // told how to defeat the guess, not to rewrite these options.
+      what += (". In the next draft, make that way of guessing land on a "
+               + "distractor: give a distractor the answer that looks likeliest "
+               + `without ${withheldHalf(itemType)}, and let ${withheldHalf(itemType)} `
+               + "be what rules it out");
     }
   }
   return what;

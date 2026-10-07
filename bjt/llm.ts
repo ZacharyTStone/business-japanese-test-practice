@@ -48,8 +48,10 @@ export class LLMTruncatedError extends LLMError {}
 export const _TRUNCATED: readonly string[] = ["max_tokens", "model_context_window_exceeded"];
 
 /** This process has spent what it was allowed to. Raised *before* the
- *  call that would go over, so the ceiling is never crossed by more than one
- *  response. A subclass of the billing error on purpose: every caller that
+ *  call that would go over: a request is refused unless what has been spent
+ *  plus the most that request can cost fits under the ceiling, so a run never
+ *  ends above it (from 2026-10-06, when a night ended at $0.54 of $0.50, the
+ *  last response no longer counts as free). A subclass of the billing error on purpose: every caller that
  *  stops for an empty account stops for this too, keeping what it wrote. */
 export class LLMSpendLimitError extends LLMBillingError {}
 
@@ -324,15 +326,18 @@ export class Spend {
 
   /** The ceilings, then one more request on the count. Called before
    *  every request any vendor is sent — each retry included — so the call
-   *  ceiling counts what was asked for, not what came back. */
-  beginRequest(): void {
-    this.checkCeilings();
+   *  ceiling counts what was asked for, not what came back. `reserveUsd` is
+   *  the most this request can cost (`worstCaseUsd`); a caller that cannot
+   *  bound it passes nothing and is held only to what is already spent. */
+  beginRequest(reserveUsd: number = 0): void {
+    this.checkCeilings(reserveUsd);
     this.attempts += 1;
     this.save();
   }
 
-  /** Raise if the next call would be one too many. Called before it. */
-  checkCeilings(): void {
+  /** Raise if the next call would be one too many, or could take the run
+   *  past its budget. Called before it. */
+  checkCeilings(reserveUsd: number = 0): void {
     if (this.ledger_error !== null) {
       throw new LLMSpendLimitError(
         `${this.ledger_error}; nothing is spent without knowing what was `
@@ -346,6 +351,13 @@ export class Spend {
     if (this.usd >= config.RUN_BUDGET_USD) {
       throw new LLMSpendLimitError(
         `spend ceiling reached: $${fixed(this.usd, 2)} of `
+        + `$${fixed(config.RUN_BUDGET_USD, 2)} (BJT_RUN_BUDGET_USD) `
+        + `in ${str(this.calls)} calls`);
+    }
+    if (reserveUsd > 0 && this.usd + reserveUsd > config.RUN_BUDGET_USD) {
+      throw new LLMSpendLimitError(
+        `spend ceiling reached: $${fixed(this.usd, 2)} spent and the next request `
+        + `may cost up to $${fixed(reserveUsd, 2)}, over `
         + `$${fixed(config.RUN_BUDGET_USD, 2)} (BJT_RUN_BUDGET_USD) `
         + `in ${str(this.calls)} calls`);
     }
@@ -547,6 +559,18 @@ export function _worstCaseUsage(system: string, user: string | unknown[], maxTok
   return { input_tokens: chars, output_tokens: maxTokens };
 }
 
+/** The most one request can cost: `_worstCaseUsage` priced, with the whole
+ *  input as a cache write (the dearest way an input token is billed). What
+ *  the spend ceiling reserves before the request is sent. */
+export function worstCaseUsd(model: string, system: string, user: string | unknown[],
+                             maxTokens: number): number {
+  const usage = _worstCaseUsage(system, user, maxTokens);
+  const [perIn] = ratesFor(model);
+  const inTokens = _tokens(usage, "input_tokens");
+  return priceUsd(model, { output_tokens: usage.output_tokens })
+    + inTokens * perIn * Math.max(1, CACHE_WRITE_MULTIPLIER) / 1_000_000;
+}
+
 /** The most input tokens one picture can be, at the API's largest image size. */
 export const _IMAGE_TOKENS_MAX = 5000;
 
@@ -616,14 +640,16 @@ export async function _structured(
   const maxTokens = opts.maxTokens ?? 8000;
   const effort = opts.effort ?? "high";
   // The ceilings are checked before the call, never after: a run that is
-  // over its budget makes no further request, not one more.
-  state.spend.checkCeilings();
-  const client = seams.getClient();
+  // over its budget, or that this request could take over it, makes no
+  // further request, not one more.
   const params = requestParams(model, system, user, schema, { maxTokens, effort });
+  const reserve = worstCaseUsd(model, system, user, params.max_tokens);
+  state.spend.checkCeilings(reserve);
+  const client = seams.getClient();
   let retry = 0;
   let resp: any;
   while (true) {
-    state.spend.beginRequest();
+    state.spend.beginRequest(reserve);
     try {
       resp = await client.messages.create(params);
       break;
