@@ -1,0 +1,258 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_choukai",
+  "level": "J3",
+  "generated_at": "2026-10-07T21:25:30+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "e30344079e",
+      "item_type": "sougou_choukai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "negotiation+other_department+what_changed@J3",
+        "setting": "negotiation",
+        "relation": "other_department",
+        "function": "what_changed",
+        "level": "J3",
+        "channel": "in_person"
+      },
+      "topic": "交渉条件の一部変更報告",
+      "stem": "みどり物産との交渉について、前回の合意内容から何が変わりましたか。",
+      "options": [
+        {
+          "text": "納期は4週間のまま変わらず、単価だけ3％引き下げられた。",
+          "role": "surface_keyword_match",
+          "why": "4週間と3％という数字は会話に出てくるが、どちらも前回や交渉前の数値で、今回の結論とは逆の組み合わせになっている。"
+        },
+        {
+          "text": "単価を3％引き下げ、納期も2週間に短縮することで合意した。",
+          "role": "superseded_by_later_turn",
+          "why": "これは前回の合意内容として最初に確認された内容で、今回は単価引き下げのほうが見送りに変更されている。"
+        },
+        {
+          "text": "単価は予定通り3％引き下げられ、納期は4週間のままとなった。",
+          "role": "stated_by_wrong_speaker",
+          "why": "単価が予定通り下がるというのは営業部の担当者Bの発言だが、Aがすぐに否定しており、納期が4週間に戻るとは誰も言っていない。"
+        },
+        {
+          "text": "単価の引き下げは見送られたが、納期短縮の2週間は維持された。",
+          "role": "correct",
+          "why": "営業部の担当者Aが材料費高騰で単価引き下げを見送ると明言し、納期短縮の2週間はそのまま進めると最後に述べている。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "前回は「単価3％引き下げ、納期2週間短縮」で合意していたが、今回は材料費の高騰により単価引き下げが見送りになった。一方、納期短縮の2週間については先方にとっても重要なためそのまま維持されることになった。営業部の担当者Bが「単価は引き続き下がる」と発言するが、これはAに訂正されており誤り。また4週間や3％という数字は前回や交渉前の条件であり、今回の結論をそのまま表すものではない。会話の流れを追わないと、前回の合意内容や途中の誤った発言をそのまま答えに選んでしまう。",
+      "explanation_en": "The price cut is dropped due to rising material costs, but the two-week delivery shortening stays; a colleague's incorrect guess and earlier figures are traps.",
+      "vocab_notes": [
+        {
+          "term": "単価",
+          "reading": "たんか",
+          "meaning": "unit price"
+        },
+        {
+          "term": "見送る",
+          "reading": "みおくる",
+          "meaning": "to postpone or forgo"
+        },
+        {
+          "term": "納期短縮",
+          "reading": "のうきたんしゅく",
+          "meaning": "shortening of the delivery deadline"
+        }
+      ],
+      "audio": {
+        "narration": "8bbcc26ca55109b1",
+        "options": [
+          "203ae82b2c260969",
+          "a73f9251c8839672",
+          "3e8d4820c6eb17b7",
+          "3954a5b9d72a7adb"
+        ],
+        "dialogue": [
+          "8ef8a80a9858403d",
+          "2f009b15d794eeae",
+          "e3e24903830f0369",
+          "e91cdaf36c561dc5",
+          "a3daf37e24d2a808",
+          "884de14daa505eb7"
+        ]
+      },
+      "dialogue": [
+        {
+          "speaker_role": "製造部の担当者",
+          "text": "みどり物産との件、前回は単価を3％引き下げて、納期も4週間から2週間に短縮するという話でしたよね。今回もその通りで決まったんですか。",
+          "clip_id": "8ef8a80a9858403d"
+        },
+        {
+          "speaker_role": "営業部の担当者A",
+          "text": "それが、先方の事情で単価の引き下げは今回見送りになりまして。",
+          "clip_id": "2f009b15d794eeae"
+        },
+        {
+          "speaker_role": "営業部の担当者B",
+          "text": "いえ、単価は引き続き3％下げる方向だと聞いていますけど。",
+          "clip_id": "e3e24903830f0369"
+        },
+        {
+          "speaker_role": "営業部の担当者A",
+          "text": "いや、さっき先方から連絡がありまして、材料費が上がっているとのことで、引き下げはなしになりました。ただ、納期短縮の2週間のほうは、そのまま進めることで合意しています。",
+          "clip_id": "e91cdaf36c561dc5"
+        },
+        {
+          "speaker_role": "製造部の担当者",
+          "text": "分かりました。では製造スケジュールは2週間に合わせて組みますね。",
+          "clip_id": "a3daf37e24d2a808"
+        },
+        {
+          "speaker_role": "営業部の担当者A",
+          "text": "お願いします。",
+          "clip_id": "884de14daa505eb7"
+        }
+      ],
+      "scene_id": "scene_meeting_room_table",
+      "channel": "in_person",
+      "model_p_correct": 1.0
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "8bbcc26ca55109b1",
+      "item_id": "e30344079e",
+      "kind": "narration",
+      "index": null,
+      "text": "みどり物産との交渉について、前回の合意内容から何が変わりましたか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "8ef8a80a9858403d",
+      "item_id": "e30344079e",
+      "kind": "dialogue",
+      "index": 0,
+      "text": "みどり物産との件、前回は単価を3％引き下げて、納期も4週間から2週間に短縮するという話でしたよね。今回もその通りで決まったんですか。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "2f009b15d794eeae",
+      "item_id": "e30344079e",
+      "kind": "dialogue",
+      "index": 1,
+      "text": "それが、先方の事情で単価の引き下げは今回見送りになりまして。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e3e24903830f0369",
+      "item_id": "e30344079e",
+      "kind": "dialogue",
+      "index": 2,
+      "text": "いえ、単価は引き続き3％下げる方向だと聞いていますけど。",
+      "voice": "staff_mid_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "e91cdaf36c561dc5",
+      "item_id": "e30344079e",
+      "kind": "dialogue",
+      "index": 3,
+      "text": "いや、さっき先方から連絡がありまして、材料費が上がっているとのことで、引き下げはなしになりました。ただ、納期短縮の2週間のほうは、そのまま進めることで合意しています。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a3daf37e24d2a808",
+      "item_id": "e30344079e",
+      "kind": "dialogue",
+      "index": 4,
+      "text": "分かりました。では製造スケジュールは2週間に合わせて組みますね。",
+      "voice": "manager_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "884de14daa505eb7",
+      "item_id": "e30344079e",
+      "kind": "dialogue",
+      "index": 5,
+      "text": "お願いします。",
+      "voice": "staff_junior_m",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "e30344079e",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "203ae82b2c260969",
+      "item_id": "e30344079e",
+      "kind": "option",
+      "index": 0,
+      "text": "納期は4週間のまま変わらず、単価だけ3％引き下げられた。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "e30344079e",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a73f9251c8839672",
+      "item_id": "e30344079e",
+      "kind": "option",
+      "index": 1,
+      "text": "単価を3％引き下げ、納期も2週間に短縮することで合意した。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "e30344079e",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3e8d4820c6eb17b7",
+      "item_id": "e30344079e",
+      "kind": "option",
+      "index": 2,
+      "text": "単価は予定通り3％引き下げられ、納期は4週間のままとなった。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "e30344079e",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "3954a5b9d72a7adb",
+      "item_id": "e30344079e",
+      "kind": "option",
+      "index": 3,
+      "text": "単価の引き下げは見送られたが、納期短縮の2週間は維持された。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_meeting_room_table"
+  ]
+}
