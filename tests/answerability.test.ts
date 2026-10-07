@@ -239,4 +239,24 @@ describe("answerability", () => {
     // No result, or no cold reasons: the plain sentence.
     expect(answerability.leakDescription("goi_bunpou")).not.toContain("own words");
   });
+
+  /** The next draft is a new item: it is told how to defeat the guess, not
+   *  to rewrite options it never saw, and named the half to lean on. */
+  test("the leak feedback tells the next draft how to beat the guess", async () => {
+    const item = goiItem();
+    const ci = schemas.correctIndex(item["options"]);
+    patch(llm, "answerChoice", async () => ({ choice: ci, reason: "the most typical one" }));
+    const res = await answerability.runGate(item);
+    const text = answerability.leakDescription("sougou_dokkai", { result: res });
+    expect(text).toContain("next draft");
+    expect(text).toContain("without the passage, and let the passage be what rules it out");
+    expect(text).not.toContain("Rewrite the options");
+  });
+
+  test("every type names the half its cold view hides", () => {
+    expect(answerability.withheldHalf("sougou_choukai")).toBe("the conversation");
+    expect(answerability.withheldHalf("hatsugen_choukai")).toBe("the situation");
+    expect(answerability.withheldHalf("gazou_haaku")).toBe("the picture");
+    expect(answerability.withheldHalf("goi_bunpou")).toBe("the stem");
+  });
 });

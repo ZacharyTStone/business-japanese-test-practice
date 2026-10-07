@@ -28,6 +28,7 @@ import { Random } from "../pyrandom.ts";
 import * as render from "../render/index.ts";
 import * as schemas from "../schemas.ts";
 import type { Cell } from "../seedtable.ts";
+import * as answerability from "../fidelity/answerability.ts";
 import * as naturalness from "../fidelity/naturalness.ts";
 import * as roles from "../fidelity/roles.ts";
 
@@ -170,6 +171,42 @@ export class Generator {
     );
   }
 
+  /** How to pass the answerability gate's cold side, for every type.
+   *
+   *  From 2026-10-02 to 2026-10-06, 15 of 22 nightly drafts were discarded as
+   *  leaky, every one at cold=100%: the judge took the option that read as the
+   *  most typical, most concrete or most appropriate, and it was the key. The
+   *  per-type warnings say the cold view exists; this says how to write for
+   *  it. Only a tie is asked for, never "the key is the unlikely one", since
+   *  that habit would be a tell a learner could pass a type on. */
+  _coldTestSpec(): string {
+    const hidden = answerability.withheldHalf(this.item_type);
+    return (
+      `The reviewer's cold test. Review first shows a strong reader the four `
+      + `options with ${hidden} hidden, three times; if they pick the key twice, `
+      + `the item is discarded. They guess by taking the option that sounds the most `
+      + `typical for this kind of question, the most concrete or complete, or the most `
+      + `generally appropriate. Write so that guessing is a coin toss:
+`
+      + `- Plan the four options before ${hidden}: four answers that would each be `
+      + `just as likely with ${hidden} unknown. Then decide which is right, and write `
+      + `${hidden} so that it makes that one right and rules out the other three.
+`
+      + `- Never let the key be the single most typical, most specific, longest or `
+      + `safest option. At least one distractor must be an equally good guess; the `
+      + `surest way is to give a distractor the answer this kind of situation usually `
+      + `has, and let ${hidden} be what overturns it.
+`
+      + `- Give all four the same grain: the same length, the same amount of detail, `
+      + `the same register. One option that names a date, a reason or a person among `
+      + `three that do not is the key to a guesser.
+`
+      + `- Before you write the JSON, take the test yourself: cover ${hidden}, read `
+      + `the stem and the four options, and ask which you would pick. If it is the `
+      + `key, change the options or ${hidden} until it is not.`
+    );
+  }
+
   _fewshotBlock(): string {
     const examples = _loadSeed("fewshot", this.item_type, _markFloats);
     if (examples.length === 0) {
@@ -261,6 +298,7 @@ export class Generator {
       + `${this.label} item.`,
       this.task_spec,
       this._roleSpec(),
+      this._coldTestSpec(),
       // Right after the roles, because most of it is about how a
       // distractor may be wrong. The principle in the role spec does not
       // hold on its own: asked for an over-polite distractor, a model

@@ -151,20 +151,44 @@ describe("the ledger", () => {
     expect(ledger.report().includes("claude-opus-5") && ledger.report().includes("$0.01")).toBe(true);
   });
 
-  test("the dollar ceiling stops the next call not the last", async () => {
-    ledgerFixture();
+  test("the dollar ceiling refuses a call that could cross it", async () => {
+    const ledger = ledgerFixture();
     const answers = answersFixture();
-    // Each Opus call above costs one cent; a ceiling of 2.5 cents allows
-    // three (the third crosses it) and refuses the fourth before it is made.
-    setConfig({ RUN_BUDGET_USD: 0.025 });
+    // Each Opus call above costs one cent, but may cost up to its whole
+    // 1500-token output ceiling (about four cents) before it is made. With
+    // 6.5 cents, three calls fit (two cents spent plus four reserved is
+    // under); the fourth could end at seven and is refused before it is made.
+    setConfig({ RUN_BUDGET_USD: 0.065 });
     for (let i = 0; i < 3; i++) {
       await llm.answerChoice("q", ["a", "b"], { model: "claude-opus-5" });
     }
     const err = await llm.answerChoice("q", ["a", "b"], { model: "claude-opus-5" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(llm.LLMSpendLimitError);
     expect(answers.length, "the refused call never reached the API").toBe(3);
+    expect(ledger.usd).toBeLessThanOrEqual(0.065);
     const text = (err as Error).message;
     expect(text.includes("spend ceiling") && text.includes("BJT_RUN_BUDGET_USD")).toBe(true);
+  });
+
+  /** 2026-10-06: a night ended at $0.54 of $0.50, the last response priced
+   *  after it was already paid for. The reservation is what stops that. */
+  test("a run never ends above its budget", async () => {
+    const ledger = ledgerFixture();
+    answersFixture();
+    setConfig({ RUN_BUDGET_USD: 0.05 });
+    for (let i = 0; i < 10; i++) {
+      const err = await llm.answerChoice("q", ["a"], { model: "claude-opus-5" }).catch((e: unknown) => e);
+      if (err instanceof llm.LLMSpendLimitError) break;
+    }
+    expect(ledger.usd).toBeLessThanOrEqual(0.05);
+  });
+
+  test("the worst case covers the whole output ceiling", () => {
+    // 8000 output tokens of Sonnet at $10/MTok is eight cents before input.
+    expect(llm.worstCaseUsd("claude-sonnet-5", "", "", 8000)).toBeCloseTo(0.08, 6);
+    // Input is reserved at the cache-write price, a token per character.
+    expect(llm.worstCaseUsd("claude-sonnet-5", "x".repeat(1000), "", 0))
+      .toBeCloseTo(1000 * 2.0 * llm.CACHE_WRITE_MULTIPLIER / 1_000_000, 9);
   });
 
   test("the call ceiling needs no price table", async () => {
