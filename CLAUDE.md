@@ -69,7 +69,10 @@ accident is not.
   workflow's own token starts no other workflow). The owner stopped reviewing
   nightly content by hand on 2026-10-02: the gate, the proofreader, the batch
   checks and `checks` are the review. A red check leaves the pull request open
-  with a comment for a person; nothing from it is live. Otherwise, once
+  with a comment for a person; nothing from it is live. (GitHub also holds a
+  jobless `pull_request` run of `checks` for the bot's pull request, which turns
+  red when it closes; the publish job deletes it after the merge, so a red X on
+  a nightly pull request means something.) Otherwise, once
   `checks` is green on `main`, the deploy runs by itself, deploys exactly the
   commit `checks` passed, and publishes the items and their audio together; by
   hand it runs only from `main`.

@@ -17,7 +17,9 @@
 # for the checks itself, and merges only on green. GitHub still records a
 # `pull_request` run for that pull request, held for approval with no jobs,
 # which ends as a failure when the pull request closes. That red run is not
-# a verdict; the night's own run of these jobs is.
+# a verdict; the night's own run of these jobs is. The nightly's publish job
+# deletes it after the merge, so a red X on a nightly pull request means
+# something again; a pull request left open for a person keeps it.
 #
 # Every job here is offline. No API key, no Cloudflare account, no network calls.
 name: checks

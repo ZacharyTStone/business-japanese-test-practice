@@ -713,6 +713,22 @@ jobs:
           done
           merged=$(gh pr view "$PR" --json mergeCommit --jq .mergeCommit.oid)
           gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH" > /dev/null || true
+          # The pull_request run GitHub held for approval on this pull request
+          # (see the top of checks.yml) ran no job and checked nothing; it
+          # turns red when the pull request closes, on every night, and a red
+          # X that means nothing hides one that does. The verdict is the
+          # verify job above. Delete the held run once it has settled. Best
+          # effort: a run still settling after this is left, and says nothing.
+          for attempt in 1 2 3 4; do
+            sleep 5
+            held=$(gh api "repos/$GH_REPO/actions/workflows/checks.yml/runs?event=pull_request&branch=$BRANCH" \
+                     --jq '.workflow_runs[] | select(.status == "completed") | .id' || true)
+            [ -n "$held" ] || continue
+            for id in $held; do
+              gh api -X DELETE "repos/$GH_REPO/actions/runs/$id" > /dev/null || true
+            done
+            break
+          done
           head=$(gh api "repos/$GH_REPO/commits/$DEFAULT" --jq .sha)
           if [ "$head" = "$merged" ]; then
             gh workflow run deploy-db.yml --ref "$DEFAULT"
