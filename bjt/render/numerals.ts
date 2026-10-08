@@ -45,7 +45,7 @@
  * part of an item that is printed *to look like something*, so it is the only
  * place the problem arises.
  */
-import { get, has, sorted, str, TypeError_ } from "../py.ts";
+import { get, has, isDict, sorted, str, TypeError_ } from "../py.ts";
 
 export const _DIGITS: Record<string, number> = {
   "〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4,
@@ -201,11 +201,6 @@ export function toArabicText(text: string): string {
 /** The spelled-out numbers in the string — empty when it reads like print. */
 export function kanjiNumbersIn(text: string): string[] {
   return _numbers(text).map((m) => m.text);
-}
-
-/** `isinstance(v, dict)` for parsed JSON. */
-function isDict(v: unknown): v is Record<string, any> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
 /** `for x in (value or [])`, as Python iterates it: a list's elements, a

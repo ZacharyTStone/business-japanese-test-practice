@@ -18,11 +18,12 @@ import path from "node:path";
 
 import * as batchmod from "../batch.ts";
 import * as config from "../config.ts";
+import { unreadable } from "../files.ts";
 import type { Store } from "../db/store.ts";
 import * as levels from "../levels.ts";
 import * as llm from "../llm.ts";
 import * as phrasebook from "../phrasebook.ts";
-import { floatRepr, get, has, KeyError, len, repr, rstrip, str, strip, truthy, ValueError } from "../py.ts";
+import { floatRepr, get, getitem, isDict, len, repr, rstrip, str, strip, truthy, ValueError, WS } from "../py.ts";
 import { dumps } from "../pyjson.ts";
 import { Random } from "../pyrandom.ts";
 import * as render from "../render/index.ts";
@@ -86,9 +87,7 @@ function _loadSeed(
   try {
     data = JSON.parse(readFileSync(p, "utf8"), reviver);
   } catch (e) {
-    // (json.JSONDecodeError, OSError): a body that is not JSON, or a file
-    // the system will not give us (an OS error carries its errno code).
-    if (e instanceof SyntaxError || (e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string")) {
+    if (unreadable(e)) {
       return [];
     }
     throw e;
@@ -116,14 +115,6 @@ function _unmarkFloats(text: string): string {
   return text.replace(_MARKED_FLOAT, "$1");
 }
 
-/** `d[key]` on a plain object: a missing key is a KeyError, as in Python. */
-export function _getitem<T>(d: Record<string, T>, key: string): T {
-  if (!has(d, key)) {
-    throw new KeyError(repr(key));
-  }
-  return d[key];
-}
-
 export class Generator {
   item_type: string = "";
   /** One-line label shown in the CLI. */
@@ -144,8 +135,8 @@ export class Generator {
   // -- prompt assembly ---------------------------------------------------
 
   _roleSpec(): string {
-    const lines = _getitem(roles.DISTRACTOR_ROLES, this.item_type).map(
-      (r) => `- ${r}: ${_getitem(roles.ROLE_DESCRIPTIONS, r)}`,
+    const lines = getitem(roles.DISTRACTOR_ROLES, this.item_type).map(
+      (r) => `- ${r}: ${getitem(roles.ROLE_DESCRIPTIONS, r)}`,
     );
     return (
       "Every wrong option must be wrong for a specific, nameable reason drawn "
@@ -467,7 +458,7 @@ export class Generator {
   _finalize(item: Item, level: string, seed: number | null, opts: { cell?: Cell | null } = {}): Item {
     const cell = opts.cell ?? null;
     const rng = new Random(seed);
-    const options = [..._getitem(item, "options") as unknown[]];
+    const options = [...getitem(item, "options") as unknown[]];
     rng.shuffle(options);
     item["options"] = options;
     item["level"] = level;
@@ -477,11 +468,6 @@ export class Generator {
     }
     return item;
   }
-}
-
-/** A plain JSON object (Python's `isinstance(x, dict)`). */
-function _isDict(x: unknown): x is Item {
-  return x !== null && typeof x === "object" && !Array.isArray(x);
 }
 
 /**
@@ -507,7 +493,7 @@ export function repairSurplusOptions(item: Item): string[] {
   if (!Array.isArray(options) || options.length <= 4) {
     return [];
   }
-  const correct = options.filter((o) => _isDict(o) && get(o, "role") === roles.CORRECT);
+  const correct = options.filter((o) => isDict(o) && get(o, "role") === roles.CORRECT);
   if (correct.length !== 1) {
     return [];
   }
@@ -518,17 +504,17 @@ export function repairSurplusOptions(item: Item): string[] {
     if (o === correct[0]) {
       continue;
     }
-    const role = _isDict(o) ? get(o, "role") : null;
+    const role = isDict(o) ? get(o, "role") : null;
     if (kept.length < 4 && truthy(role) && !seenRoles.has(role)) {
       kept.push(o);
       seenRoles.add(role);
     } else {
-      dropped.push(_isDict(o) ? str(get(o, "text", "")) : str(o));
+      dropped.push(isDict(o) ? str(get(o, "text", "")) : str(o));
     }
   }
   // Keep the model's own order for what survives.
   item["options"] = options.filter((o) => kept.some((k) => o === k));
-  const keptTexts = kept.filter(_isDict).map((o) => str(get(o, "text", "")));
+  const keptTexts = kept.filter(isDict).map((o) => str(get(o, "text", "")));
   for (const field of ["explanation_ja", "explanation_en"]) {
     if (typeof get(item, field) === "string") {
       item[field] = dropSentencesAbout(item[field], dropped, keptTexts);
@@ -537,16 +523,13 @@ export function repairSurplusOptions(item: Item): string[] {
   return dropped;
 }
 
-// Python's `\s` (what `str.isspace()` says is whitespace), which is wider than
-// JavaScript's: written out so the two split at the same characters.
-const _PY_WS = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
-
 /** Quotation marks a 解説 quotes an option in: 「」『』 and the double quotes. */
 export const _QUOTED = /「([^」]+)」|『([^』]+)』|“([^”]+)”|"([^"]+)"/gu;
 /** One sentence with its own ending and the space after it: up to 。！？, to
- *  .!? before a space (so 1.5 stays whole), or to a line break. The pieces
- *  join back into exactly the text they came from. */
-export const _SENTENCE = new RegExp(`.+?(?:[。！？]+|[.!?]+(?=[${_PY_WS}]|$)|\\n|$)[${_PY_WS}]*`, "gsu");
+ *  .!? before a space (so 1.5 stays whole), or to a line break; a space is
+ *  Python's `\s`, which is wider than JavaScript's. The pieces join back
+ *  into exactly the text they came from. */
+export const _SENTENCE = new RegExp(`.+?(?:[。！？]+|[.!?]+(?=[${WS}]|$)|\\n|$)[${WS}]*`, "gsu");
 
 /** `_SENTENCE.findall(text)`: every sentence of `text`, in order. */
 export function _sentences(text: string): string[] {

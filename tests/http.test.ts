@@ -9,7 +9,7 @@ import { describe, expect, test } from "vitest";
 import * as http from "../bjt/http.ts";
 import * as r2 from "../bjt/r2.ts";
 import * as scene_art from "../bjt/scene_art.ts";
-import { patch } from "./helpers.ts";
+import { bytes, patch } from "./helpers.ts";
 
 const CREDS = new r2.Credentials({ account_id: "acct", access_key_id: "k", secret_access_key: "s" });
 
@@ -31,7 +31,6 @@ function wire() {
   return w;
 }
 
-const bytes = (s: string) => new TextEncoder().encode(s);
 const status = (code: number, body: string = "") => new http.HTTPError(code, bytes(body));
 
 describe("http", () => {

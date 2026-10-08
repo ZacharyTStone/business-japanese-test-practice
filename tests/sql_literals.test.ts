@@ -55,7 +55,7 @@ describe("literals", () => {
     }
   });
 
-  test("numbers and the rest", () => {
+  test("null, booleans and numbers become sql literals", () => {
     expect(publish.lit(null)).toBe("null");
     // A SQLite boolean is an integer, and the schema checks it is 0 or 1.
     expect(publish.lit(true) === "1" && publish.lit(false) === "0").toBe(true);

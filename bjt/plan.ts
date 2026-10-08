@@ -48,6 +48,7 @@
  * module only makes sure the queue has something to choose from.
  */
 import * as batchmod from "./batch.ts";
+import { unreadable } from "./files.ts";
 import {
   FileNotFoundError, get, isodateUtc, isoformatUtc, len, max, min, or, round, sorted, sum, truthy,
 } from "./py.ts";
@@ -79,8 +80,8 @@ export const DEFAULT_BUDGET = 2;
 /** How many of the night's items go to the reading shelves (語彙・文法, 表現読解,
  *  総合読解) before the emptiest-first rule sees the rest. Reading items need no
  *  audio and no picture, so they are the cheapest item to ship and the one kind
- *  a night should never come back without. One of three is the floor, not the
- *  ceiling: the main rule can still hand the other two to reading shelves when
+ *  a night should never come back without. The floor, not the ceiling: the
+ *  main rule can still hand the rest of the night to reading shelves when
  *  they are the furthest behind. The floor takes the emptiest reading shelves
  *  first, exactly as the main rule does, and yields whatever it cannot place
  *  back to the main rule. */
@@ -167,12 +168,23 @@ export class Survey {
   }
 }
 
-/** Python's `except (OSError, json.JSONDecodeError)` around reading a bundle:
- *  a file that cannot be read (an operating-system error carries its errno
- *  code), or text that is not JSON (`JSON.parse` throws a SyntaxError). */
-function _unreadable(e: unknown): boolean {
-  if (e instanceof SyntaxError || e instanceof FileNotFoundError) return true;
-  return e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string";
+/** Every live item of every committed bundle that can be read, with its
+ *  bundle. A bundle that cannot be read (`files.unreadable`, or our own
+ *  FileNotFoundError) is skipped. */
+function* _liveItems(): Generator<[Record<string, any>, Record<string, any>]> {
+  const gone = withdrawn.ids();
+  for (const p of batchmod.bundles()) {
+    let bundle: Record<string, any>;
+    try {
+      bundle = batchmod.load(p);
+    } catch (e) {
+      if (unreadable(e) || e instanceof FileNotFoundError) continue;
+      throw e;
+    }
+    for (const item of withdrawn.liveItems(bundle, { withdrawn: gone })) {
+      yield [bundle, item];
+    }
+  }
 }
 
 /**
@@ -191,25 +203,12 @@ function _unreadable(e: unknown): boolean {
  */
 export function _publishedCounts(): Map<string, number> {
   const counts = new Map<string, number>();
-  const gone = withdrawn.ids();
-  for (const p of batchmod.bundles()) {
-    let bundle: Record<string, any>;
-    try {
-      bundle = batchmod.load(p);
-    } catch (e) {
-      if (_unreadable(e)) continue;
-      throw e;
-    }
+  for (const [bundle, item] of _liveItems()) {
     const itemType = get(bundle, "item_type");
-    if (!truthy(itemType)) {
-      continue;
-    }
-    for (const item of withdrawn.liveItems(bundle, { withdrawn: gone })) {
-      const level = or(get(item, "level"), get(bundle, "level"));
-      if (truthy(level)) {
-        const k = shelfKey(itemType, level);
-        counts.set(k, (counts.get(k) ?? 0) + 1);
-      }
+    const level = or(get(item, "level"), get(bundle, "level"));
+    if (truthy(itemType) && truthy(level)) {
+      const k = shelfKey(itemType, level);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
     }
   }
   return counts;
@@ -412,7 +411,8 @@ export function toJson(surveyResult: Survey, order: readonly WorkItem[],
 /**
  * (items carrying a difficulty signal, items published).
  *
- * `model_p_correct` is the only term in `next_items()` that separates two
+ * `model_p_correct` is the only term in the queue's ranking
+ * (client/worker/core/queue.ts `nextItems`) that separates two
  * items of the same type and level, and it is written at generation time or
  * not at all — so a bundle that arrived through `bjt importbatch` has none.
  * Left uncounted that is invisible: the ranking term falls back to a constant,
@@ -423,19 +423,9 @@ export function toJson(surveyResult: Survey, order: readonly WorkItem[],
 function _difficultyCoverage(): [number, number] {
   let have = 0;
   let total = 0;
-  const gone = withdrawn.ids();
-  for (const p of batchmod.bundles()) {
-    let bundle: Record<string, any>;
-    try {
-      bundle = batchmod.load(p);
-    } catch (e) {
-      if (_unreadable(e)) continue;
-      throw e;
-    }
-    for (const item of withdrawn.liveItems(bundle, { withdrawn: gone })) {
-      total += 1;
-      have += Number(get(item, "model_p_correct") != null);
-    }
+  for (const [, item] of _liveItems()) {
+    total += 1;
+    have += Number(get(item, "model_p_correct") != null);
   }
   return [have, total];
 }

@@ -81,7 +81,7 @@ function tagLabel(axis: TagStat["axis"], tag: string, t: (key: Key) => string): 
   return TAG_LABELS[axis]?.[tag] ?? tag;
 }
 
-/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+/** Behind the setup notice when no Worker is configured (ui/screen.tsx). */
 export default function ProgressScreen() {
   return (
     <ScreenGate>
@@ -93,7 +93,7 @@ export default function ProgressScreen() {
 function Progress() {
   const clearance = useTabClearance();
   const router = useRouter();
-  const { lang, t } = useLang();
+  const { t } = useLang();
   const [types, setTypes] = useState<TypeStat[] | null>(null);
   const [tags, setTags] = useState<TagStat[]>([]);
   const [traps, setTraps] = useState<RoleTrap[]>([]);
@@ -104,7 +104,7 @@ function Progress() {
 
   useFocusEffect(
     useCallback(() => {
-        let cancelled = false;
+      let cancelled = false;
       (async () => {
         try {
           const [ty, tg, tr, ad, lv] = await Promise.all([
@@ -203,25 +203,14 @@ function Progress() {
             {trapsRecent ? <Text style={type.small}>{t("prog_recent")}</Text> : null}
           </View>
           {topTraps.map((trap) => (
-            <View key={trap.role} style={styles.trapRow}>
-              <IconBadge name="alert" tone="pink" size={30} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={type.body}>{roleInfo(trap.role, lang).label}</Text>
-                <Text style={type.small}>{roleInfo(trap.role, lang).advice}</Text>
-              </View>
-              <Tag tone="pink">{t("trap_rate", { c: trap.n, m: trap.met })}</Tag>
-            </View>
+            <TrapRow
+              key={trap.role}
+              role={trap.role}
+              tone="pink"
+              count={t("trap_rate", { c: trap.n, m: trap.met })}
+            />
           ))}
-          {timeouts ? (
-            <View style={styles.trapRow}>
-              <IconBadge name="alert" tone="amber" size={30} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={type.body}>{roleInfo("timed_out", lang).label}</Text>
-                <Text style={type.small}>{roleInfo("timed_out", lang).advice}</Text>
-              </View>
-              <Tag tone="amber">{t("times", { n: timeouts.n })}</Tag>
-            </View>
-          ) : null}
+          {timeouts ? <TrapRow role="timed_out" tone="amber" count={t("times", { n: timeouts.n })} /> : null}
         </Card>
       ) : null}
 
@@ -272,6 +261,22 @@ function Progress() {
 
       <AdSlot placement="list_screen" enabled={!adFree} />
     </ScrollView>
+  );
+}
+
+/** One trap on the 記録 card: its name, the advice, and how often it caught. */
+function TrapRow({ role, tone, count }: { role: string; tone: BadgeTone; count: string }) {
+  const { lang } = useLang();
+  const info = roleInfo(role, lang);
+  return (
+    <View style={styles.trapRow}>
+      <IconBadge name="alert" tone={tone} size={30} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={type.body}>{info.label}</Text>
+        <Text style={type.small}>{info.advice}</Text>
+      </View>
+      <Tag tone={tone}>{count}</Tag>
+    </View>
   );
 }
 

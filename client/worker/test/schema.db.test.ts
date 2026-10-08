@@ -7,6 +7,9 @@
  * changed, a question that cannot be deleted, a veto, starting again, and the
  * arithmetic the exam's shape rests on.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { resolveLearner, type Learner } from "../core/caller";
@@ -251,8 +254,6 @@ describe("the schema's promises", () => {
   // --- the bank's own difficulty -------------------------------------------------
 
   it("recounts each person's first answer, timeouts left out, from nothing", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
     const recount = readFileSync(resolve(__dirname, "../../../d1/refresh_item_stats.sql"), "utf8");
     const run = () => db.exec(recount.replace(/^--.*$/gm, "").replace(/\s+/g, " ").trim());
 

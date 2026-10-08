@@ -20,8 +20,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import Anthropic, { AnthropicError, APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import * as config from "./config.ts";
-import { writeAtomic } from "./files.ts";
-import { eprint, errText, fixed, g, get, KeyError, len, max, PyError, repr, RuntimeError, sorted, str, strip, thousands, time, toFloat, toInt, truthy, TypeError_, ValueError } from "./py.ts";
+import { unreadable, writeAtomic } from "./files.ts";
+import { eprint, errText, fixed, g, get, isDict, KeyError, len, max, OverflowError, repr, RuntimeError, sorted, str, strip, thousands, time, toFloat, toInt, truthy, TypeError_, ValueError } from "./py.ts";
 import { dumps, loads } from "./pyjson.ts";
 
 export class LLMError extends RuntimeError {}
@@ -126,10 +126,6 @@ export function priceUsd(model: string, usage: UsageLike | null | undefined): nu
   ) / 1_000_000;
 }
 
-/** Python's `OverflowError`: `int()` of an infinite float. Not one of the
- *  errors an unreadable ledger is caught as, exactly as in Python. */
-class OverflowError extends PyError {}
-
 /** Python's name for the type of a JSON value, for a TypeError's message. */
 function _typeName(v: unknown): string {
   if (v === null || v === undefined) return "NoneType";
@@ -158,7 +154,9 @@ function _float(v: unknown): number {
   throw new TypeError_(`float() argument must be a string or a real number, not '${_typeName(v)}'`);
 }
 
-/** `int(v)` of a JSON value: a float truncates. */
+/** `int(v)` of a JSON value: a float truncates. An infinity is an
+ *  OverflowError, which an unreadable ledger is not caught as, exactly as in
+ *  Python. */
 function _int(v: unknown): number {
   if (typeof v === "number") {
     if (Number.isNaN(v)) throw new ValueError("cannot convert float NaN to integer");
@@ -173,13 +171,9 @@ function _int(v: unknown): number {
 /** The errors a ledger that cannot be read raises: Python's (OSError,
  *  ValueError, TypeError, KeyError) — a file the system will not give us, a
  *  body that is not JSON, a field that is missing or not a number. */
-function _unreadable(e: unknown): boolean {
-  if (e instanceof SyntaxError || e instanceof ValueError || e instanceof TypeError_
-      || e instanceof TypeError || e instanceof KeyError) {
-    return true;
-  }
-  // An operating-system error (Python's OSError) carries its errno code.
-  return e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string";
+function _ledgerUnreadable(e: unknown): boolean {
+  return unreadable(e) || e instanceof ValueError || e instanceof TypeError_
+    || e instanceof TypeError || e instanceof KeyError;
 }
 
 
@@ -282,7 +276,7 @@ export class Spend {
         throw new ValueError("a negative or non-finite number");
       }
     } catch (e) {
-      if (!_unreadable(e)) throw e;
+      if (!_ledgerUnreadable(e)) throw e;
       this.ledger_error = `the spend ledger ${this.ledger} cannot be read (${repr(e)})`;
       return;
     }
@@ -534,11 +528,6 @@ export function _backoff(retry: number, exc: unknown): number {
   return wait;
 }
 
-/** A plain object: what Python's `isinstance(block, dict)` asks. */
-function _isDict(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
 /** What a request that timed out may have cost: its whole output ceiling,
  *  and an input counted a token per character (more than Japanese or English
  *  takes) with a picture at the most a picture is. The server may well have
@@ -548,9 +537,9 @@ export function _worstCaseUsage(system: string, user: string | unknown[], maxTok
   let chars = len(system);
   const blocks: unknown[] = Array.isArray(user) ? user : [{ type: "text", text: user }];
   for (const block of blocks) {
-    if (_isDict(block) && get(block, "type") === "image") {
+    if (isDict(block) && get(block, "type") === "image") {
       chars += _IMAGE_TOKENS_MAX;
-    } else if (_isDict(block)) {
+    } else if (isDict(block)) {
       chars += len(str(get(block, "text", "")));
     } else {
       chars += len(str(block));
@@ -619,7 +608,7 @@ export function requestParams(
  *  (`type='refusal' explanation='…'`, as the Python SDK prints it), anything
  *  else as itself. */
 function _detailsText(details: unknown): string {
-  if (_isDict(details)) {
+  if (isDict(details)) {
     return Object.entries(details).map(([k, v]) => `${k}=${repr(v)}`).join(" ");
   }
   return str(details);
@@ -683,7 +672,7 @@ export async function _structured(
   if (_TRUNCATED.includes(resp.stop_reason)) {
     throw new LLMTruncatedError(
       `reply cut off (${str(resp.stop_reason)}) at a ceiling of `
-      + `${Math.min(maxTokens, config.MAX_TOKENS_CEILING)} output tokens`);
+      + `${params.max_tokens} output tokens`);
   }
 
   let text: unknown = null;
@@ -714,6 +703,30 @@ export async function generateStructured(
                      { maxTokens: 8000, effort: config.GEN_EFFORT });
 }
 
+/** The schema of a one-flag-per-rule review: a boolean per rule, described
+ *  as `flag` says, then a `notes` string. Shared by the proofreader and the
+ *  scene reviewer, whose callers own the rule lists. */
+function _flagSchema(rules: Record<string, string>, flag: (fault: string) => string,
+                     notes: string): Record<string, unknown> {
+  const properties: Record<string, unknown> = {};
+  for (const [rule, fault] of Object.entries(rules)) {
+    properties[rule] = { type: "boolean", description: flag(fault) };
+  }
+  properties["notes"] = { type: "string", description: notes };
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [...Object.keys(rules), "notes"],
+    properties: properties,
+  };
+}
+
+/** A picture as a content block of the user turn. */
+function _imageBlock(image: Uint8Array, mediaType: string): Record<string, unknown> {
+  return { type: "image", source: { type: "base64", media_type: mediaType,
+                                    data: Buffer.from(image).toString("base64") } };
+}
+
 // ----- the proofreader --------------------------------------------------
 
 /** Read one finished item and say which of the rules it breaks.
@@ -732,17 +745,8 @@ export async function sanityCheck(
   rules: Record<string, string>,
   opts: { model?: string | null } = {},
 ): Promise<Record<string, any>> {
-  const properties: Record<string, unknown> = {};
-  for (const [rule, fault] of Object.entries(rules)) {
-    properties[rule] = { type: "boolean", description: `true if this fault is present: ${fault}` };
-  }
-  properties["notes"] = { type: "string", description: "one sentence on anything you flagged" };
-  const schema = {
-    type: "object",
-    additionalProperties: false,
-    required: [...Object.keys(rules), "notes"],
-    properties: properties,
-  };
+  const schema = _flagSchema(rules, (fault) => `true if this fault is present: ${fault}`,
+                             "one sentence on anything you flagged");
   const user = (
     "Proofread the finished test item below. It is meant to be difficult, and a "
     + "hard item is not a broken one — flag a rule only when the fault is actually "
@@ -852,8 +856,7 @@ export async function answerFromImage(
 ): Promise<Record<string, any>> {
   const numbered = options.map((t, i) => `${i}. ${str(t)}`).join("\n");
   const content = [
-    { type: "image", source: { type: "base64", media_type: mediaType,
-                               data: Buffer.from(image).toString("base64") } },
+    _imageBlock(image, mediaType),
     { type: "text", text: (
       `${question}\n\nOptions:\n${numbered}\n\n`
       + "Look at the picture and choose the single option that describes what it "
@@ -884,20 +887,10 @@ export async function reviewSceneImage(
   rules: Record<string, string>,
   opts: { model?: string | null } = {},
 ): Promise<Record<string, any>> {
-  const properties: Record<string, unknown> = {};
-  for (const [rule, fault] of Object.entries(rules)) {
-    properties[rule] = { type: "boolean", description: `true if the image has this fault: ${fault}` };
-  }
-  properties["notes"] = { type: "string", description: "one or two sentences on what you see" };
-  const schema = {
-    type: "object",
-    additionalProperties: false,
-    required: [...Object.keys(rules), "notes"],
-    properties: properties,
-  };
+  const schema = _flagSchema(rules, (fault) => `true if the image has this fault: ${fault}`,
+                             "one or two sentences on what you see");
   const content = [
-    { type: "image", source: { type: "base64", media_type: mediaType,
-                               data: Buffer.from(image).toString("base64") } },
+    _imageBlock(image, mediaType),
     { type: "text", text: (
       "This image was drawn for the brief below. It will be shared by many "
       + "listening-comprehension items about the same setting, so it must show the "

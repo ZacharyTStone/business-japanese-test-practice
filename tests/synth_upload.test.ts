@@ -12,24 +12,18 @@ import { describe, expect, test } from "vitest";
 import * as cli from "../bjt/cli/index.ts";
 import * as batch from "../bjt/batch.ts";
 import * as config from "../bjt/config.ts";
-import * as fixtures from "../bjt/fixtures.ts";
 import * as http from "../bjt/http.ts";
 import * as r2 from "../bjt/r2.ts";
 import * as scene_art from "../bjt/scene_art.ts";
 import * as providers from "../bjt/tts/providers.ts";
 import * as synth from "../bjt/tts/synth.ts";
-import { capture, patch, tmpPath } from "./helpers.ts";
+import { hatsugenBundle } from "./conftest.ts";
+import { bytes, capture, patch, tmpPath } from "./helpers.ts";
 
 const REFERENCE = path.join(config.ROOT, "batches", "hatsugen_choukai_J2_001.json");
 
 type RequestOpts = Parameters<typeof http.request>[2];
 
-const bytes = (s: string) => new TextEncoder().encode(s);
-
-/** The `bundle` fixture. */
-function bundleFixture(): Record<string, any> {
-  return batch.buildBundle("hatsugen_choukai", "J2", [fixtures.FIXTURES["hatsugen_choukai"]], "test");
-}
 
 /** A configured bucket whose server answers each upload with `answer`. */
 function _bucketSeeing(answer: (url: string, headers: Record<string, string>) => Uint8Array):
@@ -108,7 +102,7 @@ describe("synth_upload", () => {
 
   test("a clip already in the bucket is live and only a named one replaced", async () => {
     const tmp = tmpPath();
-    const report = await synth.synthesiseBundle(bundleFixture(), { outDir: tmp });
+    const report = await synth.synthesiseBundle(hatsugenBundle(), { outDir: tmp });
     const ids = report.clips.map((c) => c.clip_id);
     const bucket = new _Bucket(new Set([ids[0], ids[1]]));
     const up = await synth.uploadClips(report, bucket, { mediaDir: tmp, remake: new Set([ids[1]]) });

@@ -54,8 +54,8 @@ export default function Result() {
     hasAdFree().then(setAdFree);
     // The database may have moved a section's level on one of this set's
     // answers. That is the one thing worth a card of its own here, and it is
-    // read back rather than computed, because the rule lives in the trigger and
-    // nowhere else.
+    // read back rather than computed, because the rule lives in the Worker
+    // (worker/core/levels.ts) and nowhere else.
     fetchSectionLevels()
       .then(setLevelsNow)
       .catch(() => setLevelsNow([]));
@@ -224,7 +224,7 @@ export default function Result() {
           })}
           {correct < total ? (
             // The promise the daily set keeps: a trap that caught them comes back
-            // after a night, in a new question. See next_items, bucket 0.
+            // after a night, in a new question. See worker/core/queue.ts, bucket 0.
             <Text style={[type.small, { marginTop: space.xs }]}>{t("retry_promise")}</Text>
           ) : null}
         </Card>

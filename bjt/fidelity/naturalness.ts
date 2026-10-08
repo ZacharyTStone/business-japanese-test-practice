@@ -25,7 +25,7 @@
  * role, `nonexistent_form`, whose whole job is to be morphologically plausible and
  * not a word; those options are exempt from the keigo patterns.
  */
-import { get, KeyError, len, or, truthy, ValueError } from "../py.ts";
+import { get, KeyError, len, or, truthy, ValueError, WS } from "../py.ts";
 import * as schemas from "../schemas.ts";
 import * as document from "../render/document.ts";
 import * as tts_plan from "../tts/plan.ts";
@@ -90,11 +90,9 @@ export const ONE_PERSON_TYPES: ReadonlySet<string> = new Set(["gazou_haaku"]);
  *  to it. */
 export const NARRATION_MUST_NOT_SAY: ReadonlySet<string> = new Set(["bamen_haaku"]);
 
-// Python's `\s` (what `str.isspace()` says is whitespace), which is wider than
-// JavaScript's: written out so the two remove the same characters.
-const _PY_WS = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
-
-export const _PUNCT = new RegExp(`[${_PY_WS}。、．，,.!?！？「」『』]`, "gu");
+// `WS` is Python's `\s` (what `str.isspace()` says is whitespace), which is
+// wider than JavaScript's, so the two remove the same characters.
+export const _PUNCT = new RegExp(`[${WS}。、．，,.!?！？「」『』]`, "gu");
 
 export const PROMPT = (
   "Natural Japanese, every line of it. Everything in the item — the narration, the "

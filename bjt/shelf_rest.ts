@@ -30,8 +30,6 @@ import * as r2 from "./r2.ts";
 export const PREFIX = "nightly/shelves/";
 export const WRITTEN = "written";
 export const MISSED = "missed";
-/** The stamp's format, as Python's strftime/strptime wrote it. */
-export const _STAMP = "%Y%m%dT%H%M%S";
 
 /** A shelf: (item type, level). */
 export type Shelf = [string, string];

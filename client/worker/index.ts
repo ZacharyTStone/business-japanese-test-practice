@@ -16,8 +16,7 @@
  * Same origin, so there is no CORS to configure and the session cookie rides
  * along with every request the app makes.
  */
-import type { AuthEnv } from "./auth";
-import { authFor } from "./auth";
+import { authFor, type AuthEnv } from "./auth";
 import { resolveLearner } from "./core/caller";
 import { toApiError } from "./core/errors";
 import { isRefusal, notATester, type Refusal } from "./identity";
@@ -51,7 +50,7 @@ export async function runQuery(
   args: Record<string, unknown>,
   { now = Date.now(), random = Math.random, checkSignIn = true }: { now?: number; random?: (id: string) => number; checkSignIn?: boolean } = {}
 ): Promise<Response> {
-  if (!Object.prototype.hasOwnProperty.call(queries, name)) {
+  if (!Object.hasOwn(queries, name)) {
     return json({ error: { code: "unknown_query", message: `no query named ${name}` } }, 404);
   }
   try {

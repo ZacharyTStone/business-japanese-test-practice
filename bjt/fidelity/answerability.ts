@@ -51,14 +51,11 @@
  */
 import * as config from "../config.ts";
 import * as llm from "../llm.ts";
-import { get, has, or, PyError, slice, str, strip, sum, toInt, truthy, TypeError_, ValueError } from "../py.ts";
+import { get, has, or, OverflowError, slice, str, strip, toInt, truthy, TypeError_, ValueError, ZeroDivisionError } from "../py.ts";
 import * as schemas from "../schemas.ts";
 import * as textutil from "../textutil.ts";
 import * as document from "../render/document.ts";
 import { correctIndex } from "../schemas.ts";
-
-/** Python's ZeroDivisionError: a fraction over nothing. */
-export class ZeroDivisionError extends PyError {}
 
 /** Python's `fractions.Fraction`, as far as the gate uses it: a ratio of two
  *  integers compared exactly, never as a float (two thirds is not 0.666…). */
@@ -142,13 +139,11 @@ export class GateResult {
  *  could change the verdict. The gate's early stop. */
 export type Decided = (correct: number, done: number, planned: number) => boolean;
 
-/** Python's OverflowError: `int()` of an infinite float. Not one of the
- *  errors a trial is scored unanswered on, exactly as in Python. */
-class OverflowError extends PyError {}
-
 /** Python's `int(x)` of what a judge returned as its choice: a whole number
  *  as itself, a float cut toward zero, a numeral string read, a boolean as 0
- *  or 1; anything else the ValueError or TypeError `int()` raises. */
+ *  or 1; anything else the ValueError or TypeError `int()` raises. An
+ *  infinity is an OverflowError, which a trial is not scored unanswered on,
+ *  exactly as in Python. */
 function _int(x: unknown): number {
   if (typeof x === "boolean") return x ? 1 : 0;
   if (typeof x === "number") {
@@ -205,11 +200,16 @@ export async function runTrials(
     if (chosen === null) {
       break;
     }
-    if (decided && decided(sum(out.map((x) => (x.correct ? 1 : 0))), out.length, trials)) {
+    if (decided && decided(correctCount(out), out.length, trials)) {
       break;
     }
   }
   return out;
+}
+
+/** How many of the trials were answered correctly. */
+export function correctCount(trials: readonly Trial[]): number {
+  return trials.filter((t) => t.correct).length;
 }
 
 /** True when any trial got no answer — or none was asked at all. */
@@ -418,7 +418,7 @@ export async function runGate(item: Record<string, any>): Promise<GateResult> {
     return new GateResult({ cold_success_rate: null, full_success_rate: null,
                             verdict: UNCHECKED, trials: coldTrials });
   }
-  const coldCorrect = sum(coldTrials.map((t) => (t.correct ? 1 : 0)));
+  const coldCorrect = correctCount(coldTrials);
   const coldRate = coldCorrect / coldTrials.length;
   if (isLeaky(coldCorrect, planned)) {
     return new GateResult({
@@ -434,7 +434,7 @@ export async function runGate(item: Record<string, any>): Promise<GateResult> {
     return new GateResult({ cold_success_rate: null, full_success_rate: null,
                             verdict: UNCHECKED, trials: [...fullTrials, ...coldTrials] });
   }
-  const fullCorrect = sum(fullTrials.map((t) => (t.correct ? 1 : 0)));
+  const fullCorrect = correctCount(fullTrials);
   const fullRate = fullCorrect / fullTrials.length;
   const verdict = isAmbiguous(fullCorrect, planned) ? "discarded:ambiguous" : "kept";
 

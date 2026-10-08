@@ -2,12 +2,8 @@
  *  that is the only door while the app is in testing). Both print SQL for a
  *  person to read and apply; neither holds a key that could write it. */
 import * as publish from "../publish.ts";
-import { eprint, len, print, repr, str, strip } from "../py.ts";
+import { eprint, len, print, repr, str, strip, WS } from "../py.ts";
 import type { Namespace, SubParsers } from "./argparse.ts";
-
-/** Python's `\s` (`str.isspace()`), which is not JavaScript's: it has the
- *  information separators and NEL, and not the byte-order mark. */
-const _PY_SPACE = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
 
 /** A user id (users.id), a uuid. (`\n?$`: Python's `$` also matches before a
  *  trailing newline.) */
@@ -19,7 +15,7 @@ export const _UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{
  *  that cannot end the comment line it is printed in. Quotes are allowed
  *  (o'brien@…) — `publish.lit` doubles them. */
 export const _EMAIL = new RegExp(
-  `^[^@${_PY_SPACE}\\x00-\\x1f\\x7f]+@[^@${_PY_SPACE}\\x00-\\x1f\\x7f]+\\.[^@${_PY_SPACE}\\x00-\\x1f\\x7f.]+\\n?$`, "u");
+  `^[^@${WS}\\x00-\\x1f\\x7f]+@[^@${WS}\\x00-\\x1f\\x7f]+\\.[^@${WS}\\x00-\\x1f\\x7f.]+\\n?$`, "u");
 
 
 /**

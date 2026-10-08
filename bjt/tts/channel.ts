@@ -17,7 +17,7 @@
  * and written here the way Python's `wave` module (which the pipeline used to
  * use) reads and writes it, so the same input gives the same bytes.
  */
-import { floorDiv, get, PyError, round, RuntimeError, truthy, ValueError } from "../py.ts";
+import { floorDiv, get, IndexError, PyError, round, RuntimeError, truthy, ValueError, ZeroDivisionError } from "../py.ts";
 import { CHANNEL_PROFILES } from "./plan.ts";
 
 /** WAV bytes → (samples, sample_rate, channels). Mono-mixed. */
@@ -188,8 +188,6 @@ export class EOFError extends PyError {}
 export { RuntimeError };
 /** `struct.error`: a sample outside 16 bits, or a byte string of odd length. */
 export class StructError extends PyError {}
-export class IndexError extends PyError {}
-export class ZeroDivisionError extends PyError {}
 
 const WAVE_FORMAT_PCM = 0x0001;
 
@@ -271,8 +269,9 @@ class _Chunk {
   }
 }
 
-/** `wave.open(io.BytesIO(data), "rb")`. */
-class _WaveRead {
+/** `wave.open(io.BytesIO(data), "rb")`. Also what `synth._durationOf` reads
+ *  a clip on disk with. */
+export class _WaveRead {
   private readonly nchannels: number = 0;
   private readonly framerate: number = 0;
   private readonly sampwidth: number = 0;

@@ -52,7 +52,7 @@ export function levelEvidence(snap: Snapshot, section: Section): Evidence {
   const window = Math.min(firsts.length < 20 ? 10 : 20, shelf);
   const recent = firsts
     .filter((f) => f.item.level === level && (since === null || f.answered_at >= since) && !f.helped)
-    .sort((a, b) => (before(a, b) ? 1 : before(b, a) ? -1 : 0))
+    .sort((a, b) => (before(a, b) ? 1 : before(b, a) ? -1 : 0)) // newest first
     .slice(0, Math.max(window, 0));
   return {
     level,

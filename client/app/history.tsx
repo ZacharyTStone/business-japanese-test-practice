@@ -1,7 +1,7 @@
 /**
  * What you have answered, newest first.
  *
- * `attempts` has no update or delete policy — an answer already given is
+ * No query updates or deletes an answer — an answer already given is
  * history, and rewriting it would quietly corrupt the weakness profile built
  * from it. This screen is the other side of that decision: if the record is
  * permanent, it should at least be *readable*, and the most useful thing to
@@ -30,7 +30,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useAuth } from "../src/lib/auth";
 import { clipUrl, fetchHistory, fetchNotes, fetchReviewDetail, saveNote } from "../src/lib/db";
 import { NUMBERS } from "../src/lib/labels";
 import { useLang } from "../src/lib/i18n";
@@ -41,13 +40,12 @@ import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/componen
 import { ScreenGate } from "../src/ui/screen";
 import { ScreenCrash } from "../src/ui/crash";
 import { DocumentView } from "../src/ui/document";
-import { colors, radius, shadow, space, type } from "../src/ui/theme";
-
+import { card, colors, radius, space, type } from "../src/ui/theme";
 
 /** A throw while drawing stays on this screen (ui/crash.tsx). */
 export const ErrorBoundary = ScreenCrash;
 
-/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+/** Behind the setup notice when no Worker is configured (ui/screen.tsx). */
 export default function HistoryScreen() {
   return (
     <ScreenGate underHeader>
@@ -316,7 +314,6 @@ function NoteEditor({
   onSaved: (text: string) => void;
 }) {
   const { t } = useLang();
-  const { session } = useAuth();
   const [text, setText] = useState(saved);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   useEffect(() => setText(saved), [saved]);
@@ -343,13 +340,8 @@ function NoteEditor({
             selected={false}
             onPress={() => {
               if (state === "saving" || !dirty) return;
-              const userId = session?.user.id;
-              if (!userId) {
-                setState("failed");
-                return;
-              }
               setState("saving");
-              saveNote(userId, itemId, text)
+              saveNote(itemId, text)
                 .then(() => {
                   onSaved(text.trim());
                   setState("saved");
@@ -379,15 +371,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   row: { flexDirection: "row", gap: space.sm },
-  entry: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: space.lg,
-    gap: space.sm,
-    ...shadow.card,
-  },
+  entry: { ...card, gap: space.sm },
   entryHead: { flexDirection: "row", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
   option: {
     flexDirection: "row",

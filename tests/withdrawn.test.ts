@@ -16,7 +16,7 @@ import * as publish from "../bjt/publish.ts";
 import { deepcopy, len, sorted, ValueError } from "../bjt/py.ts";
 import { shelfKey } from "../bjt/shelf_rest.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
-import { patch, tmpPath } from "./helpers.ts";
+import { after, before, patch, tmpPath } from "./helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const BATCHES = path.join(ROOT, "batches");
@@ -31,19 +31,6 @@ function _libraryIds(): Set<string> {
     for (const it of batch.load(p)["items"] as Item[]) ids.add(it["id"]);
   }
   return ids;
-}
-
-/** `s.split(sep, 1)[1]`: everything after the first `sep`. */
-function after(s: string, sep: string): string {
-  const i = s.indexOf(sep);
-  expect(i, `${JSON.stringify(sep)} not found`).toBeGreaterThanOrEqual(0);
-  return s.slice(i + sep.length);
-}
-
-/** `s.split(sep, 1)[0]`: everything before the first `sep`. */
-function before(s: string, sep: string): string {
-  const i = s.indexOf(sep);
-  return i < 0 ? s : s.slice(0, i);
 }
 
 // ----- the committed ledger -------------------------------------------------

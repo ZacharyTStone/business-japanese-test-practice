@@ -12,6 +12,7 @@ import { describe, expect, test } from "vitest";
 import * as http from "../bjt/http.ts";
 import * as jev from "../bjt/jev.ts";
 import * as llm from "../bjt/llm.ts";
+import { freshLedger } from "./conftest.ts";
 import { patch, setConfig, setEnv } from "./helpers.ts";
 
 function _status(code: number, retryAfter: string | null = null): Error {
@@ -25,13 +26,6 @@ function _ok(): Record<string, any> {
     content: [{ type: "text", text: '{"choice": 0, "reason": "x"}' }],
     usage: { input_tokens: 1000, output_tokens: 200 },
   };
-}
-
-/** `ledger`: a fresh bill for the test. */
-function ledgerFixture(): llm.Spend {
-  const fresh = new llm.Spend();
-  patch(llm.state, "spend", fresh);
-  return fresh;
 }
 
 /** `waits`: every wait between retries, instead of waiting. */
@@ -66,7 +60,7 @@ function _client(replies: unknown[]): Record<string, any>[] {
 
 describe("retries", () => {
   test("a transient failure is retried and every attempt counted", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     const waits = waitsFixture();
     setConfig({ API_MAX_RETRIES: 2 });
     const sent = _client([_status(529), new Anthropic.APIConnectionError({ message: undefined }), _ok()]);
@@ -78,7 +72,7 @@ describe("retries", () => {
   });
 
   test("the retry budget is the configured one", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     waitsFixture();
     setConfig({ API_MAX_RETRIES: 2 });
     const sent = _client([_status(503)]);
@@ -87,7 +81,7 @@ describe("retries", () => {
   });
 
   test("a request that can never succeed is not retried", async () => {
-    ledgerFixture();
+    freshLedger();
     const waits = waitsFixture();
     const sent = _client([_status(400)]);
     await expect(llm.answerChoice("q", ["a"], { model: "claude-sonnet-5" })).rejects.toThrow(llm.LLMError);
@@ -96,7 +90,7 @@ describe("retries", () => {
   });
 
   test("an empty account is not retried", async () => {
-    ledgerFixture();
+    freshLedger();
     waitsFixture();
     const broke = Anthropic.APIError.generate(
       400, undefined, "Your credit balance is too low to access the Anthropic API.", new Headers());
@@ -108,7 +102,7 @@ describe("retries", () => {
   test("the call ceiling counts requests not responses", async () => {
     // Two failed requests are two requests: the third is refused before it
     // is sent, retry or not.
-    ledgerFixture();
+    freshLedger();
     waitsFixture();
     setConfig({ RUN_MAX_CALLS: 2, API_MAX_RETRIES: 5 });
     const sent = _client([_status(529)]);
@@ -120,7 +114,7 @@ describe("retries", () => {
 
   test("every retry passes the ceilings first", async () => {
     // The minute ceiling reached while waiting to retry stops the retry.
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     waitsFixture();
     setConfig({ RUN_MAX_MINUTES: 30 });
 
@@ -133,7 +127,7 @@ describe("retries", () => {
   });
 
   test("a timed out request is priced at its ceiling", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     waitsFixture();
     setConfig({ API_MAX_RETRIES: 0 });
     _client([new Anthropic.APIConnectionTimeoutError()]);
@@ -144,7 +138,7 @@ describe("retries", () => {
   });
 
   test("the servers retry after is honoured when short", async () => {
-    ledgerFixture();
+    freshLedger();
     const waits = waitsFixture();
     setConfig({ API_MAX_RETRIES: 1 });
     _client([_status(429, "3"), _ok()]);
@@ -153,7 +147,7 @@ describe("retries", () => {
   });
 
   test("a jev request is counted before it is sent", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     setEnv("TYPESAFE_API_KEY", "k");
     patch(http.seams, "open", async () => {
       throw new http.OSError("down");
@@ -168,7 +162,7 @@ describe("retries", () => {
     // An SDK too old for output_config raises a TypeError on every call.
     // Wrapped as an LLMError it read as an outage, and every tolerant call site
     // (the proofreader, the probe) turned a broken run into a quiet one.
-    ledgerFixture();
+    freshLedger();
     const waits = waitsFixture();
     _client([new TypeError("Messages.create() got an unexpected keyword argument "
                            + "'output_config'")]);
@@ -182,7 +176,7 @@ describe("retries", () => {
     // The SDK reports a missing key as a plain error rather than as one of
     // its API errors (Python's SDK raises a TypeError); that one is an
     // outage, so a probe without a key reports unmeasured as documented.
-    ledgerFixture();
+    freshLedger();
     waitsFixture();
     _client([new Error('"Could not resolve authentication method. Expected one of '
                        + 'api_key, auth_token, or credentials to be set."')]);

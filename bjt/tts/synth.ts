@@ -32,12 +32,12 @@
  * synthesises, the bucket uploads); reading `have`, the SQL and the report are
  * not.
  */
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as config from "../config.ts";
 import { writeAtomic } from "../files.ts";
 import * as publish from "../publish.ts";
-import { errText, floorDiv, get, RuntimeError, slice, sorted, splitlines, str, strip, SystemExit, thousands, ValueError } from "../py.ts";
+import { errText, floorDiv, get, isException, RuntimeError, slice, sorted, splitlines, str, strip, thousands, ValueError } from "../py.ts";
 import { dumps } from "../pyjson.ts";
 import * as scene_art from "../scene_art.ts";
 import * as withdrawn from "../withdrawn.ts";
@@ -134,10 +134,10 @@ export function storagePath(clipId: string, providerName: string): string {
   return `${providerName}/${slice(clipId, 0, 2)}/${clipId}.wav`;
 }
 
-/** Python's `except Exception`: every error but the one that ends the
- *  process. */
-function _isException(exc: unknown): boolean {
-  return exc instanceof Error && !(exc instanceof SystemExit);
+/** A provider, or its name (default: silent). */
+function _provider(p: Provider | string | undefined): Provider {
+  const chosen = p ?? "silent";
+  return typeof chosen === "string" ? getProvider(chosen) : chosen;
 }
 
 /**
@@ -173,10 +173,7 @@ export async function synthesiseBundle(
     remake?: ReadonlySet<string> | null;
   } = {},
 ): Promise<SynthReport> {
-  let provider = opts.provider ?? "silent";
-  if (typeof provider === "string") {
-    provider = getProvider(provider);
-  }
+  const provider = _provider(opts.provider);
   const outDir = path.join(opts.outDir ? opts.outDir : config.MEDIA_DIR, "audio");
   const force = opts.force ?? false;
   const limit = opts.limit ?? null;
@@ -191,14 +188,14 @@ export async function synthesiseBundle(
     // Named for replacement: neither the database's list of live clips nor
     // a copy sitting on this machine stands in the way.
     const named = remake !== null && remake.has(clip["clip_id"]);
-    if (have !== null && have.size > 0 && have.has(clip["clip_id"]) && !named) {
+    if (have !== null && have.has(clip["clip_id"]) && !named) {
       report.live.push(clip["clip_id"]);
       continue;
     }
     const rel = storagePath(clip["clip_id"], provider.name);
     const dest = path.join(outDir, rel);
 
-    if (_exists(dest) && !force && !named) {
+    if (existsSync(dest) && !force && !named) {
       let ms: number;
       try {
         ms = _durationOf(dest);
@@ -226,7 +223,7 @@ export async function synthesiseBundle(
       );
       processed = channel_mod.applyChannel(raw, clip["channel"]);
     } catch (exc) { // one bad clip must not stop the run
-      if (!_isException(exc)) throw exc;
+      if (!isException(exc)) throw exc;
       // A whole batch failing because one clip did would mean paying for
       // the successful ones again on the retry.
       report.failed.push([clip["clip_id"], errText(exc)]);
@@ -235,7 +232,7 @@ export async function synthesiseBundle(
 
     writeAtomic(dest, processed);
     made += 1;
-    if (named && have !== null && have.size > 0 && have.has(clip["clip_id"])) {
+    if (named && have !== null && have.has(clip["clip_id"])) {
       report.remade.push(clip["clip_id"]);
     }
     report.written.push(
@@ -288,10 +285,7 @@ export async function run(
     remake?: ReadonlySet<string> | null;
   } = {},
 ): Promise<SynthRun> {
-  let provider = opts.provider ?? "silent";
-  if (typeof provider === "string") {
-    provider = getProvider(provider);
-  }
+  const provider = _provider(opts.provider);
   const bucket = opts.bucket ?? null;
   const have = opts.have ?? null;
   const remake = opts.remake ?? null;
@@ -331,16 +325,6 @@ export async function run(
   return out;
 }
 
-/** `Path(p).exists()`. */
-function _exists(p: string): boolean {
-  try {
-    statSync(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** How long a clip on disk is. Throws ValueError for a file that is not a
  *  whole WAV — unreadable, cut short of the frames its header promises, or
  *  empty — rather than calling it zero milliseconds long: a zero here went
@@ -350,7 +334,7 @@ export function _durationOf(p: string): number {
   let declared: number;
   let frames: number;
   try {
-    const w = new _WaveRead(data);
+    const w = new channel_mod._WaveRead(data);
     declared = w.getnframes();
     frames = floorDiv(w.readframes(declared).length, Math.max(1, w.getsampwidth() * w.getnchannels()));
   } catch (exc) {
@@ -515,160 +499,4 @@ export function writeReport(report: SynthReport, p: string): string {
     "utf8",
   );
   return p;
-}
-
-// ----- the WAV container, as Python's `wave` module reads it ------------------
-//
-// `_durationOf` asks of a file what `wave.open(...)` tells: how many frames
-// the header declares and how many are really there. bjt/tts/channel.ts reads
-// the container the same way but keeps its reader to itself, so this is the
-// same walk (Python 3.11's `wave.Wave_read` over `chunk.Chunk`), only as far
-// as those two numbers: the same chunk bounds, the same failures.
-
-const WAVE_FORMAT_PCM = 0x0001;
-
-/** `io.BytesIO` over bytes, read-only. */
-class _BytesIO {
-  private readonly buf: Uint8Array;
-  private pos = 0;
-  constructor(buf: Uint8Array) {
-    this.buf = buf;
-  }
-  read(size: number = -1): Uint8Array {
-    const end = size < 0 ? this.buf.length : Math.min(this.buf.length, this.pos + size);
-    if (this.pos >= end) return new Uint8Array(0);
-    const out = this.buf.subarray(this.pos, end);
-    this.pos = end;
-    return out;
-  }
-  seek(pos: number, whence: number = 0): void {
-    if (whence === 0 && pos < 0) throw new ValueError(`negative seek value ${pos}`);
-    if (whence === 1) pos = this.pos + pos;
-    else if (whence === 2) pos = this.buf.length + pos;
-    this.pos = Math.max(0, pos);
-  }
-  tell(): number {
-    return this.pos;
-  }
-}
-
-/** `chunk.Chunk`, little-endian, aligned. */
-class _Chunk {
-  private readonly file: _BytesIO | _Chunk;
-  readonly chunkname: string;
-  readonly chunksize: number;
-  sizeRead = 0;
-  private readonly offset: number;
-
-  constructor(file: _BytesIO | _Chunk) {
-    this.file = file;
-    const name = file.read(4);
-    if (name.length < 4) throw new channel_mod.EOFError();
-    this.chunkname = String.fromCharCode(...name);
-    const size = file.read(4);
-    if (size.length < 4) throw new channel_mod.EOFError();
-    this.chunksize = Buffer.from(size).readUInt32LE(0);
-    this.offset = file.tell();
-  }
-
-  seek(pos: number, whence: number = 0): void {
-    if (whence === 1) pos = pos + this.sizeRead;
-    else if (whence === 2) pos = pos + this.chunksize;
-    if (pos < 0 || pos > this.chunksize) throw new RuntimeError();
-    this.file.seek(this.offset + pos);
-    this.sizeRead = pos;
-  }
-
-  tell(): number {
-    return this.sizeRead;
-  }
-
-  read(size: number = -1): Uint8Array {
-    if (this.sizeRead >= this.chunksize) return new Uint8Array(0);
-    if (size < 0) size = this.chunksize - this.sizeRead;
-    if (size > this.chunksize - this.sizeRead) size = this.chunksize - this.sizeRead;
-    const data = this.file.read(size);
-    this.sizeRead = this.sizeRead + data.length;
-    if (this.sizeRead === this.chunksize && this.chunksize & 1) {
-      const dummy = this.file.read(1);
-      this.sizeRead = this.sizeRead + dummy.length;
-    }
-    return data;
-  }
-
-  skip(): void {
-    let n = this.chunksize - this.sizeRead;
-    // maybe fix alignment
-    if (this.chunksize & 1) n = n + 1;
-    this.file.seek(n, 1);
-    this.sizeRead = this.sizeRead + n;
-  }
-}
-
-/** `wave.open(io.BytesIO(data), "rb")`, as far as `_durationOf` reads it. */
-class _WaveRead {
-  private nchannels = 0;
-  private sampwidth = 0;
-  private nframes = 0;
-  private framesize = 0;
-  private readonly dataChunk: _Chunk;
-
-  constructor(data: Uint8Array) {
-    const file = new _Chunk(new _BytesIO(data));
-    if (file.chunkname !== "RIFF") throw new channel_mod.WaveError("file does not start with RIFF id");
-    if (String.fromCharCode(...file.read(4)) !== "WAVE") throw new channel_mod.WaveError("not a WAVE file");
-    let fmtChunkRead = false;
-    let dataChunk: _Chunk | null = null;
-    for (;;) {
-      let chunk: _Chunk;
-      try {
-        chunk = new _Chunk(file);
-      } catch (e) {
-        if (e instanceof channel_mod.EOFError) break;
-        throw e;
-      }
-      if (chunk.chunkname === "fmt ") {
-        // _read_fmt_chunk
-        const head = chunk.read(14);
-        if (head.length < 14) throw new channel_mod.EOFError();
-        const h = Buffer.from(head);
-        const wFormatTag = h.readUInt16LE(0);
-        this.nchannels = h.readUInt16LE(2);
-        if (wFormatTag === WAVE_FORMAT_PCM) {
-          const width = chunk.read(2);
-          if (width.length < 2) throw new channel_mod.EOFError();
-          this.sampwidth = floorDiv(Buffer.from(width).readUInt16LE(0) + 7, 8);
-          if (!this.sampwidth) throw new channel_mod.WaveError("bad sample width");
-        } else {
-          throw new channel_mod.WaveError(`unknown format: ${wFormatTag}`);
-        }
-        if (!this.nchannels) throw new channel_mod.WaveError("bad # of channels");
-        this.framesize = this.nchannels * this.sampwidth;
-        fmtChunkRead = true;
-      } else if (chunk.chunkname === "data") {
-        if (!fmtChunkRead) throw new channel_mod.WaveError("data chunk before fmt chunk");
-        dataChunk = chunk;
-        this.nframes = floorDiv(chunk.chunksize, this.framesize);
-        break;
-      }
-      chunk.skip();
-    }
-    if (!fmtChunkRead || dataChunk === null) throw new channel_mod.WaveError("fmt chunk and/or data chunk missing");
-    this.dataChunk = dataChunk;
-  }
-
-  getnchannels(): number {
-    return this.nchannels;
-  }
-  getnframes(): number {
-    return this.nframes;
-  }
-  getsampwidth(): number {
-    return this.sampwidth;
-  }
-
-  readframes(nframes: number): Uint8Array {
-    if (nframes === 0) return new Uint8Array(0);
-    return this.dataChunk.read(nframes * this.framesize);
-  }
 }

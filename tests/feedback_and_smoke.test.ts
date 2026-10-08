@@ -6,17 +6,11 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import * as cli from "../bjt/cli/index.ts";
-import * as fixtures from "../bjt/fixtures.ts";
 import * as llm from "../bjt/llm.ts";
 import { getGenerator } from "../bjt/generators/index.ts";
-import { deepcopy } from "../bjt/py.ts";
 import * as schemas from "../bjt/schemas.ts";
-import { seedsDir, store } from "./conftest.ts";
+import { fixtureItem, seedsDir, store } from "./conftest.ts";
 import { capture, patch, setConfig, tmpPath } from "./helpers.ts";
-
-function _valid(t: string): Record<string, any> {
-  return deepcopy(fixtures.FIXTURES[t]);
-}
 
 // ----- tell feedback loop (fidelity #3 closes onto #1's prompt) -----------
 
@@ -47,7 +41,7 @@ describe("tell feedback loop", () => {
 // ----- smoke harness ------------------------------------------------------
 
 async function _fakeKeptAnswer(question: string, options: string[]): Promise<Record<string, any>> {
-  const correct = (_valid("goi_bunpou")["options"] as Record<string, any>[])
+  const correct = (fixtureItem("goi_bunpou")["options"] as Record<string, any>[])
     .find((o) => o["role"] === "correct")!["text"];
   const ci = options.indexOf(correct);
   expect(ci).toBeGreaterThanOrEqual(0);
@@ -59,7 +53,7 @@ describe("smoke harness", () => {
     const tmp = tmpPath();
     const cap = capture();
     setConfig({ DB_PATH: path.join(tmp, "smoke.db"), SANITY_ENABLED: false });
-    patch(llm, "generateStructured", async () => _valid("goi_bunpou"));
+    patch(llm, "generateStructured", async () => fixtureItem("goi_bunpou"));
     patch(llm, "answerChoice", _fakeKeptAnswer);
     const rc = await cli.cmdSmoke({ type: "goi_bunpou", level: "J2", n: 3, no_gate: false });
     expect(rc).toBe(0);
@@ -89,7 +83,7 @@ describe("gen --json", () => {
     const tmp = tmpPath();
     const cap = capture();
     setConfig({ DB_PATH: path.join(tmp, "gen.db"), DIFFICULTY_ENABLED: false });
-    patch(llm, "generateStructured", async () => _valid("hyougen"));
+    patch(llm, "generateStructured", async () => fixtureItem("hyougen"));
     const rc = await cli.cmdGen({ type: "hyougen", level: "J2", no_gate: true, no_sanity: true, json: true });
     expect(rc).toBe(0);
     const out = cap.readouterr().out;

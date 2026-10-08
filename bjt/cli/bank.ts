@@ -18,7 +18,7 @@ import * as jev from "../jev.ts";
 import * as llmmod from "../llm.ts";
 import * as pipeline from "../pipeline.ts";
 import * as publish from "../publish.ts";
-import { eprint, errText, fixed, g, get, print, repr, sorted, str, sum, truthy, ValueError } from "../py.ts";
+import { eprint, errText, fixed, g, get, pathStr, print, repr, sorted, str, sum, truthy, ValueError } from "../py.ts";
 import { loads } from "../pyjson.ts";
 import { Random } from "../pyrandom.ts";
 import * as regate from "../regate.ts";
@@ -32,25 +32,15 @@ import type { Namespace, SubParsers } from "./argparse.ts";
 /** An item or a bundle: plain JSON data. */
 type Item = Record<string, any>;
 
-/** `str(pathlib.Path(p))`: a path as pathlib spells it — repeated and
- *  trailing slashes and `.` components dropped, `..` kept, an empty path
- *  `.`. What the commands print where the Python printed a `Path`, and the
- *  argument type of `--out` (argparse's `type=pathlib.Path`). */
-export function _pathStr(p: string): string {
-  const lead = p.startsWith("//") && !p.startsWith("///") ? "//" : p.startsWith("/") ? "/" : "";
-  const parts = p.split("/").filter((s) => s !== "" && s !== ".");
-  const out = lead + parts.join("/");
-  return out === "" ? "." : out;
-}
-
 /**
  * Measure the difficulty of live items that shipped without a measurement.
  *
  * `items.model_p_correct` is the queue's prior on how hard a question is, and
- * it is the only term in `next_items()` that tells two items of the same type
- * and level apart. It is written at generation time — by the difficulty probe,
- * or failing that by the answerability gate — so an item that reached the
- * bank any other way has none. `bjt importbatch` is that other way: it stores
+ * it is the only term in `nextItems()` (client/worker/core/queue.ts) that
+ * tells two items of the same type and level apart. It is written at
+ * generation time — by the difficulty probe, or failing that by the
+ * answerability gate — so an item that reached the bank any other way has
+ * none. `bjt importbatch` is that other way: it stores
  * with `gate_verdict="skipped"` and measures nothing, which is right for an
  * offline import and leaves a hole: for those items the ranking term falls
  * back to a constant, so the pitch does nothing at all across them.
@@ -387,13 +377,12 @@ export async function cmdImportbatch(args: Namespace): Promise<number> {
     return 1;
   }
   const out = batchmod.save(bundle, {
-    path: truthy(args.out) ? args.out : _pathStr((args.path as string).replaceAll(".source.json", ".json")),
+    path: truthy(args.out) ? args.out : pathStr((args.path as string).replaceAll(".source.json", ".json")),
   });
   print(`\nWrote ${items.length} item(s) to ${out}`);
   return 0;
 }
 
-/** Re-run every offline check over an existing bundle. No API key needed. */
 /**
  * The reported questions still live, and the ledger line that would withdraw
  * each (`bjt/reports.ts`). Reads what the owner downloaded; holds no key and
@@ -422,8 +411,9 @@ export async function cmdReports(args: Namespace): Promise<number> {
   return 0;
 }
 
+/** Re-run every offline check over an existing bundle. No API key needed. */
 export async function cmdCheckbatch(args: Namespace): Promise<number> {
-  const bundle = batchmod.load(_pathStr(args.path));
+  const bundle = batchmod.load(pathStr(args.path));
   const report = batchmod.checkBundle(bundle);
   pipeline.printBundleReport(bundle, report);
   if (args.show) {
@@ -440,7 +430,7 @@ export async function cmdCheckbatch(args: Namespace): Promise<number> {
 /** Bundle → SQL. Content reaches the database as a reviewable file, never as
  *  a live call from a laptop holding a service key. */
 export async function cmdPublish(args: Namespace): Promise<number> {
-  const p = _pathStr(args.path);
+  const p = pathStr(args.path);
   const bundle = batchmod.load(p);
   const report = batchmod.checkBundle(bundle);
   if (!report.ok && !args.force) {
@@ -473,7 +463,7 @@ export async function cmdPublish(args: Namespace): Promise<number> {
 export function register(sub: SubParsers, types: string[]): void {
   const ib = sub.addParser("importbatch", { help: "validate a hand-written source file into a bundle" });
   ib.addArgument("path");
-  ib.addArgument("--out", { type: _pathStr, default: null, help: "bundle path" });
+  ib.addArgument("--out", { type: pathStr, default: null, help: "bundle path" });
   ib.addArgument("--shuffle", { action: "store_true",
                                 help: "re-shuffle option order (leave off when the author set it deliberately)" });
   ib.addArgument("--seed", { type: "int", default: null, help: "make --shuffle reproducible" });
@@ -483,7 +473,7 @@ export function register(sub: SubParsers, types: string[]): void {
   ib.setDefaults({ func: cmdImportbatch });
   const pb = sub.addParser("publish", { help: "turn a bundle into idempotent SQL for the database" });
   pb.addArgument("path");
-  pb.addArgument("--out", { type: _pathStr, default: null,
+  pb.addArgument("--out", { type: pathStr, default: null,
                             help: "where to write the SQL (default: alongside the bundle)" });
   pb.addArgument("--force", { action: "store_true",
                               help: "publish even if the bundle fails its own checks" });

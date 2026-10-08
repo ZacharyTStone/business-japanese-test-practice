@@ -48,7 +48,7 @@ import { FadeIn } from "../../src/ui/motion";
 import { useTabClearance } from "../../src/ui/tabbar";
 import { colors, shadow, space, tabular } from "../../src/ui/theme";
 
-/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+/** Behind the setup notice when no Worker is configured (ui/screen.tsx). */
 export default function HomeScreen() {
   return (
     <ScreenGate>
@@ -140,13 +140,15 @@ function Home() {
     );
   }
 
-  // Three states, decided by the database's own count of today (v_my_day):
+  // Three states, decided by the database's own count of today (`day()`):
   // the day's set still open; the set done and a bonus set on offer; and the
   // ceiling reached, which is a full stop rather than a dimmer button. An
   // account with the ceiling lifted never reaches the third.
   const goal = day?.goal ?? profile?.daily_goal ?? 10;
   const answered = day?.answered_today ?? 0;
   const done = Math.min(answered, goal);
+  const left = goal - done;
+  const share = goal > 0 ? done / goal : 0;
   // The same arithmetic practice uses to size the set (src/lib/day.ts).
   const blocked = day != null && dayState(day) === "done";
   const bonus = day != null ? setSize(day) : 0;
@@ -233,8 +235,8 @@ function Home() {
                 </Text>
               </View>
               <ProgressRing
-                value={goal > 0 ? done / goal : 0}
-                label={`${Math.round((goal > 0 ? done / goal : 0) * 100)}%`}
+                value={share}
+                label={`${Math.round(share * 100)}%`}
                 caption={t("today")}
                 accessibilityLabel={t("goal_ring", { done, goal })}
               />
@@ -247,8 +249,8 @@ function Home() {
               label={t("btn_today")}
               sub={
                 due > 0
-                  ? t("btn_today_sub_due", { n: goal - done, min: minutesFor(goal - done, perQuestion), due })
-                  : t("btn_today_sub", { n: goal - done, min: minutesFor(goal - done, perQuestion) })
+                  ? t("btn_today_sub_due", { n: left, min: minutesFor(left, perQuestion), due })
+                  : t("btn_today_sub", { n: left, min: minutesFor(left, perQuestion) })
               }
               tone="onAccent"
               icon="play"

@@ -8,7 +8,7 @@
  *    and the statistics from ever disagreeing, and it means a bug in this file
  *    cannot corrupt someone's weakness profile.
  *
- * 2. **No `select *` over items.** A practice set arrives from one RPC with its
+ * 2. **No `select *` over items.** A practice set arrives from one query with its
  *    options already attached, because five questions should be one round trip,
  *    not eleven — and on a phone on a train that difference is the difference
  *    between usable and not.
@@ -54,6 +54,6 @@ export async function fetchOptionLabels(): Promise<string[] | null> {
     voice: NARRATOR_VOICE,
     texts: OPTION_LABELS,
   });
-  const paths = new Map((data ?? []).map((row) => [row.text as string, row.audio_path as string | null]));
+  const paths = new Map((data ?? []).map((row) => [row.text, row.audio_path]));
   return allOrNone(OPTION_LABELS, paths, clipUrl);
 }

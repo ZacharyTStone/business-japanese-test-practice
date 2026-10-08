@@ -15,8 +15,8 @@ import * as config from "../bjt/config.ts";
 import * as llm from "../bjt/llm.ts";
 import * as pipeline from "../bjt/pipeline.ts";
 import * as plan from "../bjt/plan.ts";
-import { store } from "./conftest.ts";
-import { capture, patch, setConfig, useRealSeams } from "./helpers.ts";
+import { freshLedger, store } from "./conftest.ts";
+import { capture, countOf, mustFind, patch, setConfig, useRealSeams } from "./helpers.ts";
 
 function _usage(kw: llm.UsageLike): llm.UsageLike {
   return { ...kw };
@@ -26,13 +26,6 @@ function _usage(kw: llm.UsageLike): llm.UsageLike {
 function _approx(received: number, expected: number, message: string = ""): void {
   expect(Math.abs(received - expected), `${message} ${received} ≈ ${expected}`.trim())
     .toBeLessThanOrEqual(Math.max(1e-6 * Math.abs(expected), 1e-12));
-}
-
-/** `ledger`: a fresh bill for the test. */
-function ledgerFixture(): llm.Spend {
-  const fresh = new llm.Spend();
-  patch(llm.state, "spend", fresh);
-  return fresh;
 }
 
 /** `answers`: a client whose every reply is a small, well-formed structured
@@ -56,18 +49,6 @@ function answersFixture(): Record<string, any>[] {
 
   patch(llm.seams, "getClient", () => client);
   return seen;
-}
-
-/** Python's `str.count`. */
-function _count(text: string, sub: string): number {
-  return text.split(sub).length - 1;
-}
-
-/** `text.index(sub, start)`: a failure when it is not there at all. */
-function _index(text: string, sub: string, start: number = 0): number {
-  const i = text.indexOf(sub, start);
-  expect(i, `${JSON.stringify(sub)} is in the text`).toBeGreaterThanOrEqual(0);
-  return i;
 }
 
 describe("pricing", () => {
@@ -140,7 +121,7 @@ describe("pricing", () => {
 
 describe("the ledger", () => {
   test("every call is added to the ledger", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     answersFixture();
     await llm.answerChoice("q", ["a", "b"], { model: "claude-opus-5" });
     await llm.answerChoice("q", ["a", "b"], { model: "claude-haiku-4-5" });
@@ -152,7 +133,7 @@ describe("the ledger", () => {
   });
 
   test("the dollar ceiling refuses a call that could cross it", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     const answers = answersFixture();
     // Each Opus call above costs one cent, but may cost up to its whole
     // 1500-token output ceiling (about four cents) before it is made. With
@@ -173,7 +154,7 @@ describe("the ledger", () => {
   /** 2026-10-06: a night ended at $0.54 of $0.50, the last response priced
    *  after it was already paid for. The reservation is what stops that. */
   test("a run never ends above its budget", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     answersFixture();
     setConfig({ RUN_BUDGET_USD: 0.05 });
     for (let i = 0; i < 10; i++) {
@@ -192,7 +173,7 @@ describe("the ledger", () => {
   });
 
   test("the call ceiling needs no price table", async () => {
-    ledgerFixture();
+    freshLedger();
     const answers = answersFixture();
     setConfig({ RUN_MAX_CALLS: 2, RUN_BUDGET_USD: 1000.0 });
     await llm.answerChoice("q", ["a"], { model: "claude-opus-5" });
@@ -203,7 +184,7 @@ describe("the ledger", () => {
   });
 
   test("a paid for refusal is still on the bill", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     const client = {
       messages: {
         create: async () => ({ stop_reason: "refusal", stop_details: "no", content: [],
@@ -297,7 +278,7 @@ describe("per night", () => {
   });
 
   test("the summary carries the bill", () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     ledger.add("claude-sonnet-5", _usage({ input_tokens: 100_000, output_tokens: 10_000 }));
     const text = cli._nightlySummary([], ["x: y"], { spend: ledger });
     expect(text).toContain("What tonight cost");
@@ -305,7 +286,7 @@ describe("per night", () => {
   });
 
   test("the time ceiling stops the next call", async () => {
-    const ledger = ledgerFixture();
+    const ledger = freshLedger();
     const answers = answersFixture();
     setConfig({ RUN_MAX_MINUTES: 30 });
     await llm.answerChoice("q", ["a"], { model: "claude-sonnet-5" });
@@ -315,10 +296,8 @@ describe("per night", () => {
     expect(answers.length === 1 && (err as Error).message.includes("time ceiling")).toBe(true);
   });
 
-  /** pytest's `unmocked_seams`: the real `getClient`, building the real SDK
-   *  client, whose settings are read back from it. (Python replaced the SDK
-   *  module with a fake that recorded its keyword arguments; the TypeScript
-   *  SDK's client keeps both, and its timeout is in milliseconds.) */
+  /** The real `getClient`, building the real SDK client, whose settings are
+   *  read back from it (its timeout is in milliseconds). */
   test("the client has a timeout and few retries", () => {
     useRealSeams();
     patch(llm.state, "client", null);
@@ -350,8 +329,8 @@ function _nightly(): string {
 
 /** One step of the nightly job, from its name to the next step. */
 function _step(text: string, name: string): string {
-  const start = _index(text, `name: ${name}`);
-  return text.slice(start, _index(text, "- name:", start + 1));
+  const start = mustFind(text, `name: ${name}`);
+  return text.slice(start, mustFind(text, "- name:", start + 1));
 }
 
 describe("the workflow", () => {
@@ -370,33 +349,33 @@ describe("the workflow", () => {
     expect(/^\s+BJT_RUN_BUDGET_USD:/m.test(text), "the dollar ceiling is set for the run").toBe(true);
     expect(/^\s+max_usd:/m.test(text)).toBe(true);
 
-    const keep = _index(text, "name: keep tonight's work whatever happens next");
-    const keepBlock = text.slice(keep, _index(text, "- name:", keep + 1));
+    const keep = mustFind(text, "name: keep tonight's work whatever happens next");
+    const keepBlock = text.slice(keep, mustFind(text, "- name:", keep + 1));
     expect(/if:\s*always\(\)/.test(keepBlock), "the artifact is saved even when a later step fails").toBe(true);
     expect(keepBlock).toContain("batches");
 
-    const pr = _index(text, "name: open the night's pull request");
-    const prBlock = text.slice(pr, _index(text, "\n  verify:", pr));
+    const pr = mustFind(text, "name: open the night's pull request");
+    const prBlock = text.slice(pr, mustFind(text, "\n  verify:", pr));
     expect(prBlock.includes("git rebase") && prBlock.includes("git fetch origin"),
            "tonight's commit sits on today's main").toBe(true);
 
     // Nobody reviews a night any more (2026-10-02), so the merge is guarded by
     // the checks instead: it waits for the whole `checks` workflow on tonight's
     // branch, and it does not merge into a `main` that moved while it ran.
-    const verify = text.slice(_index(text, "\n  verify:"), _index(text, "\n  publish:"));
+    const verify = text.slice(mustFind(text, "\n  verify:"), mustFind(text, "\n  publish:"));
     expect(verify, "the night is checked by the checks workflow").toContain("uses: ./.github/workflows/checks.yml");
     expect(verify, "on tonight's branch, not on main").toContain("needs.nightly.outputs.branch");
-    const publish = text.slice(_index(text, "\n  publish:"), _index(text, "\n  held:"));
+    const publish = text.slice(mustFind(text, "\n  publish:"), mustFind(text, "\n  held:"));
     expect(/needs:\s*\[nightly, verify\]/.test(publish), "the merge waits for the checks").toBe(true);
     expect(publish, "a main that moved meanwhile is not merged into").toContain('"$now" != "$BASE"');
-    expect(_index(publish, "gh pr merge"), "deploy after the merge")
-      .toBeLessThan(_index(publish, "gh workflow run deploy-db.yml"));
+    expect(mustFind(publish, "gh pr merge"), "deploy after the merge")
+      .toBeLessThan(mustFind(publish, "gh workflow run deploy-db.yml"));
 
     // What a night may spend is bounded by the ceilings above and nothing
     // else: no check on other branches decides whether it runs, so a leftover
     // branch cannot hold a night back.
-    const unlocked = _index(text, "name: which of tonight's work is unlocked");
-    const unlockedBlock = text.slice(unlocked, _index(text, "- name:", unlocked + 1));
+    const unlocked = mustFind(text, "name: which of tonight's work is unlocked");
+    const unlockedBlock = text.slice(unlocked, mustFind(text, "- name:", unlocked + 1));
     expect(unlockedBlock).not.toContain("content/nightly-*");
   });
 
@@ -409,7 +388,7 @@ describe("the workflow", () => {
   test("the nights run on a schedule and stay cheap", () => {
     const text = _nightly();
 
-    const on = text.slice(_index(text, "\non:\n"), _index(text, "\nconcurrency:"));
+    const on = text.slice(mustFind(text, "\non:\n"), mustFind(text, "\nconcurrency:"));
     expect(/^  schedule:\n(?:\s*#.*\n)*\s+- cron: "[^"]+"/m.test(on), "the nights are on").toBe(true);
 
     const fallback = /^\s+BJT_RUN_BUDGET_USD:.*\|\|\s*'([\d.]+)'/m.exec(text);
@@ -426,10 +405,7 @@ describe("the workflow", () => {
    *  artifact, checks and pull request — but only when somebody asks for it
    *  from the Actions tab: inputs exist only on a manual run, so a scheduled
    *  night can never turn into a probe. A probe run writes no items, draws no
-   *  pictures and points the database at nothing.
-   *
-   *  The workflow runs the Node command line now: `node bjt/main.ts probe`
-   *  where the Python test looked for `python -m bjt probe`. */
+   *  pictures and points the database at nothing. */
   test("the probe is a manual run that does nothing else", () => {
     const text = _nightly();
     const step = (name: string) => _step(text, name);
@@ -445,7 +421,7 @@ describe("the workflow", () => {
     expect(probe).not.toContain("psql");
     expect(step("write tonight's items")).toContain("if: steps.keys.outputs.write == 'true'");
     // The ceilings are the job's env, so the probe runs under them like a night.
-    expect(_index(text, "BJT_RUN_BUDGET_USD:")).toBeLessThan(_index(text, "name: measure the difficulty"));
+    expect(mustFind(text, "BJT_RUN_BUDGET_USD:")).toBeLessThan(mustFind(text, "name: measure the difficulty"));
   });
 
   /** A comparison run spends under the same ceilings and leaves nothing
@@ -469,14 +445,14 @@ describe("the workflow", () => {
     }
     expect(step("recount how hard each item is")).toContain("compare_jev != 'true'");
 
-    const jobEnv = text.slice(_index(text, "timeout-minutes:"), _index(text, "    steps:"));
+    const jobEnv = text.slice(mustFind(text, "timeout-minutes:"), mustFind(text, "    steps:"));
     expect(jobEnv).toContain("BJT_DIFFICULTY_MODEL: ${{ vars.BJT_DIFFICULTY_MODEL }}");
     expect(jobEnv).not.toContain("TYPESAFE");
     const holders = ["write tonight's items", "measure the difficulty the bank is missing",
                      "compare the difficulty probe with Jev"]
       .filter((name) => step(name).includes("TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}"));
     expect(holders.length).toBe(3);
-    expect(_count(text, "secrets.TYPESAFE_API_KEY"), "three steps and the presence check").toBe(4);
+    expect(countOf(text, "secrets.TYPESAFE_API_KEY"), "three steps and the presence check").toBe(4);
   });
 
   /** `plan.ts` and `nightly.yml` each hold their own copy of the same three

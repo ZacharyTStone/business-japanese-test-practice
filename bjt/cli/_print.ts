@@ -1,12 +1,9 @@
 /** Printing an item to a terminal: the question, then the answer and its traps. */
 import * as schemas from "../schemas.ts";
 import * as roles from "../fidelity/roles.ts";
-import { get, or, print, PyError, str, truthy, wrap } from "../py.ts";
+import { get, IndexError, or, print, str, truthy, wrap } from "../py.ts";
 
 export const LETTERS = ["A", "B", "C", "D"];
-
-/** Python's IndexError: `LETTERS[i]` past the fourth option. */
-class IndexError extends PyError {}
 
 /** `LETTERS[i]`, which raises past the end rather than printing `undefined`. */
 function _letter(i: number): string {

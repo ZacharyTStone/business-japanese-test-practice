@@ -26,10 +26,10 @@ import * as config from "./config.ts";
 import * as answerability from "./fidelity/answerability.ts";
 import * as sanity from "./fidelity/sanity.ts";
 import * as llmmod from "./llm.ts";
-import { errText, get, isodateUtc, min, or, print, repr, slice, splitlines, splitWs, str, strip, sum, ValueError } from "./py.ts";
+import { errText, get, isodateUtc, min, or, print, repr, slice, splitlines, splitWs, splitWsMax, str, strip, sum, ValueError } from "./py.ts";
 import * as publish from "./publish.ts";
 import * as withdrawn from "./withdrawn.ts";
-import { type Log, Shelf, UNREACHABLE_PATIENCE } from "./backfill.ts";
+import { type Log, Shelf, surveyBundles, UNREACHABLE_PATIENCE } from "./backfill.ts";
 
 /** An item or a bundle: plain JSON data. */
 type Item = Record<string, any>;
@@ -102,26 +102,6 @@ export function regateLedgerPath(): string {
   return path.join(config.BATCH_DIR, REGATE_LEDGER_NAME);
 }
 
-/** Python's `str.isspace()` set, what `str.split()` splits on. */
-const WS = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
-const WS_RUN = new RegExp(`[${WS}]+`, "u");
-const WS_LEAD = new RegExp(`^[${WS}]+`, "u");
-
-/** `s.split(None, maxsplit)`: at most `maxsplit` splits on runs of
- *  whitespace, the rest of the line kept whole. */
-function _splitWsMax(s: string, maxsplit: number): string[] {
-  const parts: string[] = [];
-  let rest = s.replace(WS_LEAD, "");
-  while (rest !== "" && parts.length < maxsplit) {
-    const m = WS_RUN.exec(rest);
-    if (m === null) break;
-    parts.push(rest.slice(0, m.index));
-    rest = rest.slice(m.index + m[0].length);
-  }
-  if (rest !== "") parts.push(rest);
-  return parts;
-}
-
 /** The regate ledger, by item id. A missing file is an empty ledger; a
  *  malformed line is an error, as it is in withdrawn.txt, because a line read
  *  wrongly is a question checked again or a failure never proposed.
@@ -143,7 +123,7 @@ export function loadRegated(opts: { path?: string | null } = {}): Map<string, Re
     if (!text || text.startsWith("#")) {
       continue;
     }
-    const parts = _splitWsMax(text, 4);
+    const parts = splitWsMax(text, 4);
     if (parts.length < 5) {
       throw new ValueError(`${name}:${n}: expected `
                            + "'<item id> <verdict> <date> <reason> <what was found>'");
@@ -207,11 +187,6 @@ export class Review {
   }
 }
 
-/** How many of these trials picked the key. */
-function _right(trials: answerability.Trial[]): number {
-  return sum(trials.map((t) => (t.correct ? 1 : 0)));
-}
-
 /** The proofreader, then the gate if it found nothing. `item` is in
  *  generator shape (`batch.asGeneratorShape`). */
 export async function regateItem(item: Item): Promise<Review> {
@@ -240,8 +215,8 @@ export async function regateItem(item: Item): Promise<Review> {
   if (gres.verdict === "kept") {
     return new Review({
       verdict: "kept", reason: "-",
-      note: `sanity=clean cold=${_right(cold)}/${cold.length} `
-            + `full=${_right(full)}/${full.length}`,
+      note: `sanity=clean cold=${answerability.correctCount(cold)}/${cold.length} `
+            + `full=${answerability.correctCount(full)}/${full.length}`,
     });
   }
   if (gres.verdict === "discarded:leaky") {
@@ -250,11 +225,11 @@ export async function regateItem(item: Item): Promise<Review> {
     const what = answerability.leakDescription(get(item, "item_type", ""));
     return new Review({
       verdict: "discarded:leaky", reason: "other",
-      note: `The gate's cold view: ${what} (${_right(cold)} of `
+      note: `The gate's cold view: ${what} (${answerability.correctCount(cold)} of `
             + `${cold.length} trials)${_said(cold, { correct: true })}`,
     });
   }
-  const right = _right(full);
+  const right = answerability.correctCount(full);
   const chosen = new Set(full.filter((t) => !t.correct && t.chosen !== null).map((t) => t.chosen as number));
   const options = or(get(item, "options"), []) as Item[];
   if (!right && chosen.size === 1 && 0 <= min(chosen) && min(chosen) < options.length) {
@@ -288,16 +263,7 @@ export function unregated(bundle: Item, done: Map<string, Regated>,
 /** What a regate would check, at no cost. */
 export function surveyRegate(paths: string[]): Shelf[] {
   const [gone, done] = [withdrawn.ids(), loadRegated()];
-  const out: Shelf[] = [];
-  for (const p of paths) {
-    const bundle = batchmod.load(p);
-    const items = get(bundle, "items", []) as Item[];
-    out.push(new Shelf({
-      path: p, n_items: items.length, n_withdrawn: items.filter((it) => gone.has(get(it, "id"))).length,
-      todo: unregated(bundle, done, { gone }),
-    }));
-  }
-  return out;
+  return surveyBundles(paths, gone, (bundle) => unregated(bundle, done, { gone }));
 }
 
 export class RegateRun {

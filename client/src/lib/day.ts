@@ -1,12 +1,12 @@
 /**
  * The day, as Japan counts it, and where today stands.
  *
- * The database closes the day at midnight in Japan (`v_my_day`, the streak, the
+ * The database closes the day at midnight in Japan (`day()`, the streak, the
  * ceiling), whatever clock the device keeps. The screens that say something
  * about the day have to agree with it: when it turns over, what that is on the
  * clock in the learner's hand, and — from the database's own count, never one
  * the app keeps — how big the next set is. Home draws its three states from
- * `dayState` and practice asks for `setSize` questions; next_items() does the
+ * `dayState` and practice asks for `setSize` questions; the queue does the
  * same arithmetic and caps the set anyway, so the screens and the queue cannot
  * disagree about the day.
  *

@@ -36,8 +36,8 @@ import { writeAtomic } from "./files.ts";
 import * as http from "./http.ts";
 import * as llm from "./llm.ts";
 import {
-  errText, get, has, KeyError, PyError, replace, repr, RuntimeError, sorted, str, SystemExit, thousands, toInt, truthy,
-  TypeError_, ValueError,
+  AttributeError, errText, get, has, IndexError, isException, KeyError, OverflowError, replace, repr, RuntimeError,
+  sorted, str, thousands, toInt, truthy, TypeError_, ValueError,
 } from "./py.ts";
 import * as r2 from "./r2.ts";
 import * as scenes from "./scenes.ts";
@@ -256,35 +256,30 @@ export type Reviewer = (image: Uint8Array, mediaType: string, scene: scenes.Scen
  * judge's outages would be given up on and its item never served.
  */
 export async function reviewWithModel(image: Uint8Array, mediaType: string, scene: scenes.Scene): Promise<Verdict> {
-  if (scene.is_picture) {
-    const flags = await llm.reviewSceneImage(image, mediaType, scenes.promptFor(scene), PICTURE_RULES);
-    const broken = Object.keys(PICTURE_RULES).filter((rule) => truthy(_dictGet(flags, rule))).map((rule) => PICTURE_RULES[rule]);
-    if (broken.length === 0 && scene.options.length > 0 && scene.answer !== null) {
-      for (let trial = 0; trial < config.GATE_TRIALS; trial++) {
-        const res = await llm.answerFromImage(image, mediaType, scene.question, [...scene.options]);
-        let chosen: number;
-        try {
-          chosen = _int(_dictGet(res, "choice", -1));
-        } catch (exc) {
-          if (exc instanceof ValueError || exc instanceof TypeError_ || exc instanceof AttributeError) {
-            throw new llm.LLMError(`the picture's reader gave no answer: ${repr(res)}`, { cause: exc });
-          }
-          throw exc;
+  const rules = scene.is_picture ? PICTURE_RULES : RULES;
+  const flags = await llm.reviewSceneImage(image, mediaType, scenes.promptFor(scene), rules);
+  const broken = Object.keys(rules).filter((rule) => truthy(_dictGet(flags, rule))).map((rule) => rules[rule]);
+  if (scene.is_picture && broken.length === 0 && scene.options.length > 0 && scene.answer !== null) {
+    for (let trial = 0; trial < config.GATE_TRIALS; trial++) {
+      const res = await llm.answerFromImage(image, mediaType, scene.question, [...scene.options]);
+      let chosen: number;
+      try {
+        chosen = _int(_dictGet(res, "choice", -1));
+      } catch (exc) {
+        if (exc instanceof ValueError || exc instanceof TypeError_ || exc instanceof AttributeError) {
+          throw new llm.LLMError(`the picture's reader gave no answer: ${repr(res)}`, { cause: exc });
         }
-        if (chosen !== scene.answer) {
-          const picked = 0 <= chosen && chosen < scene.options.length ? scene.options[chosen] : "nothing";
-          broken.push(`a reader shown the picture chose ${str(chosen)} (${str(picked)}) ` +
-                      `rather than the marked description ${str(scene.answer)}`);
-          break;
-        }
+        throw exc;
+      }
+      if (chosen !== scene.answer) {
+        const picked = 0 <= chosen && chosen < scene.options.length ? scene.options[chosen] : "nothing";
+        broken.push(`a reader shown the picture chose ${str(chosen)} (${str(picked)}) ` +
+                    `rather than the marked description ${str(scene.answer)}`);
+        break;
       }
     }
-    return new Verdict({ approved: broken.length === 0, reasons: broken });
   }
-
-  const flags = await llm.reviewSceneImage(image, mediaType, scenes.promptFor(scene), RULES);
-  const faults = Object.keys(RULES).filter((rule) => truthy(_dictGet(flags, rule))).map((rule) => RULES[rule]);
-  return new Verdict({ approved: faults.length === 0, reasons: faults });
+  return new Verdict({ approved: broken.length === 0, reasons: broken });
 }
 
 /** For the placeholder provider only: a grey rectangle has nothing to judge. */
@@ -322,7 +317,7 @@ export class Drawn {
     this.path = init.path;
     this.attempts = init.attempts;
     this.rejected = init.rejected ?? [];
-    this.error = init.error !== undefined ? init.error : null;
+    this.error = init.error ?? null;
     this.prior = init.prior ?? 0;
     this.given_up = init.given_up ?? false;
   }
@@ -342,7 +337,7 @@ export class DrawResult {
   constructor(init: { drawn: Drawn[]; provider: string; stopped?: string | null }) {
     this.drawn = init.drawn;
     this.provider = init.provider;
-    this.stopped = init.stopped !== undefined ? init.stopped : null;
+    this.stopped = init.stopped ?? null;
   }
 
   get approved(): Drawn[] {
@@ -404,12 +399,6 @@ export class DrawStopped extends llm.LLMBillingError {
 /** Told about each refused draft: (scene_id, lifetime attempt number, reasons).
  *  The bucket's ledger is written through this. */
 export type OnReject = (sceneId: string, n: number, reasons: readonly string[]) => void | Promise<void>;
-
-/** Python's `except Exception`: every error but the one that ends the
- *  process. */
-function _isException(exc: unknown): boolean {
-  return exc instanceof Error && !(exc instanceof SystemExit);
-}
 
 /**
  * Draft, review and write each wanted scene.
@@ -489,7 +478,7 @@ export async function draw(
           throw new DrawStopped(exc, new DrawResult({ drawn, provider: provider.name,
                                                       stopped: errText(exc) }));
         }
-        if (!_isException(exc)) throw exc;
+        if (!isException(exc)) throw exc;
         // a vendor error is a result, not a crash
         record.error = errText(exc);
         break;
@@ -849,16 +838,6 @@ function _digitsToInt(s: string): number {
   return toInt(s.normalize("NFKC"));
 }
 
-/** Python's AttributeError: `.get` asked of something that is not a dict. */
-class AttributeError extends PyError {}
-
-/** Python's IndexError: an index past the end of a list. */
-class IndexError extends PyError {}
-
-/** Python's OverflowError: `int()` of an infinite float. Not one of the
- *  errors `reviewWithModel` reads as "no answer", as in Python. */
-class OverflowError extends PyError {}
-
 /** Python's name for the type of a JSON value, for a TypeError's message. */
 function _typeName(v: unknown): string {
   if (v === null || v === undefined) return "NoneType";
@@ -879,7 +858,9 @@ function _dictGet(d: unknown, key: string, dflt: unknown = null): any {
 }
 
 /** `int(x)` for a JSON value: an int as it is, a bool as 0 or 1, a float
- *  truncated, a string read as base 10; anything else a TypeError. */
+ *  truncated, a string read as base 10; anything else a TypeError. An
+ *  infinity is an OverflowError, which `reviewWithModel` does not read as
+ *  "no answer", as in Python. */
 function _int(x: unknown): number {
   if (typeof x === "boolean") return x ? 1 : 0;
   if (typeof x === "number") {

@@ -8,11 +8,14 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { afterEach } from "vitest";
+import * as batch from "../bjt/batch.ts";
 import { Store } from "../bjt/db/index.ts";
+import * as roles from "../bjt/fidelity/roles.ts";
 import * as fixtures from "../bjt/fixtures.ts";
+import * as llm from "../bjt/llm.ts";
 import { deepcopy } from "../bjt/py.ts";
 import * as seedtable from "../bjt/seedtable.ts";
-import { setConfig, tmpPath } from "./helpers.ts";
+import { patch, setConfig, tmpPath } from "./helpers.ts";
 
 /** The Stores `store()` opened in this test, closed after it. */
 const openStores: Store[] = [];
@@ -30,14 +33,38 @@ export function store(tmp: string = tmpPath()): Store {
   return s;
 }
 
-/** `goi_item`: a fresh copy of the 語彙・文法 fixture, the test's to change. */
+/** A fresh copy of a type's valid fixture item (bjt/fixtures.ts), the test's
+ *  to change. */
+export function fixtureItem(itemType: string): Record<string, any> {
+  return deepcopy(fixtures.FIXTURES[itemType]);
+}
+
+/** `goi_item`: a fresh copy of the 語彙・文法 fixture. */
 export function goiItem(): Record<string, any> {
-  return deepcopy(fixtures.FIXTURES["goi_bunpou"]);
+  return fixtureItem("goi_bunpou");
 }
 
 /** `hyougen_item`: a fresh copy of the 表現読解 fixture. */
 export function hyougenItem(): Record<string, any> {
-  return deepcopy(fixtures.FIXTURES["hyougen"]);
+  return fixtureItem("hyougen");
+}
+
+/** The text of the 語彙・文法 fixture's correct option. */
+export function goiCorrectText(): string {
+  return fixtures.FIXTURES["goi_bunpou"]["options"].find(
+    (o: Record<string, any>) => o["role"] === roles.CORRECT)["text"];
+}
+
+/** `bundle`: a one-item 発言聴解 bundle built from its fixture. */
+export function hatsugenBundle(batchId: string = "test"): Record<string, any> {
+  return batch.buildBundle("hatsugen_choukai", "J2", [fixtures.FIXTURES["hatsugen_choukai"]], batchId);
+}
+
+/** `ledger`: a fresh bill for the test, in place of the process's. */
+export function freshLedger(): llm.Spend {
+  const fresh = new llm.Spend();
+  patch(llm.state, "spend", fresh);
+  return fresh;
 }
 
 /** `seeds_dir`: a temp seeds/ dir the test can populate; points config at it.

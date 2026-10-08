@@ -9,15 +9,16 @@
  *   setEnv / delEnv          monkeypatch.setenv / delenv.
  *   tmpPath()                tmp_path: a fresh directory, removed after.
  *   capture()                capsys: what the test printed, `readouterr()`.
- *   chdir(dir)               monkeypatch.chdir.
  *
- * Every one of them is undone after each test by tests/setup.ts.
+ * Every one of them is undone after each test by tests/setup.ts. Below them,
+ * the small text and iterator helpers several test files share.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import * as config from "../bjt/config.ts";
+import { sorted } from "../bjt/py.ts";
 
 const undo: (() => void)[] = [];
 
@@ -73,12 +74,6 @@ export function tmpPath(): string {
   const dir = mkdtempSync(path.join(tmpdir(), "bjt-test-"));
   undo.push(() => rmSync(dir, { recursive: true, force: true }));
   return dir;
-}
-
-export function chdir(dir: string): void {
-  const old = process.cwd();
-  process.chdir(dir);
-  undo.push(() => process.chdir(old));
 }
 
 export type Captured = {
@@ -158,4 +153,52 @@ export function refuseSeams(): void {
  *  is behind them instead (pytest's `unmocked_seams` mark). */
 export function useRealSeams(): void {
   for (const s of SEAMS) s.obj[s.key] = s.original;
+}
+
+// ------------------------------------------------------------ shared helpers
+
+/** A string as UTF-8 bytes, the shape every fake wire and bucket deals in. */
+export const bytes = (s: string): Uint8Array => new TextEncoder().encode(s);
+
+/** How many times `sub` occurs in `text`, not overlapping. */
+export function countOf(text: string, sub: string): number {
+  return text.split(sub).length - 1;
+}
+
+/** Where `sub` first occurs in `text` from `start`; a failed assertion when it
+ *  is not there at all, so a slice between two markers never silently spans
+ *  the wrong text. */
+export function mustFind(text: string, sub: string, start: number = 0): number {
+  const i = text.indexOf(sub, start);
+  expect(i, `${JSON.stringify(sub)} is in the text`).toBeGreaterThanOrEqual(0);
+  return i;
+}
+
+/** Everything after the first `sep`; a failed assertion when there is none. */
+export function after(s: string, sep: string): string {
+  const i = s.indexOf(sep);
+  expect(i, `${JSON.stringify(sep)} not found`).toBeGreaterThanOrEqual(0);
+  return s.slice(i + sep.length);
+}
+
+/** Everything before the first `sep` (all of `s` when there is none). */
+export function before(s: string, sep: string): string {
+  const i = s.indexOf(sep);
+  return i < 0 ? s : s.slice(0, i);
+}
+
+/** The two hold the same members, whatever their order or repeats. */
+export function sameSet(a: Iterable<string>, b: Iterable<string>): void {
+  expect(sorted(new Set(a))).toEqual(sorted(new Set(b)));
+}
+
+/** A function handing out the next of `values` on every call, and throwing
+ *  once they run out: a fake that answers a fixed script of replies. */
+export function iter<T>(values: T[]): () => T {
+  const it = values[Symbol.iterator]();
+  return () => {
+    const n = it.next();
+    if (n.done) throw new Error("StopIteration");
+    return n.value;
+  };
 }

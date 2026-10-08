@@ -1,11 +1,9 @@
 # The checks CLAUDE.md asks for before every push, run on the server too.
 #
-# Work lands directly on `main` with no gate in front of it, so this workflow is
-# the only thing between a mistake and the tree everyone reads. That is why it
-# runs on every push to `main` as well as on pull requests: a check that only
-# guards PRs guards nothing in a repo where nobody opens one. It is also what
-# the **deploy database** workflow waits for: a green run on a push to `main`
-# is what ships.
+# Every change reaches `main` through a pull request (CLAUDE.md, since
+# 2026-10-03), and the pull request is checked here. The merge is checked
+# again as a push to `main`, because that run is what the **deploy database**
+# workflow waits for: a green run on a push to `main` is what ships.
 #
 # A push to any other branch is not checked on its own. A branch that is going
 # anywhere gets a pull request, and the pull request is checked; checking the
@@ -131,7 +129,7 @@ jobs:
       - run: npm ci
       # A local D1 (Miniflare, the same SQLite the real one runs), built the
       # way the deploy builds the real one: every migration in d1/migrations,
-      # then every batches/*.sql, twice. Then every query the Worker serves,
+      # d1/triggers.sql, then every batches/*.sql, twice. Then every query the Worker serves,
       # as a tester, and the schema's promises (client/worker/test/). Offline:
       # wrangler's local mode reaches no Cloudflare account.
       - run: npm run test:db

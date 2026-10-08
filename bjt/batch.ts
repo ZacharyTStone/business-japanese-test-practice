@@ -21,13 +21,13 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import * as config from "./config.ts";
-import { writeAtomic } from "./files.ts";
+import { unreadable, writeAtomic } from "./files.ts";
 import * as dedupe from "./fidelity/dedupe.ts";
 import * as naturalness from "./fidelity/naturalness.ts";
 import * as roles from "./fidelity/roles.ts";
 import {
-  deepcopy, errText, fixed, FileNotFoundError, get, has, isoformatUtc, KeyError, len, max, min, or, percent, PyError,
-  repr, sorted, str, truthy, ValueError, zip,
+  deepcopy, errText, fixed, FileNotFoundError, get, getitem, has, IndexError, isDict, isoformatUtc, len, max, min, or,
+  percent, repr, sorted, str, truthy, utf8, ValueError, zip,
 } from "./py.ts";
 import { BUNDLE_FLOAT_KEYS, dumps, loads } from "./pyjson.ts";
 import * as document from "./render/document.ts";
@@ -99,7 +99,7 @@ export const LENGTH_BANDS: Record<string, Record<string, [number, number]>> = {
  *  item rather than adding a second copy. */
 export function itemId(item: Item): string {
   const key = or(get(or(get(item, "seed_cell"), {}), "id"), get(item, "stem", ""));
-  return createHash("sha1").update(_utf8(`${str(get(item, "item_type", ""))}|${str(key)}`)).digest("hex").slice(0, 10);
+  return createHash("sha1").update(utf8(`${str(get(item, "item_type", ""))}|${str(key)}`)).digest("hex").slice(0, 10);
 }
 
 /**
@@ -128,40 +128,36 @@ export function itemId(item: Item): string {
  * asked in one of them, and no table is beside them to contradict.
  */
 export function normaliseNumerals(item: Item): number {
-  if (!truthy(_documentField(get(item, "item_type", "")))) {
+  if (schemas.documentField(get(item, "item_type", "")) === null) {
     return 0;
   }
-  const spoken = tts_plan.audioPolicy(_need(item, "item_type"));
+  const spoken = tts_plan.audioPolicy(getitem(item, "item_type"));
   let moved = 0;
+  // Rewrite one string in place, counting it if it changed.
+  const rewrite = (obj: Item, key: string) => {
+    const before = obj[key];
+    obj[key] = numerals.toArabicText(before);
+    moved += Number(obj[key] !== before);
+  };
 
   for (const doc of schemas.documentsOf(item)) {
     moved += numerals.toArabic(doc);
   }
 
   if (!truthy(spoken.stem) && truthy(get(item, "stem"))) {
-    const before = item["stem"];
-    item["stem"] = numerals.toArabicText(before);
-    moved += Number(item["stem"] !== before);
+    rewrite(item, "stem");
   }
 
   if (!truthy(spoken.options)) {
     for (const option of or(get(item, "options"), []) as Item[]) {
       for (const key of ["text", "why"]) {
-        if (typeof get(option, key) === "string") {
-          const before = option[key];
-          option[key] = numerals.toArabicText(before);
-          moved += Number(option[key] !== before);
-        }
+        if (typeof get(option, key) === "string") rewrite(option, key);
       }
     }
   }
 
   for (const key of ["explanation_ja", "explanation_en"]) {
-    if (typeof get(item, key) === "string") {
-      const before = item[key];
-      item[key] = numerals.toArabicText(before);
-      moved += Number(item[key] !== before);
-    }
+    if (typeof get(item, key) === "string") rewrite(item, key);
   }
 
   return moved;
@@ -185,15 +181,15 @@ export function toBundleItem(item: Item): Item {
     byKind.get(clip.kind)!.push(clip);
   }
   const narration = or(byKind.get("narration") ?? null, []) as tts_plan.Clip[];
-  const options = _need(item, "options") as Item[];
+  const options = getitem(item, "options") as Item[];
   const out: Item = {
     "id": iid,
     "item_type": get(item, "item_type"),
     "level": get(item, "level"),
     "seed_cell": get(item, "seed_cell"),
     "topic": get(item, "topic", ""),
-    "stem": _need(item, "stem"),
-    "options": options.map((o) => ({ "text": _need(o, "text"), "role": _need(o, "role"), "why": get(o, "why", "") })),
+    "stem": getitem(item, "stem"),
+    "options": options.map((o) => ({ "text": getitem(o, "text"), "role": getitem(o, "role"), "why": get(o, "why", "") })),
     "correct_index": schemas.correctIndex(options),
     "explanation_ja": get(item, "explanation_ja", ""),
     "explanation_en": get(item, "explanation_en", ""),
@@ -232,10 +228,9 @@ export function toBundleItem(item: Item): Item {
 
   // A type whose picture is its own: the brief travels with the item, and
   // the scene id is derived from the item id so the picture job, the
-  // database and the app all find it under one name (bjt/scenes.ts).
+  // database and the app all find it under one name (bjt/scenes.ts, which
+  // alone spells it).
   if (truthy(get(item, "image_brief"))) {
-    // (scenes.ts imports this module to read the bundles, and the name should
-    // be spelled in one place.)
     out["image_brief"] = item["image_brief"];
     out["scene_id"] = scenes.pictureSceneId(iid);
   }
@@ -350,7 +345,7 @@ export function spentCellIds(itemType: string): Set<string> {
     try {
       bundle = seams.load(p);
     } catch (e) {
-      if (!_unreadable(e)) throw e;
+      if (!unreadable(e)) throw e;
       throw new ValueError(`${p} cannot be read, so the seed cells it spends are ` +
                            `unknown: ${errText(e)}`, { cause: e });
     }
@@ -540,8 +535,8 @@ export function checkBundle(
   const enumRoles = (get(roles.DISTRACTOR_ROLES, itemType, []) as string[]);
   const usedRoles = new Set<unknown>();
   for (const it of items) {
-    for (const o of _need(it, "options") as Item[]) {
-      if (_need(o, "role") !== roles.CORRECT) usedRoles.add(o["role"]);
+    for (const o of getitem(it, "options") as Item[]) {
+      if (getitem(o, "role") !== roles.CORRECT) usedRoles.add(o["role"]);
     }
   }
   const unused = enumRoles.filter((r) => !usedRoles.has(r));
@@ -560,8 +555,8 @@ export function checkBundle(
   //    means the app has nothing to show after a wrong answer.
   const thin: string[] = [];
   for (const it of items) {
-    (_need(it, "options") as Item[]).forEach((o, i) => {
-      if (len(get(o, "why", "")) < 12) thin.push(`${str(_need(it, "id"))}#${i}`);
+    (getitem(it, "options") as Item[]).forEach((o, i) => {
+      if (len(get(o, "why", "")) < 12) thin.push(`${str(getitem(it, "id"))}#${i}`);
     });
   }
   add("per-option why", thin.length ? "fail" : "pass",
@@ -619,7 +614,7 @@ export function checkBundle(
       // because that is what `documentFaults` reads; an item whose only
       // spelled-out number is in an option still reports its count.
       const runs = sorted(new Set(docs.flatMap((doc) => numerals.documentFaults(doc))));
-      spelledOut.set(_need(it, "id"), runs.length ? runs.join(", ") : `${moved} string(s)`);
+      spelledOut.set(getitem(it, "id"), runs.length ? runs.join(", ") : `${moved} string(s)`);
     }
   }
   if (nDocs) {
@@ -639,10 +634,10 @@ export function checkBundle(
   const mixed = new Map<unknown, string[]>();
   for (const it of items) {
     const shaped = asGeneratorShape(it);
-    if (!truthy(_documentField(get(shaped, "item_type", "")))) {
+    if (schemas.documentField(get(shaped, "item_type", "")) === null) {
       continue;
     }
-    const spoken = tts_plan.audioPolicy(_need(shaped, "item_type"));
+    const spoken = tts_plan.audioPolicy(getitem(shaped, "item_type"));
     const texts: string[] = [get(shaped, "explanation_ja", "")];
     if (!truthy(spoken.options)) {
       for (const o of or(get(shaped, "options"), []) as Item[]) {
@@ -654,10 +649,10 @@ export function checkBundle(
     }
     const runs = sorted(new Set(texts.flatMap((t) => numerals.mixedNotation(t))));
     if (runs.length) {
-      mixed.set(_need(it, "id"), runs);
+      mixed.set(getitem(it, "id"), runs);
     }
   }
-  if (items.some((it) => truthy(_documentField(get(it, "item_type", ""))))) {
+  if (items.some((it) => schemas.documentField(get(it, "item_type", "")) !== null)) {
     add("one sentence, one notation", mixed.size ? "warn" : "pass",
         mixed.size
           ? "both notations in: "
@@ -720,7 +715,7 @@ export function checkBundle(
   const clips = get(bundle, "audio_manifest", []) as unknown[];
   let planned = 0;
   for (const it of items) {
-    planned += tts_plan.planItem(asGeneratorShape(it), _need(it, "id")).length;
+    planned += tts_plan.planItem(asGeneratorShape(it), getitem(it, "id")).length;
   }
   if (!planned) {
     add("audio manifest", "pass", "no audio — this item type is read, not heard");
@@ -790,18 +785,18 @@ export function asGeneratorShape(bundleItem: Item): Item {
     delete it["scene_id"];  // derived by the bundle, never emitted by the model
   }
 
-  const field = _documentField(get(it, "item_type", ""));
+  const field = schemas.documentField(get(it, "item_type", ""));
   const documents = has(it, "documents") ? it["documents"] : null;
   delete it["documents"];
-  if (truthy(field) && documents !== null) {
-    it[field!] = field === "documents" ? documents : (truthy(documents) ? documents : [null])[0];
+  if (field !== null && documents !== null) {
+    it[field] = field === "documents" ? documents : (truthy(documents) ? documents : [null])[0];
   }
 
   const dialogue = get(it, "dialogue");
   if (Array.isArray(dialogue)) {
     // The bundle staples a clip id onto each turn; the generator did not.
     it["dialogue"] = dialogue
-      .filter((t) => _isDict(t))
+      .filter((t) => isDict(t))
       .map((t: Item) => ({ "speaker_role": get(t, "speaker_role", ""), "text": get(t, "text", "") }));
   }
   return it;
@@ -819,7 +814,7 @@ export function _worstPairScore(items: Item[]): number {
 }
 
 export function _correctIsExtreme(item: Item, opts: { longest: boolean }): boolean {
-  const lengths = (_need(item, "options") as Item[]).map((o) => len(_need(o, "text")));
+  const lengths = (getitem(item, "options") as Item[]).map((o) => len(getitem(o, "text")));
   const target = opts.longest ? max(lengths) : min(lengths);
   const ci = get(item, "correct_index", 0);
   // Ties do not count as a leak — if two options share the extreme, length
@@ -829,59 +824,10 @@ export function _correctIsExtreme(item: Item, opts: { longest: boolean }): boole
 
 // ----- Python's behaviour where JavaScript's differs --------------------------
 
-/** `DOCUMENT_FIELDS.get(item_type)`: the type's document field, or null (for
- *  a type with none, or an item_type that is not a string at all). */
-function _documentField(itemType: unknown): string | null {
-  return typeof itemType === "string" && has(schemas.DOCUMENT_FIELDS, itemType) ? schemas.DOCUMENT_FIELDS[itemType] : null;
-}
-
-/** `isinstance(v, dict)` for parsed JSON. */
-function _isDict(v: unknown): v is Item {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
-/** `d[key]`: a missing key is a KeyError, as in Python, rather than an
- *  `undefined` that would travel on into the bundle. */
-function _need(d: Item, key: string): any {
-  if (!has(d, key)) throw new KeyError(repr(key));
-  return d[key];
-}
-
-/** Python's IndexError. */
-export class IndexError extends PyError {}
-
 /** `xs[i]` as Python indexes a list: a negative index counts from the end, and
  *  one out of range is an IndexError rather than `undefined`. */
 function _index(xs: readonly unknown[], i: number): number {
   const j = i < 0 ? xs.length + i : i;
   if (!Number.isInteger(j) || j < 0 || j >= xs.length) throw new IndexError("list index out of range");
   return j;
-}
-
-/** What `spentCellIds` treats as a bundle that cannot be read: Python's
- *  (OSError, json.JSONDecodeError) — a file the system will not give us, or a
- *  body that is not JSON. */
-function _unreadable(e: unknown): boolean {
-  if (e instanceof SyntaxError) return true;
-  // An operating-system error (Python's OSError) carries its errno code.
-  return e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string";
-}
-
-/** Python's UnicodeEncodeError (a ValueError): text with a lone surrogate has
- *  no UTF-8 form. */
-class UnicodeEncodeError extends ValueError {}
-
-const LONE_SURROGATE = new RegExp("[\\uD800-\\uDFFF]", "u");
-
-/** `s.encode("utf-8")`, strict: a lone surrogate is refused rather than
- *  replaced with U+FFFD (which would hash to a different item id). */
-function _utf8(s: string): Buffer {
-  const m = LONE_SURROGATE.exec(s);
-  if (m) {
-    const ch = m[0].charCodeAt(0).toString(16);
-    throw new UnicodeEncodeError(
-      `'utf-8' codec can't encode character '\\u${ch}' in position ${len(s.slice(0, m.index))}: surrogates not allowed`,
-    );
-  }
-  return Buffer.from(s, "utf8");
 }

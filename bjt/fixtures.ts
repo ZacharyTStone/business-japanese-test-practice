@@ -8,7 +8,7 @@
  *
  * There is one for every item type, and that is deliberate rather than tidy. A type
  * whose schema nothing ever constructs is a type whose schema is only asserted:
- * `selftest` runs validation over all nine, so a document field that cannot
+ * `selftest` runs validation over every one, so a document field that cannot
  * actually be filled, or a role enum that cannot actually be satisfied, fails here
  * with no API key rather than in the middle of a paid batch run.
  *

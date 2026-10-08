@@ -21,7 +21,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { get, percent, PyError, repr, strip, ValueError } from "./py.ts";
+import { AttributeError, get, percent, PyError, repr, strip, ValueError } from "./py.ts";
 
 /** What to run in the D1 console of the Cloudflare dashboard to export the
  *  app's side, then download the result as CSV (or `npx wrangler d1 execute
@@ -91,10 +91,6 @@ export class Tally {
 
 /** Python's `csv.Error`. */
 export class CsvError extends PyError {}
-
-/** What Python raised when a long row's extra fields (a list) reached
- *  `.strip()`. */
-export class AttributeError extends PyError {}
 
 /** `csv.field_size_limit()`'s default. */
 const FIELD_SIZE_LIMIT = 131072;

@@ -20,9 +20,10 @@
  * visual design, so one document renders correctly in light mode, dark mode, and
  * at whatever text size the reader has chosen.
  */
-import { fixed, floorDiv, get, has, htmlEscape, len, or, PyError, rstrip, slice, str, toInt, truthy, TypeError_, ValueError } from "../py.ts";
+import { fixed, floorDiv, get, has, htmlEscape, isDict, len, or, PyError, rstrip, slice, str, toInt, truthy, TypeError_, ValueError } from "../py.ts";
 import * as chartmod from "./chart.ts";
 import type { Chart } from "./chart.ts";
+import { CALLOUT_TONES } from "./document.ts";
 import * as tpl from "./templates.ts";
 
 /** Heading depth is clamped: a document sits inside an app screen that already
@@ -31,11 +32,6 @@ export const _MIN_HEADING = 2;
 export const _MAX_HEADING = 4;
 
 type Block = Record<string, any>;
-
-/** `isinstance(v, dict)` for parsed JSON. */
-function isDict(v: unknown): v is Record<string, any> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
 
 /** `for x in (value or [])`, as Python iterates it: a list's elements, a
  *  string's characters, a dict's keys. */
@@ -143,7 +139,7 @@ function _quotedMessage(block: Block): string {
 
 function _callout(block: Block): string {
   let tone = or(get(block, "tone"), "info");
-  if (!["info", "warning", "action"].includes(tone)) {
+  if (!CALLOUT_TONES.includes(tone)) {
     tone = "info";
   }
   // role="note" rather than an alert: this is part of a reading passage, and a

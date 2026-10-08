@@ -7,14 +7,12 @@
 import type { Key } from "./i18n";
 
 /**
- * The technical account: message, details and hint joined, with the Postgres
- * `code` kept because it is the part worth searching for.
+ * The technical account: message, details and hint joined, with the `code`
+ * kept because it is the part worth searching for.
  *
- * A failed query is not an `Error` — it is a plain object carrying
- * `message`, `details`, `hint` and a Postgres `code` — so `String(e)` would
- * show "[object Object]" and hide what actually went wrong. `42703` is
- * "undefined column", which says "this client is newer than this database"
- * far more precisely than any wording of ours would.
+ * A failed query is not an `Error` — it is a plain object (`ApiError`,
+ * lib/api.ts) carrying `code`, `message`, `details` and `hint` — so
+ * `String(e)` would show "[object Object]" and hide what actually went wrong.
  */
 export function errorText(e: unknown): string {
   if (typeof e === "string") return e;

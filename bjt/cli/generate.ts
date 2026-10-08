@@ -18,7 +18,7 @@ import * as llmmod from "../llm.ts";
 import { Store } from "../db/index.ts";
 import { LLMBillingError } from "../llm.ts";
 import {
-  eprint, errText, fixed, g, get, print, PyError, repr, str, sum, SystemExit, splitWs, truthy,
+  eprint, errText, fixed, g, get, IndexError, isException, pathStr, print, repr, str, sum, splitWs, truthy,
 } from "../py.ts";
 import { BUNDLE_FLOAT_KEYS, dumps } from "../pyjson.ts";
 import type { Namespace, SubParsers } from "./argparse.ts";
@@ -45,15 +45,6 @@ export async function cmdGen(args: Namespace): Promise<number> {
   return 0;
 }
 
-
-/** Python's IndexError: `split()[0]` of a string with no words in it. */
-class IndexError extends PyError {}
-
-/** Python's `except Exception`: every error but the one that ends the
- *  process. */
-function _isException(e: unknown): boolean {
-  return e instanceof Error && !(e instanceof SystemExit);
-}
 
 /** Headless acceptance harness — the automated 'answer N in a row without a
  *  crash or a repeated scenario' check. No interaction; asserts every item is
@@ -95,7 +86,7 @@ export async function cmdSmoke(args: Namespace): Promise<number> {
         if (e instanceof LLMBillingError) {
           throw e; // the ceiling or an empty account: every later item would fail too
         }
-        if (!_isException(e)) throw e;
+        if (!isException(e)) throw e;
         // a crash is a hard failure of the DoD check
         failures += 1;
         print(`  [${i + 1}/${args.n}] CRASH: ${errText(e)}`);
@@ -304,15 +295,6 @@ export function _nightlySummary(
 }
 
 
-/** `type=pathlib.Path`: the path as pathlib spells it (repeated and trailing
- *  slashes and `.` components dropped, an empty path `.`). */
-function _path(value: string): string {
-  const lead = value.startsWith("//") && !value.startsWith("///") ? "//" : value.startsWith("/") ? "/" : "";
-  const out = lead + value.split("/").filter((s) => s !== "" && s !== ".").join("/");
-  return out === "" ? "." : out;
-}
-
-
 /** Add this module's subcommands to the `bjt` parser. */
 export function register(sub: SubParsers, types: string[]): void {
   const gp = sub.addParser("gen", { help: "generate, proofread, gate, store, and print one item" });
@@ -335,7 +317,7 @@ export function register(sub: SubParsers, types: string[]): void {
   b.addArgument("-n", { type: "int", default: 10, help: "how many items to keep" });
   b.addArgument("--no-gate", { action: "store_true", help: "skip the answerability gate" });
   b.addArgument("--no-sanity", { action: "store_true", help: "skip the cheap proofreading pass before the gate" });
-  b.addArgument("--out", { type: _path, default: null, help: "bundle path" });
+  b.addArgument("--out", { type: pathStr, default: null, help: "bundle path" });
   b.addArgument("--force", { action: "store_true", help: "write the bundle even if checks fail" });
   b.setDefaults({ func: cmdBatch });
   const pl = sub.addParser("plan", { help: "what the bank needs next, emptiest shelf first" });

@@ -34,8 +34,8 @@ import { bearer } from "better-auth/plugins";
 
 export type AuthEnv = {
   DB: D1Database;
-  /** All four are Worker secrets (`wrangler secret put`), never `vars`: a
-   *  deploy keeps secrets and replaces vars with wrangler.jsonc's. */
+  // All four below are Worker secrets (`wrangler secret put`), never `vars`:
+  // a deploy keeps secrets and replaces vars with wrangler.jsonc's.
   /** The Worker's own address, e.g. https://<host>. */
   BETTER_AUTH_URL?: string;
   /** Signs the session cookie and token: `openssl rand -base64 32`. */

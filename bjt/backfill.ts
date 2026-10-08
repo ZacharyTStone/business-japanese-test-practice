@@ -10,7 +10,7 @@
  * on the checking.
  *
  * `probeBank` is the difficulty prior. `items.model_p_correct` is the only term
- * in `next_items()` that tells two items of one type and level apart, and it is
+ * in the queue's ranking that tells two items of one type and level apart, and it is
  * written at generation time or never, so without this pass the difficulty pitch
  * sorts nothing across every imported item. The same probe, the same weaker
  * model and the same trials as a fresh draft gets (bjt/fidelity/difficulty.ts),
@@ -42,7 +42,7 @@ import * as config from "./config.ts";
 import * as difficulty from "./fidelity/difficulty.ts";
 import * as jev from "./jev.ts";
 import * as llmmod from "./llm.ts";
-import { errText, fixed, floorDiv, g, get, print, sorted, str, sum, truthy, ValueError, zip } from "./py.ts";
+import { errText, fixed, floorDiv, g, get, pathStr, print, sorted, str, sum, truthy, ValueError, zip } from "./py.ts";
 import * as publish from "./publish.ts";
 import * as withdrawn from "./withdrawn.ts";
 
@@ -57,15 +57,6 @@ export type Log = (...args: unknown[]) => void;
  *  as "unmeasured", not as an error — and asking a hundred items says nothing
  *  the third did not. */
 export const UNREACHABLE_PATIENCE = 3;
-
-/** `str(Path(p))`: a path as pathlib spells it — repeated and trailing
- *  slashes and `.` components dropped, `..` kept, an empty path `.`. */
-function _pathStr(p: string): string {
-  const lead = p.startsWith("//") && !p.startsWith("///") ? "//" : p.startsWith("/") ? "/" : "";
-  const parts = p.split("/").filter((s) => s !== "" && s !== ".");
-  const out = lead + parts.join("/");
-  return out === "" ? "." : out;
-}
 
 /**
  * The bundles a pass runs over: every committed one, or the ones named.
@@ -86,7 +77,7 @@ export function selectBundles(paths: string[], every: boolean): string[] {
   }
   const out: string[] = [];
   for (const p of paths) {
-    const bundlePath = _pathStr(p);
+    const bundlePath = pathStr(p);
     if (path.basename(bundlePath).endsWith(".source.json")) {
       throw new ValueError(`${bundlePath} is a source file, not a bundle; name the .json beside it`);
     }
@@ -179,19 +170,24 @@ export class Shelf {
   }
 }
 
+/** Each bundle as a pass sees it, at no cost: `todo` picks what the pass
+ *  would do there. */
+export function surveyBundles(paths: string[], gone: ReadonlySet<string>,
+                              todo: (bundle: Item) => Item[]): Shelf[] {
+  return paths.map((p) => {
+    const bundle = batchmod.load(p);
+    const items = get(bundle, "items", []) as Item[];
+    return new Shelf({
+      path: p, n_items: items.length, n_withdrawn: items.filter((it) => gone.has(get(it, "id"))).length,
+      todo: todo(bundle),
+    });
+  });
+}
+
 /** What a probe would do, at no cost: each bundle's live items without a rate. */
 export function surveyProbe(paths: string[]): Shelf[] {
   const gone = withdrawn.ids();
-  const out: Shelf[] = [];
-  for (const p of paths) {
-    const bundle = batchmod.load(p);
-    const items = get(bundle, "items", []) as Item[];
-    out.push(new Shelf({
-      path: p, n_items: items.length, n_withdrawn: items.filter((it) => gone.has(get(it, "id"))).length,
-      todo: unprobed(bundle, { gone }),
-    }));
-  }
-  return out;
+  return surveyBundles(paths, gone, (bundle) => unprobed(bundle, { gone }));
 }
 
 
@@ -243,11 +239,7 @@ export async function probeBank(paths: string[], opts: { log?: Log } = {}): Prom
         run.unmeasured += 1;
         // Every trial unanswered is a model that cannot be reached, not
         // an item that is hard to measure; one answer says it can be.
-        if (result.trials.length && result.trials.every((t) => t.chosen === null)) {
-          strikes += 1;
-        } else {
-          strikes = 0;
-        }
+        strikes = _unreachable(result) ? strikes + 1 : 0;
         if (strikes >= UNREACHABLE_PATIENCE) {
           run.stopped = (`the model could not be reached for ${strikes} `
                          + "items in a row");

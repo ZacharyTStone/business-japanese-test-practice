@@ -22,7 +22,7 @@ import * as scene_art from "../bjt/scene_art.ts";
 import * as scenes from "../bjt/scenes.ts";
 import * as channel from "../bjt/tts/channel.ts";
 import * as synth from "../bjt/tts/synth.ts";
-import { patch, tmpPath } from "./helpers.ts";
+import { bytes, patch, tmpPath } from "./helpers.ts";
 
 type RequestOpts = Parameters<typeof http.request>[2];
 
@@ -43,7 +43,6 @@ function _wav(frames: number): Uint8Array {
   return channel.wrapPcm(new Uint8Array(2 * frames), 24000);
 }
 
-const bytes = (s: string) => new TextEncoder().encode(s);
 
 describe("files", () => {
   test("a failed write leaves the old file and no litter", () => {

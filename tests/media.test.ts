@@ -21,7 +21,8 @@ import * as channel from "../bjt/tts/channel.ts";
 import * as plan from "../bjt/tts/plan.ts";
 import * as providers from "../bjt/tts/providers.ts";
 import * as synth from "../bjt/tts/synth.ts";
-import { capture, delEnv, patch, setEnv, tmpPath } from "./helpers.ts";
+import { hatsugenBundle } from "./conftest.ts";
+import { bytes, capture, delEnv, patch, setEnv, tmpPath } from "./helpers.ts";
 
 /** A signal with content at both ends of the band, so a filter that does
  *  nothing is distinguishable from one that works. */
@@ -59,12 +60,6 @@ function _rms(samples: number[]): number {
   return (s / Math.max(1, samples.length)) ** 0.5;
 }
 
-const bytes = (s: string) => new TextEncoder().encode(s);
-
-/** The `bundle` fixture. */
-function bundleFixture(): Record<string, any> {
-  return batch.buildBundle("hatsugen_choukai", "J2", [fixtures.FIXTURES["hatsugen_choukai"]], "test");
-}
 
 const CAST = new Set([plan.NARRATOR_VOICE, ...Object.values(plan.RELATION_VOICES), ...plan.DIALOGUE_VOICES]);
 
@@ -139,7 +134,7 @@ describe("media", () => {
   /** On a fresh runner media/ is empty; the database says what exists, and a
    *  clip on that list is left exactly as the learner first heard it. */
   test("clips already live are neither made nor pointed at again", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const haveFile = path.join(tmp, "have.txt");
     const ids: string[] = bundle["audio_manifest"].map((c: any) => c["clip_id"]);
@@ -158,7 +153,7 @@ describe("media", () => {
   });
 
   test("a bundle that is entirely live has nothing to apply", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const have = new Set<string>(bundle["audio_manifest"].map((c: any) => c["clip_id"]));
     const report = await synth.synthesiseBundle(bundle, { outDir: tmp, have });
@@ -167,7 +162,7 @@ describe("media", () => {
   });
 
   test("uploading sends every clip and a failure keeps it out of the sql", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const report = await synth.synthesiseBundle(bundle, { outDir: tmp });
     const bad = report.written[0].path;
@@ -197,7 +192,7 @@ describe("media", () => {
   });
 
   test("synthesis produces a clip per manifest entry", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const report = await synth.synthesiseBundle(bundle, { outDir: tmp });
     expect(report.written.length).toBe(bundle["audio_manifest"].length);
@@ -211,7 +206,7 @@ describe("media", () => {
   /** Clip ids are content hashes, so re-running a batch after fixing one item
    *  must re-synthesise that item and nothing else. */
   test("a second run reuses every clip", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     await synth.synthesiseBundle(bundle, { outDir: tmp });
     const second = await synth.synthesiseBundle(bundle, { outDir: tmp });
@@ -222,14 +217,14 @@ describe("media", () => {
   /** The first time this points at a paid provider it must not be able to
    *  spend the afternoon's money in one command. */
   test("the limit is a budget", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const report = await synth.synthesiseBundle(bundle, { outDir: tmp, limit: 2 });
     expect(report.written.length).toBe(2);
   });
 
   test("one failing clip does not lose the others", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
 
     class Flaky implements providers.Provider {
@@ -265,7 +260,7 @@ describe("media", () => {
   /** A placeholder must never be mistakable for a real recording, in storage
    *  or in a review. */
   test("silent clips are marked as such in their path", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const report = await synth.synthesiseBundle(bundle, { outDir: tmp });
     expect(report.written.every((c) => c.path.startsWith("silent/"))).toBe(true);
@@ -274,7 +269,7 @@ describe("media", () => {
   /** The clip rows come from `bjt publish`, off the same manifest. A missing
    *  row means the bundle was never published, and inventing one hides that. */
   test("the sql updates rather than inserts", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const sql = synth.toSql(await synth.synthesiseBundle(bundle, { outDir: tmp }));
     expect(sql).toContain("update audio_clips");
@@ -282,7 +277,7 @@ describe("media", () => {
   });
 
   test("the run leaves a record", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle();
     const tmp = tmpPath();
     const report = await synth.synthesiseBundle(bundle, { outDir: tmp });
     const out = synth.writeReport(report, path.join(tmp, "reports", "r.json"));

@@ -62,7 +62,7 @@ type Savers = {
   timer: SettingSaver<boolean>;
 };
 
-/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+/** Behind the setup notice when no Worker is configured (ui/screen.tsx). */
 export default function AccountScreen() {
   return (
     <ScreenGate>
@@ -75,10 +75,7 @@ function Account() {
   const clearance = useTabClearance();
   const router = useRouter();
   const { lang, setLang, t } = useLang();
-  const { email, session, signOut } = useAuth();
-  // Read by the savers when they write, so they never hold on to a stale one.
-  const userId = useRef<string | null>(null);
-  userId.current = session?.user.id ?? null;
+  const { email, signOut } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [levels, setLevels] = useState<SectionLevel[]>([]);
   /** Only read for one thing here: whether this account may size its own day,
@@ -101,34 +98,31 @@ function Account() {
   // there is never more than one write out, the last press is the one
   // written, and a write that fails puts the setting back to what the
   // database holds and says so in its own card. Their callbacks reach only
-  // for state setters, which React keeps stable, and the user id through its
-  // ref.
+  // for state setters, which React keeps stable.
   const savers = useRef<Savers | null>(null);
   if (savers.current === null) {
-    const write = (patch: Parameters<typeof updateProfile>[1]) =>
-      userId.current ? updateProfile(userId.current, patch) : Promise.reject(new Error("not signed in"));
     const failedIn = (card: SettingCard) => (error: unknown) => setFailed({ card, error });
     savers.current = {
       exam: settingSaver<string | null>({
-        write: (exam_date) => write({ exam_date }),
+        write: (exam_date) => updateProfile({ exam_date }),
         show: (exam_date) => setProfile((p) => (p ? { ...p, exam_date } : p)),
         failed: failedIn("exam"),
       }),
       // The day's size, for the one account that may choose it. The bound
-      // comes from the database (`v_my_day.goal_max`) and the database checks
+      // comes from the database (`day().goal_max`) and the database checks
       // it again on the way in — the field is drawn from the answer, not
       // trusted with it — so a failure here is a real refusal and is shown
       // rather than swallowed.
       goal: settingSaver<number>({
-        write: (daily_goal) => write({ daily_goal }),
+        write: (daily_goal) => updateProfile({ daily_goal }),
         show: (daily_goal) => setProfile((p) => (p ? { ...p, daily_goal } : p)),
-        // Home reads the goal from v_my_day, so keep the copy this screen is
+        // Home reads the goal from `day()`, so keep the copy this screen is
         // holding in step rather than showing yesterday's number until a reload.
         saved: (goal) => setDay((d) => (d ? { ...d, goal } : d)),
         failed: failedIn("goal"),
       }),
       timer: settingSaver<boolean>({
-        write: (timed_reading) => write({ timed_reading }),
+        write: (timed_reading) => updateProfile({ timed_reading }),
         show: (timed_reading) => setProfile((p) => (p ? { ...p, timed_reading } : p)),
         failed: failedIn("timer"),
       }),
@@ -146,7 +140,7 @@ function Account() {
   // have moved a level, and this screen is where the three are printed.
   useFocusEffect(
     useCallback(() => {
-        let cancelled = false;
+      let cancelled = false;
       fetchProfile()
         .then((p) => {
           if (cancelled) return;
@@ -296,8 +290,8 @@ function Account() {
       {/* How long a sitting is, for the one account the database says may say
           so: `goal_max` is null for everybody else and this card is not drawn
           at all. It is on the same side of the line as the reading clock —
-          how you practise, not what you are served — and `next_items()` takes
-          a size and decides the rest from the record. */}
+          how you practise, not what you are served — and the queue takes a
+          size and decides the rest from the record. */}
       {day?.goal_max != null ? (
         <View style={{ gap: space.md }}>
           <SectionLabel>{t("acc_setsize")}</SectionLabel>
@@ -368,8 +362,8 @@ function Account() {
       {/* Everything the app knows about somebody is derived from their answers,
           so this one button is the whole of it: the three levels, the spacing
           ladder, the weakness arithmetic and today's count all follow from the
-          rows it removes. The database does the removing — the client has no
-          delete policy on an answer and is not getting one. */}
+          rows it removes. The database does the removing — no query lets the
+          client delete an answer, and none is coming. */}
       <View style={{ gap: space.md }}>
         <SectionLabel>{t("acc_reset")}</SectionLabel>
         <Card style={{ gap: space.md }}>
@@ -453,8 +447,8 @@ function Account() {
 }
 
 const styles = StyleSheet.create({
-  levelRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   page: { paddingHorizontal: space.lg, gap: space.lg },
+  levelRow: { flexDirection: "row", alignItems: "center", gap: space.md },
   head: { flexDirection: "row", alignItems: "center", gap: space.md },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
 });

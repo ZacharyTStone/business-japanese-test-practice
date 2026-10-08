@@ -258,7 +258,7 @@ accident is not.
 
 ### The practice queue
 
-- **One bank, shared by everybody; fixed SQL does the sorting.** Only the order
+- **One bank, shared by everybody; fixed arithmetic does the sorting.** Only the order
   is personal, decided by arithmetic in the queue (`client/worker/core/queue.ts`) that a person can read
   and check. The model's contribution (the seed cell's tags, the distractor
   roles, `model_p_correct`) is attached *before* the item ships, and never

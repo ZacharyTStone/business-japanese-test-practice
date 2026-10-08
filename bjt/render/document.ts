@@ -17,7 +17,7 @@
  * in `templates.ts` — because every block type is a thing the renderer, the phone
  * layout, and the accessibility pass all have to handle.
  */
-import { get, has, len, or, repr, sorted, str, strip, truthy, TypeError_ } from "../py.ts";
+import { get, has, isDict, len, or, repr, sorted, str, strip, truthy, TypeError_ } from "../py.ts";
 import * as chart from "./chart.ts";
 import * as tpl from "./templates.ts";
 
@@ -54,15 +54,18 @@ export const _BLOCK_FIELDS = ["type", "text", "level", "items", "caption", "colu
  *  field does not. */
 export const _UNUSED_NUMBERS = ["level", "depth"] as const;
 
-/** `isinstance(v, dict)` for parsed JSON. */
-function isDict(v: unknown): v is Record<string, any> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
 /** `for x in (value or [])`, as Python iterates it: a list's elements, a
  *  string's characters, a dict's keys. */
 function iterOr(v: unknown): any[] {
   if (v === null || v === undefined || v === false || v === 0 || v === "") return [];
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string") return [...v];
+  if (isDict(v)) return Object.keys(v);
+  throw new TypeError_(`'${typeof v}' object is not iterable`);
+}
+
+/** `for x in value`: a list's elements, a string's characters, a dict's keys. */
+function iterOf(v: unknown): any[] {
   if (Array.isArray(v)) return v;
   if (typeof v === "string") return [...v];
   if (isDict(v)) return Object.keys(v);
@@ -75,6 +78,19 @@ function pyLen(v: unknown): number {
   if (typeof v === "string") return len(v);
   if (isDict(v)) return Object.keys(v).length;
   throw new TypeError_(`object of type '${typeof v}' has no len()`);
+}
+
+/** A `{label, value}` pair: a document's header field, or a key_values row. */
+function _labelledField(): Record<string, any> {
+  return {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["label", "value"],
+    "properties": {
+      "label": { "type": "string" },
+      "value": { "type": "string" },
+    },
+  };
 }
 
 /** One JSON schema covering every block type.
@@ -133,15 +149,7 @@ export function _blockSchema(): Record<string, any> {
       },
       "pairs": {
         "type": "array",
-        "items": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["label", "value"],
-          "properties": {
-            "label": { "type": "string" },
-            "value": { "type": "string" },
-          },
-        },
+        "items": _labelledField(),
         "description": "Labelled fields, for a key_values block.",
       },
       "sender": { "type": "string", "description": "Who wrote a quoted message." },
@@ -232,15 +240,7 @@ export function documentSchema(): Record<string, any> {
       },
       "meta": {
         "type": "array",
-        "items": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["label", "value"],
-          "properties": {
-            "label": { "type": "string" },
-            "value": { "type": "string" },
-          },
-        },
+        "items": _labelledField(),
         "description": "The template's header fields — From/To/Date for an " +
         "email, 日時/場所/出席者 for minutes. Labels in Japanese. Dates and " +
         "times in Arabic digits (「9月9日（火）10時〜12時」).",
@@ -472,12 +472,4 @@ export function textOf(doc: Record<string, any>): string {
     }
   }
   return parts.filter((p) => p).join("\n");
-}
-
-/** `for x in value`: a list's elements, a string's characters, a dict's keys. */
-function iterOf(v: unknown): any[] {
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string") return [...v];
-  if (isDict(v)) return Object.keys(v);
-  throw new TypeError_(`'${typeof v}' object is not iterable`);
 }

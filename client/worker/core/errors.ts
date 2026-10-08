@@ -18,12 +18,20 @@ export function apiError(code: string, message: string, status = 400, hint: stri
   return new ApiFailure({ code, message, details: null, hint }, status);
 }
 
-/** The refusals the schema raises (d1/migrations), by the word it raises. */
-const RAISED: Record<string, { message: string; hint: string | null }> = {
+/** The refusals the schema's triggers raise (d1/triggers.sql), by the word
+ *  they raise. */
+const RAISED = {
   daily_limit_reached: { message: "daily limit reached", hint: "daily_limit_reached" },
   item_unavailable: { message: "this question is no longer in the bank", hint: "item_unavailable" },
   no_such_option: { message: "no such option for this question", hint: null },
-};
+} satisfies Record<string, { message: string; hint: string | null }>;
+
+/** A refusal the triggers would raise, raised by the Worker first, in the
+ *  same words. */
+export function raised(word: keyof typeof RAISED): ApiFailure {
+  const said = RAISED[word];
+  return apiError("P0001", said.message, 400, said.hint);
+}
 
 /** A thrown error, as the app should see it. */
 export function toApiError(e: unknown): { status: number; error: ApiError } {

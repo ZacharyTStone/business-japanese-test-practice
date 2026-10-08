@@ -6,14 +6,13 @@ import { createHash } from "node:crypto";
 import { describe, expect, test } from "vitest";
 import * as http from "../bjt/http.ts";
 import * as r2 from "../bjt/r2.ts";
-import { delEnv, patch, setEnv } from "./helpers.ts";
+import { bytes, delEnv, patch, setEnv } from "./helpers.ts";
 
 const WHEN = new Date(Date.UTC(2013, 4, 24));
 const [KEY, SECRET] = ["AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"];
 const HOST = "examplebucket.s3.amazonaws.com";
 const CREDS = new r2.Credentials({ account_id: "acct", access_key_id: "key-id", secret_access_key: "secret" });
 
-const bytes = (s: string) => new TextEncoder().encode(s);
 const sha256 = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
 
 function _signature(headers: Record<string, string>): string {

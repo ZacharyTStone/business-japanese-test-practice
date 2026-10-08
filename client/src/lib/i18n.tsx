@@ -148,7 +148,7 @@ const S = {
   acc_timer_exam: ["試験日まで2週間を切ると、この設定にかかわらず時間をはかります。", "In the last two weeks before your exam date, reading questions are timed whatever this says."],
   acc_exam_sub: ["試験日を入れると、復習が試験の前にひととおり来るように調整し、最後の2週間は本番と同じ分野の割合で出します。", "With an exam date, every review is scheduled to come round before the exam, and the last two weeks follow the exam's own mix of sections."],
   // How long a sitting is. Only an account whose row carries a number of its
-  // own ever sees this card — v_my_day.goal_max is null for everybody else —
+  // own ever sees this card — day().goal_max is null for everybody else —
   // and it is still a setting about how you practise rather than about which
   // questions you get.
   acc_setsize: ["1日の問題数", "Questions a day"],
@@ -260,7 +260,6 @@ const S = {
   time_left: ["残り{time}", "{time} left"],
   time_up: ["時間切れです", "Time's up"],
   time_up_sub: ["本番と同じ時間配分では、ここで次へ進みます。", "At exam pace this is where you move on."],
-  timer_hint: ["この問題の目安は{sec}秒です。", "About {sec} seconds for this one."],
   details_open: ["解説をくわしく見る", "Show the explanation"],
   details_close: ["解説をとじる", "Hide the explanation"],
   btn_result: ["結果を見る", "See results"],
@@ -287,7 +286,6 @@ const S = {
   veto_confirm: ["取り下げますか。全員に出なくなります。", "Veto it? It stops being served to everyone."],
   veto_yes: ["取り下げる", "Veto"],
   veto_cancel: ["やめる", "Cancel"],
-  veto_done: ["取り下げました。", "Vetoed."],
   veto_failed: ["取り下げられませんでした。", "Couldn't veto that."],
 
   // result

@@ -13,9 +13,9 @@
  * Its variety comes from the seed table, never from the prompt — see
  * `bjt/seedtable.ts` and `requires_cell`.
  */
-import { get, repr } from "../py.ts";
+import { get, getitem, repr } from "../py.ts";
 import type { Cell } from "../seedtable.ts";
-import { _getitem, Generator, type Item, withRelationNote } from "./base.ts";
+import { Generator, type Item, withRelationNote } from "./base.ts";
 
 export class HatsugenChoukaiGenerator extends Generator {
   override item_type = "hatsugen_choukai";
@@ -48,7 +48,7 @@ export class HatsugenChoukaiGenerator extends Generator {
 
   override cellSpec(cell: Cell): string {
     const scenes = cell.scenes.join("、");
-    const channelNote = _getitem({
+    const channelNote = getitem({
       "phone": (
         "This is a telephone item: the speaker and listener cannot see each "
         + "other, so the utterance must carry the phone conventions (naming "

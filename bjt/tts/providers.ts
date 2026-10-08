@@ -36,7 +36,7 @@
  * replaced `providers._post`.
  */
 import * as http from "../http.ts";
-import { get, has, htmlEscape, KeyError, len, PyError, repr, RuntimeError, sorted, strip, toInt, truthy, TypeError_, ValueError } from "../py.ts";
+import { get, has, htmlEscape, IndexError, KeyError, len, PyError, repr, RuntimeError, sorted, strip, toInt, truthy, TypeError_, ValueError } from "../py.ts";
 import { dumps, loads } from "../pyjson.ts";
 import * as channel from "./channel.ts";
 
@@ -133,11 +133,15 @@ export const PRONUNCIATION: Record<string, string> = {
 };
 
 
-/** Substitute the readings we have decided on.
- *
- *  Longest first, so 「一段落」 is not caught by a shorter entry midway through. */
+/** The dictionary's terms, longest first, so 「一段落」 is not caught by a
+ *  shorter entry midway through. */
+function _termsLongestFirst(): string[] {
+  return sorted(Object.keys(PRONUNCIATION), { key: len, reverse: true });
+}
+
+/** Substitute the readings we have decided on. */
 export function applyPronunciation(text: string): string {
-  for (const term of sorted(Object.keys(PRONUNCIATION), { key: len, reverse: true })) {
+  for (const term of _termsLongestFirst()) {
     text = text.replaceAll(term, PRONUNCIATION[term]);
   }
   return text;
@@ -328,7 +332,7 @@ export class GeminiProvider implements Provider {
       // is not JSON (or not UTF-8), a field that is missing or of the wrong
       // shape, base64 that does not decode.
       if (exc instanceof SyntaxError || exc instanceof TypeError || exc instanceof ValueError
-          || exc instanceof KeyError || exc instanceof channel.IndexError || exc instanceof TypeError_) {
+          || exc instanceof KeyError || exc instanceof IndexError || exc instanceof TypeError_) {
         throw new RuntimeError("Gemini returned no audio: " + _UTF8_REPLACE.decode(raw.subarray(0, 300)), { cause: exc });
       }
       throw exc;
@@ -396,7 +400,7 @@ export class GoogleProvider implements Provider {
    *  a reviewer reading the request can see what was meant to be said. */
   static toSsml(text: string): string {
     let body = htmlEscape(text);
-    for (const term of sorted(Object.keys(PRONUNCIATION), { key: len, reverse: true })) {
+    for (const term of _termsLongestFirst()) {
       body = body.replaceAll(
         htmlEscape(term), `<sub alias="${PRONUNCIATION[term]}">${htmlEscape(term)}</sub>`,
       );
@@ -514,7 +518,7 @@ function _sub(obj: unknown, key: string | number): unknown {
     if (Array.isArray(obj) || typeof obj === "string") {
       const seq: unknown[] = typeof obj === "string" ? [...obj] : obj;
       const i = key < 0 ? seq.length + key : key;
-      if (i < 0 || i >= seq.length) throw new channel.IndexError(`${_typeName(obj)} index out of range`);
+      if (i < 0 || i >= seq.length) throw new IndexError(`${_typeName(obj)} index out of range`);
       return seq[i];
     }
     if (obj !== null && typeof obj === "object") throw new KeyError(String(key));

@@ -6,8 +6,9 @@
  * that situation. The distractors are grammatical but wrong on register, honorific
  * direction, or speech act.
  */
+import { getitem } from "../py.ts";
 import type { Cell } from "../seedtable.ts";
-import { _getitem, Generator, withRelationNote } from "./base.ts";
+import { Generator, withRelationNote } from "./base.ts";
 
 export class HyougenGenerator extends Generator {
   override item_type = "hyougen";
@@ -34,7 +35,7 @@ export class HyougenGenerator extends Generator {
   );
 
   override cellSpec(cell: Cell): string {
-    const channelNote = _getitem({
+    const channelNote = getitem({
       "written": "The options are written expressions — lines from an email, a "
                  + "chat message, or a notice. They must read as text, not as "
                  + "transcribed speech, and the 定型表現 conventions of written "
