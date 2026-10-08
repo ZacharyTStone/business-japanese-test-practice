@@ -58,7 +58,7 @@ accident is not.
 - **Nothing is generated while somebody is practising**, so the running cost is
   zero. Generation is a batch job (`bjt batch`, or `bjt nightly` from the
   **nightly** workflow at 01:17 JST); content ships as reviewable SQL
-  (`bjt publish`). A night is very cheap: three items at most, reading first,
+  (`bjt publish`). A night is very cheap: two items at most, reading first,
   never more than fifty cents (`BJT_RUN_BUDGET_USD` and the `max_usd` default in
   `nightly.yml`, both pinned at or below 0.5 by `tests/ceilings.test.ts`). A
   manual run can ask for the difficulty probe (`bjt probe --all`) instead. The
@@ -94,9 +94,10 @@ accident is not.
 - **Every run writes reading items.** The first `--reading-min` (1) items go to
   the emptiest reading shelves (no audio or picture needed) before the
   emptiest-first rule sees the rest; their lines come first in the work order,
-  so a night its ceiling ends early still has them. A night is three items, two to a shelf at
-  most (`plan.DEFAULT_BUDGET` / `_PER_SLOT`, and the nightly workflow's own
-  defaults, which must agree), sized to how little the app is used. A type in
+  so a night its ceiling ends early still has them. A night is two items, one to a shelf
+  (`plan.DEFAULT_BUDGET` / `_PER_SLOT`, and the nightly workflow's own
+  defaults, which must agree), sized to how little the app is used and to the
+  owner's choice of one or two right questions over three (2026-10-08). A type in
   `plan.NIGHT_TYPE_CAPS` (画像把握: one) never exceeds its nightly allowance,
   however empty its shelves.
 - **A shelf that writes nothing rests.** A shelf the generator cannot write

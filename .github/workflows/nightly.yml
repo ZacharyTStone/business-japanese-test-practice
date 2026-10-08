@@ -96,9 +96,10 @@ name: nightly
 
 on:
   # The owner turned the nights back on (2026-09-27), asking that they stay
-  # very cheap: three items at most, reading first, and never more than fifty
-  # cents a night. They had been off since 2026-09-25, when every night cost
-  # API money for questions the app was used too little to need and the pull
+  # very cheap: two items at most (three until 2026-10-08), reading first,
+  # and never more than fifty cents a night. They had been off since
+  # 2026-09-25, when every night cost API money for questions the app was
+  # used too little to need and the pull
   # requests sat on branches nobody opened; the size of a night had already
   # come down to three items (2026-09-24), and the dollar ceiling now comes
   # down with it — see BJT_RUN_BUDGET_USD below. A manual run from the Actions
@@ -118,11 +119,11 @@ on:
       budget:
         description: "Most items this run may write"
         required: false
-        default: "3"
+        default: "2"
       per_slot:
         description: "Most items into any one (type, level)"
         required: false
-        default: "2"
+        default: "1"
       reading_min:
         description: "Items reserved for the reading shelves before the rest (they need no audio or picture)"
         required: false
@@ -186,18 +187,19 @@ jobs:
     # above it, is the guard that does not depend on any code being right.
     timeout-minutes: 45
     env:
-      # Three a night, two to a shelf: well under a dollar on Sonnet. It was
-      # eight until the owner said the app is used far less than that fills
-      # (2026-09-24). The code clamps whatever is typed here to
+      # Two a night, one to a shelf: the owner would rather have one or two
+      # questions that are right than three (2026-10-08). It was eight until
+      # the owner said the app is used far less than that fills (2026-09-24),
+      # then three. The code clamps whatever is typed here to
       # BJT_NIGHT_MAX_BUDGET / _PER_SLOT.
-      BUDGET: ${{ github.event.inputs.budget || '3' }}
-      PER_SLOT: ${{ github.event.inputs.per_slot || '2' }}
+      BUDGET: ${{ github.event.inputs.budget || '2' }}
+      PER_SLOT: ${{ github.event.inputs.per_slot || '1' }}
       # Reading items first: no audio, no picture, the cheapest item there is,
       # and the owner asked for them every night (2026-09-19). At least one.
       READING_MIN: ${{ github.event.inputs.reading_min || '1' }}
       # The most this run may spend, checked before every call against the
       # usage the API reports. Reached, the run stops and keeps what it wrote.
-      # Fifty cents, the owner's price for a night (2026-09-27): three items on
+      # Fifty cents, the owner's price for a night (2026-09-27): two items on
       # Sonnet fit under it when the drafts go well, and when a shelf needs its
       # retries the night stops short and ships what it has, which is the trade
       # the owner chose. A scheduled run has no inputs, so this fallback is the

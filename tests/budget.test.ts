@@ -246,6 +246,6 @@ describe("budget", () => {
     expect(config.GEN_EFFORT).toBe("medium");
     expect(config.IMAGE_QUALITY).toBe("medium");
     expect(config.SLOT_PATIENCE).toBe(3);
-    expect([plan.DEFAULT_BUDGET, plan.DEFAULT_PER_SLOT, plan.DEFAULT_READING_MIN]).toEqual([3, 2, 1]);
+    expect([plan.DEFAULT_BUDGET, plan.DEFAULT_PER_SLOT, plan.DEFAULT_READING_MIN]).toEqual([2, 1, 1]);
   });
 });

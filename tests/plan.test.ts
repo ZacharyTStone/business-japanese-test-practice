@@ -116,7 +116,7 @@ describe("the work order", () => {
 
   test("render names the thin shelves", () => {
     const text = plan.render(
-      _survey(["a", "J2", 0, 10]), plan.workOrder(_survey(["a", "J2", 0, 10]), { budget: 2 }),
+      _survey(["a", "J2", 0, 10]), plan.workOrder(_survey(["a", "J2", 0, 10]), { budget: 2, perSlot: 2 }),
     );
     expect(text).toContain("thin");
     expect(text).toContain("2 × a J2");
@@ -244,9 +244,9 @@ describe("the reading floor", () => {
       "hyougen", "goi_bunpou", "bamen_haaku", "sougou_choukai", "joukyou_haaku"]);
   });
 
-  /** The shape of the default night: one reading item and two others, where
-   *  the others are the emptiest shelves in the bank. The reading one is first,
-   *  so a night the fifty-cent ceiling ends after one shelf still has it. */
+  /** The shape of the default night: one reading item and one other, the
+   *  emptiest shelf in the bank. The reading one is first, so a night the
+   *  fifty-cent ceiling ends after one shelf still has it. */
   test("a nights first line is reading even beside an empty listening shelf", () => {
     const order = plan.workOrder(
       _survey(["gazou_haaku", "J1", 0, 100], ["sougou_choudokkai", "J1", 1, 100],
@@ -254,7 +254,7 @@ describe("the reading floor", () => {
       { budget: plan.DEFAULT_BUDGET, perSlot: plan.DEFAULT_PER_SLOT, readingMin: plan.DEFAULT_READING_MIN },
     );
     expect(order[0].item_type).toBe("hyougen");
-    expect(order.slice(1).map((w) => w.item_type)).toEqual(["gazou_haaku", "sougou_choudokkai"]);
+    expect(order.slice(1).map((w) => w.item_type)).toEqual(["gazou_haaku"]);
   });
 
   test("a shelf both passes reached is one line at the floors place", () => {
