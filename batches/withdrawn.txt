@@ -80,3 +80,8 @@ f760e4e239  unnatural     The boss smuggles the calendar in as hearsay: 「十�
 # 総合聴読解
 91d768f9f8  unclear       Inspection starting a week late cannot be fixed by finishing a week early, so the conversation's conclusion, and the key, do not follow.
 2bc464a7cb  unnatural     「作りを組み直す」 and 「表示の部分だけを当て直す」 are not how an engineer describes a rebuild and a patch.
+
+# 2026-10-08: two more 画像把握 with the same fault as the three above, found when
+# the offline lint learnt to see it (naturalness.OPENS_WITH_PERSON).
+c706451a58  unnatural     Asked 「社員は何をしていますか」, option 「来客が社員に会議室までの道を尋ねています」 is about the visitor.
+2cf468fc3d  unnatural     Asked 「左の人は何をしていますか」, option 「右の人がメモを取りながら話を聞いています」 is about the person on the right.

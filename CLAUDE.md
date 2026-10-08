@@ -161,8 +161,10 @@ accident is not.
   an invented stack (させていただかせていただく is the commonest).
   `bjt/fidelity/naturalness.ts` holds the rules: every generator is told them
   (`PROMPT`); a draft tripping the mechanical half (invented keigo, a 〇〇
-  placeholder, brackets in something heard, a 場面把握 narration that says the
-  answer) is sent back with the reason; the proofreader has `unnatural_japanese`
+  placeholder, brackets or 貴殿 in something heard, three written set phrases
+  stacked in one spoken line, an honorific on a thing, a 場面把握 narration that
+  says the answer, a 画像把握 option about somebody other than the person
+  asked after) is sent back with the reason; the proofreader has `unnatural_japanese`
   and `situation_incoherent`; `checkBundle` fails any served item with a tell,
   so a committed one is withdrawn or CI fails. 語彙・文法's `nonexistent_form` is the
   one deliberate non-word and is exempt. Widen a pattern only against a line

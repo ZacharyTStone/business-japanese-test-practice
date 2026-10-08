@@ -93,6 +93,81 @@ describe("naturalness", () => {
     expect(naturalness.faults(read)).toEqual([]);
   });
 
+  test.each([
+    "この度は私の不徳の致すところで、誠に慙愧に堪えない失態を演じてしまいましたこと、幾重にもお詫び申し上げます。",
+    "誠に僭越ながら申し上げますが、御見積書の数量表記に些少の齟齬が生じておられるやに拝察いたしますゆえ、ご訂正賜れますと幸甚に存じます。",
+    "誠に恐縮至極ではございますが、僭越ながら次回の商談の件、少々お時間を頂戴いたしたく、伏してお願い申し上げる次第でございます。",
+  ])("a parody chain of set phrases is caught %s", (line) => {
+    expect(naturalness.faults(_withOption("hatsugen_choukai", line)).some((f) => f.includes("parody"))).toBe(true);
+  });
+
+  test.each([
+    // One formula out of its place is the over-polite distractor people produce.
+    "私の不徳の致すところで、誠に申し訳ございません。",
+    "僭越ながら、乾杯の音頭を取らせていただきます。",
+    "大変僭越ながら申し上げますが、提案書に誤植が見受けられますので、ご確認いただければ幸いに存じます。",
+  ])("one set phrase is left alone %s", (line) => {
+    expect(naturalness.faults(_withOption("hatsugen_choukai", line))).toEqual([]);
+  });
+
+  test("a word only letters use is caught only where it is heard", () => {
+    const heard = _withOption(
+      "hatsugen_choukai",
+      "大変僭越ながら申し上げますが、貴殿の提案書に誤植が見受けられますので、ご確認いただければ幸いに存じます。",
+    );
+    expect(naturalness.faults(heard).some((f) => f.includes("only letters use"))).toBe(true);
+
+    // In a letter, 貴殿 is where it belongs.
+    const read = _item("sougou_dokkai");
+    read["document"]["title"] = "貴殿の益々のご清栄をお慶び申し上げます";
+    expect(naturalness.faults(read)).toEqual([]);
+  });
+
+  test("an honorific on a thing is caught", () => {
+    const item = _withOption(
+      "hatsugen_choukai",
+      "恐れ入ります。ただいま宅配便がお見えになりましたので、少々お時間を頂戴いたしたく存じます。",
+    );
+    expect(naturalness.faults(item).some((f) => f.includes("honorific on a thing"))).toBe(true);
+    for (const line of ["恐れ入ります。宅配便が参りましたので、五分ほど席を外してもよろしいでしょうか。",
+                        "山川商事の佐藤様がお見えになりました。"]) {
+      expect(naturalness.faults(_withOption("hatsugen_choukai", line))).toEqual([]);
+    }
+  });
+
+  test("a phrase that cancels itself is caught", () => {
+    const item = _item("hyougen");
+    item["stem"] = "前任の後任であることを伝えて、挨拶のメールを書きます。";
+    expect(naturalness.faults(item).some((f) => f.includes("cancels itself"))).toBe(true);
+    item["stem"] = "前任の佐藤の後任であることを伝えて、挨拶のメールを書きます。";
+    expect(naturalness.faults(item)).toEqual([]);
+  });
+
+  test.each([
+    ["受付の人は何をしていますか。", "来客が受付の人に行き方を教えています。"],
+    ["ホワイトボードの前に立っている人は何をしていますか。", "座っている上司が立っている部下に指示を出しています。"],
+    ["立っている人は何をしていますか。", "座っている人が立っている人に書類を渡しています。"],
+    ["社員は何をしていますか。", "来客が社員に会議室までの道を尋ねています。"],
+    ["左の人は何をしていますか。", "右の人がメモを取りながら話を聞いています。"],
+  ])("a picture option about somebody else is caught %s", (stem, line) => {
+    const item = _withOption("gazou_haaku", line, { role: "wrong_participants" });
+    item["stem"] = stem;
+    expect(naturalness.faults(item).some((f) => f.includes("is about"))).toBe(true);
+  });
+
+  test.each([
+    // About the person asked after, wrong in what they do or to whom.
+    ["受付の人は何をしていますか。", "来客から行き方を教わっています。"],
+    // A clause with its own subject is not a sentence about somebody else.
+    ["ホワイトボードの前に立っている人は何をしていますか。", "会議が終わってホワイトボードを消しています。"],
+    // The person asked after, named as the subject.
+    ["立っている人は何をしていますか。", "立っている人が座っている人に書類を渡しています。"],
+  ])("a picture option about the person asked after is left alone %s", (stem, line) => {
+    const item = _withOption("gazou_haaku", line, { role: "wrong_participants" });
+    item["stem"] = stem;
+    expect(naturalness.faults(item)).toEqual([]);
+  });
+
   test("a narration that says the answer is caught", () => {
     const item = _item("bamen_haaku");
     const answer = item["options"][0];
