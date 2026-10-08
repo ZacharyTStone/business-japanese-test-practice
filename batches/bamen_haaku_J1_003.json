@@ -1,0 +1,160 @@
+{
+  "bundle_version": 2,
+  "item_type": "bamen_haaku",
+  "level": "J1",
+  "generated_at": "2026-10-08T21:25:42+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "56d2848650",
+      "item_type": "bamen_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "video_call+junior_to_senior+identify_listener_role@J1",
+        "setting": "video_call",
+        "relation": "junior_to_senior",
+        "function": "identify_listener_role",
+        "level": "J1",
+        "channel": "video"
+      },
+      "topic": "オンライン会議で指導への礼を述べる",
+      "stem": "オンライン会議で、ある人がこう話しています。「先日はお忙しい中、資料のまとめ方を一から教えていただき、本当に助かりました。おかげさまで、先週の部内会議での発表は無事に終わりました。改めてお礼申し上げます。」この人は誰に向かって話していますか。",
+      "options": [
+        {
+          "text": "取引先の担当者",
+          "role": "wrong_participant",
+          "why": "自社の部内会議の準備を教わったという内容で、社外の取引先に向けて述べる話ではない。"
+        },
+        {
+          "text": "他部署の先輩",
+          "role": "adjacent_setting",
+          "why": "先輩に向けた礼ではあるが、話題が自分の部署の部内会議であり、他部署の先輩が教えたという説明にはならない。"
+        },
+        {
+          "text": "直属の上司である課長",
+          "role": "plausible_but_unmentioned",
+          "why": "指導や礼を述べる相手として自然だが、相手が上司であるとも課長であるとも一切述べられていない。"
+        },
+        {
+          "text": "同じ部署の先輩",
+          "role": "correct",
+          "why": "部内会議の発表に向けて資料のまとめ方を教わったと礼を述べており、同じ部署内で指導してくれた先輩に向けた話である。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "「教えていただき」「お礼申し上げます」という謙譲表現と、「先週の部内会議での発表」という部署内の出来事が結び付いており、話し手は自分の部署の先輩に向けて礼を述べていると分かる。取引先であれば社内の部内会議の話はしない。他部署の先輩では部内会議との結び付きが説明できない。上司（課長）である可能性は否定できないが、本文に役職への言及は一切なく、単なる思い込みにすぎない。",
+      "explanation_en": "The internal 部内会議 reference ties the thank-you to a senior colleague in the same department, ruling out a client, a senior from another department, or an assumed manager title never mentioned.",
+      "vocab_notes": [
+        {
+          "term": "教えていただく",
+          "reading": "おしえていただく",
+          "meaning": "to have someone kindly teach (humble receptive form)"
+        },
+        {
+          "term": "部内会議",
+          "reading": "ぶないかいぎ",
+          "meaning": "internal department meeting"
+        }
+      ],
+      "audio": {
+        "narration": "7697df97dbed55b7",
+        "options": [
+          "da9b1e734101077f",
+          "9b5512a874a866fe",
+          "83393fbe7d77651e",
+          "4cce692797ada6ab"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "model_p_correct": 0.53
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "7697df97dbed55b7",
+      "item_id": "56d2848650",
+      "kind": "narration",
+      "index": null,
+      "text": "オンライン会議で、ある人がこう話しています。「先日はお忙しい中、資料のまとめ方を一から教えていただき、本当に助かりました。おかげさまで、先週の部内会議での発表は無事に終わりました。改めてお礼申し上げます。」この人は誰に向かって話していますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "56d2848650",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "da9b1e734101077f",
+      "item_id": "56d2848650",
+      "kind": "option",
+      "index": 0,
+      "text": "取引先の担当者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "56d2848650",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "9b5512a874a866fe",
+      "item_id": "56d2848650",
+      "kind": "option",
+      "index": 1,
+      "text": "他部署の先輩",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "56d2848650",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "83393fbe7d77651e",
+      "item_id": "56d2848650",
+      "kind": "option",
+      "index": 2,
+      "text": "直属の上司である課長",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "56d2848650",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "4cce692797ada6ab",
+      "item_id": "56d2848650",
+      "kind": "option",
+      "index": 3,
+      "text": "同じ部署の先輩",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_video_call_laptop"
+  ]
+}
