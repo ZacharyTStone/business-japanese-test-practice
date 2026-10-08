@@ -1,12 +1,10 @@
--- Artwork for 21 scene(s).
+-- Artwork for 19 scene(s).
 -- Produced by bjt scenes --sql. Idempotent: re-running sets the same values.
 -- For D1: wrangler d1 execute applies the file all or nothing.
 
 insert into scenes (id, label_ja, image_path) values ('pic_09fa4bde9a', '取引先の会議室で名刺交換をする', 'pic_09fa4bde9a.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
 insert into scenes (id, label_ja, image_path) values ('pic_2b3e3869ff', 'オフィス移転に伴う什器の運搬', 'pic_2b3e3869ff.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
-insert into scenes (id, label_ja, image_path) values ('pic_2cf468fc3d', 'セミナー会場でメモを取る', 'pic_2cf468fc3d.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
 insert into scenes (id, label_ja, image_path) values ('pic_643098801f', '社内書類への押印', 'pic_643098801f.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
-insert into scenes (id, label_ja, image_path) values ('pic_c706451a58', '取引先の応接室で奥へ案内する', 'pic_c706451a58.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
 insert into scenes (id, label_ja, image_path) values ('scene_client_meeting_room', '取引先の会議室', 'scene_client_meeting_room.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
 insert into scenes (id, label_ja, image_path) values ('scene_client_office_sofa', '取引先の応接ソファ', 'scene_client_office_sofa.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
 insert into scenes (id, label_ja, image_path) values ('scene_corridor', 'オフィスの廊下', 'scene_corridor.webp') on conflict (id) do update set label_ja = excluded.label_ja, image_path = excluded.image_path;
