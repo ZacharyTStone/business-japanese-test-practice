@@ -500,7 +500,11 @@ accident is not.
   trusting the client. It is an unpublish, never a delete, so every attempt,
   review rung and report pointing at the item keeps resolving. Vetoing happens
   instead of answering: no `attempts` row, and the day's ten is not spent.
-  `item_vetoes` keeps who and when.
+  `item_vetoes` keeps who and when. `bjt reports` is how the owner looks:
+  one read-only SELECT (no user id), printed for wrangler, whose output it
+  turns into the reported questions still live, each with the ledger line that
+  would withdraw it; the nightly runs the same query and puts the list in the
+  night's pull request. It never writes the ledger.
 - **A question leaves the bank through `batches/withdrawn.txt`, never by
   deletion** — the veto made from the repository. Every reference to an item
   is `on delete restrict`, so the database refuses a delete outright. One line per item (id, a

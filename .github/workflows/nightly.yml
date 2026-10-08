@@ -574,6 +574,25 @@ jobs:
           (cd client && npx --yes wrangler@4.131.1 d1 execute business-japanese-drill --remote --yes \
             --file ../batches/scenes.sql)
 
+      # What testers reported that is still live, for the night's pull request
+      # (bjt/reports.ts). One SELECT, and no user id in it: the night reads the
+      # reports and decides nothing, since a report is not a veto; taking a
+      # question out is still a line in batches/withdrawn.txt. Allowed to fail:
+      # a night is never lost over reports it could not read.
+      - name: list the questions testers reported
+        if: steps.keys.outputs.db == 'true'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          query=$(node bjt/main.ts reports --query)
+          (cd client && npx --yes wrangler@4.131.1 d1 execute business-japanese-drill --remote --json \
+            --command "$query") > reports.json
+          node bjt/main.ts reports reports.json --summary reports.md
+          if [ -s reports.md ]; then cat reports.md >> "$GITHUB_STEP_SUMMARY"; fi
+
       # batches/scenes.sql is included when the scene step wrote it, so the
       # pull request also records which pictures the database was pointed at.
       - name: open the night's pull request
@@ -629,6 +648,7 @@ jobs:
           echo "base=$(git rev-parse "origin/$default")" >> "$GITHUB_OUTPUT"
           [ -f summary.md ] || echo "Nightly run: scene artwork only." > summary.md
           [ -f scenes.md ] && { echo; cat scenes.md; } >> summary.md
+          [ -s reports.md ] && { echo; cat reports.md; } >> summary.md
           cat summary.md >> "$GITHUB_STEP_SUMMARY"
           # The items are safe on the branch by now. If the repository does not
           # let Actions open pull requests, say so and how to fix it, and hand
