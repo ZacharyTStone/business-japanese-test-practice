@@ -65,6 +65,9 @@ describe("the Worker's own sign-in", () => {
     return (await stmt.first<{ n: number }>())?.n ?? -1;
   }
 
+  const sessionsOf = async (userId: string | undefined) =>
+    (await bank.db.prepare(`select count(*) as n from "${AUTH_TABLES.session}" where "userId" = ?`).bind(userId).first<{ n: number }>())?.n;
+
   /** A signed-in device for `email`: a user, a session, its cookie. */
   async function signIn(email: string): Promise<{ cookie: string; token: string; userId: string }> {
     const ctx = await context();
@@ -125,11 +128,10 @@ describe("the Worker's own sign-in", () => {
     await addTester(bank.db, leaving);
     const { userId } = await signIn(leaving);
     await bank.db.prepare("delete from testers where email = ?").bind(leaving).run();
-    const before = await bank.db.prepare(`select count(*) as n from "${AUTH_TABLES.session}" where "userId" = ?`).bind(userId).first<{ n: number }>();
+    const before = await sessionsOf(userId);
     const refused = await (await context()).internalAdapter.createSession(userId).catch((e: unknown) => e);
     expect(codeOf(refused)).toBe("not_on_tester_list");
-    const after = await bank.db.prepare(`select count(*) as n from "${AUTH_TABLES.session}" where "userId" = ?`).bind(userId).first<{ n: number }>();
-    expect(after?.n).toBe(before?.n);
+    expect(await sessionsOf(userId)).toBe(before);
   });
 
   it("keeps none of Google's tokens, and no address or browser with a session", async () => {
@@ -233,8 +235,7 @@ describe("the Worker's own sign-in", () => {
     const userId = (await bank.db.prepare(`select "id" from "${AUTH_TABLES.user}" where "email" = ?`).bind(leaving).first<{ id: string }>())?.id;
     expect((await query("deleteAccount", { email: leaving })).body.data).toMatchObject({ deleted: true });
     expect(await rows(AUTH_TABLES.user, leaving)).toBe(0);
-    const sessions = await bank.db.prepare(`select count(*) as n from "${AUTH_TABLES.session}" where "userId" = ?`).bind(userId).first<{ n: number }>();
-    expect(sessions?.n).toBe(0);
+    expect(await sessionsOf(userId)).toBe(0);
 
     // Without the cache the session is gone at once.
     expect(await ask({ cookie })).toMatchObject({ code: "signed_out" });

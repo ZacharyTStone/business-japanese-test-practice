@@ -18,14 +18,10 @@ import {
   Generator,
   repairSurplusOptions,
 } from "../bjt/generators/base.ts";
-import { goiCell, goiItem, store } from "./conftest.ts";
+import { fixtureItem, goiCell, goiItem, store } from "./conftest.ts";
 import { patch } from "./helpers.ts";
 
 type Item = Record<string, any>;
-
-function _valid(itemType: string): Item {
-  return deepcopy(fixtures.FIXTURES[itemType]);
-}
 
 /** `"".join(_SENTENCE.findall(t))`. */
 function _findall(re: RegExp, t: string): string[] {
@@ -33,9 +29,9 @@ function _findall(re: RegExp, t: string): string[] {
 }
 
 describe("generators", () => {
-  test("happy path", async () => {
+  test("a valid draft becomes an item on its cell with exactly one correct option", async () => {
     const cell = goiCell();
-    patch(llm, "generateStructured", async () => _valid("goi_bunpou"));
+    patch(llm, "generateStructured", async () => fixtureItem("goi_bunpou"));
     const item = await getGenerator("goi_bunpou").generate({ cell, seed: 0 });
     expect(item["level"]).toBe("J2");
     expect(item["seed_cell"]["id"]).toBe(cell.id);
@@ -53,11 +49,11 @@ describe("generators", () => {
     const fake = async () => {
       calls.n += 1;
       if (calls.n === 1) {
-        const bad = _valid("goi_bunpou");
+        const bad = fixtureItem("goi_bunpou");
         bad["options"][1]["role"] = "correct"; // now two correct -> invalid
         return bad;
       }
-      return _valid("goi_bunpou");
+      return fixtureItem("goi_bunpou");
     };
 
     patch(llm, "generateStructured", fake);
@@ -69,7 +65,7 @@ describe("generators", () => {
   test("raises after max attempts", async () => {
     const cell = goiCell();
     const alwaysBad = async () => {
-      const bad = _valid("goi_bunpou");
+      const bad = fixtureItem("goi_bunpou");
       bad["options"] = bad["options"].slice(0, 3); // only 3 options -> always invalid
       return bad;
     };
@@ -106,7 +102,7 @@ describe("generators", () => {
 
     const fake = async (system: string, user: string) => {
       captured["user"] = user;
-      return _valid("goi_bunpou");
+      return fixtureItem("goi_bunpou");
     };
 
     patch(llm, "generateStructured", fake);
@@ -128,8 +124,8 @@ describe("generators", () => {
     class G extends Generator {
       override item_type = "goi_bunpou";
     }
-    const a = new G()._finalize(_valid("goi_bunpou"), "J2", 42);
-    const b = new G()._finalize(_valid("goi_bunpou"), "J2", 42);
+    const a = new G()._finalize(fixtureItem("goi_bunpou"), "J2", 42);
+    const b = new G()._finalize(fixtureItem("goi_bunpou"), "J2", 42);
     expect(a["options"].map((o: Item) => o["text"])).toEqual(b["options"].map((o: Item) => o["text"]));
   });
 
@@ -143,7 +139,7 @@ describe("generators", () => {
 
     const fake = async () => {
       calls.n += 1;
-      const item = _valid("joukyou_haaku");
+      const item = fixtureItem("joukyou_haaku");
       delete item["item_type"]; // as the model returns it
       item["document"]["blocks"].splice(1, 0, { "type": "callout", "text": "" });
       return item;
@@ -171,7 +167,7 @@ describe("generators", () => {
 
     const fake = async () => {
       calls.n += 1;
-      const item = _valid("goi_bunpou");
+      const item = fixtureItem("goi_bunpou");
       const spare = { ...item["options"][1] };
       spare["text"] = "余分な選択肢";
       item["options"].push(spare); // a duplicate role, so it is the one to drop
@@ -186,10 +182,10 @@ describe("generators", () => {
     expect(schemas.validateItem("goi_bunpou", item)).toEqual([]);
 
     // Fewer than four, or two correct, is left for the validator to reject.
-    const short = _valid("goi_bunpou"); short["options"].pop();
+    const short = fixtureItem("goi_bunpou"); short["options"].pop();
     expect(repairSurplusOptions(short)).toEqual([]);
     expect(short["options"].length).toBe(3);
-    const two = _valid("goi_bunpou"); two["options"].push({ ...two["options"][0], text: "x" });
+    const two = fixtureItem("goi_bunpou"); two["options"].push({ ...two["options"][0], text: "x" });
     expect(repairSurplusOptions(two)).toEqual([]);
     expect(two["options"].length).toBe(5);
   });
@@ -199,7 +195,7 @@ describe("generators", () => {
     // sentences go with it. Left in, they described an option the item no longer
     // has, and the proofreader rejected every 表現読解 J3 draft as
     // explanation_mismatch — the trim saved nothing.
-    const item = _valid("goi_bunpou");
+    const item = fixtureItem("goi_bunpou");
     const spare = { ...item["options"][1], text: "本日は遅れられまして申し訳ございません。" };
     item["options"].push(spare); // a duplicate role, so it is the one dropped
     const correct = item["options"].find((o: Item) => o["role"] === roles.CORRECT)["text"];
@@ -244,7 +240,7 @@ describe("generators", () => {
 
     const fake = async (system: string, user: string) => {
       seen["user"] = user;
-      return _valid("goi_bunpou");
+      return fixtureItem("goi_bunpou");
     };
 
     patch(llm, "generateStructured", fake);

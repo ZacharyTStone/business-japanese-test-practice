@@ -8,10 +8,10 @@
  * say it the same way, so the ordering and the comparison live here rather
  * than being reinvented per screen.
  *
- * Nothing here decides anything. The levels are moved by `adjust_level()` in the
- * database, on the evidence of the answers, and whether a level has enough
- * behind it to be printed at all (`placed`) is read from the same view rather
- * than counted here; this is presentation.
+ * Nothing here decides anything. The levels are moved by `nextLevel()` in the
+ * Worker (worker/core/levels.ts), on the evidence of the answers, and whether a
+ * level has enough behind it to be printed at all (`placed`) is read from the
+ * same file rather than counted here; this is presentation.
  */
 import type { Key } from "./i18n";
 import type { Level, Section, SectionLevel } from "./types";
@@ -54,7 +54,7 @@ function levelOf(levels: SectionLevel[], section: Section): Level | null {
  * point, not a finding about them, and printing "J2" at somebody who has
  * answered nothing is the app stating a conclusion it has no evidence for.
  *
- * The database decides. `v_my_levels.placed` is true once `adjust_level()` has
+ * The database decides. `placed` (`myLevels()`) is true once `nextLevel()` has
  * moved the section, or once it has the answers it would judge a first move on
  * — first attempts, at the section's current level, since the last change.
  * A count kept here would include stretch and below-level answers, and so

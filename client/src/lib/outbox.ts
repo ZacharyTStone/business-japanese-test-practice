@@ -25,7 +25,7 @@
  * **Sent twice is recorded once.** "Failed to fetch" can mean the insert landed
  * and the reply was lost. So before an entry is sent again the learner's own
  * attempts are asked for one with the same item, option, timings and replays —
- * row-level security scopes the question to them — and a match counts as sent.
+ * the Worker scopes the question to them — and a match counts as sent.
  *
  * **The day's door and the bank still decide.** An entry the database refuses
  * because the day is over (`daily_limit_reached`) or the question is gone
@@ -239,5 +239,3 @@ export function makeOutbox(store: KeyValueStore = AsyncStorage) {
 
   return { read, enqueue, flush, send, sendAgain };
 }
-
-export type Outbox = ReturnType<typeof makeOutbox>;

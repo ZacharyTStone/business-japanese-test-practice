@@ -9,7 +9,7 @@ import * as seedtable from "../bjt/seedtable.ts";
 import { getGenerator } from "../bjt/generators/index.ts";
 import { RELATION_NOTES } from "../bjt/generators/base.ts";
 import * as tts_plan from "../bjt/tts/plan.ts";
-import { setConfig, tmpPath } from "./helpers.ts";
+import { sameSet, setConfig, tmpPath } from "./helpers.ts";
 
 type Item = Record<string, any>;
 
@@ -21,10 +21,6 @@ function table(): seedtable.SeedTable {
 }
 
 /** `set(a) == set(b)`, as sorted arrays. */
-function sameSet(a: Iterable<string>, b: Iterable<string>): void {
-  expect(sorted(new Set(a))).toEqual(sorted(new Set(b)));
-}
-
 describe("seedtable", () => {
   test.each(TABLES)("every cell satisfies all three constraints %s", (itemType) => {
     const t = seedtable.load(itemType);

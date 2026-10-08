@@ -45,7 +45,7 @@ export function _loadBusinessTerms(): string[] {
   if (!existsSync(p)) {
     return [];
   }
-  return splitlines(readFileSync(p, "utf8")).filter((ln) => strip(ln)).map((ln) => strip(ln));
+  return splitlines(readFileSync(p, "utf8")).map((ln) => strip(ln)).filter((ln) => ln);
 }
 
 export class VocabResult {

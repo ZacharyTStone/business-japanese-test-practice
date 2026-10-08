@@ -2,8 +2,8 @@
  * Who is asking, to the database: the account a signed-in email belongs
  * to, and what its tester row allows.
  *
- * This is the door that row-level security used to be. Every query but
- * `whoami` refuses a caller who is not on the tester list (queries.ts), and
+ * This is the door that row-level security used to be. Every query refuses
+ * a caller who is not on the tester list (index.ts, before it runs), and
  * every query filters on the caller's own id — there is no other user's row
  * a query here can reach.
  *
@@ -53,7 +53,7 @@ export async function resolveLearner(
     stmt(db, "select id from users where email = ?", email),
   ]);
   const tester = (testerRes.results?.[0] as TesterRow | undefined) ?? null;
-  let userId = ((userRes.results?.[0] as { id: string } | undefined) ?? null)?.id ?? null;
+  let userId = (userRes.results?.[0] as { id: string } | undefined)?.id ?? null;
 
   const signInExists = async () =>
     !checkSignIn || (await first(db, 'select 1 as ok from "auth_users" where "email" = ?', email)) !== null;

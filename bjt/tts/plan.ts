@@ -19,7 +19,7 @@
  * and re-running a batch re-uses every clip whose text did not change.
  */
 import { createHash } from "node:crypto";
-import { get, has, KeyError, len, or, repr, str, truthy, ValueError } from "../py.ts";
+import { get, getitem, has, or, str, truthy, utf8 } from "../py.ts";
 
 /** The narrator who reads the situation. Always the same, always neutral — the
  *  narration is not part of what is being tested. */
@@ -216,7 +216,7 @@ export function voiceFor(item: Item): string {
 
 /** Content-addressed, so identical utterances share one audio file. */
 export function clipId(voice: string, channel: string, text: string): string {
-  const h = createHash("sha1").update(_utf8(`${str(voice)}|${str(channel)}|${str(text)}`)).digest("hex");
+  const h = createHash("sha1").update(utf8(`${str(voice)}|${str(channel)}|${str(text)}`)).digest("hex");
   return h.slice(0, 16);
 }
 
@@ -261,11 +261,11 @@ export function planItem(item: Item, itemId: string): Clip[] {
   if (policy.stem && truthy(get(item, "stem"))) {
     clips.push(
       new Clip({
-        clip_id: clipId(NARRATOR_VOICE, "in_person", _need(item, "stem")),
+        clip_id: clipId(NARRATOR_VOICE, "in_person", getitem(item, "stem")),
         item_id: itemId,
         kind: "narration",
         index: null,
-        text: _need(item, "stem"),
+        text: getitem(item, "stem"),
         voice: NARRATOR_VOICE,
         channel: "in_person",
       }),
@@ -280,11 +280,11 @@ export function planItem(item: Item, itemId: string): Clip[] {
       const turnVoice = casting.has(role) ? casting.get(role)! : _FALLBACK_VOICE;
       clips.push(
         new Clip({
-          clip_id: clipId(turnVoice, channel, _need(turn, "text")),
+          clip_id: clipId(turnVoice, channel, getitem(turn, "text")),
           item_id: itemId,
           kind: "dialogue",
           index: i,
-          text: _need(turn, "text"),
+          text: getitem(turn, "text"),
           voice: turnVoice,
           channel,
         }),
@@ -296,7 +296,7 @@ export function planItem(item: Item, itemId: string): Clip[] {
     if (truthy(get(policy, "options_by_narrator"))) {
       [voice, channel] = [NARRATOR_VOICE, "in_person"];
     }
-    const options: Item[] = _need(item, "options");
+    const options: Item[] = getitem(item, "options");
     options.forEach((opt, i) => {
       // The number first, in the narrator's voice and off the phone line
       // whatever the item's channel is: it is said by the exam, not from
@@ -318,11 +318,11 @@ export function planItem(item: Item, itemId: string): Clip[] {
       }
       clips.push(
         new Clip({
-          clip_id: clipId(voice, channel, _need(opt, "text")),
+          clip_id: clipId(voice, channel, getitem(opt, "text")),
           item_id: itemId,
           kind: "option",
           index: i,
-          text: _need(opt, "text"),
+          text: getitem(opt, "text"),
           voice,
           channel,
         }),
@@ -346,32 +346,4 @@ export function manifest(itemsWithIds: [string, Item][]): ClipDict[] {
     }
   }
   return out;
-}
-
-// ----- Python's behaviour where JavaScript's differs --------------------------
-
-/** `d[key]`: a missing key is a KeyError, as in Python, rather than an
- *  `undefined` that would be hashed as text. */
-function _need(d: Item, key: string): any {
-  if (!has(d, key)) throw new KeyError(repr(key));
-  return d[key];
-}
-
-/** Python's UnicodeEncodeError (a ValueError): text with a lone surrogate has
- *  no UTF-8 form. */
-class UnicodeEncodeError extends ValueError {}
-
-const LONE_SURROGATE = new RegExp("[\\uD800-\\uDFFF]", "u");
-
-/** `s.encode("utf-8")`, strict: a lone surrogate is refused rather than
- *  replaced with U+FFFD (which would hash to a different clip id). */
-function _utf8(s: string): Buffer {
-  const m = LONE_SURROGATE.exec(s);
-  if (m) {
-    const ch = m[0].charCodeAt(0).toString(16);
-    throw new UnicodeEncodeError(
-      `'utf-8' codec can't encode character '\\u${ch}' in position ${len(s.slice(0, m.index))}: surrogates not allowed`,
-    );
-  }
-  return Buffer.from(s, "utf8");
 }

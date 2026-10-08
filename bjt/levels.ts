@@ -13,6 +13,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import * as config from "./config.ts";
+import { unreadable } from "./files.ts";
 import { has, PyError, repr, ValueError } from "./py.ts";
 
 export const LEVELS = ["J3", "J2", "J1"];
@@ -45,8 +46,8 @@ export function _loadFromSeeds(): Record<string, string> {
   try {
     data = JSON.parse(readFileSync(file, "utf8"));
   } catch (e) {
-    // json.JSONDecodeError or OSError: the file is there but cannot be read.
-    if (e instanceof SyntaxError || (e instanceof Error && "code" in e)) {
+    // The file is there but cannot be read.
+    if (unreadable(e)) {
       return {};
     }
     throw e;

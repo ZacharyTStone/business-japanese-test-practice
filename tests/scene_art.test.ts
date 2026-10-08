@@ -18,11 +18,10 @@ import * as r2 from "../bjt/r2.ts";
 import * as scene_art from "../bjt/scene_art.ts";
 import * as scenes from "../bjt/scenes.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
-import { capture, delEnv, patch, setConfig, setEnv, tmpPath } from "./helpers.ts";
+import { bytes, capture, delEnv, iter, patch, setConfig, setEnv, tmpPath } from "./helpers.ts";
 
 type RequestOpts = Parameters<typeof http.request>[2];
 
-const bytes = (s: string) => new TextEncoder().encode(s);
 
 function _pngIsValid(data: Uint8Array): boolean {
   const b = Buffer.from(data);
@@ -46,16 +45,6 @@ class _Real implements scene_art.ImageProvider {
 }
 
 const verdict = (approved: boolean, ...reasons: string[]) => new scene_art.Verdict({ approved, reasons });
-
-/** Hands out the next of `items` on every call, as Python's `next(iter(...))`. */
-function iter<T>(items: T[]): () => T {
-  const it = items[Symbol.iterator]();
-  return () => {
-    const n = it.next();
-    if (n.done) throw new Error("StopIteration");
-    return n.value;
-  };
-}
 
 // ----- the bucket -----------------------------------------------------------
 
@@ -621,11 +610,7 @@ describe("scene_art", () => {
   /** A job that cannot list the bucket would see every scene as undrawn and
    *  pay to draw the whole bank again; so would one run before the library was
    *  moved into R2. Neither draws.
-   *
-   *  The workflow counts the bucket with this module now
-   *  (`(await new Bucket().list()).size`, imported from bjt/scene_art.ts), so
-   *  that is the line looked for, where the Python test looked for
-   *  `scene_art.Bucket().list()`. */
+   *  The workflow counts the bucket with this module's `Bucket().list()`. */
   test("the nightly job never draws into a bucket it cannot see or that is empty", () => {
     const text = readFileSync(path.join(config.ROOT, ".github/workflows/nightly.yml"), "utf8");
     const start = text.indexOf("name: which of tonight's work is unlocked");

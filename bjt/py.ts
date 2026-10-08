@@ -40,6 +40,23 @@ export class ValueError extends PyError {}
 export class KeyError extends PyError {}
 export class TypeError_ extends PyError {}
 export class FileNotFoundError extends PyError {}
+/** Python's IndexError: a list index past either end. */
+export class IndexError extends PyError {}
+/** Python's AttributeError: a method asked of a value that lacks it. */
+export class AttributeError extends PyError {}
+/** Python's OverflowError: `int()` of an infinite float. */
+export class OverflowError extends PyError {}
+/** Python's ZeroDivisionError: a division by nothing. */
+export class ZeroDivisionError extends PyError {}
+/** Python's UnicodeEncodeError (a ValueError): text with a lone surrogate
+ *  has no UTF-8 form. */
+export class UnicodeEncodeError extends ValueError {}
+
+/** Python's `except Exception`: every error but the one that ends the
+ *  process. */
+export function isException(e: unknown): boolean {
+  return e instanceof Error && !(e instanceof SystemExit);
+}
 
 /** `str(exc)`: the message alone, as Python prints an exception in an
  *  f-string. (`String(err)` in JavaScript prefixes the class name.) */
@@ -354,8 +371,9 @@ export function slice(s: string, start: number, end?: number): string {
   return cps.slice(start, end).join("");
 }
 
-/** Python's `str.isspace()` set: what `split()` and `strip()` remove. */
-const WS = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
+/** Python's `str.isspace()` set: what `split()` and `strip()` remove. A
+ *  character-class body, for `[${WS}]` in a pattern with the `u` flag. */
+export const WS ="\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
 const WS_RUN = new RegExp(`[${WS}]+`, "u");
 const WS_LEAD = new RegExp(`^[${WS}]+`, "u");
 const WS_TRAIL = new RegExp(`[${WS}]+$`, "u");
@@ -363,6 +381,47 @@ const WS_TRAIL = new RegExp(`[${WS}]+$`, "u");
 /** `s.split()` with no separator: runs of whitespace, no empty strings. */
 export function splitWs(s: string): string[] {
   return s.split(WS_RUN).filter((p) => p !== "");
+}
+
+/** `s.split(None, maxsplit)`: at most `maxsplit` splits on runs of
+ *  whitespace, the rest of the line kept whole (its trailing whitespace
+ *  included, as Python keeps it). */
+export function splitWsMax(s: string, maxsplit: number): string[] {
+  const parts: string[] = [];
+  let rest = s.replace(WS_LEAD, "");
+  while (rest !== "" && parts.length < maxsplit) {
+    const m = WS_RUN.exec(rest);
+    if (m === null) break;
+    parts.push(rest.slice(0, m.index));
+    rest = rest.slice(m.index + m[0].length);
+  }
+  if (rest !== "") parts.push(rest);
+  return parts;
+}
+
+const LONE_SURROGATE = new RegExp("[\\uD800-\\uDFFF]", "u");
+
+/** `s.encode("utf-8")`, strict: a lone surrogate is refused rather than
+ *  replaced with U+FFFD (which would hash or sign something else). */
+export function utf8(s: string): Buffer {
+  const m = LONE_SURROGATE.exec(s);
+  if (m) {
+    const ch = m[0].charCodeAt(0).toString(16);
+    throw new UnicodeEncodeError(
+      `'utf-8' codec can't encode character '\\u${ch}' in position ${len(s.slice(0, m.index))}: surrogates not allowed`,
+    );
+  }
+  return Buffer.from(s, "utf8");
+}
+
+/** `str(Path(p))`: a path as pathlib spells it — repeated and trailing
+ *  slashes and `.` components dropped, `..` kept, an empty path `.`. Also
+ *  the CLI's argument type where argparse had `type=pathlib.Path`. */
+export function pathStr(p: string): string {
+  const lead = p.startsWith("//") && !p.startsWith("///") ? "//" : p.startsWith("/") ? "/" : "";
+  const parts = p.split("/").filter((s) => s !== "" && s !== ".");
+  const out = lead + parts.join("/");
+  return out === "" ? "." : out;
 }
 
 function charsClass(chars: string): RegExp {
@@ -545,6 +604,19 @@ export function eq(a: unknown, b: unknown): boolean {
 export function get<T = any>(d: Record<string, any> | null | undefined, key: string, dflt: T | null = null): any {
   if (d && Object.prototype.hasOwnProperty.call(d, key)) return d[key];
   return dflt;
+}
+
+/** `d[key]` on a plain object: a missing key is a KeyError, as in Python,
+ *  rather than an `undefined` that would travel on. */
+export function getitem<T = any>(d: Record<string, T>, key: string): T {
+  if (!has(d, key)) throw new KeyError(repr(key));
+  return d[key];
+}
+
+/** `isinstance(v, dict)` for parsed JSON: a plain object, not null or a
+ *  list. */
+export function isDict(v: unknown): v is Record<string, any> {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
 /** `key in d` for a plain object. */

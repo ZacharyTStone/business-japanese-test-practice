@@ -28,7 +28,7 @@
  */
 import { createHash, createHmac } from "node:crypto";
 import * as http from "./http.ts";
-import { len, PyError, RuntimeError, sorted, splitWs, str, strip, truthy, ValueError } from "./py.ts";
+import { PyError, RuntimeError, sorted, splitWs, str, strip, truthy, utf8 } from "./py.ts";
 
 export const DEFAULT_BUCKET = "business-japanese-drill-media";
 export const REGION = "auto";
@@ -86,7 +86,7 @@ export const NOT_CONFIGURED = "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACC
 export function _quote(text: string, opts: { safe?: string } = {}): string {
   const safe = opts.safe ?? "-_.~";
   let out = "";
-  for (const byte of _utf8(text)) {
+  for (const byte of utf8(text)) {
     const ch = String.fromCharCode(byte);
     if (byte < 0x80 && (/[A-Za-z0-9_.\-~]/.test(ch) || safe.includes(ch))) out += ch;
     else out += "%" + byte.toString(16).toUpperCase().padStart(2, "0");
@@ -105,7 +105,7 @@ export function canonicalQuery(query: Record<string, string>): string {
 }
 
 function _hmac(key: Uint8Array, msg: string): Buffer {
-  return createHmac("sha256", key).update(_utf8(msg)).digest();
+  return createHmac("sha256", key).update(utf8(msg)).digest();
 }
 
 /** `when.strftime(fmt)` for the two stamps a signature carries, in UTC. */
@@ -151,10 +151,10 @@ export function sign(
     "AWS4-HMAC-SHA256",
     amzDate,
     scope,
-    createHash("sha256").update(_utf8(canonical)).digest("hex"),
+    createHash("sha256").update(utf8(canonical)).digest("hex"),
   ].join("\n");
-  const key = _hmac(_hmac(_hmac(_hmac(_utf8(`AWS4${secret}`), day), region), service), "aws4_request");
-  const signature = createHmac("sha256", key).update(_utf8(toSign)).digest("hex");
+  const key = _hmac(_hmac(_hmac(_hmac(utf8(`AWS4${secret}`), day), region), service), "aws4_request");
+  const signature = createHmac("sha256", key).update(utf8(toSign)).digest("hex");
   out["Authorization"] = (`AWS4-HMAC-SHA256 Credential=${accessKeyId}/${scope}, `
                           + `SignedHeaders=${signed}, Signature=${signature}`);
   return out;
@@ -229,27 +229,6 @@ export async function listKeys(creds: Credentials, prefix: string,
       return keys;
     }
   }
-}
-
-// ----- Python's behaviour where JavaScript's differs --------------------------
-
-/** Python's UnicodeEncodeError (a ValueError): text with a lone surrogate has
- *  no UTF-8 form. */
-class UnicodeEncodeError extends ValueError {}
-
-const LONE_SURROGATE = new RegExp("[\\uD800-\\uDFFF]", "u");
-
-/** `s.encode("utf-8")`, strict: a lone surrogate is refused rather than
- *  replaced with U+FFFD (which would sign something else). */
-function _utf8(s: string): Buffer {
-  const m = LONE_SURROGATE.exec(s);
-  if (m) {
-    const ch = m[0].charCodeAt(0).toString(16);
-    throw new UnicodeEncodeError(
-      `'utf-8' codec can't encode character '\\u${ch}' in position ${len(s.slice(0, m.index))}: surrogates not allowed`,
-    );
-  }
-  return Buffer.from(s, "utf8");
 }
 
 // ----- the listing's XML, as xml.etree.ElementTree reads it ---------------------

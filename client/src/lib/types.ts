@@ -97,7 +97,7 @@ export type ItemOption = {
   audio_path: string | null;
 };
 
-/** One row from the next_items() RPC — an item plus everything the screen needs. */
+/** One row from the `nextItems` query — an item plus everything the screen needs. */
 export type QueuedItem = {
   id: string;
   item_type: ItemTypeId;
@@ -142,9 +142,9 @@ export type VocabNote = { term: string; reading: string; meaning: string };
 
 /** The level being served in one exam section.
  *
- *  Three of these, always — the view fills in J2 for a section nobody has
+ *  Three of these, always — `myLevels()` fills in J2 for a section nobody has
  *  touched, so a screen never has to branch on a missing row. Moved by
- *  adjust_level() on the evidence of the answers; the client never writes it,
+ *  `nextLevel()` on the evidence of the answers; the client never writes it,
  *  and there is nowhere in the app to choose one. */
 export type SectionLevel = {
   section: Section;
@@ -152,17 +152,17 @@ export type SectionLevel = {
   changed_at: string;
   /** Whether the database has enough of its own evidence to call this a level
    *  rather than a starting point: the section has moved at least once, or has
-   *  the answers adjust_level() would judge its first move on. Computed on the
+   *  the answers `nextLevel()` would judge its first move on. Computed on the
    *  database's terms, so a screen cannot name a level before it could have
    *  been moved. */
   placed: boolean;
 };
 
-/** One row from v_my_day: where today stands against the goal and the ceiling.
+/** The `day` query's row: where today stands against the goal and the ceiling.
  *
  *  `max_today` and `left_today` are null for an account whose ceiling is lifted
- *  (a tester exercising the app); `unlimited` says so explicitly. The database
- *  runs the same arithmetic inside next_items(), so what this row says is left
+ *  (a tester exercising the app); `unlimited` says so explicitly. The queue
+ *  runs the same arithmetic, so what this row says is left
  *  is what the queue will serve. */
 export type DayStatus = {
   goal: number;
@@ -174,8 +174,8 @@ export type DayStatus = {
    *  account's to choose — which for everybody but the owner it is not, and
    *  then this is null. The account screen draws its set-size field on exactly
    *  that null, so no screen carries a copy of the fifteen; the database keeps
-   *  the number honest whatever the client sends (see my_daily_max and the
-   *  trigger on profiles). */
+   *  the number honest whatever the client sends (`dailyMax()` and
+   *  `updateProfile()` in worker/core/). */
   goal_max: number | null;
 };
 
@@ -191,7 +191,7 @@ export type Profile = {
   exam_date: string | null;
   /** Whether the reading questions are timed at exam pace. The one thing in the
    *  app a learner chooses, and it is about how they practise rather than about
-   *  which questions they are served — `next_items()` has never heard of it. */
+   *  which questions they are served — the queue has never heard of it. */
   timed_reading: boolean;
 };
 
@@ -238,7 +238,7 @@ export type RoleTrap = {
   recent_met: number | null;
 };
 
-/** One row from v_my_review_load. */
+/** The `reviewLoad` query's row. */
 export type ReviewLoad = {
   /** Lessons due now. Each comes back as a new question that sets the same trap. */
   due_now: number;
@@ -265,7 +265,7 @@ export type AnsweredItem = {
 
 /** What `chosen_index` is for a question nobody answered: the clock ran out.
  *  The column allows it (see the migration that added the reading clock) and the
- *  grading trigger reads it as wrong with the role `timed_out`. Every screen
+ *  grade (worker/core/grade.ts) reads it as wrong with the role `timed_out`. Every screen
  *  that indexes `options` by it gets `undefined`, which is the truth. */
 export const NO_ANSWER = -1;
 

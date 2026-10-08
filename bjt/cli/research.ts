@@ -23,7 +23,7 @@ import { GENERATORS } from "../generators/index.ts";
 import * as levels from "../levels.ts";
 import * as pipeline from "../pipeline.ts";
 import {
-  eprint, errText, get, has, indent, KeyError, or, percent, print, PyError, repr, sorted, str, strip,
+  eprint, errText, get, has, indent, isDict, KeyError, or, pathStr, percent, print, PyError, repr, sorted, str, strip,
   sum, truthy, TypeError_, ValueError, write,
 } from "../py.ts";
 import * as render from "../render/index.ts";
@@ -32,7 +32,6 @@ import * as seedsmod from "../seeds.ts";
 import * as seedtable from "../seedtable.ts";
 import { LETTERS, printAnswer, printQuestion } from "./_print.ts";
 import type { Namespace, SubParsers } from "./argparse.ts";
-import { _pathStr } from "./bank.ts";
 
 /** An item: plain JSON data. */
 type Item = Record<string, any>;
@@ -165,7 +164,7 @@ export async function cmdSeeds(args: Namespace): Promise<number> {
     for (const ex of fs) {
       const hasExpl = truthy(get(ex, "explanation_ja"));
       const options = get(ex, "options");
-      const roleOk = Array.isArray(options) && options.length && _isDict(options[0])
+      const roleOk = Array.isArray(options) && options.length && isDict(options[0])
         ? !schemas.validateItem(t, ex).length : false;
       fsGood += hasExpl && roleOk ? 1 : 0;
     }
@@ -191,11 +190,6 @@ export async function cmdSeeds(args: Namespace): Promise<number> {
           + "will suffer until you add them. See seeds.example/README.md.");
   }
   return 0;
-}
-
-/** `isinstance(x, dict)` for parsed JSON. */
-function _isDict(x: unknown): x is Item {
-  return x !== null && typeof x === "object" && !Array.isArray(x);
 }
 
 export async function cmdPractice(args: Namespace): Promise<number> {
@@ -491,7 +485,7 @@ export async function cmdCalibrate(args: Namespace): Promise<number> {
   let bank: calibration.Tally | null = null;
   let source: string;
   if (truthy(args.attempts_csv)) {
-    const csvPath = _pathStr(args.attempts_csv);
+    const csvPath = pathStr(args.attempts_csv);
     try {
       bank = calibration.readAttemptsCsv(csvPath, args.type);
     } catch (e) {
@@ -555,7 +549,7 @@ export function _normalizeOfficial(items: Item[], itemType: string): Item[] {
   for (const raw of items) {
     const opts = get(raw, "options", []);
     let item: Item;
-    if (truthy(opts) && _isDict(opts[0]) && has(opts[0], "role")) {
+    if (truthy(opts) && isDict(opts[0]) && has(opts[0], "role")) {
       item = { ...raw };
     } else {
       // A bool is an int to Python's `==` (`True == 1`).

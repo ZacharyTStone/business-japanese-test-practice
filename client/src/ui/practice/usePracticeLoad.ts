@@ -118,7 +118,7 @@ export function usePracticeLoad(userId: string | null, dispatch: Dispatch<Practi
         // given at once still has it to carry; the answer waits for it. None
         // for a set with nothing in it — there is nothing to group.
         if (queue.length > 0) {
-          sessionReady.current = startSession(userId).catch(() => null);
+          sessionReady.current = startSession().catch(() => null);
         }
         dispatch({ type: "loaded", items: queue, now: Date.now() });
         setLoaded(true);

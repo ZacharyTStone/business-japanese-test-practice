@@ -16,7 +16,7 @@
 import * as render from "./render/index.ts";
 import * as roles from "./fidelity/roles.ts";
 import { LEVELS } from "./levels.ts";
-import { get, has, repr, truthy, ValueError } from "./py.ts";
+import { get, has, isDict, repr, truthy, ValueError } from "./py.ts";
 
 /** Channels an utterance can be delivered over. Drives TTS treatment: a phone
  *  line is band-limited on purpose so the listening practice matches the exam. */
@@ -101,11 +101,7 @@ export const TYPE_EXTRAS: Record<string, TypeExtras> = {
     ),
     "required": ["scene_id", "speaker_role", "listener_role", "channel"],
     "properties": {
-      "scene_id": {
-        "type": "string",
-        "description": "Which reusable scene image this item is set in. " +
-        "Must be one of the scene ids offered for this seed cell.",
-      },
+      "scene_id": _sceneField(),
       "speaker_role": {
         "type": "string",
         "description": "The role of the person speaking the options, e.g. '営業担当（若手）'. " +
@@ -238,7 +234,7 @@ export const TYPE_EXTRAS: Record<string, TypeExtras> = {
 };
 
 /** Which section of the exam each type belongs to. The database has the same
- *  table (public.item_types) and tests/plan.test.ts asserts the two agree;
+ *  table (item_types, d1/migrations) and tests/plan.test.ts asserts the two agree;
  *  the planner reads this one because the nightly job runs with no database. */
 export const SECTIONS: Record<string, string> = {
   "bamen_haaku": "choukai",
@@ -266,7 +262,7 @@ export const SECTIONS: Record<string, string> = {
  *  constants. The planner reads it to decide what to WRITE — a shelf is compared
  *  against its share rather than against every other shelf, so a five-question
  *  type is not filled to the depth of a ten-question one. The database has the
- *  same column (public.item_types.exam_questions) and the queue reads it to
+ *  same column (item_types.exam_questions) and the queue reads it to
  *  decide what to SERVE, so that a set of ten leans the way the exam does.
  *  tests/plan.test.ts asserts the two agree.
  *
@@ -301,6 +297,12 @@ export const DOCUMENT_FIELDS: Record<string, string> = {
   "sougou_dokkai": "document",
   "sougou_choudokkai": "documents",
 };
+
+/** `DOCUMENT_FIELDS.get(item_type)`: the type's document field, or null (for
+ *  a type with none, or an item_type that is not a string at all). */
+export function documentField(itemType: unknown): string | null {
+  return typeof itemType === "string" && has(DOCUMENT_FIELDS, itemType) ? DOCUMENT_FIELDS[itemType] : null;
+}
 
 /** Types whose stimulus includes a multi-speaker exchange. */
 export const DIALOGUE_TYPES: readonly string[] = ["sougou_choukai", "sougou_choudokkai"];
@@ -443,11 +445,6 @@ export function validateItem(itemType: string, item: Record<string, any>): strin
   return errors;
 }
 
-/** `isinstance(v, dict)` for parsed JSON. */
-function isDict(v: unknown): v is Record<string, any> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
 /** A conversation with two turns is not a conversation, and one with twelve is a
  *  memory test rather than a listening test. Both ends are enforced, and they
  *  are the bounds the model is told (the dialogue schema's description above). */
@@ -466,8 +463,7 @@ export const MAX_DOCUMENTS = 2;
  *  rather deal with one shape than with that distinction, so the translation
  *  lives here once instead of in each of them. */
 export function documentsOf(item: Record<string, any>): Record<string, any>[] {
-  const itemType = get(item, "item_type", "");
-  const field = typeof itemType === "string" && has(DOCUMENT_FIELDS, itemType) ? DOCUMENT_FIELDS[itemType] : null;
+  const field = documentField(get(item, "item_type", ""));
   if (field === null) {
     return [];
   }
@@ -484,7 +480,7 @@ export function documentsOf(item: Record<string, any>): Record<string, any>[] {
  *  table rows match its header or that it carries the header fields its
  *  template promises — that lives in bjt/render, and this is where it is run. */
 export function _documentErrors(itemType: string, item: Record<string, any>): string[] {
-  const field = has(DOCUMENT_FIELDS, itemType) ? DOCUMENT_FIELDS[itemType] : null;
+  const field = documentField(itemType);
   if (field === null) {
     return [];
   }

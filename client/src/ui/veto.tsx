@@ -7,10 +7,10 @@
  * on one press is a bank one press away from empty. A veto is the decision
  * itself, taken in the one moment when the evidence is in front of you.
  *
- * What keeps that safe is not the button, it is who has it. `may_i_veto()` is
+ * What keeps that safe is not the button, it is who has it. `mayVeto()` is
  * false for every tester row by default and true for the owner's, and
- * `veto_item()` re-checks it rather than trusting the client that drew the
- * button. A tester sees the report button and nothing else.
+ * `vetoItem()` (worker/core/bank.ts) re-checks it rather than trusting the
+ * client that drew the button. A tester sees the report button and nothing else.
  *
  * Three decisions:
  *

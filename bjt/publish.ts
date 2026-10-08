@@ -14,7 +14,7 @@
  * half-finished import to reason about, and a diff to look at before a hundred
  * items reach real users.
  *
- * Two things this must get right:
+ * Three things this must get right:
  *
  * * **One file, all or nothing.** D1 runs a file with `wrangler d1 execute
  *   --remote --file` as one unit and rolls it back if any statement fails, so an
@@ -30,7 +30,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { writeAtomic } from "./files.ts";
-import { FileNotFoundError, floatRepr, get, has, KeyError, numStr, or, repr, sorted, str, truthy, ValueError } from "./py.ts";
+import { FileNotFoundError, floatRepr, get, getitem, numStr, or, sorted, str, truthy, ValueError } from "./py.ts";
 import { BUNDLE_FLOAT_KEYS, dumps, loads } from "./pyjson.ts";
 import * as seedtable from "./seedtable.ts";
 import * as withdrawn from "./withdrawn.ts";
@@ -113,16 +113,6 @@ export function comment(value: unknown): string {
   return out;
 }
 
-/** `d[key]`: a KeyError when the key is absent, as Python's subscript
- *  raises, so a bundle without a field it must have stops the publish
- *  rather than writing a null. */
-function at(d: Record<string, any>, key: string): any {
-  if (!has(d, key)) {
-    throw new KeyError(repr(key));
-  }
-  return d[key];
-}
-
 /** An INSERT ... ON CONFLICT DO UPDATE per row (see "Small statements"). */
 export function _upsert(table: string, columns: string[], rows: unknown[][], key: string[]): string {
   if (rows.length === 0) {
@@ -167,13 +157,13 @@ export function bundleSql(
   bundleId: string,
   opts: { withdrawnIds?: Iterable<string> | null } = {},
 ): string {
-  const itemType: string = at(bundle, "item_type");
-  const items: Record<string, any>[] = at(bundle, "items");
+  const itemType: string = getitem(bundle, "item_type");
+  const items: Record<string, any>[] = getitem(bundle, "items");
   const labels = sceneLabels(itemType);
   const gone: ReadonlySet<string> = opts.withdrawnIds == null ? withdrawn.ids() : new Set(opts.withdrawnIds);
 
   let parts: string[] = [
-    `-- ${comment(bundleId)}: ${items.length} × ${comment(itemType)} (${comment(at(bundle, "level"))})`,
+    `-- ${comment(bundleId)}: ${items.length} × ${comment(itemType)} (${comment(getitem(bundle, "level"))})`,
     `-- generated ${comment(get(bundle, "generated_at", ""))} ` + `by ${comment(get(bundle, "generator_model", ""))}`,
     "-- Produced by bjt publish. Idempotent: re-running replaces these rows.",
     "",
@@ -210,7 +200,7 @@ export function bundleSql(
       _upsert(
         "audio_clips",
         ["id", "text", "voice", "channel"],
-        clips.map((c) => [at(c, "clip_id"), at(c, "text"), at(c, "voice"), at(c, "channel")]),
+        clips.map((c) => [getitem(c, "clip_id"), getitem(c, "text"), getitem(c, "voice"), getitem(c, "channel")]),
         ["id"],
       ),
       "",
@@ -224,7 +214,7 @@ export function bundleSql(
       [[
         bundleId,
         itemType,
-        at(bundle, "level"),
+        getitem(bundle, "level"),
         get(bundle, "generator_model", "unknown"),
         get(bundle, "generated_at"),
       ]],
@@ -244,11 +234,11 @@ export function bundleSql(
   for (const it of items) {
     const cell = or(get(it, "seed_cell"), {}) as Record<string, any>;
     itemRows.push([
-      at(it, "id"), bundleId, itemType, at(it, "level"),
+      getitem(it, "id"), bundleId, itemType, getitem(it, "level"),
       get(cell, "id"), get(cell, "setting"), get(cell, "relation"), get(cell, "function"),
       or(get(it, "channel"), get(cell, "channel")),
       get(it, "scene_id"), get(it, "speaker_role"), get(it, "listener_role"),
-      get(it, "topic", ""), at(it, "stem"), at(it, "correct_index"),
+      get(it, "topic", ""), getitem(it, "stem"), getitem(it, "correct_index"),
       get(it, "explanation_ja", ""), get(it, "explanation_en", ""),
       get(it, "vocab_notes", []),
       // Always arrays, even for the types that carry exactly one document
@@ -265,15 +255,15 @@ export function bundleSql(
       get(it, "model_p_correct"),
     ]);
     const clipIds = or(get(or(get(it, "audio"), {}), "options"), []) as (string | null)[];
-    (at(it, "options") as Record<string, any>[]).forEach((opt, pos) => {
+    (getitem(it, "options") as Record<string, any>[]).forEach((opt, pos) => {
       optionRows.push([
-        at(it, "id"), pos, at(opt, "text"), at(opt, "role"), get(opt, "why", ""),
+        getitem(it, "id"), pos, getitem(opt, "text"), getitem(opt, "role"), get(opt, "why", ""),
         pos < clipIds.length ? clipIds[pos] : null,
       ]);
     });
   }
 
-  const ids = items.map((it) => lit(at(it, "id"))).join(", ");
+  const ids = items.map((it) => lit(getitem(it, "id"))).join(", ");
   parts = parts.concat([
     _upsert("items", itemColumns, itemRows, ["id"]),
     "",
@@ -292,7 +282,7 @@ export function bundleSql(
 
   // After the upsert, so an item this transaction inserts for the first time
   // is withdrawn in the same breath rather than served until the next deploy.
-  const pulled = items.filter((it) => gone.has(at(it, "id"))).map((it) => at(it, "id") as string);
+  const pulled = items.filter((it) => gone.has(getitem(it, "id"))).map((it) => getitem(it, "id") as string);
   if (pulled.length > 0) {
     parts = parts.concat([
       "-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,",
@@ -305,8 +295,7 @@ export function bundleSql(
     ]);
   }
 
-  parts = parts.concat([""]);
-  return parts.filter((p) => p !== null && p !== undefined).join("\n");
+  return [...parts, ""].join("\n");
 }
 
 /** Read a bundle, write its SQL next to it (or wherever asked). */

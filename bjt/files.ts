@@ -9,6 +9,9 @@
  * readers takes for the real thing. So the bytes go to a temporary file beside
  * the target and are moved over it in one step (`renameSync`, atomic on the
  * same filesystem); a write that fails leaves the old file exactly as it was.
+ *
+ * And the other half, `unreadable`: which errors mean a file could not be read
+ * as JSON, for the readers that skip such a file rather than crash.
  */
 import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from "node:fs";
 import { randomBytes } from "node:crypto";
@@ -33,4 +36,11 @@ export function writeAtomic(target: string, data: Uint8Array | string, opts: { e
     throw e;
   }
   return target;
+}
+
+/** Python's `except (OSError, json.JSONDecodeError)` around reading a JSON
+ *  file: an operating-system error (it carries its errno code), or text that
+ *  is not JSON (`JSON.parse` throws a SyntaxError). */
+export function unreadable(e: unknown): boolean {
+  return e instanceof SyntaxError || (e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string");
 }

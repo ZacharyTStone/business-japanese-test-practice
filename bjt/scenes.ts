@@ -27,6 +27,7 @@ import path from "node:path";
 // other while it is being loaded: `batchmod` is only touched inside functions.
 import * as batchmod from "./batch.ts";
 import * as config from "./config.ts";
+import { unreadable } from "./files.ts";
 import * as publish from "./publish.ts";
 import { FileNotFoundError, get, KeyError, or, repr, sorted, str, truthy, ValueError } from "./py.ts";
 import * as seedtable from "./seedtable.ts";
@@ -226,12 +227,10 @@ export function survey(opts: { mediaDir?: string | null; remote?: Iterable<strin
   return sorted(scenes, { key: (s) => [s.has_art, s.is_picture, -s.cell_count, s.scene_id] });
 }
 
-/** Python's `except (OSError, ValueError)` around reading a bundle: a file
- *  that cannot be read (an operating-system error carries its errno code), or
- *  text that is not JSON (`JSON.parse` throws a SyntaxError). */
+/** Python's `except (OSError, ValueError)` around reading a bundle: what
+ *  `files.unreadable` names, a ValueError, or our own FileNotFoundError. */
 function _unreadable(e: unknown): boolean {
-  if (e instanceof SyntaxError || e instanceof ValueError || e instanceof FileNotFoundError) return true;
-  return e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string";
+  return unreadable(e) || e instanceof ValueError || e instanceof FileNotFoundError;
 }
 
 /**

@@ -4,7 +4,7 @@ What stands between this repository and an app open to more than its testers.
 Each entry needs something the repository cannot supply for itself — licensed
 material, an account, a dashboard setting, or a person — and says where it
 stands and what the next step is. Work that needs only code is not listed; the
-offline checks are in the [README](README.md#quick-start).
+offline checks are in the [README](README.md#8-working-on-it).
 
 ---
 
@@ -163,7 +163,8 @@ the keystore, so its SHA-1, and the Android OAuth client, stay valid. A tester
 also needs both lists (#4, "Adding a tester").
 
 **Next step for Google Play.** What the store asks of the app is in code:
-the privacy policy at `/privacy` (`client/src/lib/privacy.ts`), "Delete
+the privacy policy at `/privacy` (`client/src/lib/privacy.ts`; public since
+Access came off on 2026-10-04, and readable without its scripts), "Delete
 account" on the account screen and on the web, and a draft listing with the
 Data safety answers (`client/store-listing.md`). The start screen
 (`client/src/ui/welcome.tsx`) already tells listeners that the voices are
@@ -174,8 +175,6 @@ to people. What is left is the owner's:
 - The operator's name and a contact address for the privacy policy
   (`PRIVACY_OPERATOR` and `PRIVACY_CONTACT` in `client/src/lib/privacy.ts`):
   the page says "to be added" until then, and Play wants both.
-- `/privacy` public: it is once Access is switched off (#4). The page's text
-  is in its static HTML, so it reads without its scripts.
 - Read the policy and the listing draft, and change what is not right: they
   are drafts written from the code, not legal advice.
 - Screenshots from the `preview` build on a phone (two to eight, portrait).
@@ -249,6 +248,6 @@ merge, connect the landing Worker, then move the sign-in's redirect URI,
 
 `AdSlot` renders only in development, and its placement type has exactly two
 members, so an ad on the practice screen is a type error. The free tier is meant
-to be complete, and the ad-free unlock already has a grant path (`bjt grant`,
-`grant_entitlement`). Wiring a real ad SDK is a product decision, and needs an
+to be complete, and the ad-free unlock already has a grant path (`bjt grant`
+prints the SQL for the `entitlements` table). Wiring a real ad SDK is a product decision, and needs an
 ad network account when it is taken.

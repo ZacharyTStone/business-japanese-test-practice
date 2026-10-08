@@ -31,7 +31,7 @@
  * The validator holds all of this, so a draft outside it is sent back with the
  * reason rather than drawn badly.
  */
-import { fixed, get, len, or, repr, round, rstrip, str, strip, truthy, zip, TypeError_ } from "../py.ts";
+import { fixed, get, isDict, len, or, repr, round, rstrip, str, strip, truthy, zip, TypeError_ } from "../py.ts";
 
 /** What a chart may draw. See the module docstring for why not a pie. */
 export const CHART_KINDS = ["bar", "line"];
@@ -66,11 +66,6 @@ export type Chart = {
   series: { name: string; values: (number | null)[] }[];
 };
 
-/** `isinstance(v, dict)` for parsed JSON. */
-function isDict(v: unknown): v is Record<string, any> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
 /** Iterating a value as Python's `for x in value` would: a list's elements, a
  *  string's characters, a dict's keys. */
 function iterOf(v: unknown): unknown[] {
@@ -81,7 +76,7 @@ function iterOf(v: unknown): unknown[] {
 }
 
 /** A real, finite number. `true` is an int to Python and not a figure to
- *  anybody, and NaN would reach the database as a JSON token Postgres refuses. */
+ *  anybody, and NaN would reach a bundle as `NaN`, which is not JSON. */
 export function isNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }

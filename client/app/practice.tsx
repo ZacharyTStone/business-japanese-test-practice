@@ -258,7 +258,7 @@ export default function Practice() {
    * The two paths are deliberately the same path. A question the clock took is
    * a question that was got wrong, and it belongs in the record on exactly the
    * same terms as any other: it counts against the day, it drops to the bottom
-   * of the spacing ladder, and `adjust_level()` weighs it. The only difference
+   * of the spacing ladder, and `nextLevel()` weighs it. The only difference
    * is that the database grades it from `chosen_index = -1` rather than from an
    * option, and hands back the role `timed_out`.
    */

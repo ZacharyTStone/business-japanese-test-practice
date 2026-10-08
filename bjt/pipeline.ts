@@ -151,8 +151,8 @@ export async function generateAndGate(
     { coldSuccessRate: cold, fullSuccessRate: full,
       gateVerdict: gateVerdict, vocabViolations: vres.violations },
   );
-  if (gate && gateVerdict !== "discarded:sanity") {
-    for (const t of gres!.trials) {
+  if (gres !== null) {
+    for (const t of gres.trials) {
       store.recordGateTrial(itemId, t.side, t.trial, t.chosen, t.correct);
     }
   }
@@ -177,9 +177,7 @@ export async function generateAndGate(
   }
 
   const detail = _gateDetail(cold, full, gateVerdict, vres, { sres, dres });
-  const gresForReason = gate && gateVerdict !== "discarded:sanity" ? gres : null;
-  return [item, itemId, kept, detail, rejectionReason(
-    itemType, gateVerdict, sres, vres, { gres: gresForReason })];
+  return [item, itemId, kept, detail, rejectionReason(itemType, gateVerdict, sres, vres, { gres })];
 }
 
 /**
@@ -267,11 +265,6 @@ export function _gateDetail(
  */
 function _spentCellsImpl(store: Store, itemType: string): Set<string> {
   return new Set([...store.usedCellIds(itemType), ...batchmod.spentCellIds(itemType)]);
-}
-
-/** `_spentCells` itself; every caller here goes through `seams.spentCells`. */
-export function _spentCells(store: Store, itemType: string): Set<string> {
-  return seams.spentCells(store, itemType);
 }
 
 /** One unused seed-table cell. Raises if the table for this type is exhausted
@@ -518,9 +511,9 @@ export function _bundleShelf(
   return [path, keptItems.length];
 }
 
-/** What the tests replace: `runBatch` and `_spentCells`, and every call this
- *  module makes to them (`runNight`, `_nextCell`, `sampleCells`, `_cellAt`),
- *  go through these (`patch(pipeline.seams, "runBatch", ...)`). */
+/** What the tests replace: `runBatch` and the spent-cell ledger, and every
+ *  call this module makes to them (`runNight`, `_nextCell`, `sampleCells`,
+ *  `_cellAt`), go through these (`patch(pipeline.seams, "runBatch", ...)`). */
 export const seams = {
   runBatch: _runBatchImpl,
   spentCells: _spentCellsImpl,

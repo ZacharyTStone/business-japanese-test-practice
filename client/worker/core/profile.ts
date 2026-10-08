@@ -2,12 +2,12 @@
  * The learner's own row, the one way to start again, and the one way to leave.
  *
  * Of its profile a learner may change only `display_name`, `daily_goal`,
- * `exam_date` and `timed_reading` (what the column grants allowed); the
+ * `exam_date` and `timed_reading` (queries.ts refuses any other field); the
  * level summary is the database's to move. The size of the day is the
- * owner's to give, one account at a time (keep_the_daily_goal_under_its_
- * ceiling()): without a max_daily_goal on this account's tester row the goal
- * is not the learner's to change at all, and with one it may not go above it.
- * A goal is judged when it is written, never an existing row.
+ * owner's to give, one account at a time (updateProfile): without a
+ * max_daily_goal on this account's tester row the goal is not the learner's
+ * to change at all, and with one it may not go above it. A goal is judged
+ * when it is written, never an existing row.
  */
 import type { Learner } from "./caller";
 import { apiError } from "./errors";

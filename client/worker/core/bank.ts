@@ -15,7 +15,6 @@ import { all, chunks, first, marks, run, stmt, type Db } from "./sql";
 import { iso } from "./time";
 
 export async function reportItem(db: Db, learner: Learner, itemId: string, reason: string, note: string, now: number) {
-  const nowIso = iso(now);
   await run(
     db,
     `insert into item_feedback (user_id, item_id, reason, note, created_at, updated_at)
@@ -25,7 +24,7 @@ export async function reportItem(db: Db, learner: Learner, itemId: string, reaso
     itemId,
     reason,
     note,
-    nowIso
+    iso(now)
   );
   return null;
 }

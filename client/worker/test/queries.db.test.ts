@@ -6,9 +6,8 @@
  * sign-in (index.ts), with no sign-in to check (`checkSignIn: false`;
  * test/auth.db.test.ts has that half): the address is resolved to an account,
  * a caller not on the tester list is refused, and the query runs as that
- * learner. So a column that
- * does not exist, a write the schema refuses, or a learner seeing another's
- * rows, fails here. A query with no case below fails the last test: a new
+ * learner. So a column that does not exist, a write the schema refuses, or a
+ * learner seeing another's rows, fails here. A query with no case below fails the last test: a new
  * query is a new thing to prove.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

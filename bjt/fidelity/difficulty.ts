@@ -41,7 +41,7 @@
 import * as config from "../config.ts";
 import * as jev from "../jev.ts";
 import * as llm from "../llm.ts";
-import { errText, fixed, max, percent, range, sum } from "../py.ts";
+import { errText, fixed, max, percent, range } from "../py.ts";
 import * as textutil from "../textutil.ts";
 import { correctIndex } from "../schemas.ts";
 import * as answerability from "./answerability.ts";
@@ -93,7 +93,7 @@ export async function measure(item: Record<string, any>, opts: { model?: string 
   const model = opts.model || config.DIFFICULTY_MODEL;
   const options = textutil.optionTexts(item);
   const answer = correctIndex(item["options"]);
-  const [fullQ, _coldQ] = answerability.questions(item);
+  const [fullQ] = answerability.questions(item);
 
   if (jev.isJev(model)) {
     return _byProbability(fullQ, options, answer, model);
@@ -109,7 +109,7 @@ export async function measure(item: Record<string, any>, opts: { model?: string 
              + "trial(s) got no answer",
     });
   }
-  const rate = sum(trials.map((t) => (t.correct ? 1 : 0))) / trials.length;
+  const rate = answerability.correctCount(trials) / trials.length;
   return new DifficultyResult({ rate: rate, model: model, measured: true, trials: trials });
 }
 

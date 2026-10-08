@@ -10,6 +10,7 @@ import * as render from "../bjt/render/index.ts";
 import * as tpl from "../bjt/render/templates.ts";
 import { range, sorted } from "../bjt/py.ts";
 import * as schemas from "../bjt/schemas.ts";
+import { sameSet } from "./helpers.ts";
 
 type Doc = Record<string, any>;
 
@@ -32,10 +33,6 @@ function _email(overrides: Doc = {}): Doc {
 }
 
 /** `set(a) == set(b)`, for lists of strings. */
-function sameSet(a: Iterable<string>, b: Iterable<string>): void {
-  expect(sorted(new Set(a))).toEqual(sorted(new Set(b)));
-}
-
 // ----- validation ---------------------------------------------------------
 
 describe("validation", () => {

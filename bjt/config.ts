@@ -30,7 +30,7 @@ function loadDotenv(): void {
   }
 }
 
-loadDotenv()
+loadDotenv();
 
 
 function env(name: string, dflt: string): string {
@@ -221,15 +221,15 @@ export const SHELF_REST_DAYS = toFloat(env("BJT_SHELF_REST_DAYS", "7"));
 export const NIGHT_MAX_PICTURES = toInt(env("BJT_NIGHT_MAX_PICTURES", "4"));
 
 // How hard the image API compresses the WebP it returns (0–100, higher is
-// larger). The `scenes` bucket refuses anything over SCENE_MAX_BYTES, which is
-// the limit the pipeline keeps for the media bucket in R2,
-// and a 1536×1024 "high" draft can exceed it. 80 keeps a flat illustration far
-// under the limit with no visible cost, and the limit is checked before a byte
-// is sent.
+// larger). The upload refuses anything over SCENE_MAX_BYTES, the limit the
+// pipeline keeps for pictures in the R2 media bucket, and a 1536×1024 "high"
+// draft can exceed it. 80 keeps a flat illustration far under the limit with
+// no visible cost, and the limit is checked before a byte is sent.
 export const IMAGE_COMPRESSION = toInt(env("BJT_IMAGE_COMPRESSION", "80"));
 export const SCENE_MAX_BYTES = 2 * 1024 * 1024;
 
-// The `audio` bucket's file_size_limit, from the same migration. A clean 24 kHz
-// clip runs to about 48 KB a second, so this is over a minute and a half of
-// narration; a clip near it is a planning bug, not a long question.
+// The most one clip may be, checked before it is uploaded (bjt/tts/synth.ts),
+// as SCENE_MAX_BYTES is for a picture. A clean 24 kHz clip runs to about 48 KB
+// a second, so this is over a minute and a half of narration; a clip near it
+// is a planning bug, not a long question.
 export const AUDIO_MAX_BYTES = 5 * 1024 * 1024;

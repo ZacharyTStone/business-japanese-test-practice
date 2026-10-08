@@ -27,6 +27,8 @@
 #   migrations   `wrangler d1 migrations apply --remote`, from d1/migrations.
 #                Wrangler records what it applied in the database's
 #                d1_migrations table and applies only what is new next time.
+#   triggers     d1/triggers.sql, as a file (each trigger dropped and created
+#                again), since D1 cuts a trigger body inside a migration.
 #   the bank     every batches/*.sql, which `bjt publish` wrote as upserts,
 #                scenes.sql first (an item names its scene). Each file is one
 #                all-or-nothing unit.
@@ -115,9 +117,9 @@ jobs:
     #   a push   a pull request's own `checks` run is not a merge, and it is the
     #            merge that is the decision to ship.
     #
-    # Nothing legitimate is lost: work lands on `main` as a push (CLAUDE.md), a
-    # merged nightly pull request is a push to `main` too, and a pull request's
-    # own run never matched `branches: [main]` in the first place.
+    # Nothing legitimate is lost: a merged pull request, a person's or the
+    # night's, is a push to `main`, and a pull request's own run never matched
+    # `branches: [main]` in the first place.
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
       || (github.event_name == 'workflow_run'

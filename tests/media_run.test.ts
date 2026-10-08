@@ -8,8 +8,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
-import * as batch from "../bjt/batch.ts";
-import * as fixtures from "../bjt/fixtures.ts";
 import * as http from "../bjt/http.ts";
 import { RuntimeError, sorted, ValueError } from "../bjt/py.ts";
 import * as r2 from "../bjt/r2.ts";
@@ -18,12 +16,8 @@ import * as scenes from "../bjt/scenes.ts";
 import * as providers from "../bjt/tts/providers.ts";
 import * as synth from "../bjt/tts/synth.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
+import { hatsugenBundle } from "./conftest.ts";
 import { patch, tmpPath } from "./helpers.ts";
-
-/** The `bundle` fixture. */
-function bundleFixture(): Record<string, any> {
-  return batch.buildBundle("hatsugen_choukai", "J2", [fixtures.FIXTURES["hatsugen_choukai"]], "t");
-}
 
 class _Bucket {
   name = "audio";
@@ -107,14 +101,14 @@ describe("media_run", () => {
 
   test("the run refuses an upload without the live list", async () => {
     const tmp = tmpPath();
-    const err = await synth.run(bundleFixture(), { provider: "silent", bucket: new _Bucket(), mediaDir: tmp })
+    const err = await synth.run(hatsugenBundle("t"), { provider: "silent", bucket: new _Bucket(), mediaDir: tmp })
       .catch((e) => e);
     expect(err).toBeInstanceOf(ValueError);
     expect(err.message).toMatch(/already live/);
   });
 
   test("the run leaves the report describing the bucket", async () => {
-    const bundle = bundleFixture();
+    const bundle = hatsugenBundle("t");
     const tmp = tmpPath();
 
     class Voice extends providers.SilentProvider {

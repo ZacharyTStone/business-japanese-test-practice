@@ -10,7 +10,7 @@
  * its sentence could be its answer.
  *
  * A reference, not a drill, and not a choice about the questions: nothing here
- * is recorded, and what is served next is still next_items() alone.
+ * is recorded, and what is served next is still the queue's alone.
  */
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -25,7 +25,7 @@ import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/componen
 import { ScreenGate } from "../src/ui/screen";
 import { ScreenCrash } from "../src/ui/crash";
 import { RubyText } from "../src/ui/ruby";
-import { colors, radius, shadow, space, type } from "../src/ui/theme";
+import { card, colors, radius, space, type } from "../src/ui/theme";
 
 const LEVELS: Level[] = ["J1", "J2", "J3"];
 /** Drawn at a time. Furigana lays a sentence out a character to a cell, and a
@@ -35,7 +35,7 @@ const PAGE = 40;
 /** A throw while drawing stays on this screen (ui/crash.tsx). */
 export const ErrorBoundary = ScreenCrash;
 
-/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+/** Behind the setup notice when no Worker is configured (ui/screen.tsx). */
 export default function WordsScreen() {
   return (
     <ScreenGate underHeader>
@@ -193,15 +193,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
-  entry: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: space.lg,
-    gap: space.xs,
-    ...shadow.card,
-  },
+  entry: { ...card, gap: space.xs },
   head: { flexDirection: "row", alignItems: "center", gap: space.sm },
   term: { fontSize: 20, fontWeight: "700", color: colors.text, lineHeight: 28 },
   example: {

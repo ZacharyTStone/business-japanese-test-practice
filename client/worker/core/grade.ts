@@ -18,7 +18,7 @@
  * refused answer moves nothing, and an accepted one moves everything at once.
  */
 import type { Learner } from "./caller";
-import { apiError } from "./errors";
+import { raised } from "./errors";
 import { nextLevel, overallLevel } from "./levels";
 import { loadSnapshot, SECTIONS, type Answer, type Level, type Snapshot } from "./snapshot";
 import { stmt, type Db } from "./sql";
@@ -113,11 +113,9 @@ export async function recordAttempt(db: Db, learner: Learner, args: AttemptArgs,
   const snap = await loadSnapshot(db, learner);
 
   const item = snap.items.get(args.itemId);
-  if (!item || !item.is_published) {
-    throw apiError("P0001", "this question is no longer in the bank", 400, "item_unavailable");
-  }
+  if (!item || !item.is_published) throw raised("item_unavailable");
   const option = (snap.options.get(item.id) ?? []).find((o) => o.position === args.chosenIndex);
-  if (args.chosenIndex !== -1 && !option) throw apiError("P0001", "no such option for this question");
+  if (args.chosenIndex !== -1 && !option) throw raised("no_such_option");
   const isCorrect = args.chosenIndex !== -1 && args.chosenIndex === item.correct_index;
   const role = args.chosenIndex === -1 ? "timed_out" : option!.role;
   const standsFor = validStandsFor(snap, item.id, args.standsFor, nowIso);
@@ -133,12 +131,7 @@ export async function recordAttempt(db: Db, learner: Learner, args: AttemptArgs,
     replays: args.replays,
     peeked: args.peeked,
   };
-  const rung = nextRung(
-    snap,
-    { item_id: item.id, is_correct: isCorrect, chosen_role: role, elapsed_ms: args.elapsedMs, think_ms: args.thinkMs, replays: args.replays, peeked: args.peeked },
-    standsFor ?? item.id,
-    now
-  );
+  const rung = nextRung(snap, { ...answer, elapsed_ms: args.elapsedMs, think_ms: args.thinkMs }, standsFor ?? item.id, now);
   const after: Snapshot = { ...snap, answers: [...snap.answers, answer], levels: new Map(snap.levels) };
 
   // The first answer seeds all three sections at the profile's level, so a

@@ -54,7 +54,7 @@ describe("vocab levels", () => {
     expect(new Set(res.business_terms_used)).toEqual(new Set(["納期", "見積書"]));
   });
 
-  test("status summary", () => {
+  test("the status summary lists the tiers and business terms loaded", () => {
     const seeds = seedsDir();
     _writeTier(seeds, "n5", "日 月");
     writeFileSync(path.join(seeds, "vocab", "business_terms.txt"), "納期\n", "utf8");

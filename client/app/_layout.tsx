@@ -111,33 +111,33 @@ function Navigator() {
 
   return (
     <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: colors.bg },
-            headerShadowVisible: false,
-            headerTintColor: colors.text,
-            headerTitleStyle: { fontSize: 16 },
-            contentStyle: { backgroundColor: colors.bg },
-          }}
-        >
-          {/* The tab bar draws its own headers, so this one gets out of the way. */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          {/* No back gesture mid-session: leaving halfway loses the set, and on
-              a phone the swipe is easy to trigger by accident while reading. */}
-          <Stack.Screen name="practice" options={{ title: t("title_practice"), gestureEnabled: false }} />
-          <Stack.Screen name="result" options={{ title: t("title_result"), headerBackVisible: false }} />
-          <Stack.Screen
-            name="history"
-            options={{ title: t("title_history"), headerLeft: () => <BackToRecord /> }}
-          />
-          <Stack.Screen
-            name="vocab"
-            options={{ title: t("title_vocab"), headerLeft: () => <BackToRecord /> }}
-          />
-          <Stack.Screen
-            name="words"
-            options={{ title: t("title_words"), headerLeft: () => <BackToRecord /> }}
-          />
-          <Stack.Screen name="privacy" options={{ title: t("title_privacy") }} />
-        </Stack>
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.bg },
+        headerShadowVisible: false,
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontSize: 16 },
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      {/* The tab bar draws its own headers, so this one gets out of the way. */}
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* No back gesture mid-session: leaving halfway loses the set, and on
+          a phone the swipe is easy to trigger by accident while reading. */}
+      <Stack.Screen name="practice" options={{ title: t("title_practice"), gestureEnabled: false }} />
+      <Stack.Screen name="result" options={{ title: t("title_result"), headerBackVisible: false }} />
+      <Stack.Screen
+        name="history"
+        options={{ title: t("title_history"), headerLeft: () => <BackToRecord /> }}
+      />
+      <Stack.Screen
+        name="vocab"
+        options={{ title: t("title_vocab"), headerLeft: () => <BackToRecord /> }}
+      />
+      <Stack.Screen
+        name="words"
+        options={{ title: t("title_words"), headerLeft: () => <BackToRecord /> }}
+      />
+      <Stack.Screen name="privacy" options={{ title: t("title_privacy") }} />
+    </Stack>
   );
 }

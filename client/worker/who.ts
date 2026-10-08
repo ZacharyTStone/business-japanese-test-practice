@@ -24,8 +24,6 @@
 import { authFor, type AuthEnv } from "./auth";
 import { isRefusal, signedInEmail, signedOut, type Refusal } from "./identity";
 
-export { signedOut };
-
 /** The address asking, and the `Set-Cookie` values to send back with the
  *  answer (empty unless the session was renewed or its cache refreshed). */
 export type Caller = { email: string; cookies: string[] };

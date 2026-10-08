@@ -23,7 +23,8 @@
  * is licensed material — these are the phrases on every business-manners poster.
  */
 import * as batchmod from "./batch.ts";
-import { counter, get, has, KeyError, mostCommon, repr } from "./py.ts";
+import { unreadable } from "./files.ts";
+import { counter, get, getitem, mostCommon } from "./py.ts";
 import * as withdrawn from "./withdrawn.ts";
 
 /** Spelled once, here, and nowhere else. Keep the punctuation: it is part of
@@ -70,12 +71,12 @@ export function libraryLines(opts: { minCount?: number; limit?: number } = {}): 
     } catch (e) {
       // (OSError, json.JSONDecodeError): a bundle that cannot be read adds
       // nothing to the phrasebook.
-      if (_unreadable(e)) continue;
+      if (unreadable(e)) continue;
       throw e;
     }
     for (const clip of get(withdrawn.liveBundle(bundle, { withdrawn: gone }), "audio_manifest", []) as Record<string, any>[]) {
       if (["option", "dialogue"].includes(get(clip, "kind"))) {
-        texts.push(_need(clip, "text"));
+        texts.push(getitem(clip, "text"));
       }
     }
   }
@@ -101,20 +102,4 @@ export function promptBlock(itemType: string): string {
     + "situation does not call for it:\n"
     + lines.map((line) => `- ${line}`).join("\n")
   );
-}
-
-// ----- Python's behaviour where JavaScript's differs --------------------------
-
-/** Python's (OSError, json.JSONDecodeError): a file the system will not give
- *  us, or a body that is not JSON. */
-function _unreadable(e: unknown): boolean {
-  if (e instanceof SyntaxError) return true;
-  // An operating-system error (Python's OSError) carries its errno code.
-  return e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string";
-}
-
-/** `clip["text"]`: a missing key is a KeyError, as in Python. */
-function _need(d: Record<string, any>, key: string): any {
-  if (!has(d, key)) throw new KeyError(repr(key));
-  return d[key];
 }

@@ -1,12 +1,13 @@
 /**
  * The one thing every screen used to check for itself: whether the app has
- * been pointed at a project at all.
+ * been pointed at a Worker at all.
  *
  * A native build has no Worker to talk to without `EXPO_PUBLIC_API_BASE`, and
- * every screen then shows the setup notice instead of a stack trace. Seven screens carried their own
- * copy of that branch, and of an `isConfigured` guard in each of their loads;
- * this is the one copy. A screen's default export wraps its body in it, so the
- * body — its effects included — runs only when there is a project to ask.
+ * every screen then shows the setup notice instead of a stack trace. Seven
+ * screens carried their own copy of that branch, and of an `isConfigured`
+ * guard in each of their loads; this is the one copy. A screen's default
+ * export wraps its body in it, so the body — its effects included — runs only
+ * when there is a Worker to ask.
  *
  * Nothing else lives here. Whether somebody is signed in, and a tester, is
  * the root layout's door (app/_layout.tsx): no screen behind it can be drawn

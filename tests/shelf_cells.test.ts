@@ -18,7 +18,7 @@ import * as answerability from "../bjt/fidelity/answerability.ts";
 import * as dedupe from "../bjt/fidelity/dedupe.ts";
 import { Generator } from "../bjt/generators/base.ts";
 import { store } from "./conftest.ts";
-import { patch, setConfig, tmpPath } from "./helpers.ts";
+import { iter, patch, setConfig, tmpPath } from "./helpers.ts";
 
 type Item = Record<string, any>;
 
@@ -46,23 +46,13 @@ function shelf(tmp: string): string[] {
   return drafted;
 }
 
-/** One value after another, as `next(iter([...]))` hands them out. */
-function _iter<T>(values: T[]): () => T {
-  const it = values[Symbol.iterator]();
-  return () => {
-    const n = it.next();
-    if (n.done) throw new Error("StopIteration");
-    return n.value;
-  };
-}
-
 describe("shelf cells", () => {
   test("a near-duplicate never sends the shelf back to a kept cell", async () => {
     const tmp = tmpPath();
     const s = store(tmp);
     const drafted = shelf(tmp);
     // Kept, near-duplicate, kept.
-    const similarity = _iter([0.0, 1.0, 0.0]);
+    const similarity = iter([0.0, 1.0, 0.0]);
     patch(dedupe, "maxSimilarity", () => similarity());
 
     const [p, kept] = await pipeline.runBatch(s, "goi_bunpou", "J2", 2, {
@@ -82,7 +72,7 @@ describe("shelf cells", () => {
     const s = store(tmp);
     const drafted = shelf(tmp);
     setConfig({ SLOT_PATIENCE: 10 });
-    const similarity = _iter([0.0, 1.0, 1.0, 1.0, 1.0, 0.0]);
+    const similarity = iter([0.0, 1.0, 1.0, 1.0, 1.0, 0.0]);
     patch(dedupe, "maxSimilarity", () => similarity());
 
     const [, kept] = await pipeline.runBatch(s, "goi_bunpou", "J2", 2, {
@@ -98,7 +88,7 @@ describe("shelf cells", () => {
     const tmp = tmpPath();
     const s = store(tmp);
     const drafted = shelf(tmp);
-    const verdicts = _iter(["discarded:leaky", "kept"]);
+    const verdicts = iter(["discarded:leaky", "kept"]);
     patch(answerability, "runGate", async () => ({
       cold_success_rate: 0.0, full_success_rate: 1.0,
       verdict: verdicts(), trials: [] }) as unknown as answerability.GateResult);
@@ -117,7 +107,7 @@ describe("shelf cells", () => {
     const onlyIds = new Set(only.map((c) => c.id));
     patch(pipeline.seams, "spentCells", (_store: Store, _t: string) =>
       new Set(table.cells({ level: "J2" }).map((c) => c.id).filter((id) => !onlyIds.has(id))));
-    const similarity = _iter([0.0, 1.0]);
+    const similarity = iter([0.0, 1.0]);
     patch(dedupe, "maxSimilarity", () => similarity());
 
     const [p, kept] = await pipeline.runBatch(s, "goi_bunpou", "J2", 2, {

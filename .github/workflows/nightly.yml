@@ -6,8 +6,8 @@
 #               levels) and print the work order `bjt nightly` would execute.
 #               Offline, no key, runs on every run whatever else is configured.
 #               (Nightly again since 2026-09-27, at fifty cents — see `on:`.)
-#               This is the half that tells you the practice queue cannot
-#               interleave across types because sixteen of the shelves are empty.
+#               This is the half that says which shelves are thinnest, and
+#               which ones are resting (bjt/shelf_rest.ts).
 #   write     — actually generate, gate, check and commit those items, and open a
 #               pull request that records the night. Runs only when the secrets
 #               it needs are present. A manual run can ask for the difficulty
@@ -97,13 +97,10 @@ name: nightly
 on:
   # The owner turned the nights back on (2026-09-27), asking that they stay
   # very cheap: two items at most (three until 2026-10-08), reading first,
-  # and never more than fifty cents a night. They had been off since
-  # 2026-09-25, when every night cost API money for questions the app was
-  # used too little to need and the pull
-  # requests sat on branches nobody opened; the size of a night had already
-  # come down to three items (2026-09-24), and the dollar ceiling now comes
-  # down with it — see BJT_RUN_BUDGET_USD below. A manual run from the Actions
-  # tab still works, with the same defaults.
+  # and never more than fifty cents a night — see BJT_RUN_BUDGET_USD below.
+  # They had been off since 2026-09-25, when every night cost API money for
+  # questions the app was used too little to need. A manual run from the
+  # Actions tab still works, with the same defaults.
   #
   # The Sunday bank-scene run below keys on the scheduled event, so it is back
   # with the schedule; a manual run with "scenes" ticked still draws them.
@@ -518,8 +515,8 @@ jobs:
       # Draw whichever scenes have no picture, review each draft, upload what
       # passed. The bucket listing is what makes this idempotent: on a fresh
       # runner media/ is empty, and the bucket is the only record of what was
-      # drawn on an earlier night. Without the storage secrets the pictures are
-      # drawn and kept only in the run's artifact, for a person to upload.
+      # drawn on an earlier night. That is why nothing is drawn at all without
+      # the storage secrets (`art` is false then; see the step that sets it).
       #
       # After the generation, not before: the survey reads batches/ in this
       # checkout, so a 画像把握 item written tonight gets its picture tonight,

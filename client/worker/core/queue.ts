@@ -1,9 +1,10 @@
 /**
  * The practice queue: which questions come next, and in what order.
  *
- * A line-for-line port of next_items() from the Postgres schema
- * (20260930000700_the_retest_walk_stops_early.sql). It takes a size and reads
- * everything else from the record. In order:
+ * A line-for-line port of the Postgres next_items() (its last migration,
+ * 20260930000700_the_retest_walk_stops_early.sql, went with the move to D1
+ * and is in the git history). It takes a size and reads everything else
+ * from the record. In order:
  *
  *   due     lessons that are due, misses first, each re-tested by an unseen
  *           question that sets the same trap (its `stands_for` names the
@@ -24,8 +25,8 @@
 import { dailyMax, type Learner } from "./caller";
 import { down, up } from "./levels";
 import { loadSnapshot, SECTIONS, type BankItem, type Level, type Section, type Snapshot } from "./snapshot";
-import { chunks, json, marks, stmt, type Db } from "./sql";
-import { addDays, HOUR, jstDate, jstDayStart, ms, recency } from "./time";
+import { all, chunks, json, marks, stmt, type Db } from "./sql";
+import { addDays, HOUR, iso, jstDate, jstDayStart, ms, recency } from "./time";
 
 export type Pick = { id: string; bucket: number; rank: number; stands_for: string | null; lesson_trap: string | null };
 
@@ -70,7 +71,7 @@ export function rankQueue(
   random: (id: string) => number = Math.random
 ): Pick[] {
   const n = setSize(snap, learner, limit, now);
-  const nowIso = new Date(now).toISOString();
+  const nowIso = iso(now);
 
   // ---- the ladder: each section's level and the two beside it
   const ladder = new Map<Section, { level: Level; up: Level | null; down: Level | null }>();
@@ -273,7 +274,7 @@ export function rankQueue(
 
   // ---- every other question: unseen ones at any level, then met ones from
   // inside the window
-  const twentyHoursAgo = new Date(now - 20 * HOUR).toISOString();
+  const twentyHoursAgo = iso(now - 20 * HOUR);
   const rest: Pick[] = pool
     .filter((p) => !p.is_seen || p.in_window)
     .map((p) => {
@@ -303,7 +304,6 @@ function cmp(a: string, b: string): number {
 }
 
 // ------------------------------------------------------------------ serving
-
 
 type ItemRow = {
   id: string;
@@ -371,8 +371,12 @@ export async function nextItems(db: Db, learner: Learner, limit: number, now: nu
   for (const o of optionRows) if (o.clip_id) clipIds.add(o.clip_id);
   const paths = new Map<string, string | null>();
   for (const part of chunks([...clipIds])) {
-    const rows = await db.prepare(`select id, audio_path from audio_clips where id in (${marks(part.length)})`).bind(...part).all<{ id: string; audio_path: string | null }>();
-    for (const r of rows.results ?? []) paths.set(r.id, r.audio_path);
+    const rows = await all<{ id: string; audio_path: string | null }>(
+      db,
+      `select id, audio_path from audio_clips where id in (${marks(part.length)})`,
+      ...part
+    );
+    for (const r of rows) paths.set(r.id, r.audio_path);
   }
   const pathOf = (id: string | null | undefined) => (id ? (paths.get(id) ?? null) : null);
 

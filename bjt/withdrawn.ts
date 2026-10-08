@@ -8,11 +8,11 @@
  *
  * * **The database keeps the row.** An item somebody has already answered is
  *   pointed at by `attempts`, `review_schedule` and `item_feedback`, so removal is
- *   an unpublish (`is_published = false`), exactly as `veto_item()` does it from
+ *   an unpublish (`is_published = false`), exactly as `vetoItem()` does it from
  *   inside the app. `bjt publish` writes that statement into the bundle's SQL for
  *   every withdrawn id, so the ledger and the bank cannot disagree after a deploy.
  * * **The seed cell stays spent.** `item_id` is a hash of (type, cell). Were the
- *   item deleted, `spent_cell_ids` would free its cell, the next night could write
+ *   item deleted, `spentCellIds` would free its cell, the next night could write
  *   that cell again, and the new question would inherit the withdrawn id — and
  *   with it the unpublish, so it would never be served.
  * * **The record is the point.** A withdrawn item is a worked example of what the
@@ -30,7 +30,7 @@
  * publish from unpublishing the item, but it does not publish it again, because
  * the bundle SQL never sets `is_published = true`: that is what keeps an owner's
  * veto from the app from being undone by the next deploy. Putting an item back is
- * one `update public.items set is_published = true where id = '…'`, by hand.
+ * one `update items set is_published = 1 where id = '…'`, by hand.
  *
  * The ledger is written by hand, and by one tool: `bjt regate --withdraw`
  * proposes lines through `append`, which adds after what is there and never
@@ -40,9 +40,9 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import * as config from "./config.ts";
-import { deepcopy, get, has, or, repr, rstrip, sorted, splitlines, splitWs, strip, truthy, ValueError } from "./py.ts";
+import { deepcopy, get, has, or, repr, rstrip, sorted, splitlines, splitWs, splitWsMax, strip, truthy, ValueError } from "./py.ts";
 
-/** Why an item was withdrawn. The same closed set as `public.item_feedback.reason`
+/** Why an item was withdrawn. The same closed set as `item_feedback.reason`
  *  (d1/migrations/0001_initial.sql), so a tester's
  *  report and the decision it leads to are counted in one vocabulary. A test
  *  holds the two equal. */
@@ -65,27 +65,6 @@ export class Withdrawal {
 /** Read at call time, so a test that points BATCH_DIR elsewhere is obeyed. */
 export function ledgerPath(): string {
   return path.join(config.BATCH_DIR, LEDGER_NAME);
-}
-
-/** Python's `str.isspace()` set, what `str.split()` splits on. */
-const WS = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
-const WS_RUN = new RegExp(`[${WS}]+`, "u");
-const WS_LEAD = new RegExp(`^[${WS}]+`, "u");
-
-/** `s.split(None, maxsplit)`: at most `maxsplit` splits on runs of
- *  whitespace, the rest of the line kept whole (its trailing whitespace
- *  included, as Python keeps it). */
-function splitWsMax(s: string, maxsplit: number): string[] {
-  const parts: string[] = [];
-  let rest = s.replace(WS_LEAD, "");
-  while (rest !== "" && parts.length < maxsplit) {
-    const m = WS_RUN.exec(rest);
-    if (m === null) break;
-    parts.push(rest.slice(0, m.index));
-    rest = rest.slice(m.index + m[0].length);
-  }
-  if (rest !== "") parts.push(rest);
-  return parts;
 }
 
 /**

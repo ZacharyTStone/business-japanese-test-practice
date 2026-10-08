@@ -14,7 +14,7 @@
  * was met in, with its clip where there is one, and the question it came from.
  *
  * Still a record, not a drill. Nothing here decides what is served next — that
- * is next_items() and nothing else — and there is nothing to choose about the
+ * is the queue and nothing else — and there is nothing to choose about the
  * questions: it is the same kind of screen as 解いた問題, reached from the same
  * place. Its title is the button's words, 「まちがえた問題のことば」, so the
  * button and the screen it opens say the same thing beside 「ことば一覧」.
@@ -31,12 +31,12 @@ import { MiniPlay } from "../src/ui/audio";
 import { Card, Chip, Loading, LoadFailed, Notice, Tag } from "../src/ui/components";
 import { ScreenGate } from "../src/ui/screen";
 import { ScreenCrash } from "../src/ui/crash";
-import { colors, radius, shadow, space, type } from "../src/ui/theme";
+import { card, colors, radius, space, type } from "../src/ui/theme";
 
 /** A throw while drawing stays on this screen (ui/crash.tsx). */
 export const ErrorBoundary = ScreenCrash;
 
-/** Behind the setup notice when no project is configured (ui/screen.tsx). */
+/** Behind the setup notice when no Worker is configured (ui/screen.tsx). */
 export default function VocabScreen() {
   return (
     <ScreenGate underHeader>
@@ -175,15 +175,7 @@ function Vocab() {
 const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.md },
   row: { flexDirection: "row", gap: space.sm },
-  entry: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.hairline,
-    padding: space.lg,
-    gap: space.xs,
-    ...shadow.card,
-  },
+  entry: { ...card, gap: space.xs },
   head: { flexDirection: "row", alignItems: "center", gap: space.sm },
   sentence: {
     flexDirection: "row",

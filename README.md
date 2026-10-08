@@ -47,14 +47,15 @@ level per section, brings back the traps that caught the learner in new
 questions, and aims each question at the right difficulty.
 
 Every question is original, written by Claude **offline in a nightly batch
-job**, checked by other models and fixed rules, and read by a person before it
-ships.
+job**, and checked by other models and fixed rules before it ships. Nobody
+reads a night's questions by hand (since 2026-10-02): the checks are the review.
 
 **Principles**
 
 * **Nothing is generated while anyone practises.** Serving costs nothing; the
   quality checks can be slow.
-* **One shared bank, sorted per person** by fixed, readable SQL.
+* **One shared bank, sorted per person** by fixed, readable arithmetic
+  (`client/worker/core/queue.ts`).
 * **Three levels, one per section** — J3 (easiest), J2, J1 (hardest). Most people
   are J1 at one section and J3 at another.
 * **The learner chooses nothing about the questions.** No level, type or mode
@@ -99,8 +100,8 @@ Three programs that only meet in the database:
 
 | When | What happens |
 |---|---|
-| 01:17 JST | The **nightly** workflow writes up to 3 questions (≤ $0.50) and opens a pull request, the night's record. |
-| Minutes later | It runs **checks** on that branch; when every job is green it merges the pull request and starts **deploy database**, which applies migrations, runs every bundle's SQL, and makes missing audio. A red check leaves the pull request open for the owner. |
+| 01:17 JST | The **nightly** workflow writes up to 2 questions (≤ $0.50) and opens a pull request, the night's record. |
+| Minutes later | It runs **checks** on that branch; when every job is green it merges the pull request and starts **deploy database**, which applies migrations and triggers, runs every bundle's SQL, and makes missing audio. A red check leaves the pull request open for the owner. |
 | Any time | A learner presses the button; the Worker builds a set of 10 and the database grades each answer. |
 | 15 answers | Nothing more is served, and the database accepts nothing more, until midnight in Japan. |
 
@@ -355,24 +356,24 @@ type; every committed bundle is also a regression test.
 
 **The planner** (`bjt plan`) has 30 shelves (10 types × 3 levels). Each night:
 first a reading question (cheapest), then the shelf furthest behind its exam
-share — max 2 per shelf, 画像把握 max 1. Deterministic, so it can be reviewed in
+share — one per shelf, 画像把握 max 1. Deterministic, so it can be reviewed in
 advance. It never targets individual learners; personalisation happens in the
 queue.
 
 **Workflows:**
 
 * **nightly** (01:17 JST, or by hand from `main`) — survey the bank, recount question
-  difficulty from all answers, write up to 3 questions, draw needed pictures,
+  difficulty from all answers, write up to 2 questions, draw needed pictures,
   open a PR — the night's record — then run **checks** on that branch and, when
   every job is green, merge it and start **deploy database**. A red check leaves
   the PR open with a comment saying why. Manual options: **probe** (measure
   unrated questions) or **compare_jev** (Jev vs the default probe; writes
   nothing). Work is saved as an artifact before any push.
 * **checks** (every push to `main`, every PR, and each night's branch) — the
-  pipeline's vitest suite, typecheck and lint, schema tests (and the app's
-  generated database types), app typecheck, lint and tests, checkbatch.
+  pipeline's vitest suite, typecheck and lint, the database tests
+  (`npm run test:db`), app typecheck, lint and tests, checkbatch.
 * **deploy database** (after green `checks` on a push to `main`, deploying
-  that commit; or by hand from `main`) — migrations,
+  that commit; or by hand from `main`) — migrations, `d1/triggers.sql`,
   every bundle's SQL, missing audio. Idempotent. Manual runs can add a tester
   (email masked in the public log).
 * **Web app** — Cloudflare rebuilds `client/` from the repo.
@@ -499,6 +500,7 @@ from `client/`, listing yourself as a tester first:
 
 ```bash
 npx wrangler d1 migrations apply business-japanese-drill --remote
+npx wrangler d1 execute business-japanese-drill --remote --yes --file ../d1/triggers.sql
 npx wrangler d1 execute business-japanese-drill --remote --file ../batches/scenes.sql
 for f in ../batches/*.sql; do npx wrangler d1 execute business-japanese-drill --remote --yes --file "$f"; done
 node ../bjt/main.ts tester you@example.com > tester.sql
@@ -581,7 +583,7 @@ bjt/
   tts/         audio planning, synthesis, phone channel, voices
   scenes.ts · scene_art.ts        pictures
   r2.ts        the media bucket, over R2's S3 API
-d1/        migrations/ · refresh_item_stats.sql
+d1/        migrations/ · triggers.sql · refresh_item_stats.sql
 client/    the app (see client/README.md)
 landing/   the landing page, static files (see landing/README.md)
 tests/     pipeline tests and library-wide sweeps

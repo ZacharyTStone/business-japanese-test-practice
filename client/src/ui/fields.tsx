@@ -56,10 +56,10 @@ export function DateField({
   min?: string;
   accessibilityLabel: string;
 }) {
-  const [text, setText] = React.useState(value ?? "");
+  const [text, setText] = useState(value ?? "");
   // Follows the profile when it is loaded or cleared from elsewhere on the
   // screen, without fighting what is being typed here.
-  React.useEffect(() => setText(value ?? ""), [value]);
+  useEffect(() => setText(value ?? ""), [value]);
 
   function commit(next: string) {
     setText(next);

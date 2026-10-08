@@ -27,7 +27,8 @@ export function optionTexts(item: Record<string, any>): string[] {
 export function renderForDiscriminator(item: Record<string, any>): string {
   const lines = [`[${str(get(item, "item_type", ""))} / ${str(get(item, "level", ""))}]`];
 
-  for (const doc of schemas.documentsOf(item)) {
+  const docs = schemas.documentsOf(item);
+  for (const doc of docs) {
     lines.push("--- 資料 ---");
     lines.push(document.textOf(doc));
   }
@@ -40,7 +41,7 @@ export function renderForDiscriminator(item: Record<string, any>): string {
     }
   }
 
-  if (truthy(turns) || schemas.documentsOf(item).length > 0) {
+  if (truthy(turns) || docs.length > 0) {
     lines.push("--- 問題 ---");
   }
   lines.push(item["stem"]);

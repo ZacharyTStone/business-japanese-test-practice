@@ -93,7 +93,7 @@ describe("the day", () => {
   });
 
   it("never asks past the ceiling, even with the set unfinished", () => {
-    // A goal written above a ceiling that was later lowered: the trigger
+    // A goal written above a ceiling that was later lowered: `updateProfile()`
     // judges a goal being written, never an existing one.
     const d = day({ goal: 15, answered_today: 12, max_today: 13, left_today: 1 });
     expect(dayState(d)).toBe("open");

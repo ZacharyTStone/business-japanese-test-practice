@@ -15,7 +15,6 @@ import * as batch from "../bjt/batch.ts";
 import * as cli from "../bjt/cli/index.ts";
 import * as answerability from "../bjt/fidelity/answerability.ts";
 import * as difficulty from "../bjt/fidelity/difficulty.ts";
-import * as roles from "../bjt/fidelity/roles.ts";
 import * as fixtures from "../bjt/fixtures.ts";
 import * as http from "../bjt/http.ts";
 import * as jev from "../bjt/jev.ts";
@@ -24,7 +23,7 @@ import * as pipeline from "../bjt/pipeline.ts";
 import { deepcopy, max, sorted, sum } from "../bjt/py.ts";
 import { dumps } from "../bjt/pyjson.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
-import { goiItem, store } from "./conftest.ts";
+import { goiCorrectText, goiItem, store } from "./conftest.ts";
 import { capture, delEnv, patch, setConfig, setEnv, tmpPath } from "./helpers.ts";
 
 type Item = Record<string, any>;
@@ -77,10 +76,6 @@ function wire(): Wire {
     return state.reply;
   });
   return state;
-}
-
-function _correctText(): string {
-  return fixtures.FIXTURES["goi_bunpou"]["options"].find((o: Item) => o["role"] === roles.CORRECT)["text"];
 }
 
 function expectApprox(got: number[], want: number[]): void {
@@ -250,7 +245,7 @@ function _probabilitiesForKey(pKey: number, seen: [string | null, string][] | nu
     if (seen !== null) {
       seen.push([opts.model ?? null, question]);
     }
-    const ci = options.indexOf(_correctText());
+    const ci = options.indexOf(goiCorrectText());
     const rest = (1 - pKey) / (options.length - 1);
     return options.map((_, i) => (i === ci ? pKey : rest));
   };
@@ -319,7 +314,7 @@ describe("the probe", () => {
     expect(res.trials.map((t) => t.chosen)).toEqual([null]);
   });
 
-  test("calls per item", () => {
+  test("the probe costs its trials per item and jev one call", () => {
     setConfig({ DIFFICULTY_TRIALS: 5, DIFFICULTY_MODEL: "claude-haiku-4-5" });
     expect(difficulty.callsPerItem()).toBe(5);
     expect(difficulty.callsPerItem({ model: JEV })).toBe(1);
@@ -333,7 +328,7 @@ describe("the probe", () => {
     patch(llm, "generateStructured", async () => deepcopy(fixtures.FIXTURES["goi_bunpou"]));
 
     const judge = async (question: string, options: string[], opts: { model?: string | null } = {}) => {
-      const ci = options.indexOf(_correctText());
+      const ci = options.indexOf(goiCorrectText());
       return { "choice": question.includes("withheld") ? (ci + 1) % 4 : ci, "reason": "x" };
     };
 
@@ -393,7 +388,7 @@ function _measureByModel(rates: Record<string, (number | null)[]>, seen: (string
 }
 
 describe("the comparison", () => {
-  test("spearman", () => {
+  test("spearman is ±1 on monotone ranks and null without an order", () => {
     expect(backfill.spearman([0.1, 0.2, 0.3, 0.4], [0.2, 0.4, 0.6, 0.9])).toBeCloseTo(1.0, 6);
     expect(backfill.spearman([0.1, 0.2, 0.3], [0.9, 0.5, 0.1])).toBeCloseTo(-1.0, 6);
     expect(backfill.spearman([1.0, 1.0, 0.6, 0.2], [0.9, 0.8, 0.5, 0.1])).toBeCloseTo(0.9486833, 6);

@@ -19,7 +19,7 @@ import * as publish from "../bjt/publish.ts";
 import { rstrip, sorted, strip, sum, toInt } from "../bjt/py.ts";
 import { dumps } from "../bjt/pyjson.ts";
 import * as schemas from "../bjt/schemas.ts";
-import { capture, patch, tmpPath } from "./helpers.ts";
+import { after, before, capture, patch, tmpPath } from "./helpers.ts";
 
 const ROOT_DIR = path.resolve(import.meta.dirname, "..");
 
@@ -136,20 +136,6 @@ function _bundleWithRate(rate: number | null): Record<string, any> {
     item["model_p_correct"] = rate;
   }
   return batchmod.buildBundle("goi_bunpou", "J2", [item], "test-model");
-}
-
-/** `s.split(sep, 1)[1]`: everything after the first `sep` (an IndexError in
- *  Python when there is none, a failed assertion here). */
-function after(s: string, sep: string): string {
-  const i = s.indexOf(sep);
-  expect(i, `${JSON.stringify(sep)} not found`).toBeGreaterThanOrEqual(0);
-  return s.slice(i + sep.length);
-}
-
-/** `s.split(sep, 1)[0]`: everything before the first `sep`. */
-function before(s: string, sep: string): string {
-  const i = s.indexOf(sep);
-  return i < 0 ? s : s.slice(0, i);
 }
 
 describe("the difficulty estimate travels with the item", () => {

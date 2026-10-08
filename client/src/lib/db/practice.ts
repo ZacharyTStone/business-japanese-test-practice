@@ -7,27 +7,25 @@
  * decides whether an answer was right.** It posts which option was touched and
  * the database grades it.
  */
-import type {
-  QueuedItem,
-} from "../types";
+import type { QueuedItem } from "../types";
 import type { AttemptArgs, Graded } from "../outbox";
 import type { TypePace } from "../pace";
 import { call } from "../api";
 
 /** The practice queue — the only way this app asks for questions.
  *
- *  How many, and nothing else. The composition lives in SQL (see next_items)
- *  because it needs the whole library and the whole history to decide: the
- *  items that caught you before, the unseen ones aimed at your weakest ground,
- *  one from the level above. There is no level, type or mode to pass, because
- *  there is no screen where anybody chooses one. */
+ *  How many, and nothing else. The composition lives in the Worker
+ *  (`nextItems()`, worker/core/queue.ts) because it needs the whole library
+ *  and the whole history to decide: the items that caught you before, the
+ *  unseen ones aimed at your weakest ground, one from the level above. There
+ *  is no level, type or mode to pass, because there is no screen where
+ *  anybody chooses one. */
 export async function fetchQueue(limit: number): Promise<QueuedItem[]> {
   return (await call<QueuedItem[]>("nextItems", { limit })) ?? [];
 }
 
-// `userId` is kept in the signature the screens call with; the Worker files the
-// session under the signed-in learner, as row-level security would insist.
-export async function startSession(_userId: string): Promise<string | null> {
+/** The Worker files the session under the signed-in learner. */
+export async function startSession(): Promise<string | null> {
   // A session is only a grouping label. If creating it fails we still want the
   // person to be able to practise, so this is not allowed to throw.
   try {
@@ -46,10 +44,10 @@ export async function finishSession(sessionId: string): Promise<void> {
 /**
  * Record an answer and find out whether it was right.
  *
- * Note what is NOT sent: user_id, is_correct, the role, the time. The insert
- * trigger fills them in, and `select` returns the graded row — so the value this
- * resolves to is the database's verdict, not ours. The database refuses those
- * columns outright if a client sends them.
+ * Note what is NOT sent: user_id, is_correct, the role, the time. The Worker
+ * fills them in from the item as it inserts the row (worker/core/grade.ts) and
+ * returns the graded row — so the value this resolves to is the database's
+ * verdict, not ours. A trigger refuses any row whose grade is not the item's.
  *
  * What IS sent, beyond the answer, is how it was given, because the ladder and
  * the level both care: `thinkMs` (from the end of the audio, or from the question
@@ -92,10 +90,7 @@ export async function fetchPace(): Promise<Record<string, TypePace>> {
   const data = await call<{ id: string; seconds_per_item: number | null; typical_chars: number | null }[]>("pace");
   const out: Record<string, TypePace> = {};
   for (const row of data ?? []) {
-    out[row.id as string] = {
-      seconds: (row.seconds_per_item as number) ?? 0,
-      typicalChars: (row.typical_chars as number) ?? 0,
-    };
+    out[row.id] = { seconds: row.seconds_per_item ?? 0, typicalChars: row.typical_chars ?? 0 };
   }
   return out;
 }
@@ -116,10 +111,8 @@ export type FeedbackReason =
  * Report that a question is wrong or odd.
  *
  * One row per person per item, so pressing again corrects the earlier report
- * rather than counting twice. Done as an insert and then, on the unique
- * violation, an update — rather than an upsert — because the conflict target is
- * a column the client deliberately does not send: `user_id` is filled in by a
- * trigger from the session, exactly as it is for an attempt.
+ * rather than counting twice. `user_id` is not sent: the Worker fills it in
+ * from the session, exactly as it does for an attempt.
  *
  * Nothing about this reaches the queue. A reported item keeps being served until
  * a person reads the report, which is the only way "some tester pressed a
@@ -130,15 +123,13 @@ export async function reportItem(args: {
   reason: FeedbackReason;
   note?: string;
 }): Promise<void> {
-  // Insert, and on the unique violation replace what they said — in the
-  // Worker, inside one transaction (worker/queries.ts, reportItem).
   await call("reportItem", { itemId: args.itemId, reason: args.reason, note: (args.note ?? "").trim() });
 }
 
 /**
  * Whether this account may veto — asked once, so the button is drawn or it is
- * not. A `false` here is cosmetic: `veto_item()` re-checks the same thing
- * server-side, because the client that draws a button is not the thing that
+ * not. A `false` here is cosmetic: `vetoItem()` (worker/core/bank.ts)
+ * re-checks the same thing server-side, because the client that draws a button is not the thing that
  * decides who may press it.
  */
 export async function mayVeto(): Promise<boolean> {
@@ -182,5 +173,5 @@ export async function findAttempt(args: AttemptArgs): Promise<Graded | null> {
   const row = (data ?? []).find(
     (r) => (r.elapsed_ms ?? null) === args.elapsedMs && (r.think_ms ?? null) === args.thinkMs
   );
-  return row ? { isCorrect: row.is_correct as boolean, chosenRole: row.chosen_role as string } : null;
+  return row ? { isCorrect: row.is_correct, chosenRole: row.chosen_role } : null;
 }

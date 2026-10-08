@@ -11,8 +11,9 @@
  * table's `function` axis carries the GRAMMAR POINT under test, and the cell
  * assigns it: ten items are ten different grammar points by construction.
  */
+import { getitem } from "../py.ts";
 import type { Cell } from "../seedtable.ts";
-import { _getitem, Generator, withRelationNote } from "./base.ts";
+import { Generator, withRelationNote } from "./base.ts";
 
 export class GoiBunpouGenerator extends Generator {
   override item_type = "goi_bunpou";
@@ -49,7 +50,7 @@ export class GoiBunpouGenerator extends Generator {
   );
 
   override cellSpec(cell: Cell): string {
-    const channelNote = _getitem({
+    const channelNote = getitem({
       "written": "The carrier sentence is a line of written business Japanese — "
                  + "an email, a report, or a notice. Written conventions apply: no "
                  + "spoken fillers, no 話し言葉 contractions.",

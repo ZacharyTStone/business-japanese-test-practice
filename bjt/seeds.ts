@@ -35,6 +35,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import path from "node:path";
 import * as batchmod from "./batch.ts";
 import * as config from "./config.ts";
+import { unreadable } from "./files.ts";
 import { get, or, sorted, splitlines, strip, truthy } from "./py.ts";
 import { dumps, loads } from "./pyjson.ts";
 import * as regate from "./regate.ts";
@@ -104,12 +105,6 @@ export function hasLicensedSeeds(opts: { seedsDir?: string | null } = {}): boole
   return ["fewshot", "official"].some((sub) => _jsonNames(path.join(seedsDir, sub)).length > 0);
 }
 
-/** An error reading or parsing a bundle file (`json.JSONDecodeError` or
- *  `OSError`): the file is skipped, as Python skipped it. */
-function _unreadable(e: unknown): boolean {
-  return e instanceof SyntaxError || (e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string");
-}
-
 /**
  * Up to PER_TYPE items per type, spread across the levels the bank has.
  *
@@ -142,7 +137,7 @@ export function examplesFromBatches(opts: { batchDir?: string | null } = {}): Re
     try {
       bundle = loads(readFileSync(path.join(batchDir, name), "utf8"));
     } catch (e) {
-      if (!_unreadable(e)) throw e;
+      if (!unreadable(e)) throw e;
       continue;
     }
     if (!Array.isArray(get(bundle, "items")) || !truthy(get(bundle, "item_type"))) {

@@ -13,7 +13,7 @@
  * than to judge: pairs above the threshold are reported for the five-second human
  * look that the pipeline ends with anyway.
  */
-import { get, KeyError, has, max, sorted, str, ValueError } from "../py.ts";
+import { get, KeyError, has, max, sorted, str, ValueError, WS } from "../py.ts";
 import { correctIndex } from "../schemas.ts";
 
 /** Above this Jaccard similarity, two items are treated as the same question.
@@ -21,11 +21,9 @@ import { correctIndex } from "../schemas.ts";
  *  different 敬語 problems in the same setting do not. */
 export const DEFAULT_THRESHOLD = 0.62;
 
-// Python's `\s` (what `str.isspace()` says is whitespace), which is wider than
-// JavaScript's: written out so the two strip the same characters.
-const _PY_WS = "\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
-
-export const _STRIP = new RegExp(`[${_PY_WS}。、，．,.\\-—―…「」『』（）()！？!?・:：;；　]+`, "gu");
+// `WS` is Python's `\s` (what `str.isspace()` says is whitespace), which is
+// wider than JavaScript's, so the two strip the same characters.
+export const _STRIP = new RegExp(`[${WS}。、，．,.\\-—―…「」『』（）()！？!?・:：;；　]+`, "gu");
 
 /** Fold width/case and drop punctuation, so wording differences that a
  *  listener would not hear as different do not hide a duplicate. */
@@ -102,9 +100,9 @@ export function findDuplicates(items: Record<string, any>[], opts: { threshold?:
       if (score >= threshold) {
         pairs.push(
           new DuplicatePair({
-            i: i,
-            j: j,
-            score: score,
+            i,
+            j,
+            score,
             topic_i: get(items[i], "topic", ""),
             topic_j: get(items[j], "topic", ""),
           }),

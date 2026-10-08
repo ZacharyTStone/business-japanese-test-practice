@@ -18,9 +18,9 @@ npm run build:web && npx wrangler dev   # the app and its Worker on one origin, 
 ```
 
 `wrangler dev` runs against a local D1: fill it once with `npx wrangler d1
-migrations apply business-japanese-drill --local` and each `../batches/*.sql`
-(scenes.sql first) with `npx wrangler d1 execute business-japanese-drill
---local --file`, and add yourself with `node bjt/main.ts tester`. Without a
+migrations apply business-japanese-drill --local`, then `../d1/triggers.sql`
+and each `../batches/*.sql` (scenes.sql first) with `npx wrangler d1 execute
+business-japanese-drill --local --file`, and add yourself with `node bjt/main.ts tester`. Without a
 Worker to talk to (`npm run ios`, say) the app still starts and says what is
 missing rather than crashing.
 
@@ -122,7 +122,8 @@ The app opens only to a signed-in user whose email is on the tester list
 address not on the list is refused before it runs, and no account is made for
 it (`worker/core/caller.ts`). `src/ui/gate.tsx` is the screens that say so —
 "Continue with Google", or "not open yet" with the account named — and
-`src/lib/auth.tsx` asks `whoami`, the one query that answers. A Google
+`src/lib/auth.tsx` asks `whoami` and reads its `not_a_tester` refusal as
+that "no". A Google
 account the list does not name never becomes an account at all
 (`worker/auth.ts`). Neither is what keeps anybody out; a client that skipped both would
 be refused all the same.
@@ -141,7 +142,7 @@ and everything about it in one all-or-nothing batch on the Worker
 (`worker/core/profile.ts`), the Google sign-in with it, and signs out. The web
 version has the same screen, which is the "web link" Google Play asks for.
 
-## Anonymous first, when the app opens
+## Signed in from the first question
 
 The schema is shaped for a public app that signs everybody in before it shows
 anything: no "continue as guest", no local-storage-then-migrate dance — from
@@ -150,19 +151,18 @@ the Worker makes an account only for a listed address. Opening the app means
 deciding how a stranger signs in, and dropping the list from the door in
 `worker/core/caller.ts`.
 
-Linking Google then attaches an identity to the **same user id**, so nothing is
-copied or merged. That is the whole reason for doing it in this order: the
+Signing in comes first so that nothing is ever copied or merged: the
 alternative — keep progress locally, reconcile on sign-in — means writing and
 testing a merge path that is hard to get right and impossible to verify after the
-fact when it goes wrong. The cost is that until an identity is linked, the
-session token in the app's storage is the only key to that person's history.
+fact when it goes wrong.
 
 ## The app does not grade answers
 
 `recordAttempt` sends which option was touched, with the timing and replay
-counts the spacing ladder reads — never whether it was right. The database's
-insert trigger fills in who it was, whether it was right, and **which distractor
-role** caught them, and returns the graded row.
+counts the spacing ladder reads — never whether it was right. The Worker's
+INSERT fills in who it was, whether it was right, and **which distractor role**
+caught them, from the item itself (`worker/core/grade.ts`); a trigger refuses
+any other grade, and the graded row comes back.
 
 The item already carries `correct_index`, so grading locally would save a round
 trip and feel snappier. It is not worth it: two sources of truth for "was that
@@ -197,7 +197,7 @@ listening item with no audio is still a usable reading item. When clips arrive,
 `audio_path` fills in and the same components start playing them — no screen
 changes.
 
-Paths ride along with the practice queue (`next_items` returns them inline), so
+Paths ride along with the practice queue (`nextItems` returns them inline), so
 a set is one request rather than one per clip.
 
 ## Layout
@@ -237,6 +237,11 @@ src/lib/
   playlist.ts       what a question plays, in order (SPOKEN_OPTION_TYPES lives here)
   clock.ts          the reading clock's arithmetic
   day.ts            the day as Japan counts it, and the size of the next set
+  exam.ts           the exam date, and the days left to it
+  estimate.ts       how long a set will take, for the line under home's button
+  ranking.ts        the traps and tags 記録 ranks, over the queue's 30 days
+  save.ts           a setting saved one write at a time, newest wins
+  words.ts          the word list, each word with a sentence it is used in
   labels.ts         names the screens share (option numbers, channels)
   errors.ts         what went wrong, in words a learner can act on
   practice.ts       the practice screen's state, as one pure reducer
@@ -279,7 +284,7 @@ accuracy that earned it. 結果 names the section that just moved, because
 `npm run typecheck` proves the code compiles against the types we *claim* the
 database has. It cannot prove that claim is true — for that, `npm run test:db`
 builds a local D1 the way the deploy builds the real one (every migration in
-`../d1/migrations`, every `../batches/*.sql`, twice) and runs every query in
+`../d1/migrations`, `../d1/triggers.sql`, every `../batches/*.sql`, twice) and runs every query in
 `worker/queries.ts` as a tester (`worker/test/queries.db.test.ts`) plus the
 schema's promises (`worker/test/schema.db.test.ts`), so a missing column, a
 write the schema refuses, or one learner seeing another's rows fails CI.

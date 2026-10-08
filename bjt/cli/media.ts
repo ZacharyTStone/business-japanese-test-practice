@@ -16,29 +16,9 @@ import * as synth from "../tts/synth.ts";
 import * as audition from "../tts/audition.ts";
 import { writeAtomic } from "../files.ts";
 import { GENERATORS } from "../generators/index.ts";
-import { eprint, errText, has, KeyError, len, print, PyError, repr, RuntimeError, sorted, str, truthy, ValueError } from "../py.ts";
+import { eprint, errText, has, IndexError, isDict, KeyError, len, pathStr, print, repr, RuntimeError, sorted, str, truthy, ValueError } from "../py.ts";
 import type { Namespace, SubParsers } from "./argparse.ts";
 
-
-/** `str(pathlib.Path(p))`: repeated and trailing slashes and `.` components
- *  dropped, `..` kept, an empty path `.`. */
-function _pathStr(p: string): string {
-  const lead = p.startsWith("//") && !p.startsWith("///") ? "//" : p.startsWith("/") ? "/" : "";
-  const out = lead + p.split("/").filter((s) => s !== "" && s !== ".").join("/");
-  return out === "" ? "." : out;
-}
-
-/** `type=pathlib.Path`. */
-function _path(value: string): string {
-  return _pathStr(value);
-}
-
-/** `Path(p).stem`: the name without its last suffix. */
-function _stem(p: string): string {
-  const name = path.basename(p);
-  const i = name.lastIndexOf(".");
-  return 0 < i && i < name.length - 1 ? name.slice(0, i) : name;
-}
 
 /** `f"{s:<{width}}"`, by code point. */
 function _ljust(s: string, width: number): string {
@@ -50,9 +30,6 @@ function _rjust(s: string, width: number): string {
   return " ".repeat(Math.max(0, width - len(s))) + s;
 }
 
-/** Python's IndexError: a list index past either end. */
-class IndexError extends PyError {}
-
 /** `items[i]`, negative counting from the end, as a Python list indexes. */
 function _at<T>(items: readonly T[], i: number): T {
   const j = i < 0 ? i + items.length : i;
@@ -60,11 +37,6 @@ function _at<T>(items: readonly T[], i: number): T {
     throw new IndexError("list index out of range");
   }
   return items[j];
-}
-
-/** `isinstance(x, dict)`: a plain object. */
-function _isDict(x: unknown): x is Record<string, any> {
-  return x !== null && typeof x === "object" && !Array.isArray(x);
 }
 
 
@@ -77,7 +49,7 @@ function _isDict(x: unknown): x is Record<string, any> {
  * one place all three happen together — each step is still its own line.
  */
 export async function cmdSynth(args: Namespace): Promise<number> {
-  const bundlePath = _pathStr(args.path);
+  const bundlePath = pathStr(args.path);
   const bundle = batchmod.load(bundlePath);
   const report = batchmod.checkBundle(bundle);
   if (!report.ok && !args.force) {
@@ -164,13 +136,13 @@ export async function cmdSynth(args: Namespace): Promise<number> {
     return 0;
   }
 
-  const out = args.out ? _pathStr(args.out)
-    : path.join(path.dirname(bundlePath), _stem(bundlePath) + ".audio.sql");
+  const out = args.out ? pathStr(args.out)
+    : path.join(path.dirname(bundlePath), scene_art._stem(bundlePath) + ".audio.sql");
   writeAtomic(out, synth.toSql(result));
   print(`\nWrote ${out}`);
 
   const record = path.join(truthy(args.media_dir) ? args.media_dir : config.MEDIA_DIR,
-                           "reports", `${_stem(bundlePath)}.json`);
+                           "reports", `${scene_art._stem(bundlePath)}.json`);
   synth.writeReport(result, record);
   print(`Wrote ${record}`);
 
@@ -335,7 +307,7 @@ export async function cmdScenes(args: Namespace): Promise<number> {
   const have = survey.filter((s) => s.has_art);
 
   if (args.sql) {
-    const out = args.out ? _pathStr(args.out) : path.join(config.ROOT, "batches", "scenes.sql");
+    const out = args.out ? pathStr(args.out) : path.join(config.ROOT, "batches", "scenes.sql");
     writeAtomic(out, scenemod.toSql(survey));
     const standIns: [scenemod.Scene, scenemod.Scene | null][] = survey.map((s) => [s, scenemod.standInFor(s, survey)]);
     const borrowed = standIns.filter((pair): pair is [scenemod.Scene, scenemod.Scene] => pair[1] !== null);
@@ -389,7 +361,7 @@ export async function cmdRender(args: Namespace): Promise<number> {
       return 2;
     }
   } else {
-    const bundle = batchmod.load(_pathStr(args.path));
+    const bundle = batchmod.load(pathStr(args.path));
     const items = (bundle["items"] as Record<string, any>[]).filter((i) => truthy(i["documents"] ?? null));
     if (!items.length) {
       eprint("no document items in that bundle");
@@ -398,12 +370,10 @@ export async function cmdRender(args: Namespace): Promise<number> {
     item = _at(items, Math.min(args.index, items.length - 1));
   }
 
-  const itemType = item["item_type"] ?? "";
-  const field: string | null = typeof itemType === "string" && has(schemas.DOCUMENT_FIELDS, itemType)
-    ? schemas.DOCUMENT_FIELDS[itemType] : null;
+  const field = schemas.documentField(item["item_type"] ?? "");
   const documents = item["documents"] ?? null;
   const raw = truthy(documents) ? documents : (field ? [item[field] ?? null] : []);
-  const docs = (Array.isArray(raw) ? raw : [raw]).filter(_isDict);
+  const docs = (Array.isArray(raw) ? raw : [raw]).filter(isDict);
   if (!docs.length) {
     eprint("that item has no document");
     return 2;
@@ -440,8 +410,8 @@ export function register(sub: SubParsers, types: string[]): void {
                                      + "(needs --have and the R2_* credentials); never over "
                                      + "a file already there but the ones --remake names" });
   sy.addArgument("--out", { help: "where to write the SQL (default: alongside the bundle)" });
-  sy.addArgument("--media-dir", { type: _path,
-                                  help: `where audio files go (default: ${_pathStr(config.MEDIA_DIR)})` });
+  sy.addArgument("--media-dir", { type: pathStr,
+                                  help: `where audio files go (default: ${pathStr(config.MEDIA_DIR)})` });
   sy.addArgument("--limit", { type: "int",
                               help: "cap how many NEW clips this run may make — a budget, not a "
                                     + "debugging convenience" });
@@ -454,16 +424,16 @@ export function register(sub: SubParsers, types: string[]): void {
                                                + "configured TTS provider, for a person to compare" });
   au.addArgument("--provider", { nargs: "*", metavar: "NAME",
                                  help: "which providers (default: every one with credentials)" });
-  au.addArgument("--media-dir", { type: _path,
-                                  help: `where the clips go (default: ${_pathStr(config.MEDIA_DIR)}/audition)` });
+  au.addArgument("--media-dir", { type: pathStr,
+                                  help: `where the clips go (default: ${pathStr(config.MEDIA_DIR)}/audition)` });
   au.addArgument("--voices", { action: "store_true",
                                help: "also one line in every voice the library's provider offers, "
                                      + "to recast a role by ear" });
   au.addArgument("--force", { action: "store_true", help: "re-synthesise clips that exist" });
   au.setDefaults({ func: cmdAudition });
   const sc = sub.addParser("scenes", { help: "what the scene bank needs, draw what is missing" });
-  sc.addArgument("--media-dir", { type: _path,
-                                  help: `where scene art lives (default: ${_pathStr(config.MEDIA_DIR)}/scenes)` });
+  sc.addArgument("--media-dir", { type: pathStr,
+                                  help: `where scene art lives (default: ${pathStr(config.MEDIA_DIR)}/scenes)` });
   sc.addArgument("--prompt", { metavar: "SCENE_ID",
                                help: "print the illustration brief for one scene" });
   sc.addArgument("--generate", { nargs: "*", metavar: "SCENE_ID",

@@ -18,7 +18,7 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as config from "../config.ts";
-import { errText, htmlEscape, or, SystemExit, truthy } from "../py.ts";
+import { errText, htmlEscape, isException, or, truthy } from "../py.ts";
 import * as channelMod from "./channel.ts";
 import { NARRATOR_VOICE } from "./plan.ts";
 import { available, directionFor, getProvider, OpenAIProvider } from "./providers.ts";
@@ -88,13 +88,6 @@ export function fileName(voice: string, channel: string): string {
 export const VOICES_LINE = LINES[3][2];
 
 
-/** Python's `except Exception`: every error but the one that ends the
- *  process. */
-function _isException(exc: unknown): boolean {
-  return exc instanceof Error && !(exc instanceof SystemExit);
-}
-
-
 /** Synthesise every line through every named provider (default: all that
  *  have credentials) and write the comparison page. With `voices`, also every
  *  candidate voice of the library's provider saying one line. */
@@ -122,7 +115,7 @@ export async function run(opts: { providers?: string[] | null; mediaDir?: string
                                       { instructions: directionFor("staff_mid_m"),
                                         providerVoice: candidate });
       } catch (exc) { // a vendor error is a result, not a crash
-        if (!_isException(exc)) throw exc;
+        if (!isException(exc)) throw exc;
         report.failed.push(["openai-voices", candidate, errText(exc)]);
         continue;
       }
@@ -145,7 +138,7 @@ export async function run(opts: { providers?: string[] | null; mediaDir?: string
         const raw = await provider.synthesize(text, voice, { instructions: directionFor(voice) });
         processed = channelMod.applyChannel(raw, channel);
       } catch (exc) { // one provider's outage must not hide the others
-        if (!_isException(exc)) throw exc;
+        if (!isException(exc)) throw exc;
         report.failed.push([provider.name, voice, errText(exc)]);
         continue;
       }

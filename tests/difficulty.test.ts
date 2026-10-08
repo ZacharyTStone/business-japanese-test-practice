@@ -10,8 +10,7 @@ import * as llm from "../bjt/llm.ts";
 import * as pipeline from "../bjt/pipeline.ts";
 import { deepcopy } from "../bjt/py.ts";
 import * as difficulty from "../bjt/fidelity/difficulty.ts";
-import * as roles from "../bjt/fidelity/roles.ts";
-import { goiItem, store } from "./conftest.ts";
+import { goiCorrectText, goiItem, store } from "./conftest.ts";
 import { patch, setConfig } from "./helpers.ts";
 
 type Answer = (question: string, options: string[], opts?: { model?: string | null }) => Promise<Record<string, any>>;
@@ -32,21 +31,16 @@ function _answerer(pattern: boolean[], seen: [string | null, string][] | null = 
     }
     const right = next.value;
     // The item is shuffled by the generator, so find the key by its text.
-    const ci = options.indexOf(_correctText());
+    const ci = options.indexOf(goiCorrectText());
     return { choice: right ? ci : (ci + 1) % 4, reason: "x" };
   };
-}
-
-function _correctText(): string {
-  return fixtures.FIXTURES["goi_bunpou"]["options"].find(
-    (o: Record<string, any>) => o["role"] === roles.CORRECT)["text"];
 }
 
 /** The judge: full right, cold wrong when the item is to be kept; cold right
  *  (leaky) otherwise. The probe's calls are told apart by the model name. */
 function _gateAnswerer(kept: boolean): Answer {
   return async (question, options, opts = {}) => {
-    const ci = options.indexOf(_correctText());
+    const ci = options.indexOf(goiCorrectText());
     if (opts.model === "weak-model") {
       throw new Error("AssertionError: the probe's calls must be stubbed separately");
     }
@@ -134,7 +128,7 @@ describe("difficulty", () => {
       if (right === null) {
         throw new llm.LLMError("refused");
       }
-      return { choice: options.indexOf(_correctText()), reason: "x" };
+      return { choice: options.indexOf(goiCorrectText()), reason: "x" };
     };
 
     patch(llm, "answerChoice", flaky);

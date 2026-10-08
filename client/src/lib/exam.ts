@@ -71,9 +71,10 @@ export function countdownLine(days: number | null, lang: Lang = "ja"): string | 
 }
 
 /** The last two weeks before the exam date, today included — the window in
- *  which next_items() holds a set to the exam's own section mix and the
- *  reading clock runs whatever the setting says. Fourteen in both places: the
- *  queue's `exam` CTE reads `exam_date between today and today + 14`. */
+ *  which the queue holds a set to the exam's own section mix and the reading
+ *  clock runs whatever the setting says. Fourteen in both places: the queue's
+ *  `examIsNear` (worker/core/queue.ts) reads the date between today and
+ *  today + 14. */
 export const EXAM_NEAR_DAYS = 14;
 
 export function examIsNear(examDate: string | null | undefined): boolean {

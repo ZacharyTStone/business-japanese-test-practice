@@ -28,7 +28,8 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { reportItem, type FeedbackReason } from "../lib/db";
 import { useLang, type Key } from "../lib/i18n";
 import { Chip } from "./components";
-import { colors, MIN_TOUCH, radius, space, type } from "./theme";
+import { shared } from "./practice/styles";
+import { colors, radius, space, type } from "./theme";
 
 /** The reasons, in the order they are offered. Audio comes last of the real
  *  ones because most items have none; `other` is always last. Must match the
@@ -58,7 +59,7 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
       setStage("sent");
     } catch {
       // Which error it was does not change what the person can do about it, and
-      // a Postgres message is not something to put in front of somebody
+      // a database message is not something to put in front of somebody
       // studying. Saying it failed, and that it can be tried again, is the whole
       // of the useful content.
       setStage("failed");
@@ -78,9 +79,9 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
       <Pressable
         accessibilityRole="button"
         onPress={() => setStage("open")}
-        style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [shared.link, pressed && { opacity: 0.85 }]}
       >
-        <Text style={[type.small, styles.toggle]}>{t("report_open")}</Text>
+        <Text style={[type.small, shared.toggle]}>{t("report_open")}</Text>
       </Pressable>
     );
   }
@@ -132,9 +133,9 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
           accessibilityRole="button"
           onPress={() => setStage("shut")}
           disabled={busy}
-          style={({ pressed }) => [styles.link, pressed && { opacity: 0.85 }]}
+          style={({ pressed }) => [shared.link, pressed && { opacity: 0.85 }]}
         >
-          <Text style={[type.small, styles.toggle]}>{t("report_close")}</Text>
+          <Text style={[type.small, shared.toggle]}>{t("report_close")}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -160,10 +161,6 @@ export function ReportQuestion({ itemId }: { itemId: string }) {
 }
 
 const styles = StyleSheet.create({
-  toggle: { textAlign: "center", textDecorationLine: "underline" },
-  // A line of text that is a button is still a thumb's height: the padding is
-  // the hit area, since hitSlop does nothing on the web.
-  link: { minHeight: MIN_TOUCH, justifyContent: "center" },
   thanks: { textAlign: "center" },
   panel: {
     gap: space.md,

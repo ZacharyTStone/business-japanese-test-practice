@@ -2,9 +2,7 @@
  * The learner's own row: the few things they set, the one way to start again,
  * and whether they have bought the app out of its ads.
  */
-import type {
-  Profile,
-} from "../types";
+import type { Profile } from "../types";
 import { call } from "../api";
 
 export async function fetchProfile(): Promise<Profile | null> {
@@ -12,13 +10,10 @@ export async function fetchProfile(): Promise<Profile | null> {
 }
 
 /**
- * Change one of the few things a learner sets.
- *
- * `userId` is kept in the signature the screens call with; the Worker updates
- * the signed-in learner's row and no other, as row-level security insists.
+ * Change one of the few things a learner sets. The Worker updates the
+ * signed-in learner's row and no other.
  */
 export async function updateProfile(
-  _userId: string,
   // Not target_level: the database moves that, on the evidence of the answers.
   patch: Partial<Pick<Profile, "daily_goal" | "display_name" | "exam_date" | "timed_reading">>
 ) {
@@ -37,15 +32,16 @@ type ResetCounts = {
 /**
  * Erase this learner's own practice history and start again.
  *
- * An RPC rather than a delete, because `attempts` has no delete policy and
- * `review_schedule` has no write policy at all: an answer already given is
+ * One query rather than a delete, because no query deletes an answer and
+ * nothing but an answer writes `review_schedule`: an answer already given is
  * history, and a client that could edit either could make the app tell it what
- * it wanted to hear. `reset_my_progress()` takes no arguments and reads the
- * user from the session, so there is no way to spell "delete the ones I got
- * wrong" with it — it is all of one person's history or none of it.
+ * it wanted to hear. `resetProgress()` (worker/core/profile.ts) takes no
+ * arguments and reads the learner from the session, so there is no way to
+ * spell "delete the ones I got wrong" with it — it is all of one person's
+ * history or none of it.
  *
  * Settings, the purchase and any reported questions are left alone; they are
- * not progress. See the migration for the whole list.
+ * not progress. The Worker's function has the whole list.
  */
 export async function resetProgress(): Promise<ResetCounts> {
   return call<ResetCounts>("resetProgress");

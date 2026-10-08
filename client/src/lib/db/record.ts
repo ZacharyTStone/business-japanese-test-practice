@@ -4,7 +4,7 @@
  * words, its sentence, the learner's note on it.
  *
  * All of it is a read of what the answers add up to. Nothing here decides
- * what is served next; that is next_items() alone. The one write is the
+ * what is served next; that is the queue alone. The one write is the
  * learner's own note on a question.
  */
 import type {
@@ -30,11 +30,11 @@ import { joinHistory, missedWords, type AttemptRow, type HistoryItemRow, type Op
 
 /** The three levels being served, one per exam section.
  *
- *  Always three rows: the view fills in J2 for a section nobody has answered in
- *  yet. Shown, never chosen — there is no screen in this app where a level is a
- *  control, and `v_my_levels` has no write path to be one. `placed` comes from
- *  the same view, so whether a level is worth printing is the database's call
- *  and not a count the app keeps on its own. */
+ *  Always three rows: `myLevels()` (worker/core/levels.ts) fills in J2 for a
+ *  section nobody has answered in yet. Shown, never chosen — there is no screen
+ *  in this app where a level is a control, and no query writes one. `placed`
+ *  comes from the same function, so whether a level is worth printing is the
+ *  database's call and not a count the app keeps on its own. */
 export async function fetchSectionLevels(): Promise<SectionLevel[]> {
   return (await call<SectionLevel[]>("sectionLevels")) ?? [];
 }
@@ -76,10 +76,11 @@ export async function fetchStreak(): Promise<number> {
 
 /** Today, against the goal and the ceiling.
  *
- *  Always one row. The day ends at midnight in Japan and the view does that
- *  arithmetic, so the app never has to guess the date. Home sizes its button
- *  from this and shows the "done" screen from it; practice sizes its set from
- *  it — and next_items() would cap the set anyway, so the two cannot disagree. */
+ *  Always one row. The day ends at midnight in Japan and the Worker does that
+ *  arithmetic (`day()`, worker/core/record.ts), so the app never has to guess
+ *  the date. Home sizes its button from this and shows the "done" screen from
+ *  it; practice sizes its set from it — and the queue would cap the set anyway,
+ *  so the two cannot disagree. */
 export async function fetchDay(): Promise<DayStatus> {
   return call<DayStatus>("day");
 }
@@ -87,8 +88,8 @@ export async function fetchDay(): Promise<DayStatus> {
 /**
  * Past answers, newest first — the review screen.
  *
- * `attempts` has no update or delete policy: an answer already given is
- * history, and this is the screen that treats it as such. The answers, their
+ * No query updates or deletes an answer: an answer already given is history,
+ * and this is the screen that treats it as such. The answers, their
  * questions, their options and the type labels come back in one request and
  * are joined here.
  */
@@ -157,7 +158,7 @@ export async function fetchReviewDetail(itemId: string): Promise<ReviewDetail> {
  * question that was answered right is not, on the evidence, the problem.
  *
  * A read of the record and nothing more; which questions come next is still
- * decided by next_items() alone.
+ * decided by the queue alone.
  */
 export async function fetchVocab(limit = 200): Promise<VocabEntry[]> {
   const { attempts, items } = await call<{
@@ -204,9 +205,8 @@ export async function fetchTermSentence(itemId: string, term: string): Promise<T
  * timed-out answer counts: the question was on screen.
  *
  * One request: the Worker reads the answered questions, their correct
- * options and the sections in one transaction. Row-level security already
- * narrows attempts to this learner and hides unpublished questions, so a
- * withdrawn one's words go with it.
+ * options and the sections in one batch, narrowed to this learner's attempts
+ * and to published questions, so a withdrawn one's words go with it.
  */
 export async function fetchWordList(): Promise<WordEntry[]> {
   const { items, correct, types } = await call<{
@@ -251,8 +251,7 @@ export async function fetchNotes(itemIds: string[]): Promise<Record<string, stri
   return Object.fromEntries((data ?? []).map((row) => [row.item_id, row.note]));
 }
 
-/** Keep a note, or remove it when it has been emptied. `userId` is kept in
- *  the signature the screens call with, as for `updateProfile`. */
-export async function saveNote(_userId: string, itemId: string, note: string): Promise<void> {
+/** Keep a note, or remove it when it has been emptied. */
+export async function saveNote(itemId: string, note: string): Promise<void> {
   await call("saveNote", { itemId, note: note.trim() });
 }

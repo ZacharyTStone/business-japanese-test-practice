@@ -14,7 +14,7 @@ describe("db", () => {
     expect(got.correct_index).toBe(schemas.correctIndex(goi.options));
   });
 
-  test("response accuracy", () => {
+  test("accuracy by type is right answers over answered", () => {
     const s = store();
     const g = s.insertItem("goi_bunpou", "J2", goiItem(), "m");
     const h = s.insertItem("hyougen", "J2", hyougenItem(), "m");
@@ -52,7 +52,7 @@ describe("db", () => {
     expect(kept.every((k: any) => ["kept", "skipped"].includes(k.gate_verdict))).toBe(true);
   });
 
-  test("gate summary", () => {
+  test("the gate summary counts and averages per type", () => {
     const s = store();
     const goi = goiItem();
     s.insertItem("goi_bunpou", "J2", goi, "m",
@@ -64,7 +64,7 @@ describe("db", () => {
     expect(Math.abs(gs["goi_bunpou"].avg_full - 1.0)).toBeLessThan(1e-9);
   });
 
-  test("verdict counts", () => {
+  test("verdict counts group items by gate verdict", () => {
     const s = store();
     const goi = goiItem();
     s.insertItem("goi_bunpou", "J2", goi, "m", { gateVerdict: "kept" });
