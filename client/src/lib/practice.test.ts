@@ -182,7 +182,7 @@ describe("the end of the set", () => {
 });
 
 describe("the verdict", () => {
-  it("opens the explanation after a miss and leaves it folded after a right answer", () => {
+  it("opens the explanation after every answer, right or wrong", () => {
     const miss = run([
       loaded(2),
       { type: "choose", position: 3, stage: "answer", now: 2000 },
@@ -194,7 +194,7 @@ describe("the verdict", () => {
       { type: "choose", position: 0, stage: "answer", now: 2000 },
       { type: "graded", verdict: { isCorrect: true, chosenRole: "correct", saved: true } },
     ]);
-    expect(right.showDetails).toBe(false);
+    expect(right.showDetails).toBe(true);
   });
 
   it("ignores a verdict with no answer waiting for it", () => {
