@@ -22,6 +22,7 @@ import { eprint, errText, fixed, g, get, print, repr, sorted, str, sum, truthy, 
 import { loads } from "../pyjson.ts";
 import { Random } from "../pyrandom.ts";
 import * as regate from "../regate.ts";
+import * as reports from "../reports.ts";
 import * as schemas from "../schemas.ts";
 import * as seedtable from "../seedtable.ts";
 import * as withdrawn from "../withdrawn.ts";
@@ -393,6 +394,34 @@ export async function cmdImportbatch(args: Namespace): Promise<number> {
 }
 
 /** Re-run every offline check over an existing bundle. No API key needed. */
+/**
+ * The reported questions still live, and the ledger line that would withdraw
+ * each (`bjt/reports.ts`). Reads what the owner downloaded; holds no key and
+ * writes nothing but the optional summary. With no path, it prints the one
+ * read-only query to run.
+ */
+export async function cmdReports(args: Namespace): Promise<number> {
+  if (truthy(args.query)) {
+    print(reports.QUERY);
+    return 0;
+  }
+  if (!truthy(args.path)) {
+    print("Download the reports (read-only: one SELECT, no user ids), then read them here:");
+    print("");
+    print(`  ${reports.COMMAND} > reports.json`);
+    print("  node bjt/main.ts reports reports.json");
+    return 0;
+  }
+  const text = readFileSync(args.path === "-" ? 0 : args.path, "utf8");
+  const summary = reports.summarise(reports.parse(text));
+  print(reports.render(summary));
+  if (truthy(args.summary)) {
+    const md = reports.markdown(summary);
+    writeFileSync(args.summary, md ? md + "\n" : "", "utf8");
+  }
+  return 0;
+}
+
 export async function cmdCheckbatch(args: Namespace): Promise<number> {
   const bundle = batchmod.load(_pathStr(args.path));
   const report = batchmod.checkBundle(bundle);
@@ -483,6 +512,13 @@ export function register(sub: SubParsers, types: string[]): void {
                                  help: "append every failure nobody has overruled to "
                                        + `batches/${withdrawn.LEDGER_NAME} and rewrite its bundle's SQL` });
   rg.setDefaults({ func: cmdRegate });
+  const rp = sub.addParser("reports", { help: "the questions testers reported that are still live, "
+                                               + "with the line that would withdraw each" });
+  rp.addArgument("path", { nargs: "?", default: null,
+                           help: "wrangler's --json output of the query this prints with no path ('-' for stdin)" });
+  rp.addArgument("--summary", { default: null, help: "also write a markdown summary here (empty when none is open)" });
+  rp.addArgument("--query", { action: "store_true", help: "print only the read-only query, for a script" });
+  rp.setDefaults({ func: cmdReports });
   const cb = sub.addParser("checkbatch", { help: "run the offline quality checks over a bundle" });
   cb.addArgument("path");
   cb.addArgument("--show", { action: "store_true", help: "also print every item with its 解説" });

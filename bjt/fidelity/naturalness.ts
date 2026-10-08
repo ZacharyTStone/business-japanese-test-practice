@@ -52,6 +52,36 @@ export const PLACEHOLDER = /[〇○◯×✕△□]{2,}/u;
  *  「先輩（営業部）」 as two unconnected nouns or skips the half in brackets. */
 export const WRITTEN_ONLY = /[（）()［］[\]]/u;
 
+/** The set phrases of written apologies and formal letters. One of them, said
+ *  aloud in a place too ordinary for it, is the over-polite distractor real
+ *  people produce. Three in one spoken line is a parody nobody says
+ *  (「誠に恐縮至極ではございますが、僭越ながら…伏してお願い申し上げる次第でございます」),
+ *  which is what the three withdrawn for it had. */
+export const CEREMONIAL = /恐縮至極|伏して|慙愧|拝察|不徳の致すところ|次第でございます|ゆえ[、。に]|失態を演じ|幸甚|僭越ながら|汗顔|万死/gu;
+export const CEREMONIAL_STACK = 3;
+
+/** Words that live only on paper. 貴殿 is a letter's "you"; said to a colleague
+ *  in a corridor it is not over-politeness anyone produces. (貴社 for 御社 is a
+ *  slip people really make aloud, so it is not here.) */
+export const PAPER_ONLY_WORD = /貴殿/u;
+
+/** An honorific on a thing. 宅配便がお見えになる is not a mistake anybody makes:
+ *  honorifics go on people. */
+export const HONORIFIC_ON_THING = /(?:宅配便?|荷物|郵便物?|小包|書類|資料|メール|ファックス|FAX)が(?:お見えにな|いらっしゃ|おいでにな|お越しにな)/u;
+
+/** A phrase that cancels itself: the predecessor's successor is the speaker. */
+export const SELF_CANCELLING = /前任の後任|後任の前任/u;
+
+/** 画像把握 asks what one person in the picture is doing (「立っている人は何を
+ *  していますか」). An option that opens with somebody else as its subject
+ *  (「座っている人が立っている人に書類を渡しています」) does not answer that question,
+ *  so the learner rules it out on grammar instead of on the picture. Only a
+ *  subject that names a person counts: 「会議が終わって…」 opens a clause, not a
+ *  sentence about someone else. */
+export const ASKS_ABOUT_PERSON = /^(.+?)は、?何をしていますか/u;
+export const OPENS_WITH_PERSON = /^([^、。がをにはで]{1,24}?(?:人|者|客|社員|上司|部下|同僚|先輩|後輩|課長|部長|男性|女性|スタッフ))が/u;
+export const ONE_PERSON_TYPES: ReadonlySet<string> = new Set(["gazou_haaku"]);
+
 /** Types whose narration describes the situation and whose options are short
  *  statements about it. For these, the correct option appearing word for word in
  *  the narration means the narration said the answer (「社内の会議室で、…」 before
@@ -88,7 +118,8 @@ export const PROMPT = (
   + "placeholder: 〇〇商事 is read aloud as 「まるまる」, and 「A社の『A』の字」 points at "
   + "a kanji that does not exist.\n"
   + "- Nothing written-only in what is heard: no parentheses in a narration, a spoken "
-  + "option or a turn of conversation. Say 「営業部の先輩」, not 「先輩（営業部）」.\n"
+  + "option or a turn of conversation, and no word only letters use (貴殿). Say "
+  + "「営業部の先輩」, not 「先輩（営業部）」.\n"
   + "- The narration never states the answer, and the question is plain, grammatical "
   + "Japanese: 「二人はどこで話していますか」 or 「ここはどこですか」, never a blend of "
   + "the two.\n"
@@ -165,6 +196,17 @@ export function faults(item: Item): string[] {
         `${where} contains the placeholder 「${m[0]}」; name a fictional company `
         + "or person instead (山川商事, 佐藤)");
     }
+    const thing = HONORIFIC_ON_THING.exec(text);
+    if (thing) {
+      found.push(
+        `${where} puts an honorific on a thing (「${thing[0]}」); honorifics go on `
+        + "people, so nobody makes this mistake");
+    }
+    const cancel = SELF_CANCELLING.exec(text);
+    if (cancel) {
+      found.push(
+        `${where} says 「${cancel[0]}」, which cancels itself; say 前任 or 後任 alone`);
+    }
   }
 
   for (const [where, text] of _spokenTexts(item)) {
@@ -173,6 +215,34 @@ export function faults(item: Item): string[] {
       found.push(
         `${where} is heard but contains 「${m[0]}」, which a listener cannot `
         + "hear; say it as a phrase instead");
+    }
+    const paper = PAPER_ONLY_WORD.exec(text);
+    if (paper) {
+      found.push(
+        `${where} is heard but uses 「${paper[0]}」, a word only letters use; an `
+        + "over-polite line must be something people really say");
+    }
+    const stack = new Set(text.match(CEREMONIAL) ?? []);
+    if (stack.size >= CEREMONIAL_STACK) {
+      found.push(
+        `${where} stacks ${stack.size} written set phrases (${[...stack].map((s) => `「${s}」`).join("")}) `
+        + "into one spoken line, a parody nobody says; an over-polite distractor is "
+        + "ONE formula used in too ordinary a place");
+    }
+  }
+
+  if (ONE_PERSON_TYPES.has(get(item, "item_type"))) {
+    const asked = ASKS_ABOUT_PERSON.exec(get(item, "stem", "") as string);
+    if (asked) {
+      (or(get(item, "options"), []) as Item[]).forEach((o, i) => {
+        const who = OPENS_WITH_PERSON.exec(get(o, "text", "") as string);
+        if (who && who[1] !== asked[1]) {
+          found.push(
+            `option ${i + 1} is about 「${who[1]}」, but the question asks what `
+            + `「${asked[1]}」 is doing; every option must be a sentence about `
+            + `「${asked[1]}」, wrong in what they do or to whom`);
+        }
+      });
     }
   }
 

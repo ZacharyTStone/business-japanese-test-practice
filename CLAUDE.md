@@ -58,7 +58,7 @@ accident is not.
 - **Nothing is generated while somebody is practising**, so the running cost is
   zero. Generation is a batch job (`bjt batch`, or `bjt nightly` from the
   **nightly** workflow at 01:17 JST); content ships as reviewable SQL
-  (`bjt publish`). A night is very cheap: three items at most, reading first,
+  (`bjt publish`). A night is very cheap: two items at most, reading first,
   never more than fifty cents (`BJT_RUN_BUDGET_USD` and the `max_usd` default in
   `nightly.yml`, both pinned at or below 0.5 by `tests/ceilings.test.ts`). A
   manual run can ask for the difficulty probe (`bjt probe --all`) instead. The
@@ -69,7 +69,10 @@ accident is not.
   workflow's own token starts no other workflow). The owner stopped reviewing
   nightly content by hand on 2026-10-02: the gate, the proofreader, the batch
   checks and `checks` are the review. A red check leaves the pull request open
-  with a comment for a person; nothing from it is live. Otherwise, once
+  with a comment for a person; nothing from it is live. (GitHub also holds a
+  jobless `pull_request` run of `checks` for the bot's pull request, which turns
+  red when it closes; the publish job deletes it after the merge, so a red X on
+  a nightly pull request means something.) Otherwise, once
   `checks` is green on `main`, the deploy runs by itself, deploys exactly the
   commit `checks` passed, and publishes the items and their audio together; by
   hand it runs only from `main`.
@@ -94,9 +97,10 @@ accident is not.
 - **Every run writes reading items.** The first `--reading-min` (1) items go to
   the emptiest reading shelves (no audio or picture needed) before the
   emptiest-first rule sees the rest; their lines come first in the work order,
-  so a night its ceiling ends early still has them. A night is three items, two to a shelf at
-  most (`plan.DEFAULT_BUDGET` / `_PER_SLOT`, and the nightly workflow's own
-  defaults, which must agree), sized to how little the app is used. A type in
+  so a night its ceiling ends early still has them. A night is two items, one to a shelf
+  (`plan.DEFAULT_BUDGET` / `_PER_SLOT`, and the nightly workflow's own
+  defaults, which must agree), sized to how little the app is used and to the
+  owner's choice of one or two right questions over three (2026-10-08). A type in
   `plan.NIGHT_TYPE_CAPS` (画像把握: one) never exceeds its nightly allowance,
   however empty its shelves.
 - **A shelf that writes nothing rests.** A shelf the generator cannot write
@@ -157,8 +161,10 @@ accident is not.
   an invented stack (させていただかせていただく is the commonest).
   `bjt/fidelity/naturalness.ts` holds the rules: every generator is told them
   (`PROMPT`); a draft tripping the mechanical half (invented keigo, a 〇〇
-  placeholder, brackets in something heard, a 場面把握 narration that says the
-  answer) is sent back with the reason; the proofreader has `unnatural_japanese`
+  placeholder, brackets or 貴殿 in something heard, three written set phrases
+  stacked in one spoken line, an honorific on a thing, a 場面把握 narration that
+  says the answer, a 画像把握 option about somebody other than the person
+  asked after) is sent back with the reason; the proofreader has `unnatural_japanese`
   and `situation_incoherent`; `checkBundle` fails any served item with a tell,
   so a committed one is withdrawn or CI fails. 語彙・文法's `nonexistent_form` is the
   one deliberate non-word and is exempt. Widen a pattern only against a line
@@ -494,7 +500,11 @@ accident is not.
   trusting the client. It is an unpublish, never a delete, so every attempt,
   review rung and report pointing at the item keeps resolving. Vetoing happens
   instead of answering: no `attempts` row, and the day's ten is not spent.
-  `item_vetoes` keeps who and when.
+  `item_vetoes` keeps who and when. `bjt reports` is how the owner looks:
+  one read-only SELECT (no user id), printed for wrangler, whose output it
+  turns into the reported questions still live, each with the ledger line that
+  would withdraw it; the nightly runs the same query and puts the list in the
+  night's pull request. It never writes the ledger.
 - **A question leaves the bank through `batches/withdrawn.txt`, never by
   deletion** — the veto made from the repository. Every reference to an item
   is `on delete restrict`, so the database refuses a delete outright. One line per item (id, a

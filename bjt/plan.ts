@@ -63,16 +63,18 @@ import * as withdrawn from "./withdrawn.ts";
  *  greedy fill needs no threshold. */
 export const DEFAULT_FLOOR = 12;
 
-/** Most items one run may write into one (type, level) shelf. Two of three,
- *  so a night always reaches at least two shelves. */
-export const DEFAULT_PER_SLOT = 2;
+/** Most items one run may write into one (type, level) shelf. One of two,
+ *  so a night always reaches two shelves. */
+export const DEFAULT_PER_SLOT = 1;
 
-/** Most items one run may write at all. Three a night is well under a dollar on
- *  Sonnet and is sized to how little the app is used: a question nobody reaches
- *  is money spent on nothing, and the bank still grows by twenty a week. The
- *  night's real throttle is the review gate: nothing is written while an earlier
- *  night waits unmerged. */
-export const DEFAULT_BUDGET = 3;
+/** Most items one run may write at all. Two a night, from 2026-10-08: the
+ *  owner would rather have one or two questions that are right than three, and
+ *  a night of three spent ~$0.39 for ~1.3 kept items. The gates are unchanged;
+ *  only how many shelves a night tries is smaller, so each night's fifty cents
+ *  goes to two shelves' drafts and retries instead of three. A question nobody
+ *  reaches is money spent on nothing, and the bank still grows by about ten a
+ *  week. */
+export const DEFAULT_BUDGET = 2;
 
 /** How many of the night's items go to the reading shelves (語彙・文法, 表現読解,
  *  総合読解) before the emptiest-first rule sees the rest. Reading items need no

@@ -96,9 +96,10 @@ name: nightly
 
 on:
   # The owner turned the nights back on (2026-09-27), asking that they stay
-  # very cheap: three items at most, reading first, and never more than fifty
-  # cents a night. They had been off since 2026-09-25, when every night cost
-  # API money for questions the app was used too little to need and the pull
+  # very cheap: two items at most (three until 2026-10-08), reading first,
+  # and never more than fifty cents a night. They had been off since
+  # 2026-09-25, when every night cost API money for questions the app was
+  # used too little to need and the pull
   # requests sat on branches nobody opened; the size of a night had already
   # come down to three items (2026-09-24), and the dollar ceiling now comes
   # down with it — see BJT_RUN_BUDGET_USD below. A manual run from the Actions
@@ -118,11 +119,11 @@ on:
       budget:
         description: "Most items this run may write"
         required: false
-        default: "3"
+        default: "2"
       per_slot:
         description: "Most items into any one (type, level)"
         required: false
-        default: "2"
+        default: "1"
       reading_min:
         description: "Items reserved for the reading shelves before the rest (they need no audio or picture)"
         required: false
@@ -186,18 +187,19 @@ jobs:
     # above it, is the guard that does not depend on any code being right.
     timeout-minutes: 45
     env:
-      # Three a night, two to a shelf: well under a dollar on Sonnet. It was
-      # eight until the owner said the app is used far less than that fills
-      # (2026-09-24). The code clamps whatever is typed here to
+      # Two a night, one to a shelf: the owner would rather have one or two
+      # questions that are right than three (2026-10-08). It was eight until
+      # the owner said the app is used far less than that fills (2026-09-24),
+      # then three. The code clamps whatever is typed here to
       # BJT_NIGHT_MAX_BUDGET / _PER_SLOT.
-      BUDGET: ${{ github.event.inputs.budget || '3' }}
-      PER_SLOT: ${{ github.event.inputs.per_slot || '2' }}
+      BUDGET: ${{ github.event.inputs.budget || '2' }}
+      PER_SLOT: ${{ github.event.inputs.per_slot || '1' }}
       # Reading items first: no audio, no picture, the cheapest item there is,
       # and the owner asked for them every night (2026-09-19). At least one.
       READING_MIN: ${{ github.event.inputs.reading_min || '1' }}
       # The most this run may spend, checked before every call against the
       # usage the API reports. Reached, the run stops and keeps what it wrote.
-      # Fifty cents, the owner's price for a night (2026-09-27): three items on
+      # Fifty cents, the owner's price for a night (2026-09-27): two items on
       # Sonnet fit under it when the drafts go well, and when a shelf needs its
       # retries the night stops short and ships what it has, which is the trade
       # the owner chose. A scheduled run has no inputs, so this fallback is the
@@ -572,6 +574,25 @@ jobs:
           (cd client && npx --yes wrangler@4.131.1 d1 execute business-japanese-drill --remote --yes \
             --file ../batches/scenes.sql)
 
+      # What testers reported that is still live, for the night's pull request
+      # (bjt/reports.ts). One SELECT, and no user id in it: the night reads the
+      # reports and decides nothing, since a report is not a veto; taking a
+      # question out is still a line in batches/withdrawn.txt. Allowed to fail:
+      # a night is never lost over reports it could not read.
+      - name: list the questions testers reported
+        if: steps.keys.outputs.db == 'true'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          query=$(node bjt/main.ts reports --query)
+          (cd client && npx --yes wrangler@4.131.1 d1 execute business-japanese-drill --remote --json \
+            --command "$query") > reports.json
+          node bjt/main.ts reports reports.json --summary reports.md
+          if [ -s reports.md ]; then cat reports.md >> "$GITHUB_STEP_SUMMARY"; fi
+
       # batches/scenes.sql is included when the scene step wrote it, so the
       # pull request also records which pictures the database was pointed at.
       - name: open the night's pull request
@@ -627,6 +648,7 @@ jobs:
           echo "base=$(git rev-parse "origin/$default")" >> "$GITHUB_OUTPUT"
           [ -f summary.md ] || echo "Nightly run: scene artwork only." > summary.md
           [ -f scenes.md ] && { echo; cat scenes.md; } >> summary.md
+          [ -s reports.md ] && { echo; cat reports.md; } >> summary.md
           cat summary.md >> "$GITHUB_STEP_SUMMARY"
           # The items are safe on the branch by now. If the repository does not
           # let Actions open pull requests, say so and how to fix it, and hand
@@ -711,6 +733,22 @@ jobs:
           done
           merged=$(gh pr view "$PR" --json mergeCommit --jq .mergeCommit.oid)
           gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH" > /dev/null || true
+          # The pull_request run GitHub held for approval on this pull request
+          # (see the top of checks.yml) ran no job and checked nothing; it
+          # turns red when the pull request closes, on every night, and a red
+          # X that means nothing hides one that does. The verdict is the
+          # verify job above. Delete the held run once it has settled. Best
+          # effort: a run still settling after this is left, and says nothing.
+          for attempt in 1 2 3 4; do
+            sleep 5
+            held=$(gh api "repos/$GH_REPO/actions/workflows/checks.yml/runs?event=pull_request&branch=$BRANCH" \
+                     --jq '.workflow_runs[] | select(.status == "completed") | .id' || true)
+            [ -n "$held" ] || continue
+            for id in $held; do
+              gh api -X DELETE "repos/$GH_REPO/actions/runs/$id" > /dev/null || true
+            done
+            break
+          done
           head=$(gh api "repos/$GH_REPO/commits/$DEFAULT" --jq .sha)
           if [ "$head" = "$merged" ]; then
             gh workflow run deploy-db.yml --ref "$DEFAULT"
