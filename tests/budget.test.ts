@@ -23,7 +23,7 @@ import { type Generator, type Item } from "../bjt/generators/base.ts";
 import { getGenerator } from "../bjt/generators/index.ts";
 import type * as seedtable from "../bjt/seedtable.ts";
 import { store } from "./conftest.ts";
-import { patch, setConfig, tmpPath } from "./helpers.ts";
+import { fakeMessages, patch, setConfig, tmpPath } from "./helpers.ts";
 
 /** `quiet`: no proofreader, no probe, three trials a side. */
 function quiet(): void {
@@ -193,26 +193,14 @@ describe("budget", () => {
   });
 
   test("a billing refusal is told apart from other failures", async () => {
-    const boom = {
-      messages: {
-        create: async () => {
-          throw _status(400, "Error code: 400 - Your credit balance is too low to access the Anthropic API.");
-        },
-      },
-    };
-
-    patch(llm.seams, "getClient", () => boom);
+    fakeMessages(async () => {
+      throw _status(400, "Error code: 400 - Your credit balance is too low to access the Anthropic API.");
+    });
     await expect(llm.answerChoice("q", ["a", "b"], { model: "claude-opus-5" })).rejects.toThrow(llm.LLMBillingError);
 
-    const down = {
-      messages: {
-        create: async () => {
-          throw _status(529, "Error code: 529 - overloaded");
-        },
-      },
-    };
-
-    patch(llm.seams, "getClient", () => down);
+    fakeMessages(async () => {
+      throw _status(529, "Error code: 529 - overloaded");
+    });
     const err = await llm.answerChoice("q", ["a", "b"], { model: "claude-opus-5" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(llm.LLMError);
     expect(err).not.toBeInstanceOf(llm.LLMBillingError);
@@ -220,17 +208,10 @@ describe("budget", () => {
 
   test("the generator prompt is cacheable and at the configured effort", async () => {
     const seen: Record<string, any> = {};
-
-    const client = {
-      messages: {
-        create: async (kw: Record<string, any>) => {
-          Object.assign(seen, kw);
-          throw _status(400, "stop here");
-        },
-      },
-    };
-
-    patch(llm.seams, "getClient", () => client);
+    fakeMessages(async (kw) => {
+      Object.assign(seen, kw);
+      throw _status(400, "stop here");
+    });
     setConfig({ GEN_EFFORT: "medium" });
     await expect(llm.generateStructured("the stable half", "the question", { type: "object" }))
       .rejects.toThrow(llm.LLMError);
