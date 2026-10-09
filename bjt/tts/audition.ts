@@ -15,9 +15,10 @@
  *
  * `run` is async: it asks the providers for the clips.
  */
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as config from "../config.ts";
+import { isDir } from "../files.ts";
 import { errText, htmlEscape, isException, or, truthy } from "../py.ts";
 import * as channelMod from "./channel.ts";
 import { NARRATOR_VOICE } from "./plan.ts";
@@ -177,7 +178,7 @@ export function page(report: AuditionReport): string {
   }
   const head = cols.map((c) => `<th>${htmlEscape(c)}</th>`).join("");
   let voices = "";
-  if (_isDir(path.join(report.root, "openai-voices"))) {
+  if (isDir(path.join(report.root, "openai-voices"))) {
     const items = OpenAIProvider.CANDIDATE_VOICES
       .filter((v) => existsSync(path.join(report.root, "openai-voices", `${v}.wav`)))
       .map((v) => `<tr><th>${htmlEscape(v)}</th>`
@@ -206,14 +207,4 @@ not a general sense of "nice". The library's voice is OpenAI; the other columns 
 ${voices}
 </body></html>
 `;
-}
-
-
-/** `Path.is_dir()`: false for a path that is not there. */
-function _isDir(p: string): boolean {
-  try {
-    return statSync(p).isDirectory();
-  } catch {
-    return false;
-  }
 }

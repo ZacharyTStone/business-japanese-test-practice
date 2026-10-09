@@ -32,7 +32,7 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 import * as config from "./config.ts";
-import { writeAtomic } from "./files.ts";
+import { isFile, writeAtomic } from "./files.ts";
 import * as http from "./http.ts";
 import * as llm from "./llm.ts";
 import {
@@ -720,15 +720,6 @@ export class UploadResult {
   }
 }
 
-/** A file there and a regular file (`Path.is_file()`). */
-function _isFile(p: string): boolean {
-  try {
-    return statSync(p).isFile();
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Push every locally approved file to the bucket.
  *
@@ -749,7 +740,7 @@ export async function uploadApproved(survey: readonly scenes.Scene[], bucket: Pi
     }
     const scenePath = scene.path!;
     const local = path.join(root, scenePath);
-    if (!_isFile(local)) {
+    if (!isFile(local)) {
       continue; // known only from the bucket listing; nothing to send
     }
     const size = statSync(local).size;
