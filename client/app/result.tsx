@@ -31,9 +31,13 @@ import {
   ProgressRing,
   SectionLabel,
 } from "../src/ui/components";
+import { ScreenCrash } from "../src/ui/crash";
 import { FadeIn } from "../src/ui/motion";
 import { Icon } from "../src/ui/icons";
 import { colors, MIN_TOUCH, page, space, tabular, type } from "../src/ui/theme";
+
+/** A throw while drawing stays on this screen (ui/crash.tsx). */
+export const ErrorBoundary = ScreenCrash;
 
 export default function Result() {
   const router = useRouter();
