@@ -74,7 +74,7 @@ export function countdownLine(days: number | null, lang: Lang = "ja"): string | 
  *  which the queue holds a set to the exam's own section mix and the reading
  *  clock runs whatever the setting says. Fourteen in both places: the queue's
  *  `examIsNear` (worker/core/queue.ts) reads the date between today and
- *  today + 14. */
+ *  today + its own `EXAM_NEAR_DAYS`, which a test holds equal to this. */
 export const EXAM_NEAR_DAYS = 14;
 
 export function examIsNear(examDate: string | null | undefined): boolean {

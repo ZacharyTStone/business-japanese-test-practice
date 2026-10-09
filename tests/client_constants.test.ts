@@ -61,4 +61,18 @@ describe("client_constants", () => {
     expect(ladder, "grade.ts no longer declares PACE_MAX_SCALE as expected").toBeTruthy();
     expect(toFloat(ladder![1])).toBe(toFloat(ts![1]));
   });
+
+  /** The app runs the reading clock in the last EXAM_NEAR_DAYS before the
+   *  exam (client/src/lib/exam.ts); the queue (client/worker/core/queue.ts)
+   *  follows the exam's section mix over its own EXAM_NEAR_DAYS. If the two
+   *  drift, a set would follow the exam's mix with the clock off, or the
+   *  other way round. */
+  test("the reading clock and the queue agree on when the exam is near", () => {
+    const declared = /export const EXAM_NEAR_DAYS = (\d+);/;
+    const app = declared.exec(readFileSync(path.join(ROOT, "client", "src", "lib", "exam.ts"), "utf8"));
+    expect(app, "exam.ts no longer declares EXAM_NEAR_DAYS as expected").toBeTruthy();
+    const queue = declared.exec(readFileSync(path.join(ROOT, "client", "worker", "core", "queue.ts"), "utf8"));
+    expect(queue, "queue.ts no longer declares EXAM_NEAR_DAYS as expected").toBeTruthy();
+    expect(Number(queue![1])).toBe(Number(app![1]));
+  });
 });

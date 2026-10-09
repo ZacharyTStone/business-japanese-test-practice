@@ -56,11 +56,16 @@ export function setSize(snap: Snapshot, learner: Learner, limit: number, now: nu
   return Math.min(asked, Math.max(dailyMax(learner) - today, 0));
 }
 
+/** The last two weeks before the exam date, today included. The app's
+ *  `EXAM_NEAR_DAYS` (src/lib/exam.ts) is the same number, so the reading
+ *  clock starts running on the day the set starts following the exam's mix. */
+export const EXAM_NEAR_DAYS = 14;
+
 /** Whether the exam is in its last two weeks, counted in Japan. */
 export function examIsNear(examDate: string | null | undefined, now: number): boolean {
   if (!examDate) return false;
   const today = jstDate(now);
-  return examDate >= today && examDate <= addDays(today, 14);
+  return examDate >= today && examDate <= addDays(today, EXAM_NEAR_DAYS);
 }
 
 export function rankQueue(
