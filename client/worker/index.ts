@@ -18,7 +18,7 @@
  */
 import { authFor, type AuthEnv } from "./auth";
 import { resolveLearner } from "./core/caller";
-import { toApiError } from "./core/errors";
+import { apiError, toApiError } from "./core/errors";
 import { isRefusal, notATester, type Refusal } from "./identity";
 import { serveMedia } from "./media";
 import { queries } from "./queries";
@@ -36,8 +36,16 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 }
 
+/** Every error this file writes itself, in the one shape the app reads
+ *  (core/errors.ts): a refusal names the address it refused in `details`,
+ *  and nothing else here has details or a hint. */
+function errorResponse(code: string, message: string, status: number, details: string | null = null): Response {
+  const { error } = apiError(code, message, status);
+  return json({ error: { ...error, details } }, status);
+}
+
 function refuse(r: Refusal): Response {
-  return json({ error: { code: r.code, message: r.message, details: r.email ?? null, hint: null } }, r.status);
+  return errorResponse(r.code, r.message, r.status, r.email ?? null);
 }
 
 /** One named query, as `email`. Exported for the tests, which run it against
@@ -51,7 +59,7 @@ export async function runQuery(
   { now = Date.now(), random = Math.random, checkSignIn = true }: { now?: number; random?: (id: string) => number; checkSignIn?: boolean } = {}
 ): Promise<Response> {
   if (!Object.hasOwn(queries, name)) {
-    return json({ error: { code: "unknown_query", message: `no query named ${name}` } }, 404);
+    return errorResponse("unknown_query", `no query named ${name}`, 404);
   }
   try {
     const learner = await resolveLearner(db, email, { checkSignIn });
@@ -66,7 +74,7 @@ export async function runQuery(
 
 async function handleApi(request: Request, env: Env): Promise<Response> {
   const name = new URL(request.url).pathname.replace(/^\/api\/q\//, "");
-  if (request.method !== "POST") return json({ error: { code: "method_not_allowed", message: "POST only" } }, 405);
+  if (request.method !== "POST") return errorResponse("method_not_allowed", "POST only", 405);
 
   const caller = await whoIsAsking(request, env);
   if (isRefusal(caller)) return refuse(caller);
@@ -88,7 +96,7 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
  *  and every query answers `sign_in_not_configured` (who.ts). */
 async function handleAuth(request: Request, env: Env): Promise<Response> {
   const auth = authFor(env);
-  if (!auth) return json({ error: { code: "sign_in_not_configured", message: "The sign-in is not set up" } }, 404);
+  if (!auth) return errorResponse("sign_in_not_configured", "The sign-in is not set up", 404);
   return auth.handler(request);
 }
 
