@@ -15,7 +15,6 @@
  * whoever the learner sends a screenshot to.
  */
 import { router, type ErrorBoundaryProps } from "expo-router";
-import React from "react";
 import { Platform, View } from "react-native";
 
 import { friendlyError } from "../lib/errors";

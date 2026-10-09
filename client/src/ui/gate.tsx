@@ -19,7 +19,7 @@
  * from an address the list does not name, so a client that skipped these
  * screens would see nothing anyway. They exist to say so politely.
  */
-import React, { useState } from "react";
+import { useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../lib/auth";

@@ -3,7 +3,12 @@
   "compilerOptions": {
     "strict": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    // An import, a variable or a parameter nothing reads is a leftover or a
+    // bug; an override is said so. JSX needs no React in scope (react-jsx).
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true
   },
   // The Worker runs on workerd, not React Native, and is checked against its
   // own types (worker/tsconfig.json); `npm run typecheck` runs both.

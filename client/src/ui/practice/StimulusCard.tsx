@@ -2,7 +2,6 @@
  * The question itself, once the scene has been entered: what you read, then
  * what you hear.
  */
-import React from "react";
 import { Text } from "react-native";
 
 import type { QueuedItem } from "../../lib/types";

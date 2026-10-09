@@ -29,7 +29,7 @@
  * so no attempt is written, the day's ten is not spent, and the set simply gets
  * one shorter.
  */
-import React, { useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { vetoItem } from "../lib/db";

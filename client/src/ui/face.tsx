@@ -12,7 +12,6 @@
  * Abstract on purpose. No skin tone, no gender, no age: it is *whoever* the
  * item says was listening, and the scene drawing already shows the room.
  */
-import React from "react";
 import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 
 import { tr, useLang, type Lang } from "../lib/i18n";
