@@ -143,6 +143,92 @@ describe("naturalness", () => {
     expect(naturalness.faults(item)).toEqual([]);
   });
 
+  test("役不足 said of oneself is caught unless it is the word-choice distractor", () => {
+    const line = "せっかくのお申し出ではございますが、私では役不足でございますので、どうかご容赦くださいませ。";
+    const item = _withOption("hatsugen_choukai", line, { role: "over_polite_misfit" });
+    expect(naturalness.faults(item).some((f) => f.includes("役不足"))).toBe(true);
+    // Marked wrong for being the misuse, it teaches the right word.
+    expect(naturalness.faults(_withOption("hatsugen_choukai", line, { role: "real_form_wrong_context" }))).toEqual([]);
+    for (const ok of ["申し訳ありません、私には荷が重く、力不足ですので。",
+                      "この程度の仕事では、彼には役不足だろう。"]) {
+      expect(naturalness.faults(_withOption("hatsugen_choukai", ok))).toEqual([]);
+    }
+  });
+
+  test("a weekday passed on as hearsay is caught", () => {
+    const item = _withOption(
+      "hatsugen_choukai",
+      "あの品物、結局いつ着くことになっているんですか。十八日が金曜だとかで、そのあと二十日の日曜も挟みますよね。",
+    );
+    expect(naturalness.faults(item).some((f) => f.includes("hearsay"))).toBe(true);
+    for (const ok of ["十八日が金曜なので、発送は週明けになります。",
+                      "会議は十八日だそうです。",
+                      "先方の話では、納品は来週の金曜日になるそうです。"]) {
+      expect(naturalness.faults(_withOption("hatsugen_choukai", ok))).toEqual([]);
+    }
+  });
+
+  /** A 語彙・文法 item: the carrier sentence, its key, and one distractor. */
+  function _blank(stem: string, key: string, other: string, role = "real_form_wrong_context"): Item {
+    const item = _item("goi_bunpou");
+    item["stem"] = stem;
+    item["options"][0]["text"] = key;
+    item["options"][1]["text"] = other;
+    item["options"][1]["role"] = role;
+    return item;
+  }
+
+  test.each([
+    ["お見積書を同封いたしましたので、ご確認＿＿＿ようお願い申し上げます。", "いただきます", "くださいます"],
+    ["本日の会議には、お客様が＿＿＿いらっしゃる予定です。", "三名", "三人"],
+    ["先方の承認が＿＿＿、来月一日から新しい手順に切り替える。", "得られれば", "得られたら"],
+  ])("a distractor that is the key with a standard swap is caught %s", (stem, key, other) => {
+    expect(naturalness.faults(_blank(stem, key, other)).some((f) => f.includes("standard wording swapped"))).toBe(true);
+  });
+
+  test("a whole-sentence twin is caught as well", () => {
+    const item = _item("hyougen");
+    const key = item["options"].findIndex((o: Item) => o["role"] === "correct");
+    const other = key === 0 ? 1 : 0;
+    item["options"][key]["text"] = "お手数ですが、ご確認いただきますようお願いいたします。";
+    item["options"][other]["text"] = "お手数ですが、ご確認くださいますようお願いいたします。";
+    expect(naturalness.faults(item).some((f) => f.includes(`option ${other + 1}`))).toBe(true);
+  });
+
+  test.each([
+    // A different form, not a swap of the same one.
+    ["先方の承認が＿＿＿、来月一日から新しい手順に切り替える。", "得られれば", "得られるなら"],
+    // たら does not fit 〜れば〜ほど or 〜ればこそ.
+    ["＿＿＿考えるほど、分からなくなる。", "考えれば", "考えたら"],
+    ["信頼して＿＿＿こそ、お任せするのです。", "いれば", "いたら"],
+    // 何名様 is a formula; 何人様 is not its twin.
+    ["いらっしゃいませ。＿＿＿でいらっしゃいますか。", "何名様", "何人様"],
+    // ば is the narrower: a key in たら does not make a ば distractor right.
+    ["会議が＿＿＿、すぐにご連絡します。", "終わったら", "終われば"],
+  ])("a distractor that only looks like a twin is left alone %s", (stem, key, other) => {
+    expect(naturalness.faults(_blank(stem, key, other))).toEqual([]);
+  });
+
+  test.each([
+    ["f82e71e147", "役不足"],
+    ["f760e4e239", "hearsay"],
+    ["016554fd7e", "standard wording swapped"],
+    ["a4d0177c61", "standard wording swapped"],
+    ["c1e08d21fa", "standard wording swapped"],
+  ])("the withdrawn question a pattern was written for is still caught %s", (id, says) => {
+    let item: Item | undefined;
+    for (const p of batch.bundles()) {
+      item = (batch.load(p)["items"] as Item[]).find((it) => it["id"] === id);
+      if (item !== undefined) {
+        break;
+      }
+    }
+    if (item === undefined) {
+      throw new Error(`StopIteration: ${id} is in no bundle`);
+    }
+    expect(naturalness.faults(batch.asGeneratorShape(item)).some((f) => f.includes(says))).toBe(true);
+  });
+
   test.each([
     ["受付の人は何をしていますか。", "来客が受付の人に行き方を教えています。"],
     ["ホワイトボードの前に立っている人は何をしていますか。", "座っている上司が立っている部下に指示を出しています。"],

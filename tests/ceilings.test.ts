@@ -424,6 +424,33 @@ describe("the workflow", () => {
     expect(mustFind(text, "BJT_RUN_BUDGET_USD:")).toBeLessThan(mustFind(text, "name: measure the difficulty"));
   });
 
+  /** The regate rides the nightly job the same way, and only on a manual run.
+   *  It writes no items and draws no pictures, and a run that withdraws
+   *  questions is never merged by the workflow: a withdrawal is a decision,
+   *  and the merge is a person's. */
+  test("the regate is a manual run whose withdrawals wait for a person", () => {
+    const text = _nightly();
+    const step = (name: string) => _step(text, name);
+
+    const keys = step("which of tonight's work is unlocked");
+    expect(keys).toContain('[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && '
+                           + '[ "${{ github.event.inputs.regate }}" = "true" ]; then regate=true; probe=false');
+    expect(keys).toContain('elif [ "$regate" = "true" ]; then\n            echo "art=false"');
+    expect(keys, "compare wins over regate").toContain("compare=true; probe=false; regate=false");
+
+    const regate = step("re-check the questions that skipped the gate");
+    expect(regate).toContain("if: steps.keys.outputs.regate == 'true'");
+    expect(regate).toContain("node bjt/main.ts regate --all --withdraw");
+    expect(regate).not.toContain("psql");
+    expect(mustFind(text, "BJT_RUN_BUDGET_USD:")).toBeLessThan(mustFind(text, "name: re-check the questions"));
+
+    const pr = step("open the night's pull request");
+    expect(pr).toContain('git status --porcelain batches/withdrawn.txt');
+    expect(pr).toContain('echo "hold=$hold" >> "$GITHUB_OUTPUT"');
+    const publish = text.slice(mustFind(text, "\n  publish:\n"), mustFind(text, "\n  held:\n"));
+    expect(publish).toContain("needs.nightly.outputs.hold != 'true'");
+  });
+
   /** A comparison run spends under the same ceilings and leaves nothing
    *  behind: no commit, no pull request, no pictures, no database write. The
    *  TYPESAFE key reaches only the steps that may call the probe, and which

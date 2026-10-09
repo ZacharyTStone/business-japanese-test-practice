@@ -66,7 +66,11 @@ accident is not.
   request nobody merges by hand — then runs the whole `checks` workflow on that branch and, only
   when every job is green and `main` has not moved meanwhile, merges it and
   starts the **deploy database** workflow itself (a merge made with the
-  workflow's own token starts no other workflow). The owner stopped reviewing
+  workflow's own token starts no other workflow). A manual run may instead
+  re-check the imported questions (`regate`, `bjt regate --all --withdraw`,
+  same ceilings): its pull request merges itself only when it withdraws
+  nothing, and one that proposes withdrawals waits for the owner, since a
+  withdrawal is a decision. The owner stopped reviewing
   nightly content by hand on 2026-10-02: the gate, the proofreader, the batch
   checks and `checks` are the review. A red check leaves the pull request open
   with a comment for a person; nothing from it is live. (GitHub also holds a
@@ -164,7 +168,10 @@ accident is not.
   placeholder, brackets or 貴殿 in something heard, three written set phrases
   stacked in one spoken line, an honorific on a thing, a 場面把握 narration that
   says the answer, a 画像把握 option about somebody other than the person
-  asked after) is sent back with the reason; the proofreader has `unnatural_japanese`
+  asked after, 役不足 said of oneself outside the word-choice distractor, a
+  weekday passed on as hearsay, a distractor that is the key with one
+  standard wording swapped — いただきますよう/くださいますよう, 三名/三人,
+  〜れば→〜たら) is sent back with the reason; the proofreader has `unnatural_japanese`
   and `situation_incoherent`; `checkBundle` fails any served item with a tell,
   so a committed one is withdrawn or CI fails. 語彙・文法's `nonexistent_form` is the
   one deliberate non-word and is exempt. Widen a pattern only against a line

@@ -28,6 +28,12 @@ bjt regate --all             # verdicts into batches/regated.txt; --withdraw pro
 It stops at the run ceilings and resumes where it stopped, so the whole bank is
 at least two runs. Read the proposed withdrawals before merging them.
 
+Or from GitHub, with no key on your machine: Actions → nightly → Run workflow,
+tick **regate**. It runs under the night's fifty-cent ceiling (`max_usd`), so
+the bank takes many runs. A run whose questions all pass merges itself; one
+that proposes withdrawals opens a pull request and waits for you. Merge it
+before the next run, or that run checks the same questions again.
+
 ## 2. Comparing with the official samples needs licensed material
 
 **Where it stands.** The discriminator loop and `bjt calibrate` are implemented
