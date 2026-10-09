@@ -134,5 +134,5 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 -- here ever sets is_published back to 1: a question the owner vetoed
 -- in the app stays vetoed however often this file is applied.
 update items set is_published = 0
- where id in ('95ef217a86', 'f82e71e147', '6211b4d620', '23cc36ccc2', '83b4f2db61', 'c65c0ca0ee', '4aa2abf69f', 'bc9ff36bff', 'bee26298b6');
+ where id in ('95ef217a86', 'f82e71e147', '6211b4d620', '23cc36ccc2', '83b4f2db61', '4aa2abf69f', 'bc9ff36bff');
 
