@@ -30,3 +30,10 @@ insert into item_options (item_id, position, text, role, why, clip_id) values ('
 insert into item_options (item_id, position, text, role, why, clip_id) values ('b7865a8ee7', 2, '港北物流センターへ、平日に持ち込むよう案内する。', 'ignores_the_request', '返品の一般の持ち込み先としては正しいが、お客様が言っている測定器は精密機器で、通知は本社の窓口に分けている。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 insert into item_options (item_id, position, text, role, why, clip_id) values ('b7865a8ee7', 3, '物流センターの担当者から、お客様に折り返し連絡してもらう。', 'wrong_action_owner', '案内は電話を受けた自分がその場でするもので、しかも測定器は物流センターの扱いではない。', null) on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
 
+-- Withdrawn after review: batches/withdrawn.txt says why. An unpublish,
+-- never a delete, so every answer already given keeps resolving. Nothing
+-- here ever sets is_published back to 1: a question the owner vetoed
+-- in the app stays vetoed however often this file is applied.
+update items set is_published = 0
+ where id in ('b7865a8ee7');
+
