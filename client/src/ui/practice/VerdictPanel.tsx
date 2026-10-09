@@ -97,6 +97,11 @@ export function VerdictPanel({
         ? moodLabel(mood, lang)
         : roleInfo(role, lang).label;
   const correctIs = t("correct_is", { n: NUMBERS[item.correct_index] ?? "" });
+  // What the explanation card below will show as heard; the same two values
+  // it is given, so the toggle names the script exactly when there is one.
+  const turns = view.dialogueAsText ? [] : (item.dialogue ?? []);
+  const narration = view.stemAsText ? null : { text: item.stem, url: narrationUrl };
+  const hasScript = turns.length > 0 || narration !== null;
   // The verdict as one sentence to be spoken: what happened, the line under it,
   // which one was right, and whether it is in the record yet.
   const spoken = [title, sub, graded.isCorrect ? "" : correctIs, graded.saved ? "" : t("unsent_short")]
@@ -192,7 +197,11 @@ export function VerdictPanel({
         onPress={onToggleDetails}
         style={({ pressed }) => [shared.link, pressed && { opacity: 0.85 }]}
       >
-        <Text style={[type.small, shared.toggle]}>{showDetails ? t("details_close") : t("details_open")}</Text>
+        <Text style={[type.small, shared.toggle]}>
+          {hasScript
+            ? showDetails ? t("details_close_script") : t("details_open_script")
+            : showDetails ? t("details_close") : t("details_open")}
+        </Text>
       </Pressable>
 
       {showDetails ? (
@@ -204,8 +213,8 @@ export function VerdictPanel({
           // Skipped when the verdict line above already is it, which is the
           // English case for a right answer.
           explanation={explanation === sub ? null : explanation}
-          turns={view.dialogueAsText ? [] : (item.dialogue ?? [])}
-          narration={view.stemAsText ? null : { text: item.stem, url: narrationUrl }}
+          turns={turns}
+          narration={narration}
         />
       ) : null}
 

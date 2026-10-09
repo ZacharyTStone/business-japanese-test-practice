@@ -72,6 +72,41 @@ export const HONORIFIC_ON_THING = /(?:宅配便?|荷物|郵便物?|小包|書類
 /** A phrase that cancels itself: the predecessor's successor is the speaker. */
 export const SELF_CANCELLING = /前任の後任|後任の前任/u;
 
+/** 役不足 said of oneself. It means the part is too small for the person, so
+ *  「私では役不足です」 boasts where the speaker meant 力不足. People really make
+ *  this slip, so it may stand as a distractor marked as a word used where it
+ *  does not fit (`real_form_wrong_context`); anywhere else — the key, the
+ *  conversation, an option the 解説 calls merely over-polite — it teaches the
+ *  misuse. */
+export const SELF_YAKUBUSOKU = /(?:私|わたくし|わたし|僕|自分)(?:では|には|じゃ|に|で)?(?:とても|まだ|少し)?役不足/u;
+export const YAKUBUSOKU_AS_WRONG_WORD: ReadonlySet<string> = new Set(["real_form_wrong_context"]);
+
+/** A date's weekday passed on as hearsay. Anyone at a desk can look at a
+ *  calendar, so 「十八日が金曜だとかで」 is a figure smuggled into the line, not
+ *  something a boss says. (「会議は十八日だそうです」 — an arrangement passed on —
+ *  is ordinary, and does not name a weekday.) */
+export const CALENDAR_HEARSAY = /[0-9０-９〇一二三四五六七八九十]+日(?:が|は)[月火水木金土日]曜日?(?:だとか|だそう|らしい|とのこと|だって|って聞)/u;
+
+/** Two wordings that are both standard in the same sentence. A distractor that
+ *  is the key with one of these swapped is a second right answer, marked wrong
+ *  on feel: ご確認くださいますよう is as much the formula as ご確認いただきますよう,
+ *  三人 is natural to one's boss beside 三名, and 〜たら fits wherever the key's
+ *  〜れば does (not the other way: ば is the narrower). Each pair is [the key's
+ *  wording, the distractor's], tried at every place the key has it; a swap that
+ *  builds a non-word simply matches no option. 何名様 is a fixed formula, so a
+ *  名 before 様 is left alone, as is a ば in 〜ればこそ or 〜れば〜ほど, where たら
+ *  does not fit. */
+export const STANDARD_TWINS: readonly (readonly [RegExp, string])[] = [
+  [/いただきますよう/gu, "くださいますよう"],
+  [/くださいますよう/gu, "いただきますよう"],
+  [/(?<=[0-9０-９〇一二三四五六七八九十百千何])名(?!様)/gu, "人"],
+  [/(?<=[0-9０-９〇一二三四五六七八九十百千何])人(?!様)/gu, "名"],
+  [/れば(?!こそ)(?![^。]*ほど)/gu, "たら"],
+];
+
+/** The blank in a carrier sentence (語彙・文法). */
+export const BLANK = "＿＿＿";
+
 /** 画像把握 asks what one person in the picture is doing (「立っている人は何を
  *  していますか」). An option that opens with somebody else as its subject
  *  (「座っている人が立っている人に書類を渡しています」) does not answer that question,
@@ -128,7 +163,8 @@ export const PROMPT = (
   + "two answers. The 解説 never calls a real expression nonexistent.\n"
   + "- The situation happens in real offices and hangs together: permission is asked of "
   + "a superior, not a peer; a request to another department goes by email or in "
-  + "person, not on a posted notice; cause and effect run the right way; and the 解説 "
+  + "person, not on a posted notice; a date's weekday is a fact anyone can check, never "
+  + "hearsay (十八日が金曜だとかで); cause and effect run the right way; and the 解説 "
   + "and every `why` describe the same situation as the stem."
 );
 
@@ -170,6 +206,34 @@ export function _allTexts(item: Item): [string, string, string][] {
   return out;
 }
 
+/** (index, text) of every distractor that is the key with one `STANDARD_TWINS`
+ *  swap. Compared as the learner reads them: in a carrier sentence the blank
+ *  is filled first, so 「ご確認＿＿＿よう」 with いただきます and くださいます is
+ *  seen as the two whole formulas. A deliberate non-word is never a twin. */
+export function twinsOfKey(item: Item): [number, string][] {
+  const options: Item[] = or(get(item, "options"), []);
+  let key: number;
+  try {
+    key = schemas.correctIndex(options);
+  } catch (e) {
+    if (!(e instanceof ValueError || e instanceof KeyError)) throw e;
+    return [];
+  }
+  const stem: string = get(item, "stem", "");
+  const inContext = (text: string): string => (stem.includes(BLANK) ? stem.replace(BLANK, text) : text);
+  const keyText = inContext(get(options[key], "text", ""));
+  const out: [number, string][] = [];
+  options.forEach((o, i) => {
+    if (i === key || get(o, "role", "") === "nonexistent_form") return;
+    const text = inContext(get(o, "text", ""));
+    const isTwin = STANDARD_TWINS.some(([pattern, swap]) =>
+      [...keyText.matchAll(pattern)].some((m) =>
+        keyText.slice(0, m.index) + swap + keyText.slice(m.index! + m[0].length) === text));
+    if (isTwin) out.push([i, get(o, "text", "")]);
+  });
+  return out;
+}
+
 /** Every mechanical tell of unnatural Japanese in one item, each as a
  *  sentence the next draft can act on. Empty means none was found — which is
  *  not the same as natural: most of what makes a line unnatural takes a reader.
@@ -205,6 +269,25 @@ export function faults(item: Item): string[] {
       found.push(
         `${where} says 「${cancel[0]}」, which cancels itself; say 前任 or 後任 alone`);
     }
+    const boast = SELF_YAKUBUSOKU.exec(text);
+    if (boast && !YAKUBUSOKU_AS_WRONG_WORD.has(role)) {
+      found.push(
+        `${where} says 「${boast[0]}」, the common misuse of 役不足 for 力不足; it may `
+        + "only be a distractor that is wrong for that misuse, never over-politeness");
+    }
+    const hearsay = CALENDAR_HEARSAY.exec(text);
+    if (hearsay) {
+      found.push(
+        `${where} passes on a date's weekday as hearsay (「${hearsay[0]}」); a calendar `
+        + "is a fact anybody can check, so say it plainly or let the document show it");
+    }
+  }
+
+  for (const [i, other] of twinsOfKey(item)) {
+    found.push(
+      `option ${i + 1} (「${other}」) is the key with one standard wording swapped for `
+      + "another, so it is right too; a distractor must be wrong in this sentence, "
+      + "not merely less usual");
   }
 
   for (const [where, text] of _spokenTexts(item)) {

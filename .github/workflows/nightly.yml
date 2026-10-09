@@ -135,6 +135,11 @@ on:
         type: boolean
         required: false
         default: false
+      regate:
+        description: "Instead of writing items, put live questions that skipped the proofreader and the gate through both (bjt regate --all --withdraw): same ceilings; a run that proposes withdrawals waits for a person to merge"
+        type: boolean
+        required: false
+        default: false
       compare_jev:
         description: "Instead of writing items, measure a sample of live questions with the probe's model and with Jev side by side (bjt probe --compare jev-latest): writes nothing, opens no pull request"
         type: boolean
@@ -178,6 +183,8 @@ jobs:
       branch: ${{ steps.pr.outputs.branch }}
       pr: ${{ steps.pr.outputs.pr }}
       base: ${{ steps.pr.outputs.base }}
+      # true when the pull request withdraws questions: a person merges it.
+      hold: ${{ steps.pr.outputs.hold }}
     # A night is minutes, not hours. The morning of 2026-09-18 a single run
     # generated for two and a half hours. The process stops itself at
     # BJT_RUN_MAX_MINUTES (30) and keeps what it wrote; this clock, a little
@@ -295,11 +302,17 @@ jobs:
           # Only a manual run has inputs, so a scheduled night is never a probe.
           probe=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.probe }}" = "true" ]; then probe=true; fi
+          # Or the regate: the proofreader and the gate, over live questions
+          # that were imported without either (bjt/regate.ts). It wins over
+          # "probe" when both are ticked: a question worth withdrawing is not
+          # worth measuring.
+          regate=false
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.regate }}" = "true" ]; then regate=true; probe=false; fi
           # Or it may compare the probe's model with Jev, which writes nothing
           # at all: no items, no rates, no pictures, no pull request. It wins
           # over "probe" when both are ticked, being the one that changes less.
           compare=false
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.compare_jev }}" = "true" ]; then compare=true; probe=false; fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "${{ github.event.inputs.compare_jev }}" = "true" ]; then compare=true; probe=false; regate=false; fi
           # The bucket must be readable, and must already hold the library:
           # a job that cannot see what has been drawn would pay to draw all of
           # it again.
@@ -308,6 +321,8 @@ jobs:
             drawn=$(node --input-type=module -e 'const { Bucket } = await import("./bjt/scene_art.ts"); console.log((await new Bucket().list()).size)' || echo error)
           fi
           if [ "$probe" = "true" ]; then
+            echo "art=false" >> "$GITHUB_OUTPUT"
+          elif [ "$regate" = "true" ]; then
             echo "art=false" >> "$GITHUB_OUTPUT"
           elif [ "$compare" = "true" ]; then
             echo "art=false" >> "$GITHUB_OUTPUT"
@@ -353,8 +368,10 @@ jobs:
           fi
           echo "seeds=$HAVE_SEEDS" >> "$GITHUB_OUTPUT"
           # go: the key is here, so something may be spent and a pull request
-          # may follow. write / probe: which of the two that something is.
-          # compare: spends, and leaves nothing to commit, so never `go`.
+          # may follow. write / probe / regate: which of the three that
+          # something is. compare: spends, and leaves nothing to commit, so
+          # never `go`.
+          echo "regate=false" >> "$GITHUB_OUTPUT"
           if [ "$compare" = "true" ]; then
             echo "go=false" >> "$GITHUB_OUTPUT"
             echo "write=false" >> "$GITHUB_OUTPUT"
@@ -372,7 +389,11 @@ jobs:
             fi
           elif [ "$HAVE_API_KEY" = "true" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
-            if [ "$probe" = "true" ]; then
+            if [ "$regate" = "true" ]; then
+              echo "write=false" >> "$GITHUB_OUTPUT"
+              echo "probe=false" >> "$GITHUB_OUTPUT"
+              echo "regate=true" >> "$GITHUB_OUTPUT"
+            elif [ "$probe" = "true" ]; then
               echo "write=false" >> "$GITHUB_OUTPUT"
               echo "probe=true" >> "$GITHUB_OUTPUT"
             else
@@ -463,6 +484,32 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: node bjt/main.ts probe --all --summary summary.md
+
+      # The other manual alternative: the review the imported questions never
+      # had (bjt/regate.ts). The same ceilings as a night; every verdict goes
+      # into batches/regated.txt as it is reached, so the next run starts where
+      # this one stopped, once this run's pull request is merged. A failure is
+      # appended to batches/withdrawn.txt with its bundle's SQL rewritten, and
+      # that pull request is left for a person (the publish job below): a
+      # withdrawal is a decision, and blockers.md asks that each be read.
+      # `regate` prints its own summary; it is kept for the pull request.
+      - name: re-check the questions that skipped the gate
+        if: steps.keys.outputs.regate == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -o pipefail
+          status=0
+          node bjt/main.ts regate --all --withdraw 2>&1 | tee regate.txt || status=$?
+          {
+            echo '## Regate: the proofreader and the gate, after the fact'
+            echo
+            echo '```'
+            grep -v '^  would check\|^[^ ]*\.json: ' regate.txt || true
+            echo '```'
+          } > summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
       # The evidence for switching the probe to Jev: the default model and Jev
       # on the same sample of live questions, a type at a time, under the same
@@ -609,7 +656,18 @@ jobs:
           branch="content/nightly-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
           # A probe run measured questions already in the bank; a night wrote
           # new ones. The commit and the title say which; nothing else differs.
-          if [ "${{ steps.keys.outputs.probe }}" = "true" ]; then
+          hold=false
+          if [ "${{ steps.keys.outputs.regate }}" = "true" ]; then
+            if [ -n "$(git status --porcelain batches/withdrawn.txt)" ]; then
+              hold=true
+              subject="Re-check imported questions, and propose withdrawals"
+              body="Written by bjt regate --all --withdraw. The verdicts are in batches/regated.txt; the questions that failed are appended to batches/withdrawn.txt and their bundles' SQL rewritten. Not merged automatically: read each proposed withdrawal, delete the line to keep a question and mark it overruled in regated.txt, then merge by hand. Merging this before the next regate run is what lets that run start where this one stopped."
+            else
+              subject="Re-check imported questions"
+              body="Written by bjt regate --all --withdraw. Every question checked passed; the verdicts are in batches/regated.txt and nothing is withdrawn. The nightly workflow merges it once the checks pass on this branch, so the next regate run starts where this one stopped."
+            fi
+            title="Regate: $(date -u +%Y-%m-%d)"
+          elif [ "${{ steps.keys.outputs.probe }}" = "true" ]; then
             subject="Measure the difficulty of the questions that have none"
             body="Written by the difficulty probe (bjt probe --all). It sets model_p_correct on live questions that shipped without one. The nightly workflow merges it once the checks pass on this branch, and the deploy applies the SQL."
             title="Difficulty probe: $(date -u +%Y-%m-%d)"
@@ -643,6 +701,7 @@ jobs:
           git push -u origin "$branch"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "base=$(git rev-parse "origin/$default")" >> "$GITHUB_OUTPUT"
+          echo "hold=$hold" >> "$GITHUB_OUTPUT"
           [ -f summary.md ] || echo "Nightly run: scene artwork only." > summary.md
           [ -f scenes.md ] && { echo; cat scenes.md; } >> summary.md
           [ -s reports.md ] && { echo; cat reports.md; } >> summary.md
@@ -694,10 +753,13 @@ jobs:
   # A `main` that moved while the night ran is not merged into at all: the
   # checks above saw tonight's branch on top of an older `main`, and the
   # combination nobody has checked is for a person to merge.
+  #
+  # Except a regate that withdraws questions: that one is a decision, and the
+  # merge is the person's (blockers.md). The checks above still run on it.
   publish:
     name: merge tonight's pull request and deploy it
     needs: [nightly, verify]
-    if: needs.nightly.outputs.pr != ''
+    if: needs.nightly.outputs.pr != '' && needs.nightly.outputs.hold != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

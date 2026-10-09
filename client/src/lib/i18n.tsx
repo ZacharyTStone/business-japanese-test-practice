@@ -262,6 +262,10 @@ const S = {
   time_up_sub: ["本番と同じ時間配分では、ここで次へ進みます。", "At exam pace this is where you move on."],
   details_open: ["解説をくわしく見る", "Show the explanation"],
   details_close: ["解説をとじる", "Hide the explanation"],
+  // The same toggle on a heard question, where the script is folded in too:
+  // a learner who got it right should know the transcript is there.
+  details_open_script: ["解説とスクリプトを見る", "Show the explanation and transcript"],
+  details_close_script: ["解説とスクリプトをとじる", "Hide the explanation and transcript"],
   btn_result: ["結果を見る", "See results"],
   btn_next: ["次の問題へ", "Next question"],
 
