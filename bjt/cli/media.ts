@@ -16,19 +16,9 @@ import * as synth from "../tts/synth.ts";
 import * as audition from "../tts/audition.ts";
 import { writeAtomic } from "../files.ts";
 import { GENERATORS } from "../generators/index.ts";
-import { eprint, errText, has, IndexError, isDict, KeyError, len, pathStr, print, repr, RuntimeError, sorted, str, truthy, ValueError } from "../py.ts";
+import { eprint, errText, has, IndexError, isDict, KeyError, ljust, pathStr, print, repr, rjust, RuntimeError, sorted, str, truthy, ValueError } from "../py.ts";
 import type { Namespace, SubParsers } from "./argparse.ts";
 
-
-/** `f"{s:<{width}}"`, by code point. */
-function _ljust(s: string, width: number): string {
-  return s + " ".repeat(Math.max(0, width - len(s)));
-}
-
-/** `f"{s:>{width}}"`, by code point. */
-function _rjust(s: string, width: number): string {
-  return " ".repeat(Math.max(0, width - len(s))) + s;
-}
 
 /** `items[i]`, negative counting from the end, as a Python list indexes. */
 function _at<T>(items: readonly T[], i: number): T {
@@ -167,7 +157,7 @@ export async function cmdAudition(args: Namespace): Promise<number> {
   if (!names.length && !args.voices) {
     eprint("No TTS provider is configured. Set one of:");
     for (const [name, keys] of Object.entries(providers.CREDENTIALS)) {
-      eprint(`  ${_ljust(name, 8)} ${keys.join(" or ")}`);
+      eprint(`  ${ljust(name, 8)} ${keys.join(" or ")}`);
     }
     eprint("(`--provider silent` exercises the page with silent clips.)");
     return 2;
@@ -328,11 +318,11 @@ export async function cmdScenes(args: Namespace): Promise<number> {
   }
 
   print(`scene bank: ${survey.length} scene(s), ${have.length} with artwork\n`);
-  print(`  ${_ljust("scene_id", 32)} ${_ljust("art", 4)} ${_rjust("cells", 6)}  used by`);
+  print(`  ${ljust("scene_id", 32)} ${ljust("art", 4)} ${rjust("cells", 6)}  used by`);
   for (const scene of survey) {
     const other = scenemod.standInFor(scene, survey);
     const mark = scene.has_art ? "yes" : (other ? "↪" : "—");
-    print(`  ${_ljust(scene.scene_id, 32)} ${_ljust(mark, 4)} ${_rjust(str(scene.cell_count), 6)}  `
+    print(`  ${ljust(scene.scene_id, 32)} ${ljust(mark, 4)} ${rjust(str(scene.cell_count), 6)}  `
           + `${scene.used_by.join("、")}`
           + (other ? `  (shows ${other.scene_id})` : "")
           + (scene.is_picture ? "  [per-item picture]" : ""));

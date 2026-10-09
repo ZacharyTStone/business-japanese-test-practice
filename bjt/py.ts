@@ -377,6 +377,16 @@ export function slice(s: string, start: number, end?: number): string {
   return cps.slice(start, end).join("");
 }
 
+/** `f"{s:<{width}}"`: padded on the right to `width` code points. */
+export function ljust(s: string, width: number): string {
+  return s + " ".repeat(Math.max(0, width - len(s)));
+}
+
+/** `f"{s:>{width}}"`: padded on the left to `width` code points. */
+export function rjust(s: string, width: number): string {
+  return " ".repeat(Math.max(0, width - len(s))) + s;
+}
+
 /** Python's `str.isspace()` set: what `split()` and `strip()` remove. A
  *  character-class body, for `[${WS}]` in a pattern with the `u` flag. */
 export const WS ="\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";
