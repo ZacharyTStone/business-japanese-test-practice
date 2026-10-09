@@ -672,6 +672,31 @@ export function toFloat(s: string): number {
   return Number(t);
 }
 
+/** `int(x)` of a parsed JSON value: an int as it is, a bool as 0 or 1, a
+ *  float cut toward zero, a string read as base 10; anything else the
+ *  TypeError `int()` raises. An infinity is an OverflowError, not a
+ *  ValueError, so a caller that reads a ValueError as "no answer" does not
+ *  read it as one, exactly as in Python. */
+export function pyInt(x: unknown): number {
+  if (typeof x === "boolean") return x ? 1 : 0;
+  if (typeof x === "number") {
+    if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
+    if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
+    return Math.trunc(x);
+  }
+  if (typeof x === "string") return toInt(x);
+  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${typeName(x)}'`);
+}
+
+/** `float(x)` of a parsed JSON value: a number as it is, a bool as 0 or 1, a
+ *  string read as `float(s)` reads it; anything else a TypeError. */
+export function pyFloat(x: unknown): number {
+  if (typeof x === "number") return x;
+  if (typeof x === "boolean") return Number(x);
+  if (typeof x === "string") return toFloat(x);
+  throw new TypeError_(`float() argument must be a string or a real number, not '${typeName(x)}'`);
+}
+
 // --------------------------------------------------------- dataclasses
 
 /** `dataclasses.replace(obj, **changes)`: a copy of the instance, same

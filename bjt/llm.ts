@@ -21,7 +21,7 @@ import { existsSync, readFileSync } from "node:fs";
 import Anthropic, { AnthropicError, APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import * as config from "./config.ts";
 import { unreadable, writeAtomic } from "./files.ts";
-import { eprint, errText, fixed, g, get, isDict, KeyError, len, max, OverflowError, repr, RuntimeError, sorted, str, strip, thousands, time, toFloat, toInt, truthy, TypeError_, typeName, ValueError } from "./py.ts";
+import { eprint, errText, fixed, g, get, isDict, KeyError, len, max, pyFloat, pyInt, repr, RuntimeError, sorted, str, strip, thousands, time, truthy, TypeError_, typeName, ValueError } from "./py.ts";
 import { dumps, loads } from "./pyjson.ts";
 
 export class LLMError extends RuntimeError {}
@@ -136,31 +136,10 @@ function _item(data: unknown, key: string): unknown {
   return (data as Record<string, unknown>)[key];
 }
 
-/** `float(v)` of a JSON value. */
-function _float(v: unknown): number {
-  if (typeof v === "number") return v;
-  if (typeof v === "boolean") return Number(v);
-  if (typeof v === "string") return toFloat(v);
-  throw new TypeError_(`float() argument must be a string or a real number, not '${typeName(v)}'`);
-}
-
-/** `int(v)` of a JSON value: a float truncates. An infinity is an
- *  OverflowError, which an unreadable ledger is not caught as, exactly as in
- *  Python. */
-function _int(v: unknown): number {
-  if (typeof v === "number") {
-    if (Number.isNaN(v)) throw new ValueError("cannot convert float NaN to integer");
-    if (!Number.isFinite(v)) throw new OverflowError("cannot convert float infinity to integer");
-    return Math.trunc(v);
-  }
-  if (typeof v === "boolean") return Number(v);
-  if (typeof v === "string") return toInt(v);
-  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${typeName(v)}'`);
-}
-
 /** The errors a ledger that cannot be read raises: Python's (OSError,
  *  ValueError, TypeError, KeyError) — a file the system will not give us, a
- *  body that is not JSON, a field that is missing or not a number. */
+ *  body that is not JSON, a field that is missing or not a number. An
+ *  infinity's OverflowError is not one, exactly as in Python. */
 function _ledgerUnreadable(e: unknown): boolean {
   return unreadable(e) || e instanceof ValueError || e instanceof TypeError_
     || e instanceof TypeError || e instanceof KeyError;
@@ -260,8 +239,8 @@ export class Spend {
     let usd: number, calls: number, attempts: number, started: number;
     try {
       const data: unknown = loads(readFileSync(this.ledger, "utf8"));
-      [usd, calls] = [_float(_item(data, "usd")), _int(_item(data, "calls"))];
-      [attempts, started] = [_int(_item(data, "attempts")), _float(_item(data, "started_at"))];
+      [usd, calls] = [pyFloat(_item(data, "usd")), pyInt(_item(data, "calls"))];
+      [attempts, started] = [pyInt(_item(data, "attempts")), pyFloat(_item(data, "started_at"))];
       if (![usd, calls, attempts, started].every((x) => Number.isFinite(x) && x >= 0)) {
         throw new ValueError("a negative or non-finite number");
       }
@@ -507,7 +486,7 @@ export function _backoff(retry: number, exc: unknown): number {
   }
   let asked: number | null;
   try {
-    asked = _float(raw);
+    asked = pyFloat(raw);
   } catch (e) {
     if (!(e instanceof TypeError_ || e instanceof ValueError)) throw e;
     asked = null;

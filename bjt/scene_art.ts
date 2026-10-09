@@ -36,7 +36,7 @@ import { writeAtomic } from "./files.ts";
 import * as http from "./http.ts";
 import * as llm from "./llm.ts";
 import {
-  AttributeError, errText, get, has, IndexError, isException, KeyError, OverflowError, replace, repr, RuntimeError,
+  AttributeError, errText, get, has, IndexError, isException, KeyError, pyInt, replace, repr, RuntimeError,
   sorted, str, thousands, toInt, truthy, TypeError_, typeName, ValueError,
 } from "./py.ts";
 import * as r2 from "./r2.ts";
@@ -264,8 +264,9 @@ export async function reviewWithModel(image: Uint8Array, mediaType: string, scen
       const res = await llm.answerFromImage(image, mediaType, scene.question, [...scene.options]);
       let chosen: number;
       try {
-        chosen = _int(_dictGet(res, "choice", -1));
+        chosen = pyInt(_dictGet(res, "choice", -1));
       } catch (exc) {
+        // An infinity's OverflowError is not "no answer", as in Python.
         if (exc instanceof ValueError || exc instanceof TypeError_ || exc instanceof AttributeError) {
           throw new llm.LLMError(`the picture's reader gave no answer: ${repr(res)}`, { cause: exc });
         }
@@ -845,21 +846,6 @@ function _dictGet(d: unknown, key: string, dflt: unknown = null): any {
     throw new AttributeError(`'${typeName(d)}' object has no attribute 'get'`);
   }
   return get(d as Record<string, unknown>, key, dflt);
-}
-
-/** `int(x)` for a JSON value: an int as it is, a bool as 0 or 1, a float
- *  truncated, a string read as base 10; anything else a TypeError. An
- *  infinity is an OverflowError, which `reviewWithModel` does not read as
- *  "no answer", as in Python. */
-function _int(x: unknown): number {
-  if (typeof x === "boolean") return x ? 1 : 0;
-  if (typeof x === "number") {
-    if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
-    if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
-    return Math.trunc(x);
-  }
-  if (typeof x === "string") return toInt(x);
-  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${typeName(x)}'`);
 }
 
 /** `obj[key]` on a parsed JSON value, as Python subscripts it: a dict by its
