@@ -39,6 +39,7 @@ import * as llm from "../llm.ts";
 import { errText, get, or, str, truthy } from "../py.ts";
 import * as schemas from "../schemas.ts";
 import * as document from "../render/document.ts";
+import * as roles from "./roles.ts";
 
 /** flag → what a `true` on it means, in the words the model is shown. Keys are
  *  the schema's required properties, so adding a rule here adds it to the call. */
@@ -56,9 +57,16 @@ export const RULES: Record<string, string> = {
     + "ご確認いただきますよう). A register the situation really rules out, such as "
     + "外しています to a client on the phone, is a wrong answer, not a second one"
   ),
+  // The whys and roles are what a learner reads after a wrong answer, so a
+  // miscounted date or a trap that names the wrong mistake teaches it.
   explanation_mismatch: (
     "the 解説 justifies a different option than the one marked correct, or "
-    + "states something the item contradicts"
+    + "states something the item contradicts; or an option's why gets a fact "
+    + "wrong — a date, a weekday, a count or a sum that does not follow from the "
+    + "document and the conversation (the day after the 25th is the 26th); or a "
+    + "distractor's role names a mistake that would not lead anybody to choose it "
+    + "(a date marked as the wrong person's action, a room marked as a shared word "
+    + "when the word is in every option)"
   ),
   broken_japanese: (
     "Japanese no writer would produce: a typo, a dropped or wrong particle, a "
@@ -152,9 +160,19 @@ export function renderForSanity(item: Record<string, any>): string {
   lines.push(get(item, "stem", ""));
   // Each option with its role: `unnatural_japanese` must not fire on a
   // 語彙・文法 distractor built not to be a word, and without the role the
-  // checker cannot tell that one from a mistake.
+  // checker cannot tell that one from a mistake. Under it, what the role means
+  // and the option's why — the feedback a learner who picks it is shown — so
+  // `explanation_mismatch` can check both.
   (get(item, "options", []) as Record<string, any>[]).forEach((o, i) => {
-    lines.push(`${i}. ${str(get(o, "text", ""))}　［${str(get(o, "role", ""))}］`);
+    const role = str(get(o, "role", ""));
+    lines.push(`${i}. ${str(get(o, "text", ""))}　［${role}］`);
+    const meaning = get(roles.ROLE_DESCRIPTIONS, role);
+    if (truthy(meaning)) {
+      lines.push(`   ［${role}］ = ${str(meaning)}`);
+    }
+    if (truthy(get(o, "why"))) {
+      lines.push(`   why: ${str(o["why"])}`);
+    }
   });
 
   const ci = schemas.correctIndex(item["options"]);

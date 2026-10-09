@@ -97,3 +97,10 @@ a425ecc58c  unnatural     The proofreader flagged unnatural_japanese: Option 3 s
 0e6c106a8e  wrong_answer  The gate's full view: a reviewer with the whole stimulus chose option 1 「何かお手伝いさせていただいてもよろしいでしょうか。」 over the key in both trials; the reviewer: “丁寧かつ適切な申し出表現で同僚への配慮を示している。”
 feeae3d00f  wrong_answer  The gate's full view: a reviewer with the whole stimulus chose option 1 「差し支えなければ、設営のほうは私にお任せいただけませんでしょうか。」 over the key in both trials; the reviewer: “丁寧かつ明確に自分が設営を担当したい意思を伝えている表現であるため。”
 97f123223d  ambiguous     The proofreader flagged second_answer_defensible: Option 3 is correct, but option 0 (資料チェック、よろしく) is a widely-attested peer-to-peer request form in casual chat that many native speakers would use in this exact situation; dismissing it as merely 'too casual' rather than noting it competes w
+
+# 2026-10-09: met in practice by the owner. The checks that would have stopped
+# each were added in the same commit: batch.keyOnlyOffDocument, and the
+# proofreader reading every option's why and role.
+3abf299a57  unclear       The key 第三会議室 is the only option the timetable does not print, so it is passed unheard, and 研修センター is marked as a shared word when 研修 is in every row.
+b9b8446b1d  unclear       Option 9月27日 is a Saturday its why miscounts as the day after the reserve day, 9月24日 is marked as a wrong pairing, and the conversation says every date, so the schedule is not needed.
+0c99e55bd7  unclear       The key 第三会議室 is the only option the reservation sheet does not print, so it is passed unheard; found by the same check.

@@ -92,6 +92,18 @@ describe("sanity", () => {
     }
   });
 
+  test("render shows each options why and what its role means", () => {
+    // The why is what a learner who picks the option is shown, and the role
+    // names the mistake: a miscounted date or a role that fits no learner's
+    // choice is caught only if the proofreader reads them.
+    const item = deepcopy(fixtures.FIXTURES["shiryou_choudokkai"]);
+    const text = sanity.renderForSanity(item);
+    for (const o of item["options"]) {
+      expect(text).toContain(`why: ${o["why"]}`);
+    }
+    expect(text).toContain("［reads_wrong_row］ = a plausible neighbouring row");
+  });
+
   test("render includes a document stimulus", () => {
     // A reading item whose document was invisible to the checker would be
     // proofread without the thing that makes its answer right.
