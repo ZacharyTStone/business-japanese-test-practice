@@ -29,6 +29,7 @@ import * as record from "./core/record";
 import { loadSnapshot } from "./core/snapshot";
 import type { Db } from "./core/sql";
 import { iso } from "./core/time";
+import { normaliseEmail } from "./identity";
 
 export type Args = Record<string, unknown>;
 export type Ctx = { db: Db; learner: Learner; now: number; random?: (id: string) => number };
@@ -200,7 +201,7 @@ export const queries: Record<string, Query> = {
   // The address shown on the screen that asked, as a confirmation that the
   // app is deleting the account it thinks it is: a mismatch deletes nothing.
   async deleteAccount({ db, learner }, args) {
-    if (text(args, "email", 320).trim().toLowerCase() !== learner.email) bad("email", "the signed-in account's address");
+    if (normaliseEmail(text(args, "email", 320)) !== learner.email) bad("email", "the signed-in account's address");
     return profile.deleteAccount(db, learner);
   },
 
