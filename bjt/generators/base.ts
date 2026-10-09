@@ -441,6 +441,8 @@ export class Generator {
       // cost a retry here rather than a proofreader's call, and the
       // retry is told which line and why.
       errors.push(...naturalness.faults(item));
+      const offPage = batchmod.keyOnlyOffDocument(item);
+      if (offPage !== null) errors.push(offPage);
       if (errors.length === 0) {
         return this._finalize(item, level, seed, { cell });
       }

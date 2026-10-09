@@ -165,7 +165,12 @@ export const PROMPT = (
   + "a superior, not a peer; a request to another department goes by email or in "
   + "person, not on a posted notice; a date's weekday is a fact anyone can check, never "
   + "hearsay (十八日が金曜だとかで); cause and effect run the right way; and the 解説 "
-  + "and every `why` describe the same situation as the stem."
+  + "and every `why` describe the same situation as the stem.\n"
+  + "- Every `why` is shown to a learner who picked that option, so its facts are "
+  + "right (count the dates: the day after the 25th is the 26th, and a 翌営業日 is "
+  + "never a Saturday), and each distractor's role is the mistake a person choosing it "
+  + "would really be making — a date is not the wrong person's action, and a word "
+  + "every option shares is not a surface match."
 );
 
 type Item = Record<string, any>;

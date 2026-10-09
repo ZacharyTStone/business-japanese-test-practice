@@ -26,7 +26,7 @@ import * as dedupe from "./fidelity/dedupe.ts";
 import * as naturalness from "./fidelity/naturalness.ts";
 import * as roles from "./fidelity/roles.ts";
 import {
-  deepcopy, errText, fixed, FileNotFoundError, get, getitem, has, IndexError, isDict, isoformatUtc, len, max, min, or,
+  deepcopy, errText, fixed, FileNotFoundError, get, getitem, has, IndexError, isDict, isoformatUtc, KeyError, len, max, min, or,
   percent, repr, sorted, str, truthy, utf8, ValueError, zip,
 } from "./py.ts";
 import { BUNDLE_FLOAT_KEYS, dumps, loads } from "./pyjson.ts";
@@ -427,7 +427,8 @@ export class BundleReport {
  * Every check that needs no API key. Run on every batch before it ships.
  *
  * `withdrawnIds` defaults to the committed ledger (`batches/withdrawn.txt`);
- * only the naturalness lint looks at it.
+ * only the per-item tells (the naturalness lint, the key off the document)
+ * look at it.
  */
 export function checkBundle(
   bundle: Bundle,
@@ -446,6 +447,9 @@ export function checkBundle(
     add("non-empty", "fail", "bundle contains no items");
     return report;
   }
+
+  // A withdrawn item is no longer served; the per-item tells skip it.
+  const gone: ReadonlySet<unknown> = withdrawnIds === null ? withdrawn.ids() : new Set(withdrawnIds);
 
   // 1. Every item still validates on its own.
   const invalid: string[] = [];
@@ -523,6 +527,19 @@ export function checkBundle(
   } else {
     add("length does not leak", "pass", `longest ${longest}/${n}, shortest ${shortest}/${n}`);
   }
+
+  // 5b. The key must not be the one option the 資料 leaves off. Per item, and
+  //     a failure like the naturalness lint: a new draft with this tell is
+  //     sent back (`Generator.generate`), and a served one either leaves the
+  //     bank through the ledger or fails CI.
+  const offPage: string[] = [];
+  for (const it of items) {
+    if (gone.has(get(it, "id"))) continue;
+    if (keyOnlyOffDocument(asGeneratorShape(it)) !== null) offPage.push(str(get(it, "id", "?")));
+  }
+  add("key is not the only option off the document", offPage.length ? "fail" : "pass",
+      offPage.length ? `only the key is missing from the document in ${repr(offPage)}`
+      : "no item's key is the one option the document leaves out");
 
   // 6. Distractor roles actually get exercised — an enum of eight used as three
   //    is a prompt that has settled into a rut.
@@ -669,7 +686,6 @@ export function checkBundle(
   //     no longer served, and is kept only as the record of why — which also
   //     makes the ledger compulsory: a committed item with one of these tells
   //     either leaves the bank or fails CI.
-  const gone: ReadonlySet<unknown> = withdrawnIds === null ? withdrawn.ids() : new Set(withdrawnIds);
   const unnatural = new Map<unknown, string[]>();
   for (const it of items) {
     if (gone.has(get(it, "id"))) {
@@ -811,6 +827,39 @@ export function _worstPairScore(items: Item[]): number {
     }
   }
   return worst;
+}
+
+/** The sentence a draft is sent back with when the key is the one option the
+ *  資料 does not print, or null.
+ *
+ *  Three rooms on the timetable and a fourth only heard is a question a
+ *  learner passes unheard by picking the one that is not on the sheet: two
+ *  committed 資料聴読解 items did exactly this (a room changed aloud, the new
+ *  room the only option off the page). Compared without punctuation or
+ *  spaces, on the text every reader of the document sees. An item without a
+ *  document, or whose distractors are not all on it, says nothing. Takes an
+ *  item in generator shape. */
+export function keyOnlyOffDocument(item: Item): string | null {
+  const docs = schemas.documentsOf(item);
+  if (!docs.length) return null;
+  const flat = (s: string): string => s.replace(naturalness._PUNCT, "");
+  const page = flat(docs.map((d) => document.textOf(d)).join("\n"));
+  const options = (or(get(item, "options"), []) as Item[]).map((o) => flat(str(get(o, "text", ""))));
+  let key: number;
+  try {
+    key = schemas.correctIndex(get(item, "options", []));
+  } catch (e) {
+    if (!(e instanceof ValueError || e instanceof KeyError)) throw e;
+    return null;
+  }
+  if (!options[key] || page.includes(options[key])) return null;
+  if (!options.every((o, i) => i === key || (o && page.includes(o)))) return null;
+  return (
+    `the key 「${str(get(item["options"][key], "text", ""))}」 is the only option the document `
+    + "does not print, so a learner passes by picking the one not on the page; make at "
+    + "least one distractor something heard but not printed too (a value mentioned and "
+    + "set aside, an alternative proposed and turned down)"
+  );
 }
 
 export function _correctIsExtreme(item: Item, opts: { longest: boolean }): boolean {
