@@ -324,11 +324,6 @@ export function floorDiv(a: number, b: number): number {
   return Math.floor(a / b);
 }
 
-/** `a % b`: the result takes the divisor's sign, as in Python. */
-export function mod(a: number, b: number): number {
-  return ((a % b) + b) % b;
-}
-
 export function sum(xs: Iterable<number>): number {
   let s = 0;
   for (const x of xs) s += x;
@@ -461,11 +456,6 @@ export function splitlines(s: string): string[] {
   return lines;
 }
 
-/** `s.title()` is not used; `s.capitalize()` is. */
-export function capitalize(s: string): string {
-  return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
-}
-
 /** `html.escape(s, quote=True)`. */
 export function htmlEscape(s: string, quote: boolean = true): string {
   let out = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -556,23 +546,6 @@ export function wrap(text: string, width: number): string[] {
 /** `textwrap.indent(text, prefix)`: prefix every line that is not blank. */
 export function indent(text: string, prefix: string): string {
   return text.replace(/^(?=.*\S)/gmu, prefix);
-}
-
-/** `textwrap.dedent(text)`. */
-export function dedent(text: string): string {
-  const lines = text.split("\n");
-  let margin: string | null = null;
-  for (const line of lines) {
-    if (line.trim() === "") continue;
-    const lead = /^[ \t]*/.exec(line)![0];
-    if (margin === null) margin = lead;
-    else {
-      let i = 0;
-      while (i < margin.length && i < lead.length && margin[i] === lead[i]) i++;
-      margin = margin.slice(0, i);
-    }
-  }
-  return lines.map((l) => (l.trim() === "" ? l.replace(/^[ \t]+$/, "") : l.slice(margin?.length ?? 0))).join("\n");
 }
 
 // ---------------------------------------------------------- containers
@@ -694,18 +667,6 @@ export function toFloat(s: string): number {
  *  class, with some fields changed. */
 export function replace<T extends object>(obj: T, changes: Partial<T>): T {
   return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj, changes);
-}
-
-/** `dataclasses.asdict(obj)`: the instance's own fields as plain data, deep
- *  (nested instances, arrays and maps included). */
-export function asdict(obj: unknown): any {
-  if (Array.isArray(obj)) return obj.map(asdict);
-  if (obj instanceof Map) return Object.fromEntries([...obj].map(([k, v]) => [k, asdict(v)]));
-  if (obj instanceof Set) return [...obj].map(asdict);
-  if (obj && typeof obj === "object" && !(obj instanceof Date)) {
-    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, asdict(v)]));
-  }
-  return obj;
 }
 
 // --------------------------------------------------------------- time
