@@ -65,6 +65,17 @@ export function errText(e: unknown): string {
   return str(e);
 }
 
+/** Python's name for the type of a parsed JSON value, as its errors say it
+ *  (`'NoneType' object is not subscriptable`). */
+export function typeName(v: unknown): string {
+  if (v === null || v === undefined) return "NoneType";
+  if (Array.isArray(v)) return "list";
+  if (typeof v === "object") return "dict";
+  if (typeof v === "string") return "str";
+  if (typeof v === "boolean") return "bool";
+  return Number.isInteger(v) ? "int" : "float";
+}
+
 // ------------------------------------------------------------- printing
 
 /** `repr(float)` (and `str(float)`): the shortest digits that round-trip,

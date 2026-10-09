@@ -37,7 +37,7 @@ import * as http from "./http.ts";
 import * as llm from "./llm.ts";
 import {
   AttributeError, errText, get, has, IndexError, isException, KeyError, OverflowError, replace, repr, RuntimeError,
-  sorted, str, thousands, toInt, truthy, TypeError_, ValueError,
+  sorted, str, thousands, toInt, truthy, TypeError_, typeName, ValueError,
 } from "./py.ts";
 import * as r2 from "./r2.ts";
 import * as scenes from "./scenes.ts";
@@ -838,21 +838,11 @@ function _digitsToInt(s: string): number {
   return toInt(s.normalize("NFKC"));
 }
 
-/** Python's name for the type of a JSON value, for a TypeError's message. */
-function _typeName(v: unknown): string {
-  if (v === null || v === undefined) return "NoneType";
-  if (Array.isArray(v)) return "list";
-  if (typeof v === "object") return "dict";
-  if (typeof v === "string") return "str";
-  if (typeof v === "boolean") return "bool";
-  return Number.isInteger(v) ? "int" : "float";
-}
-
 /** `d.get(key, default)` on a reply that should be a dict: an
  *  AttributeError when it is not one. */
 function _dictGet(d: unknown, key: string, dflt: unknown = null): any {
   if (d === null || d === undefined || typeof d !== "object" || Array.isArray(d)) {
-    throw new AttributeError(`'${_typeName(d)}' object has no attribute 'get'`);
+    throw new AttributeError(`'${typeName(d)}' object has no attribute 'get'`);
   }
   return get(d as Record<string, unknown>, key, dflt);
 }
@@ -869,7 +859,7 @@ function _int(x: unknown): number {
     return Math.trunc(x);
   }
   if (typeof x === "string") return toInt(x);
-  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${_typeName(x)}'`);
+  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${typeName(x)}'`);
 }
 
 /** `obj[key]` on a parsed JSON value, as Python subscripts it: a dict by its
@@ -879,11 +869,11 @@ function _sub(obj: unknown, key: string | number): unknown {
     if (Array.isArray(obj) || typeof obj === "string") {
       const seq: unknown[] = typeof obj === "string" ? [...obj] : obj;
       const i = key < 0 ? seq.length + key : key;
-      if (i < 0 || i >= seq.length) throw new IndexError(`${_typeName(obj)} index out of range`);
+      if (i < 0 || i >= seq.length) throw new IndexError(`${typeName(obj)} index out of range`);
       return seq[i];
     }
     if (obj !== null && typeof obj === "object") throw new KeyError(String(key));
-    throw new TypeError_(`'${_typeName(obj)}' object is not subscriptable`);
+    throw new TypeError_(`'${typeName(obj)}' object is not subscriptable`);
   }
   if (obj !== null && typeof obj === "object" && !Array.isArray(obj)) {
     if (!has(obj, key)) throw new KeyError(repr(key));
@@ -895,5 +885,5 @@ function _sub(obj: unknown, key: string | number): unknown {
   if (typeof obj === "string") {
     throw new TypeError_("string indices must be integers, not 'str'");
   }
-  throw new TypeError_(`'${_typeName(obj)}' object is not subscriptable`);
+  throw new TypeError_(`'${typeName(obj)}' object is not subscriptable`);
 }

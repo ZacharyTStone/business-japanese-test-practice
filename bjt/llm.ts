@@ -21,7 +21,7 @@ import { existsSync, readFileSync } from "node:fs";
 import Anthropic, { AnthropicError, APIConnectionError, APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import * as config from "./config.ts";
 import { unreadable, writeAtomic } from "./files.ts";
-import { eprint, errText, fixed, g, get, isDict, KeyError, len, max, OverflowError, repr, RuntimeError, sorted, str, strip, thousands, time, toFloat, toInt, truthy, TypeError_, ValueError } from "./py.ts";
+import { eprint, errText, fixed, g, get, isDict, KeyError, len, max, OverflowError, repr, RuntimeError, sorted, str, strip, thousands, time, toFloat, toInt, truthy, TypeError_, typeName, ValueError } from "./py.ts";
 import { dumps, loads } from "./pyjson.ts";
 
 export class LLMError extends RuntimeError {}
@@ -126,21 +126,11 @@ export function priceUsd(model: string, usage: UsageLike | null | undefined): nu
   ) / 1_000_000;
 }
 
-/** Python's name for the type of a JSON value, for a TypeError's message. */
-function _typeName(v: unknown): string {
-  if (v === null || v === undefined) return "NoneType";
-  if (Array.isArray(v)) return "list";
-  if (typeof v === "object") return "dict";
-  if (typeof v === "string") return "str";
-  if (typeof v === "boolean") return "bool";
-  return Number.isInteger(v) ? "int" : "float";
-}
-
 /** `data[key]` on a JSON value: a KeyError when a dict lacks it, a
  *  TypeError when it is not a dict. */
 function _item(data: unknown, key: string): unknown {
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
-    throw new TypeError_(`'${_typeName(data)}' object is not subscriptable`);
+    throw new TypeError_(`'${typeName(data)}' object is not subscriptable`);
   }
   if (!Object.prototype.hasOwnProperty.call(data, key)) throw new KeyError(key);
   return (data as Record<string, unknown>)[key];
@@ -151,7 +141,7 @@ function _float(v: unknown): number {
   if (typeof v === "number") return v;
   if (typeof v === "boolean") return Number(v);
   if (typeof v === "string") return toFloat(v);
-  throw new TypeError_(`float() argument must be a string or a real number, not '${_typeName(v)}'`);
+  throw new TypeError_(`float() argument must be a string or a real number, not '${typeName(v)}'`);
 }
 
 /** `int(v)` of a JSON value: a float truncates. An infinity is an
@@ -165,7 +155,7 @@ function _int(v: unknown): number {
   }
   if (typeof v === "boolean") return Number(v);
   if (typeof v === "string") return toInt(v);
-  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${_typeName(v)}'`);
+  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${typeName(v)}'`);
 }
 
 /** The errors a ledger that cannot be read raises: Python's (OSError,
