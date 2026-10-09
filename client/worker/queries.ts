@@ -98,7 +98,7 @@ const FEEDBACK_REASONS = new Set(["unnatural", "wrong_answer", "ambiguous", "unc
 
 // ----- the queries ----------------------------------------------------------
 
-export const queries: Record<string, Query> = {
+export const queries = {
   // --- who is asking ---------------------------------------------------------
 
   /** Who the database takes this caller to be — asked once when the app
@@ -266,4 +266,13 @@ export const queries: Record<string, Query> = {
   async saveNote({ db, learner }, args) {
     return bank.saveNote(db, learner, text(args, "itemId"), textOrEmpty(args, "note", 4000).trim());
   },
-};
+} satisfies Record<string, Query>;
+
+/** The name of a query the app may ask for. */
+export type QueryName = keyof typeof queries;
+
+/** Whether `name` names one of the queries above — own keys only, so
+ *  `toString` or `__proto__` name nothing. */
+export function isQueryName(name: string): name is QueryName {
+  return Object.hasOwn(queries, name);
+}

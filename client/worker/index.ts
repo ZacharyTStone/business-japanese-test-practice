@@ -21,7 +21,7 @@ import { resolveLearner } from "./core/caller";
 import { apiError, toApiError } from "./core/errors";
 import { isRefusal, notATester, type Refusal } from "./identity";
 import { serveMedia } from "./media";
-import { queries } from "./queries";
+import { isQueryName, queries } from "./queries";
 import { whoIsAsking, withCookies } from "./who";
 
 export interface Env extends AuthEnv {
@@ -58,7 +58,7 @@ export async function runQuery(
   args: Record<string, unknown>,
   { now = Date.now(), random = Math.random, checkSignIn = true }: { now?: number; random?: (id: string) => number; checkSignIn?: boolean } = {}
 ): Promise<Response> {
-  if (!Object.hasOwn(queries, name)) {
+  if (!isQueryName(name)) {
     return errorResponse("unknown_query", `no query named ${name}`, 404);
   }
   try {
