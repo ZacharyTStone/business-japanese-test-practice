@@ -12,6 +12,7 @@ import { describe, expect, test } from "vitest";
 import * as clientConstants from "../bjt/client_constants.ts";
 import { DISTRACTOR_ROLES } from "../bjt/fidelity/roles.ts";
 import { toFloat } from "../bjt/py.ts";
+import { REASONS } from "../bjt/withdrawn.ts";
 import { tmpPath } from "./helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -74,5 +75,28 @@ describe("client_constants", () => {
     const queue = declared.exec(readFileSync(path.join(ROOT, "client", "worker", "core", "queue.ts"), "utf8"));
     expect(queue, "queue.ts no longer declares EXAM_NEAR_DAYS as expected").toBeTruthy();
     expect(Number(queue![1])).toBe(Number(app![1]));
+  });
+
+  /** A report's reason is one closed set in four places: the ledger that
+   *  withdraws a question (bjt/withdrawn.ts), the Worker that takes a report
+   *  (client/worker/queries.ts), the app's type for it and the list the
+   *  report sheet offers. A reason missing from one is a report the Worker
+   *  refuses, a button with no reason, or a withdrawal no report can name. */
+  test("every list of report reasons is the same set", () => {
+    const client = (...parts: string[]) => readFileSync(path.join(ROOT, "client", ...parts), "utf8");
+    const quoted = (text: string | undefined) => [...(text ?? "").matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
+    const worker = /const FEEDBACK_REASONS = new Set\(\[([^\]]*)\]\)/.exec(client("worker", "queries.ts"));
+    expect(worker, "queries.ts no longer declares FEEDBACK_REASONS as expected").toBeTruthy();
+    const union = /export type FeedbackReason =([^;]*);/.exec(client("src", "lib", "db", "practice.ts"));
+    expect(union, "practice.ts no longer declares FeedbackReason as expected").toBeTruthy();
+    const sheet = /const REASONS: [^=]*= \[([\s\S]*?)\];/.exec(client("src", "ui", "report.tsx"));
+    expect(sheet, "report.tsx no longer declares REASONS as expected").toBeTruthy();
+    const offered = [...sheet![1].matchAll(/id: "([a-z_]+)"/g)].map((m) => m[1]).sort();
+
+    const ledger = [...REASONS].sort();
+    expect(ledger.length).toBeGreaterThan(0);
+    expect(quoted(worker![1]), "queries.ts FEEDBACK_REASONS").toEqual(ledger);
+    expect(quoted(union![1]), "practice.ts FeedbackReason").toEqual(ledger);
+    expect(offered, "report.tsx REASONS").toEqual(ledger);
   });
 });
