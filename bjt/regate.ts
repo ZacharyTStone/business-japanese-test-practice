@@ -30,9 +30,7 @@ import { errText, get, isodateUtc, min, or, print, repr, slice, splitlines, spli
 import * as publish from "./publish.ts";
 import * as withdrawn from "./withdrawn.ts";
 import { type Log, Shelf, surveyBundles, UNREACHABLE_PATIENCE } from "./backfill.ts";
-
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "./types.ts";
 
 export const REGATE_LEDGER_NAME = "regated.txt";
 

@@ -29,6 +29,7 @@ import { get, KeyError, len, or, truthy, ValueError, WS } from "../py.ts";
 import * as schemas from "../schemas.ts";
 import * as document from "../render/document.ts";
 import * as tts_plan from "../tts/plan.ts";
+import type { Item } from "../types.ts";
 
 /** Keigo no speaker produces. Every pattern here is taken from a real
  *  over-polite distractor: させていただく stacked on itself, できかねる given a
@@ -172,8 +173,6 @@ export const PROMPT = (
   + "would really be making — a date is not the wrong person's action, and a word "
   + "every option shares is not a surface match."
 );
-
-type Item = Record<string, any>;
 
 /** (where, text) for everything `bjt/tts/plan.ts` would synthesise. */
 export function _spokenTexts(item: Item): [string, string][] {

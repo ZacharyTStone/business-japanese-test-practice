@@ -40,9 +40,7 @@ import { get, or, sorted, splitlines, strip, truthy } from "./py.ts";
 import { dumps, loads } from "./pyjson.ts";
 import * as regate from "./regate.ts";
 import * as withdrawn from "./withdrawn.ts";
-
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "./types.ts";
 
 /** Fields of a published item that are about the bundle or the bank rather
  *  than the item as an example: identity, provenance, media, the answer key

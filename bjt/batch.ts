@@ -39,9 +39,8 @@ import * as schemas from "./schemas.ts";
 import * as seedtable from "./seedtable.ts";
 import * as tts_plan from "./tts/plan.ts";
 import * as withdrawn from "./withdrawn.ts";
+import type { Item } from "./types.ts";
 
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
 type Bundle = Record<string, any>;
 
 /** The bundle format: audio clip ids filed by role (`narration` / `options` /
