@@ -583,6 +583,23 @@ export function eq(a: unknown, b: unknown): boolean {
   return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && eq((a as any)[k], (b as any)[k]));
 }
 
+/** `for x in value`, as Python iterates a parsed JSON value: a list's
+ *  elements, a string's characters, a dict's keys; anything else a
+ *  TypeError. */
+export function iterOf(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string") return [...v];
+  if (isDict(v)) return Object.keys(v);
+  throw new TypeError_(`'${typeof v}' object is not iterable`);
+}
+
+/** `for x in (value or [])`: nothing for None, False, 0 or "", else as
+ *  `iterOf`. */
+export function iterOr(v: unknown): unknown[] {
+  if (v === null || v === undefined || v === false || v === 0 || v === "") return [];
+  return iterOf(v);
+}
+
 /** `d.get(key, default)`: the default only when the key is absent (a key
  *  holding null returns null, unlike `d[key] ?? default`). */
 export function get<T = any>(d: Record<string, any> | null | undefined, key: string, dflt: T | null = null): any {
