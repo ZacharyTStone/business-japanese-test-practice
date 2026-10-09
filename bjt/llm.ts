@@ -430,8 +430,8 @@ function _sleep(seconds: number): Promise<void> {
  *  the Anthropic client (Python's `_get_client`) and the wait between
  *  retries (`_sleep`). */
 export const seams = {
-  getClient: _getClient as () => MessagesClient,
-  sleep: _sleep as (seconds: number) => Promise<void>,
+  getClient: _getClient,
+  sleep: _sleep,
 };
 
 /** The HTTP status an error carries (the SDK's `status`), or null. */

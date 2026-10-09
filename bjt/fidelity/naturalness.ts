@@ -232,7 +232,7 @@ export function twinsOfKey(item: Item): [number, string][] {
     const text = inContext(get(o, "text", ""));
     const isTwin = STANDARD_TWINS.some(([pattern, swap]) =>
       [...keyText.matchAll(pattern)].some((m) =>
-        keyText.slice(0, m.index) + swap + keyText.slice(m.index! + m[0].length) === text));
+        keyText.slice(0, m.index) + swap + keyText.slice(m.index + m[0].length) === text));
     if (isTwin) out.push([i, get(o, "text", "")]);
   });
   return out;

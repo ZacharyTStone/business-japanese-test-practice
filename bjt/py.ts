@@ -243,7 +243,7 @@ export function truthy(v: unknown): boolean {
   if (typeof v === "number" && Number.isNaN(v)) return false;
   if (Array.isArray(v)) return v.length > 0;
   if (v instanceof Map || v instanceof Set) return v.size > 0;
-  if (typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) return Object.keys(v as object).length > 0;
+  if (typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) return Object.keys(v).length > 0;
   return true;
 }
 
@@ -587,7 +587,7 @@ export function eq(a: unknown, b: unknown): boolean {
     const bb = b as unknown[];
     return a.length === bb.length && a.every((x, i) => eq(x, bb[i]));
   }
-  const ka = Object.keys(a as object);
+  const ka = Object.keys(a);
   const kb = Object.keys(b as object);
   if (ka.length !== kb.length) return false;
   return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && eq((a as any)[k], (b as any)[k]));
