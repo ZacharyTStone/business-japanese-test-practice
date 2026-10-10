@@ -1,0 +1,242 @@
+{
+  "_note": "Manual load, written in an interactive session from the generator's own system prompt and seed-cell spec, with no generator key. Original compositions, NOT official BJT material; every company, person, date and amount is invented. `bjt importbatch` validated each item against the schema and ran the offline batch checks; the answerability gate, the proofreader and the difficulty probe did not run, so `model_p_correct` is absent on purpose and `bjt regate` has not seen these yet.",
+  "item_type": "sougou_dokkai",
+  "level": "J2",
+  "source": "manual-load",
+  "items": [
+    {
+      "seed_cell_id": "project_update+staff_to_client+infer_intent@J2",
+      "topic": "進捗報告で本当に頼みたいこと",
+      "channel": "written",
+      "document": {
+        "template": "progress_report",
+        "title": "配送管理システム更新 進捗報告（第6回）",
+        "meta": [
+          {
+            "label": "報告者",
+            "value": "ひかりソフト 開発部 松本"
+          },
+          {
+            "label": "報告日",
+            "value": "10月12日"
+          },
+          {
+            "label": "案件",
+            "value": "北斗運輸様 配送管理システム更新"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "北斗運輸株式会社 情報システム部 西田様　いつもお世話になっております。今週の進捗をご報告いたします。先週お伝えした要件定義の遅れは、作業の順番を入れ替えることで取り戻すことができました。"
+          },
+          {
+            "type": "table",
+            "caption": "工程表",
+            "columns": [
+              "工程",
+              "予定",
+              "状況"
+            ],
+            "rows": [
+              [
+                "要件定義",
+                "9月30日まで",
+                "完了"
+              ],
+              [
+                "画面設計",
+                "10月9日まで",
+                "設計書をお送り済み・ご確認待ち"
+              ],
+              [
+                "開発",
+                "10月19日〜11月13日",
+                "未着手"
+              ],
+              [
+                "テスト",
+                "11月16日〜11月27日",
+                "未着手"
+              ],
+              [
+                "本番切り替え",
+                "12月7日",
+                "未着手"
+              ]
+            ]
+          },
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "課題と対応"
+          },
+          {
+            "type": "bullets",
+            "items": [
+              "画面設計書は9月30日にお送りし、10月9日にご確認の結果をいただく予定でしたが、まだいただいておりません。",
+              "ご確認の結果をいただいてから開発の準備を整えるまでに、2営業日を見込んでおります。",
+              "本番切り替えの12月7日は、御社の年末の繁忙期に入る前にとのご意向を伺っておりますので、動かさない前提で計画しております。"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "ご多忙のところ恐縮ですが、ご確認の状況について、一度お聞かせいただけますと幸いです。"
+          }
+        ]
+      },
+      "stem": "松本さんがこの報告書で最も伝えたいことは何ですか。",
+      "options": [
+        {
+          "text": "画面設計書の確認を、早めに返してほしい。",
+          "role": "correct",
+          "why": "確認の結果が届かないと開発の準備に入れず、12月7日も動かせないので、早く返事がほしいというのが用件である。"
+        },
+        {
+          "text": "要件定義の遅れは、もう取り戻すことができた。",
+          "role": "stated_but_answers_different_question",
+          "why": "報告書に書かれている事実だが、すでに解決した話で、相手に求めていることではない。"
+        },
+        {
+          "text": "要件定義の内容を、改めて確認してほしい。",
+          "role": "surface_keyword_match",
+          "why": "確認を待っているのは画面設計書で、要件定義はすでに完了している。"
+        },
+        {
+          "text": "本番切り替えを、12月より後にずらしたい。",
+          "role": "unsupported_but_plausible",
+          "why": "遅れが出た案件ではよくある相談だが、12月7日は動かさない前提だと書いてある。"
+        }
+      ],
+      "explanation_ja": "工程表と課題を合わせて読むと、画面設計書の確認結果がまだ届いておらず、届いてから開発の準備に2営業日かかる。開発は10月19日に始める予定で、本番の12月7日は北斗運輸の希望で動かせない。だから、確認を早く返してほしいというのが松本さんの用件で、最後の「ご確認の状況について、一度お聞かせいただけますと幸いです」はその控えめな言い方である。要件定義の遅れは取り戻したと書いてあるが、相手に求めることではない。本番をずらす話は書かれておらず、むしろ動かさない前提である。確認を待っているのは画面設計書で、要件定義はすでに完了している。",
+      "explanation_en": "The design review is overdue, development needs two business days after it, and the go-live date cannot move, so the polite closing line is really a request to return the review quickly.",
+      "vocab_notes": [
+        {
+          "term": "進捗",
+          "reading": "しんちょく",
+          "meaning": "progress"
+        },
+        {
+          "term": "工程表",
+          "reading": "こうていひょう",
+          "meaning": "project schedule"
+        },
+        {
+          "term": "本番切り替え",
+          "reading": "ほんばんきりかえ",
+          "meaning": "go-live cutover"
+        },
+        {
+          "term": "繁忙期",
+          "reading": "はんぼうき",
+          "meaning": "busy season"
+        }
+      ]
+    },
+    {
+      "seed_cell_id": "internal_change+superior_to_subordinate+infer_risk@J2",
+      "topic": "通知の期限とシステムの開始日",
+      "channel": "written",
+      "document": {
+        "template": "memo_notice",
+        "title": "会議室の予約方法の変更について",
+        "meta": [
+          {
+            "label": "発信者",
+            "value": "総務部長 小川"
+          },
+          {
+            "label": "発信日",
+            "value": "10月20日"
+          },
+          {
+            "label": "対象",
+            "value": "全社員"
+          }
+        ],
+        "blocks": [
+          {
+            "type": "paragraph",
+            "text": "これまで各階の紙の予約表で受け付けていた会議室の予約を、新しい予約システムに切り替えます。予約システムは11月2日（月）の朝9時から利用できるようになります。準備の都合上、それより前には画面を開くことができませんので、ご注意ください。"
+          },
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "全社員にお願いすること"
+          },
+          {
+            "type": "numbered",
+            "items": [
+              "11月2日以降の会議室の利用は、すべて予約システムから予約してください。",
+              "紙の予約表にすでに記入してある11月分の予約は、10月30日（金）までに、予約した本人が予約システムに入れ直してください。入れ直されていない予約は無効になります。",
+              "10月中の予約は、これまでどおり紙の予約表で受け付けます。"
+            ]
+          },
+          {
+            "type": "heading",
+            "level": 2,
+            "text": "部署ごとのお願い"
+          },
+          {
+            "type": "bullets",
+            "items": [
+              "営業部：来客用の応接室は、これまでどおり受付で予約してください。予約システムでは扱いません。",
+              "総務部：紙の予約表は、10月30日の終業後に各階から回収します。"
+            ]
+          },
+          {
+            "type": "paragraph",
+            "text": "予約システムの使い方は、社内ポータルの「総務部からのお知らせ」にマニュアルを掲載しています。"
+          }
+        ]
+      },
+      "stem": "この通知について、総務部に確認すべき問題は何ですか。",
+      "options": [
+        {
+          "text": "10月中の予約まで、入れ直しが必要になること。",
+          "role": "wrong_timeframe",
+          "why": "10月中の予約は紙の予約表のままでよく、入れ直すのは11月分だけである。"
+        },
+        {
+          "text": "期限までに、予約システムで入れ直せないこと。",
+          "role": "correct",
+          "why": "入れ直しの期限は10月30日だが、システムが開くのは11月2日の朝で、期限までには入れ直すことができない。"
+        },
+        {
+          "text": "応接室の予約が、予約システムでできないこと。",
+          "role": "stated_but_answers_different_question",
+          "why": "書かれているとおりだが、応接室は受付で予約するという決まりで、問題ではない。"
+        },
+        {
+          "text": "予約システムの使い方を、教わる機会がないこと。",
+          "role": "unsupported_but_plausible",
+          "why": "新しいシステムではよく心配されることだが、使い方のマニュアルは社内ポータルに掲載されている。"
+        }
+      ],
+      "explanation_ja": "通知の最初に、予約システムは11月2日の朝9時から使え、それより前は画面も開けないと書いてある。ところが、紙の予約表の11月分は10月30日までにシステムへ入れ直すよう求めていて、入れ直されない予約は無効になる。期限の時点ではまだシステムが使えないので、このままでは誰も入れ直せず、11月分の予約がすべて無効になってしまう。これが総務部に確認すべき問題である。10月中の予約は紙のままでよい。応接室を受付で予約するのは決まりで、問題ではない。使い方はマニュアルが社内ポータルにある。",
+      "explanation_en": "The notice asks for November bookings to be re-entered by 30 October, but says the system cannot be opened until 2 November, so nobody can meet the deadline.",
+      "vocab_notes": [
+        {
+          "term": "予約表",
+          "reading": "よやくひょう",
+          "meaning": "booking sheet"
+        },
+        {
+          "term": "無効",
+          "reading": "むこう",
+          "meaning": "invalid, void"
+        },
+        {
+          "term": "回収",
+          "reading": "かいしゅう",
+          "meaning": "to collect (back)"
+        },
+        {
+          "term": "終業",
+          "reading": "しゅうぎょう",
+          "meaning": "end of the working day"
+        }
+      ]
+    }
+  ]
+}

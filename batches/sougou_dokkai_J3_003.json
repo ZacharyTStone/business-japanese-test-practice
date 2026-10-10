@@ -1,0 +1,267 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_dokkai",
+  "level": "J3",
+  "generated_at": "2026-10-10T04:55:33+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "ba7c336590",
+      "item_type": "sougou_dokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "internal_change+subordinate_to_superior+infer_tone@J3",
+        "setting": "internal_change",
+        "relation": "subordinate_to_superior",
+        "function": "infer_tone",
+        "level": "J3",
+        "channel": "written"
+      },
+      "topic": "精算期限の変更を部長に伝える",
+      "stem": "山本さんは、期限を過ぎた精算について、どう考えていますか。",
+      "options": [
+        {
+          "text": "部長からの連絡があれば、受け付けたいと考えている。",
+          "role": "wrong_timeframe",
+          "why": "部長の連絡で受け付けていたのはこれまでのやり方で、11月からはそうしない。"
+        },
+        {
+          "text": "申し訳ないと思いつつ、受け付けないと決めている。",
+          "role": "correct",
+          "why": "急な変更をおわびしているが、「ただ」のあとで、連絡があっても受け付けないとはっきり書いている。"
+        },
+        {
+          "text": "監査の指摘は、おかしいと思って不満を感じている。",
+          "role": "unsupported_but_plausible",
+          "why": "ルールを変える人がそう思うこともあるが、通知には監査への不満はどこにも書かれていない。"
+        },
+        {
+          "text": "部長の出張だけは、特別に受け付けたいと考えている。",
+          "role": "surface_keyword_match",
+          "why": "「部長ご自身の出張」は出てくるが、同じ扱い、つまり特別扱いはしないと書いてある。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "山本さんは、監査で指摘を受けたことを説明し、部長たちに急な変更をおわびしている。しかし「ただ」のあとで、部長から連絡があっても、部長自身の出張でも、期限を過ぎた精算は受け付けないとはっきり書いている。おわびの気持ちはあるが、例外は作らないという態度である。部長の連絡で受け付けるのは11月より前のやり方。監査への不満はどこにも書かれていない。部長の出張も同じ扱いなので、特別扱いはしない。",
+      "explanation_en": "Yamamoto apologises for the sudden change but, after ただ, is firm: no late claims, not even with a manager's word or for a manager's own trip.",
+      "vocab_notes": [
+        {
+          "term": "精算",
+          "reading": "せいさん",
+          "meaning": "settling expenses"
+        },
+        {
+          "term": "監査",
+          "reading": "かんさ",
+          "meaning": "audit"
+        },
+        {
+          "term": "指摘",
+          "reading": "してき",
+          "meaning": "a point raised, criticism"
+        },
+        {
+          "term": "内線",
+          "reading": "ないせん",
+          "meaning": "extension (phone)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "memo_notice",
+          "title": "出張旅費の精算期限の変更について（お願い）",
+          "meta": [
+            {
+              "label": "発信者",
+              "value": "総務課 山本"
+            },
+            {
+              "label": "発信日",
+              "value": "10月15日"
+            },
+            {
+              "label": "対象",
+              "value": "各部の部長"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "部長の皆様　いつもお世話になっております。総務課の山本です。11月から、出張旅費の精算の期限が変わりますので、お知らせいたします。"
+            },
+            {
+              "type": "table",
+              "caption": "精算の期限",
+              "columns": [
+                "項目",
+                "これまで",
+                "11月から"
+              ],
+              "rows": [
+                [
+                  "精算の期限",
+                  "出張から戻って1か月以内",
+                  "出張から戻って2週間以内"
+                ],
+                [
+                  "期限を過ぎた精算",
+                  "部長からご連絡があれば受付",
+                  "受付不可"
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "9月の監査で、期限を過ぎた精算を受け付けていたことについて、指摘を受けました。部長の皆様には、これまでご連絡をいただくなどご協力いただいてきたのに、急な変更となり、大変申し訳ございません。"
+            },
+            {
+              "type": "paragraph",
+              "text": "ただ、11月からは、部長の皆様からご連絡をいただいた場合も、期限を過ぎた精算はお受けすることができません。部長ご自身の出張も同じ扱いとなります。部内の皆様へのご連絡を、どうぞよろしくお願いいたします。"
+            },
+            {
+              "type": "callout",
+              "tone": "action",
+              "text": "精算書の提出先：総務課 山本（内線2143）"
+            }
+          ]
+        }
+      ],
+      "channel": "written"
+    },
+    {
+      "id": "a79f9a4213",
+      "item_type": "sougou_dokkai",
+      "level": "J3",
+      "seed_cell": {
+        "id": "project_update+peer_to_peer+infer_cause@J3",
+        "setting": "project_update",
+        "relation": "peer_to_peer",
+        "function": "infer_cause",
+        "level": "J3",
+        "channel": "written"
+      },
+      "topic": "撮影が遅れた理由",
+      "stem": "写真の撮影が予定より遅れたのは、なぜですか。",
+      "options": [
+        {
+          "text": "表紙の文章が、まだできていないから",
+          "role": "wrong_timeframe",
+          "why": "表紙と目次の文章は10月9日にもうできていて、撮影の遅れとは関係がない。"
+        },
+        {
+          "text": "工場の見学が、11月に延びたから",
+          "role": "surface_keyword_match",
+          "why": "「工場」も「延びた」も議事録にあるが、見学の話で、撮影とは別の件である。"
+        },
+        {
+          "text": "印刷会社への入稿が、遅れることになったから",
+          "role": "stated_but_answers_different_question",
+          "why": "入稿が11月4日に延びたのは事実だが、撮影が遅れた結果で、原因ではない。"
+        },
+        {
+          "text": "色が一つ増えて、サンプルを待つから",
+          "role": "correct",
+          "why": "営業部の依頼で緑が加わり、そのサンプルが20日に届く。全部の色がそろってから撮るので、撮影が22日になった。"
+        }
+      ],
+      "correct_index": 3,
+      "explanation_ja": "議事録には、営業部から緑の色を加えてほしいと依頼があり、そのサンプルを工場で新しく作るので届くのが20日になること、撮影は全部の色のサンプルがそろってから行うことが書いてある。この二つを合わせると、色が一つ増えてサンプルを待つことになったのが、撮影が14日から22日に遅れた理由だとわかる。表紙の文章は9日にできている。工場の見学が延びたのは別の件である。入稿が11月4日に延びたのは撮影が遅れた結果で、原因ではない。",
+      "explanation_en": "A green colour was added, its sample arrives on the 20th, and shooting waits for every colour, so the shoot moved from the 14th to the 22nd.",
+      "vocab_notes": [
+        {
+          "term": "撮影",
+          "reading": "さつえい",
+          "meaning": "photo shoot"
+        },
+        {
+          "term": "入稿",
+          "reading": "にゅうこう",
+          "meaning": "sending final data to the printer"
+        },
+        {
+          "term": "持ち越し",
+          "reading": "もちこし",
+          "meaning": "carried over (to next time)"
+        },
+        {
+          "term": "議事録",
+          "reading": "ぎじろく",
+          "meaning": "minutes"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "meeting_minutes",
+          "title": "新商品カタログ制作 打ち合わせ 議事録",
+          "meta": [
+            {
+              "label": "日時",
+              "value": "10月13日 15時"
+            },
+            {
+              "label": "場所",
+              "value": "第1会議室"
+            },
+            {
+              "label": "出席者",
+              "value": "高橋、中村、林（記録）"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "1. 進み具合"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "表紙と目次の文章は、予定どおり10月9日にできた。",
+                "10月6日、営業部から、新商品のマグカップに色をもう一つ（緑）加えてほしいと依頼があった。",
+                "緑のサンプルは工場で新しく作ることになり、届くのは10月20日になる。",
+                "写真の撮影は、全部の色のサンプルがそろってから行う。"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "2. 決まったこと"
+            },
+            {
+              "type": "numbered",
+              "items": [
+                "撮影日は、10月14日から10月22日に変更する。カメラマンへの連絡は中村が行う。",
+                "印刷会社へのデータの入稿は、10月28日から11月4日に変更する。印刷会社への連絡は高橋が行う。"
+              ]
+            },
+            {
+              "type": "heading",
+              "level": 2,
+              "text": "3. 次回に持ち越し"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "工場の見学は、先方の都合で11月に延びた。日程と担当者は次回決める。",
+                "カタログに載せる価格の書き方は、営業部の確認を待って次回決める。"
+              ]
+            }
+          ]
+        }
+      ],
+      "channel": "written"
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}

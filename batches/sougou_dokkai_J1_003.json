@@ -1,0 +1,297 @@
+{
+  "bundle_version": 2,
+  "item_type": "sougou_dokkai",
+  "level": "J1",
+  "generated_at": "2026-10-10T04:56:01+00:00",
+  "generator_model": "manual-load",
+  "items": [
+    {
+      "id": "494cf99788",
+      "item_type": "sougou_dokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "condolence_notice+superior_to_subordinate+infer_next_step@J1",
+        "setting": "condolence_notice",
+        "relation": "superior_to_subordinate",
+        "function": "infer_next_step",
+        "level": "J1",
+        "channel": "written"
+      },
+      "topic": "弔電の宛名がわからない",
+      "stem": "このメールを受け取った山下さんが、まずすべきことは何ですか。",
+      "options": [
+        {
+          "text": "総務部の小池さんに、供花の手配を急いでもらう。",
+          "role": "wrong_timeframe",
+          "why": "供花は朝の時点の予定で、ご遺族が辞退されたため、最新のメールで取り消しになっている。"
+        },
+        {
+          "text": "14日の通夜に、担当者として参列する。",
+          "role": "stated_but_answers_different_question",
+          "why": "通夜への参列は頼まれているが14日のことで、弔電を間に合わせるために今日すべきことが先にある。"
+        },
+        {
+          "text": "北斗運輸の佐野様に、喪主のお名前を伺う。",
+          "role": "correct",
+          "why": "弔電は喪主の名前がわかればすぐ出せるのに、案内には名前がなかった。先方の佐野様とやりとりしているのは山下さんである。"
+        },
+        {
+          "text": "弔電の文面を考えて、田村部長に確認してもらう。",
+          "role": "unsupported_but_plausible",
+          "why": "部下が文案を作るのはよくあることだが、このメールでは文面は小池さんが用意することになっている。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "最新のメールで、供花は取り消し、代わりに社長名の弔電を打つことになった。弔電は小池さんが文面を用意し、宛名にする喪主の名前さえわかればすぐに出せる。ところが山下さんのメールにあるとおり、案内には喪主の名前がなかった。先方の総務部の佐野様と連絡を取っているのは山下さんなので、まず佐野様に喪主の名前を伺うのが最初にすべきことになる。供花の手配は朝の時点の予定で、すでに取り消された。通夜への参列は14日の予定で、今日まずすることではない。弔電の文面は小池さんが用意するので、山下さんが文案を作る必要はない。",
+      "explanation_en": "The telegram can go as soon as the chief mourner's name is known, and the funeral notice did not give it, so Yamashita, who is the one in touch with the client, must ask for it first.",
+      "vocab_notes": [
+        {
+          "term": "供花",
+          "reading": "きょうか",
+          "meaning": "funeral flowers sent as an offering"
+        },
+        {
+          "term": "弔電",
+          "reading": "ちょうでん",
+          "meaning": "telegram of condolence"
+        },
+        {
+          "term": "喪主",
+          "reading": "もしゅ",
+          "meaning": "chief mourner"
+        },
+        {
+          "term": "辞退",
+          "reading": "じたい",
+          "meaning": "to decline (politely)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "email_thread",
+          "title": "Re: Re: 北斗運輸 木村前会長のご逝去について",
+          "meta": [
+            {
+              "label": "差出人",
+              "value": "営業部 部長 田村"
+            },
+            {
+              "label": "宛先",
+              "value": "営業二課 山下、総務部 小池"
+            },
+            {
+              "label": "件名",
+              "value": "Re: Re: 北斗運輸 木村前会長のご逝去について"
+            },
+            {
+              "label": "日時",
+              "value": "10月12日 17時"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "山下さん、小池さん"
+            },
+            {
+              "type": "paragraph",
+              "text": "ご遺族のご意向がわかりましたので、供花はお出ししないことにします。小池さん、手配を進めていただいていたところ申し訳ありませんが、取り消しをお願いします。"
+            },
+            {
+              "type": "paragraph",
+              "text": "代わりに、社長名で弔電を打ちます。文面は小池さんが用意してくださるとのことで、告別式の前日までに斎場へ届けば10分間に合います。小池さんからは、宛名にする喪主の方のお名前さえわかれば、すぐにでも手配できると聞いています。"
+            },
+            {
+              "type": "paragraph",
+              "text": "通夜は、私が大阪出張と重なってしまうので、担当の山下さんが参列してください。告別式には私が伺います。　田村"
+            },
+            {
+              "type": "quoted_message",
+              "sender": "営業二課 山下",
+              "sent_at": "10月12日 15時",
+              "depth": 1,
+              "text": "田村部長　北斗運輸の総務部の佐野様から、通夜・告別式のご案内をいただきました。通夜は10月14日18時から、告別式は10月15日11時から、いずれも青葉斎場で行われます。なお、ご遺族のご意向により、ご香典・ご供花は辞退されるとのことです。ご案内には、喪主のお名前の記載はありませんでした。供花の件がありますので、総務部の小池さんにもCCで入っていただきました。　山下"
+            },
+            {
+              "type": "quoted_message",
+              "sender": "営業部 部長 田村",
+              "sent_at": "10月12日 9時",
+              "depth": 2,
+              "text": "山下さん　北斗運輸の前会長の木村様が、10月11日にお亡くなりになったと、先方の総務部から連絡がありました。長年お世話になった方ですので、当社からは社長名で供花をお出ししたいと考えており、総務部の小池さんに準備をお願いしてあります。先方から通夜・告別式のご案内が届いたら、内容を知らせてください。　田村"
+            }
+          ]
+        }
+      ],
+      "channel": "written"
+    },
+    {
+      "id": "2d4b389749",
+      "item_type": "sougou_dokkai",
+      "level": "J1",
+      "seed_cell": {
+        "id": "scheduling+superior_to_subordinate+infer_owner@J1",
+        "setting": "scheduling",
+        "relation": "superior_to_subordinate",
+        "function": "infer_owner",
+        "level": "J1",
+        "channel": "written"
+      },
+      "topic": "来社の時間変更に誰が対応するか",
+      "stem": "21日の北斗運輸の来社には、誰が対応するのが適切ですか。",
+      "options": [
+        {
+          "text": "北斗運輸の見積を作った中川さん",
+          "role": "wrong_timeframe",
+          "why": "中川さんは元の14時なら対応できたが、16時は大和銀行の訪問と重なり、その訪問は動かせない。"
+        },
+        {
+          "text": "打ち合わせに出ていた石井さん",
+          "role": "correct",
+          "why": "14日の打ち合わせに出ていて経緯がわかり、16時の研修は録画で後から見られるので、時間を空けられる。"
+        },
+        {
+          "text": "午後に見積書を作っている大野さん",
+          "role": "surface_keyword_match",
+          "why": "大野さんが作っているのは東和電機の見積書で、北斗運輸の件ではなく、打ち合わせにも出ていない。"
+        },
+        {
+          "text": "課の責任者である森課長",
+          "role": "unsupported_but_plausible",
+          "why": "大事な来客に課長が出ることはよくあるが、森課長は16時から本社の課長会議に出る。"
+        }
+      ],
+      "correct_index": 1,
+      "explanation_ja": "来社は16時からに変わった。森課長は、これまでの経緯がわかっている人、つまり14日の打ち合わせに出た中川さんか石井さんに頼みたいと書いている。中川さんは16時に大和銀行を訪問中で、その訪問は先方の支店長がわざわざ時間を空けてくれたものなので動かしにくい。石井さんの研修は録画で月内に見られるので、石井さんが対応できる。中川さんは元の14時の予定での担当で、時間の変更を見落としている。大野さんが午後に作っているのは東和電機の見積書で、北斗運輸の経緯は知らない。森課長は16時から本社で課長会議がある。",
+      "explanation_en": "Only Ishii both attended the earlier meeting and can free the 16:00 slot, since the training is recorded; Nakagawa's bank visit cannot move.",
+      "vocab_notes": [
+        {
+          "term": "経緯",
+          "reading": "けいい",
+          "meaning": "how things have developed so far"
+        },
+        {
+          "term": "来社",
+          "reading": "らいしゃ",
+          "meaning": "a visit to the company"
+        },
+        {
+          "term": "支店長",
+          "reading": "してんちょう",
+          "meaning": "branch manager"
+        },
+        {
+          "term": "録画",
+          "reading": "ろくが",
+          "meaning": "a recording (video)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "documents": [
+        {
+          "template": "schedule",
+          "title": "営業一課 予定表",
+          "meta": [
+            {
+              "label": "期間",
+              "value": "10月21日（水）"
+            },
+            {
+              "label": "作成者",
+              "value": "営業一課 課長 森"
+            }
+          ],
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "北斗運輸の田辺様から、21日の来社を14時から16時に変えていただけないかとご連絡がありました。場所は第2会議室のまま、1時間ほどの予定です。"
+            },
+            {
+              "type": "table",
+              "caption": "10月21日（水）の課内の予定",
+              "columns": [
+                "時間",
+                "予定",
+                "担当",
+                "場所"
+              ],
+              "rows": [
+                [
+                  "9:00〜9:30",
+                  "課内会議",
+                  "全員",
+                  "第1会議室"
+                ],
+                [
+                  "10:30〜12:00",
+                  "東和電機 訪問",
+                  "大野",
+                  "外出"
+                ],
+                [
+                  "13:00〜14:00",
+                  "新人面談",
+                  "森",
+                  "第3会議室"
+                ],
+                [
+                  "14:00〜15:00",
+                  "北斗運輸 来社（見積のご説明）",
+                  "中川・石井",
+                  "第2会議室"
+                ],
+                [
+                  "15:00〜16:00",
+                  "東和電機 見積書の作成",
+                  "大野",
+                  "自席"
+                ],
+                [
+                  "15:30〜17:30",
+                  "大和銀行 訪問",
+                  "中川",
+                  "外出"
+                ],
+                [
+                  "16:00〜17:00",
+                  "情報セキュリティ研修",
+                  "石井",
+                  "7階 研修室"
+                ],
+                [
+                  "16:00〜18:00",
+                  "課長会議",
+                  "森",
+                  "本社"
+                ]
+              ]
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "北斗運輸の見積は中川さんが作成し、14日の打ち合わせには中川さんと石井さんが出席しています。",
+                "大和銀行の訪問は、先方の支店長がわざわざ時間を空けてくださったものです。",
+                "情報セキュリティ研修は録画が残るので、出られなかった人は月内に見ておいてください。"
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "先方のご事情もありますので、できればお受けしたいと思います。見積のご説明は、これまでの経緯がわかっている人にお願いしたいので、表を見て、引き受けられる人は今日中に私に知らせてください。"
+            }
+          ]
+        }
+      ],
+      "channel": "written"
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}
