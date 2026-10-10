@@ -8,7 +8,7 @@
  * lets it through; these hold them to that.
  */
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import * as cli from "../bjt/cli/index.ts";
 import * as fixtures from "../bjt/fixtures.ts";
 import * as jev from "../bjt/jev.ts";
@@ -22,6 +22,12 @@ import * as difficulty from "../bjt/fidelity/difficulty.ts";
 import * as sanity from "../bjt/fidelity/sanity.ts";
 import { goiItem, store } from "./conftest.ts";
 import { capture, patch, setConfig, tmpPath } from "./helpers.ts";
+
+// These tests exercise the pass-rate probe ("trials"); the confidence
+// probe, the default since 2026-10-10, has its own in confidence.test.ts.
+beforeEach(() => {
+  setConfig({ DIFFICULTY_METHOD: "trials" });
+});
 
 async function _ceiling(..._args: unknown[]): Promise<never> {
   throw new llm.LLMSpendLimitError("spend ceiling reached: $0.50 of $0.50");

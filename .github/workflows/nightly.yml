@@ -131,7 +131,7 @@ on:
         required: false
         default: false
       probe:
-        description: "Instead of writing items, measure the difficulty of the live questions that have none (bjt probe --all): same ceilings, a pull request as usual, no pictures"
+        description: "Instead of writing items, measure the difficulty of the live questions that have none, or a rate of an older kind (bjt probe --all): same ceilings, a pull request as usual, no pictures"
         type: boolean
         required: false
         default: false
@@ -669,7 +669,7 @@ jobs:
             title="Regate: $(date -u +%Y-%m-%d)"
           elif [ "${{ steps.keys.outputs.probe }}" = "true" ]; then
             subject="Measure the difficulty of the questions that have none"
-            body="Written by the difficulty probe (bjt probe --all). It sets model_p_correct on live questions that shipped without one. The nightly workflow merges it once the checks pass on this branch, and the deploy applies the SQL."
+            body="Written by the difficulty probe (bjt probe --all). It sets model_p_correct on live questions that shipped without one, or with a rate of an older kind than the probe writes now. The nightly workflow merges it once the checks pass on this branch, and the deploy applies the SQL."
             title="Difficulty probe: $(date -u +%Y-%m-%d)"
           else
             subject="Fill the emptiest shelves of the bank"

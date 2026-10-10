@@ -299,8 +299,11 @@ are shuffled afterwards.
    | 画像把握 | the picture and question |
 
 5. **<a id="the-difficulty-probe"></a>Difficulty probe** — a *weaker* model
-   (Haiku) takes the full view 5 times; its pass rate becomes `model_p_correct`.
-   If it can't run, nothing is written. Prototype: **Jev** (TypeSafe AI) returns
+   (Haiku) takes the full view once per rotation of the four options and gives
+   a probability for each; the mean probability on the key becomes
+   `model_p_correct` (a pass rate over 5 picks saturated at 1.0). Each bundle
+   records which kind of rate it holds, and `bjt probe --all` re-measures the
+   rest. If it can't run, nothing is written. Prototype: **Jev** (TypeSafe AI) returns
    a probability per option in one call; off unless switched on, and `bjt probe
    --compare jev-latest` compares the two without writing anything. Jev costs
    $0.042 per million input tokens, and output is free: about 700 tokens and
@@ -367,7 +370,7 @@ queue.
   open a PR — the night's record — then run **checks** on that branch and, when
   every job is green, merge it and start **deploy database**. A red check leaves
   the PR open with a comment saying why. Manual options: **probe** (measure
-  unrated questions) or **compare_jev** (Jev vs the default probe; writes
+  unrated questions, and re-measure any bundle of an older kind) or **compare_jev** (Jev vs the default probe; writes
   nothing). Work is saved as an artifact before any push.
 * **checks** (every push to `main`, every PR, and each night's branch) — the
   pipeline's vitest suite, typecheck and lint, the database tests
@@ -540,7 +543,7 @@ bjt publish batches/hatsugen_choukai_J2_002.json
 | `bjt synth <bundle>`, `audition` | Make audio; compare voices. |
 | `bjt scenes`, `render` | Draw/review pictures; render a document to HTML. |
 | `bjt grant`, `tester <email>` | SQL for the ad-free unlock / the tester list (`--unlimited`, `--veto`, `--max-goal N`). |
-| `bjt probe --all [--compare MODEL]` | Measure unrated items' difficulty; or compare two instruments, writing nothing. |
+| `bjt probe --all [--compare MODEL]` | Measure unrated items' difficulty (and every item of a bundle measured another way); or compare two instruments, writing nothing. |
 | `bjt regate --all [--withdraw]` | Re-check imported items; propose withdrawals. |
 
 ### Configuration
@@ -551,7 +554,7 @@ Environment variables (`bjt/config.ts`; a root `.env` is loaded).
 |---|---|---|
 | `BJT_MODEL` · `BJT_JUDGE_MODEL` | `claude-sonnet-5` | writer · gate/judge/picture reviewer |
 | `BJT_SANITY_MODEL` | `claude-haiku-4-5` | proofreader (`BJT_SANITY=0` skips) |
-| `BJT_DIFFICULTY_MODEL` · `_TRIALS` | proofreader's model · `5` | difficulty probe (`jev-latest` + `TYPESAFE_API_KEY` for Jev) |
+| `BJT_DIFFICULTY_MODEL` · `_TRIALS` · `_METHOD` | proofreader's model · `5` · `confidence` | difficulty probe (`jev-latest` + `TYPESAFE_API_KEY` for Jev) |
 | `BJT_GATE_TRIALS` | `3` | gate tries per view |
 | `BJT_RUN_BUDGET_USD` · `_MAX_CALLS` · `_MAX_MINUTES` | `2` · `500` · `30` | run ceilings |
 | `BJT_SPEND_LEDGER` | unset | a JSON file one job's bjt steps share their spend and clock through |
