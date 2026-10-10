@@ -1,0 +1,74 @@
+{
+  "bundle_version": 2,
+  "item_type": "goi_bunpou",
+  "level": "J3",
+  "generated_at": "2026-10-10T20:06:23+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "15061dc336",
+      "item_type": "goi_bunpou",
+      "level": "J3",
+      "seed_cell": {
+        "id": "quote_document+staff_to_visitor+letter_set_phrase@J3",
+        "setting": "quote_document",
+        "relation": "staff_to_visitor",
+        "function": "letter_set_phrase",
+        "level": "J3",
+        "channel": "written"
+      },
+      "topic": "見積書を添付して送付する",
+      "stem": "ご依頼いただきました見積書を添付いたしましたので、＿＿＿のほどよろしくお願い申し上げます。",
+      "options": [
+        {
+          "text": "ご査収",
+          "role": "correct",
+          "why": "送付した書類を相手に確認のうえ受け取ってもらう際の定型表現で、見積書を添付する文に自然に続く。"
+        },
+        {
+          "text": "ご検収",
+          "role": "real_form_wrong_context",
+          "why": "「ご検収」は納品された商品や成果物を検査したうえで正式に受け入れる場面で使う語で、見積書を確認してもらうだけのこの場面には重すぎる。"
+        },
+        {
+          "text": "ご査受",
+          "role": "nonexistent_form",
+          "why": "「査収」と「受領」を組み合わせたような語感だが、実際のビジネス文書でこのような言い方はされない。"
+        },
+        {
+          "text": "ご笑納",
+          "role": "set_phrase_misfit",
+          "why": "「ご笑納」は贈り物を謙遜して受け取ってもらう際の表現で、見積書のような事務文書には使わない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "添付した書類を確認のうえ受け取ってほしいと伝える場面では「ご査収」が定型表現として使われる。「ご検収」は納品物を検査して正式に受け入れる場面で使う語であり、見積書の確認を依頼するこの文脈には合わない。「ご査受」はそれらしく見えるが実際には使われない言い方である。「ご笑納」は贈答品を受け取ってもらう際に使う表現で、事務文書である見積書には不適切。",
+      "explanation_en": "ご査収 is the set phrase for asking someone to check and receive an attached document; ご検収 is for formally accepting delivered goods, ご査受 is not an actual term, and ご笑納 is used for gifts.",
+      "vocab_notes": [
+        {
+          "term": "ご査収",
+          "reading": "ごさしゅう",
+          "meaning": "please check and accept (the enclosed document)"
+        },
+        {
+          "term": "ご検収",
+          "reading": "ごけんしゅう",
+          "meaning": "formal inspection and acceptance of delivered goods"
+        },
+        {
+          "term": "ご笑納",
+          "reading": "ごしょうのう",
+          "meaning": "please kindly accept (a gift), humble expression"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "model_p_correct": 0.96
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}
