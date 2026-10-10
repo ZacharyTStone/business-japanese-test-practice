@@ -174,6 +174,16 @@ export const GATE_TRIALS = toInt(env("BJT_GATE_TRIALS", "3"));
 export const DIFFICULTY_MODEL = env("BJT_DIFFICULTY_MODEL", "").trim() || SANITY_MODEL;
 export const DIFFICULTY_TRIALS = toInt(env("BJT_DIFFICULTY_TRIALS", "5"));
 
+// How the probe turns the model's answers into a rate. "confidence" (from
+// 2026-10-10) asks for a probability on every option, once per rotation of
+// the options, and the rate is the mean probability on the key: a pass rate
+// over five trials was 1.0 for about half the bank, which orders nothing.
+// "trials" is the pass rate, kept for `bjt probe --compare` and the tests.
+// A bundle records the method its rates came from (`difficulty_method`), and
+// `bjt probe` re-measures every bundle that does not carry the current one,
+// so the bank holds one kind of number.
+export const DIFFICULTY_METHOD = env("BJT_DIFFICULTY_METHOD", "confidence");
+
 // A prototype, off unless asked for: BJT_DIFFICULTY_MODEL=jev-latest makes the
 // probe one call to TypeSafe AI's Jev, which returns a probability for every
 // option instead of an answer, and the probability it gives the key is the rate

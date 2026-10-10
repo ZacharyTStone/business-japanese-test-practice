@@ -13,6 +13,12 @@ import * as document from "../bjt/render/document.ts";
 import { fixtureItem, goiItem } from "./conftest.ts";
 import { patch, setConfig } from "./helpers.ts";
 
+// These tests exercise the pass-rate probe ("trials"); the confidence
+// probe, the default since 2026-10-10, has its own in confidence.test.ts.
+beforeEach(() => {
+  setConfig({ DIFFICULTY_METHOD: "trials" });
+});
+
 type Answer = (question: string, options: string[], opts?: { model?: string | null }) => Promise<Record<string, any>>;
 
 /** Return a stand-in for llm.answerChoice that answers full vs cold views

@@ -225,13 +225,19 @@ accident is not.
   check warns — not fails, since only a reader can tell 「二案」 (a count) from 「案二」
   (a label).
 - **`items.model_p_correct` is a property of the question, never of a person**:
-  how often a model answered the item correctly at generation time — the
-  difficulty probe (a weaker model, `BJT_DIFFICULTY_MODEL`) when it ran, else
-  the answerability gate. With `BJT_DIFFICULTY_MODEL=jev-…` (a prototype,
-  opt-in, `bjt/jev.ts`) it is instead the probability Jev puts on the key in one
-  call — a different number, so the bank carries one kind, not a mixture; read
-  `bjt probe --compare` before switching. It is not an ability estimate, nothing
-  about anybody is derived from it, and it is never displayed.
+  how sure a model was of the key at generation time — the difficulty probe (a
+  weaker model, `BJT_DIFFICULTY_MODEL`) when it ran, else the answerability
+  gate's pass rate. Since 2026-10-10 the probe asks for a probability on every
+  option, once per rotation of the four, and the rate is the mean on the key
+  (`BJT_DIFFICULTY_METHOD=confidence`): five picks were a pass rate of 1.0 for
+  about half the bank, which ordered nothing. With `BJT_DIFFICULTY_MODEL=jev-…`
+  (a prototype, opt-in, `bjt/jev.ts`) it is the probability Jev puts on the key
+  in one call. These are different numbers, so the bank carries one kind, not a
+  mixture: a bundle records its kind (`difficulty_method`), and `bjt probe`
+  measures again every bundle not of the current kind, clearing the old rates
+  as it starts on one. Read `bjt probe --compare` before switching. It is not an
+  ability estimate, nothing about anybody is derived from it, and it is never
+  displayed.
 
 ### Pictures and audio
 
@@ -321,8 +327,9 @@ accident is not.
   it moves on every answer. It runs on `items.model_p_correct`, written at
   generation time or never: an item from `bjt importbatch` has none, and then
   the term is a constant that sorts nothing while looking on. `bjt probe --all`
-  is the catch-up pass (same weaker model, same trials, only unrated items, a
-  bundle at a time so a run stopped by its ceiling resumes); it writes nothing
+  is the catch-up pass (same weaker model, same trials, unrated items and every
+  item of a bundle of another kind, a bundle at a time so a run stopped by its
+  ceiling resumes); it writes nothing
   when it cannot measure, because the queue would trust a fabricated prior.
   `bjt plan` prints the coverage so the gap cannot go quiet.
 - **The ranking terms have an order of authority.** The 機能 tag dominates; traps

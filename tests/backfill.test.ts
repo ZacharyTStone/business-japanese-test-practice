@@ -8,7 +8,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import * as backfill from "../bjt/backfill.ts";
 import * as batch from "../bjt/batch.ts";
 import * as cli from "../bjt/cli/index.ts";
@@ -22,6 +22,12 @@ import { ValueError, zip } from "../bjt/py.ts";
 import * as regate from "../bjt/regate.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
 import { capture, patch, setConfig, tmpPath } from "./helpers.ts";
+
+// These tests exercise the pass-rate probe ("trials"); the confidence
+// probe, the default since 2026-10-10, has its own in confidence.test.ts.
+beforeEach(() => {
+  setConfig({ DIFFICULTY_METHOD: "trials" });
+});
 
 type Item = Record<string, any>;
 
@@ -92,12 +98,12 @@ describe("the probe", () => {
       throw new Error("--dry-run must not reach the model");
     });
 
+    // Every live item without a rate, and every live item of a bundle whose
+    // rates are of another kind than the probe writes now.
     const gone = withdrawn.ids();
     let missing = 0;
     for (const p of batch.bundles()) {
-      for (const it of withdrawn.liveItems(batch.load(p), { withdrawn: gone })) {
-        if ((it["model_p_correct"] ?? null) === null) missing += 1;
-      }
+      missing += backfill.unprobed(batch.load(p), { gone }).length;
     }
     expect(await cli.main({ argv: ["probe", "--all", "--dry-run"] })).toBe(0);
     const out = cap.readouterr().out;

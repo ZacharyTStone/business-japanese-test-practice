@@ -29,6 +29,17 @@
  *     gate's rate. A fabricated number would be worse than that one, because the
  *     queue would trust it.
  *
+ * The rate is a confidence, not a pass count (from 2026-10-10,
+ * `config.DIFFICULTY_METHOD = "confidence"`). Five picks from a model that
+ * knows the answer are five right answers whether it was sure or torn, so a
+ * pass rate was 1.0 for about half the bank and ordered nothing there. Asked
+ * instead for a probability on every option, the model says how torn it is,
+ * and the mean probability on the key spreads where the count could not. The
+ * options are asked once per rotation of their order, so a habit of trusting
+ * the first or the last option cancels out. "trials", the pass rate, stays for
+ * comparison. Each bundle carries the method its rates came from
+ * (`difficulty_method`, bjt/backfill.ts), so the bank never mixes the two.
+ *
  * A prototype second instrument: when `config.DIFFICULTY_MODEL` is a Jev model
  * (bjt/jev.ts) the probe is one call, and the rate is the probability Jev puts on
  * the key rather than a count of trials. That is a different number from a pass
@@ -98,6 +109,9 @@ export async function measure(item: Record<string, any>, opts: { model?: string 
   if (jev.isJev(model)) {
     return _byProbability(fullQ, options, answer, model);
   }
+  if (method(model) === "confidence") {
+    return _byConfidence(fullQ, options, answer, model);
+  }
 
   const trials = await answerability.runTrials(fullQ, options, answer, SIDE,
                                                { model: model, trials: config.DIFFICULTY_TRIALS });
@@ -113,9 +127,66 @@ export async function measure(item: Record<string, any>, opts: { model?: string 
   return new DifficultyResult({ rate: rate, model: model, measured: true, trials: trials });
 }
 
-/** What measuring one item costs in calls, for a dry run's arithmetic. */
+/** The kind of number the probe writes with `model`: "jev" (Jev's own
+ *  probability), "confidence" or "trials". Rates of different kinds are not
+ *  comparable, so a bundle records this beside them. */
+export function method(model?: string | null): string {
+  return jev.isJev(model || config.DIFFICULTY_MODEL) ? "jev" : config.DIFFICULTY_METHOD;
+}
+
+/** What measuring one item costs in calls, for a dry run's arithmetic. A
+ *  confidence probe asks once per rotation of the four options. */
 export function callsPerItem(opts: { model?: string | null } = {}): number {
-  return jev.isJev(opts.model || config.DIFFICULTY_MODEL) ? 1 : config.DIFFICULTY_TRIALS;
+  const m = method(opts.model);
+  return m === "jev" ? 1 : m === "confidence" ? OPTIONS : config.DIFFICULTY_TRIALS;
+}
+
+/** Every item offers four options (the generators trim a fifth). */
+export const OPTIONS = 4;
+
+/** The options in the order trial `t` shows them: rotated `t` places, so
+ *  across one trial per option every option sits in every position once. */
+export function rotation(n: number, t: number): number[] {
+  return range(n).map((i) => (i + t) % n);
+}
+
+/** One confidence per rotation of the options; the rate is the mean
+ *  probability on the key. Each trial is also recorded as a pick (its most
+ *  likely option), so the local quality report still reads it. One reply
+ *  that is not a distribution leaves the item unmeasured, as a failed trial
+ *  does for the pass rate. */
+export async function _byConfidence(question: string, options: string[], answer: number,
+                                    model: string): Promise<DifficultyResult> {
+  const trials: Trial[] = [];
+  const onKey: number[] = [];
+  for (let t = 0; t < options.length; t++) {
+    const order = rotation(options.length, t);
+    let shown: number[];
+    try {
+      shown = await llm.choiceConfidence(question, order.map((i) => options[i]), { model: model });
+    } catch (e) {
+      if (e instanceof llm.LLMBillingError) {
+        throw e;
+      }
+      if (!(e instanceof llm.LLMError)) throw e;
+      trials.push(new Trial({ side: SIDE, trial: t, chosen: null, correct: false }));
+      return new DifficultyResult({
+        model: model, measured: false, trials: trials,
+        notes: `difficulty probe did not run: ${errText(e)}`,
+      });
+    }
+    // Back to the options' own order: shown[k] is the option order[k].
+    const probs = new Array<number>(options.length).fill(0);
+    order.forEach((i, k) => { probs[i] = shown[k]; });
+    const chosen = max(range(probs.length), (i) => probs[i]);
+    onKey.push(probs[answer]);
+    trials.push(new Trial({ side: SIDE, trial: t, chosen: chosen, correct: chosen === answer,
+                            reason: `p = ${probs.map((p) => fixed(p, 2)).join(" ")}` }));
+  }
+  // Three places: the model's own figures carry no more, and a bundle
+  // should not churn on noise in the ninth digit.
+  const rate = Math.round((onKey.reduce((a, b) => a + b, 0) / onKey.length) * 1000) / 1000;
+  return new DifficultyResult({ rate: rate, model: model, measured: true, trials: trials });
 }
 
 /** One call to a model that answers with a distribution; the key's share

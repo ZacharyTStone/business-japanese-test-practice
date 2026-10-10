@@ -4,13 +4,19 @@
  */
 import { writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import * as cli from "../bjt/cli/index.ts";
 import * as llm from "../bjt/llm.ts";
 import { getGenerator } from "../bjt/generators/index.ts";
 import * as schemas from "../bjt/schemas.ts";
 import { fixtureItem, seedsDir, store } from "./conftest.ts";
 import { capture, patch, setConfig, tmpPath } from "./helpers.ts";
+
+// These tests exercise the pass-rate probe ("trials"); the confidence
+// probe, the default since 2026-10-10, has its own in confidence.test.ts.
+beforeEach(() => {
+  setConfig({ DIFFICULTY_METHOD: "trials" });
+});
 
 // ----- tell feedback loop (fidelity #3 closes onto #1's prompt) -----------
 

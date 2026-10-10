@@ -4,7 +4,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as cli from "../bjt/cli/index.ts";
 import * as config from "../bjt/config.ts";
 import { Store } from "../bjt/db/index.ts";
@@ -16,6 +16,12 @@ import { BUNDLE_FLOAT_KEYS, dumps } from "../bjt/pyjson.ts";
 import * as schemas from "../bjt/schemas.ts";
 import { fixtureItem, goiItem, store } from "./conftest.ts";
 import { capture, countOf, mustFind, patch, setConfig, tmpPath } from "./helpers.ts";
+
+// These tests exercise the pass-rate probe ("trials"); the confidence
+// probe, the default since 2026-10-10, has its own in confidence.test.ts.
+beforeEach(() => {
+  setConfig({ DIFFICULTY_METHOD: "trials" });
+});
 
 describe("cli", () => {
   test("normalize light shape", () => {

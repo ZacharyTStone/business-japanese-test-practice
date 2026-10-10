@@ -771,6 +771,59 @@ export async function answerChoice(
   return _structured(system, user, _ANSWER_SCHEMA, opts.model || config.JUDGE_MODEL, { maxTokens: 1500, effort: "low" });
 }
 
+export const _CONFIDENCE_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["probabilities", "reason"],
+  properties: {
+    probabilities: {
+      type: "array",
+      items: { type: "number" },
+      description: "one probability per option, in the options' order, summing to 1",
+    },
+    reason: { type: "string", description: "one short sentence on what made it hard or easy" },
+  },
+};
+
+/** How sure the model is of each option: a probability per option, in the
+ *  order given, normalised to sum to 1. Used by the difficulty probe, where
+ *  a single pick saturates: a model that is right five times out of five
+ *  can still be torn, and how torn it is is the difficulty.
+ *
+ *  A reply that is not one non-negative number per option, or sums to
+ *  nothing, is an LLMError: the probe reads it as no answer, never as a
+ *  rate. */
+export async function choiceConfidence(
+  question: string,
+  options: string[],
+  opts: { model?: string | null } = {},
+): Promise<number[]> {
+  const numbered = options.map((t, i) => `${i}. ${str(t)}`).join("\n");
+  const user = (
+    `${question}\n\nOptions:\n${numbered}\n\n`
+    + "For each option, give the probability that it is the intended correct "
+    + "answer, in the order above, summing to 1. Give real weight to any option "
+    + "you cannot rule out."
+  );
+  const system = (
+    "You are a highly proficient reader of Japanese taking a business-Japanese "
+    + "proficiency test. Say how sure you are, honestly: a probability near 1 "
+    + "only when the other options are plainly wrong."
+  );
+  const res = await _structured(system, user, _CONFIDENCE_SCHEMA, opts.model || config.JUDGE_MODEL,
+                                { maxTokens: 1500, effort: "low" });
+  const raw: unknown = get(res, "probabilities");
+  if (!Array.isArray(raw) || raw.length !== options.length
+      || !raw.every((p) => typeof p === "number" && Number.isFinite(p) && p >= 0)) {
+    throw new LLMError(`expected ${options.length} probabilities, got ${str(raw)}`);
+  }
+  const total = (raw as number[]).reduce((a, b) => a + b, 0);
+  if (total <= 0) {
+    throw new LLMError("the probabilities sum to nothing");
+  }
+  return (raw as number[]).map((p) => p / total);
+}
+
 // ----- discriminator judge ----------------------------------------------
 
 /** Ask a judge to label each item real (official) or synthetic (generated),

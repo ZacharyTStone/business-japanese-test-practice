@@ -14,7 +14,8 @@
  * written at generation time or never, so without this pass the difficulty pitch
  * sorts nothing across every imported item. The same probe, the same weaker
  * model and the same trials as a fresh draft gets (bjt/fidelity/difficulty.ts),
- * on every live item without a rate.
+ * on every live item without a rate, and again on every item of a bundle whose
+ * `difficulty_method` is not the probe's current one.
  *
  * `compareBank` is the probe's model beside another one, on a sample of the
  * bank, writing nothing: the evidence for changing the instrument (Jev, a
@@ -87,10 +88,21 @@ export function selectBundles(paths: string[], every: boolean): string[] {
   return out;
 }
 
-/** The bundle's live items that have no difficulty prior yet. */
+/** The bundle key naming the kind of number its rates are (difficulty.method). */
+export const METHOD_KEY = "difficulty_method";
+
+/** True when the bundle's rates are of the kind the probe writes now. A
+ *  bundle with no record predates the record, and its rates are pass rates. */
+export function current(bundle: Item): boolean {
+  return get(bundle, METHOD_KEY) === difficulty.method();
+}
+
+/** The bundle's live items the probe still has to measure: those with no
+ *  difficulty prior yet, or every one of them when the bundle's rates are of
+ *  another kind than the probe writes now, so the bank never holds a mixture. */
 export function unprobed(bundle: Item, opts: { gone?: Iterable<string> | null } = {}): Item[] {
-  return withdrawn.liveItems(bundle, { withdrawn: opts.gone ?? null })
-    .filter((it) => get(it, "model_p_correct") === null);
+  const live = withdrawn.liveItems(bundle, { withdrawn: opts.gone ?? null });
+  return current(bundle) ? live.filter((it) => get(it, "model_p_correct") === null) : live;
 }
 
 /** The bundle and its SQL, together: the SQL is what the deploy applies,
@@ -134,7 +146,7 @@ export class ProbeRun {
     const spend = opts.spend ?? null;
     let lines = [`Measured the difficulty of ${this.measured} item(s) in `
                  + `${this.written.length} bundle(s); ${this.remaining} live item(s) `
-                 + "still have none.", ""];
+                 + "still to measure.", ""];
     lines = lines.concat(this.written.map(([p, n]) => `- \`${path.basename(p)}\`: ${n} measured`));
     if (this.unmeasured) {
       lines.push("", `${this.unmeasured} probe(s) could not run and wrote nothing: `
@@ -182,7 +194,7 @@ export function surveyBundles(paths: string[], gone: ReadonlySet<string>,
   });
 }
 
-/** What a probe would do, at no cost: each bundle's live items without a rate. */
+/** What a probe would do, at no cost: each bundle's live items to measure. */
 export function surveyProbe(paths: string[]): Shelf[] {
   const gone = withdrawn.ids();
   return surveyBundles(paths, gone, (bundle) => unprobed(bundle, { gone }));
@@ -199,7 +211,7 @@ export function runsEstimate(calls: number): string {
 }
 
 /**
- * Measure every live item without a rate, bundle by bundle.
+ * Measure every live item without a rate of the current kind, bundle by bundle.
  *
  * Each bundle is written (JSON and SQL) as soon as it is done, and also when
  * the run stops inside it — the spend ceiling, an outage, Ctrl-C — so what
@@ -219,6 +231,16 @@ export async function probeBank(paths: string[], opts: { log?: Log } = {}): Prom
       continue;
     }
     log(`${path.basename(bundlePath)}: ${todo.length} item(s) to measure`);
+    if (!current(bundle)) {
+      // Rates of another kind go before any of the new kind arrive, and the
+      // bundle is marked at once: an item this run does not reach is left
+      // with no rate, which the next run fills, never with a number of the
+      // old kind beside new ones. On disk only once something is measured.
+      for (const it of todo) {
+        delete it["model_p_correct"];
+      }
+      bundle[METHOD_KEY] = difficulty.method();
+    }
     let here = 0;
     try {
       for (const it of todo) {

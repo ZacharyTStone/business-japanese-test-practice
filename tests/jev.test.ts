@@ -9,7 +9,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import * as backfill from "../bjt/backfill.ts";
 import * as batch from "../bjt/batch.ts";
 import * as cli from "../bjt/cli/index.ts";
@@ -25,6 +25,12 @@ import { dumps } from "../bjt/pyjson.ts";
 import * as withdrawn from "../bjt/withdrawn.ts";
 import { goiCorrectText, goiItem, store } from "./conftest.ts";
 import { capture, delEnv, patch, setConfig, setEnv, tmpPath } from "./helpers.ts";
+
+// These tests exercise the pass-rate probe ("trials"); the confidence
+// probe, the default since 2026-10-10, has its own in confidence.test.ts.
+beforeEach(() => {
+  setConfig({ DIFFICULTY_METHOD: "trials" });
+});
 
 type Item = Record<string, any>;
 

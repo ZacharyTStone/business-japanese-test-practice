@@ -69,7 +69,7 @@ export async function cmdProbe(args: Namespace): Promise<number> {
     return _probeCompare(args, paths);
   }
   if (args.limit !== null) {
-    eprint("--limit is for --compare; a probe measures every item without a rate.");
+    eprint("--limit is for --compare; a probe measures every item without a rate of the current kind.");
     return 2;
   }
 
@@ -77,7 +77,7 @@ export async function cmdProbe(args: Namespace): Promise<number> {
   for (const shelf of shelves) {
     if (shelf.todo.length || !args.all) {
       print(`${path.basename(shelf.path)}: ${shelf.n_items} item(s), ${shelf.todo.length} without a `
-            + "difficulty signal"
+            + `difficulty signal of the current kind (${difficulty.method()})`
             + (shelf.n_withdrawn ? ` (${shelf.n_withdrawn} withdrawn, skipped)` : ""));
     }
   }
@@ -93,7 +93,7 @@ export async function cmdProbe(args: Namespace): Promise<number> {
         print(`  would measure ${str(it["id"])} (${str(it["item_type"])} ${str(it["level"])})`);
       }
     }
-    print(`\n${items} live item(s) in ${work.length} bundle(s) have no difficulty signal.`);
+    print(`\n${items} live item(s) in ${work.length} bundle(s) have no difficulty signal of the current kind.`);
     const per = difficulty.callsPerItem();
     const calls = items * per;
     print(`That is ${calls} call(s) to ${config.DIFFICULTY_MODEL}, ${per} per item.`);
