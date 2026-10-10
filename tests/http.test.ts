@@ -92,7 +92,7 @@ describe("http", () => {
     const [req] = w.sent[0];
     expect(http.header(req, "Content-type")).toBe("application/json");
     expect(http.header(req, "X-key")).toBe("k");
-    expect(JSON.parse(new TextDecoder().decode(req.body!))).toEqual({ a: 1 });
+    expect(JSON.parse(new TextDecoder().decode(req.body))).toEqual({ a: 1 });
   });
 
   test("a reply that is not JSON names the URL", async () => {

@@ -19,20 +19,18 @@
  *
  * `regateItem` and `regateBank` are async: they ask the models.
  */
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import * as batchmod from "./batch.ts";
 import * as config from "./config.ts";
 import * as answerability from "./fidelity/answerability.ts";
 import * as sanity from "./fidelity/sanity.ts";
+import * as ledger from "./ledger.ts";
 import * as llmmod from "./llm.ts";
-import { errText, get, isodateUtc, min, or, print, repr, slice, splitlines, splitWs, splitWsMax, str, strip, sum, ValueError } from "./py.ts";
+import { errText, get, isodateUtc, min, or, print, repr, slice, splitWs, str, strip, sum, ValueError } from "./py.ts";
 import * as publish from "./publish.ts";
 import * as withdrawn from "./withdrawn.ts";
 import { type Log, Shelf, surveyBundles, UNREACHABLE_PATIENCE } from "./backfill.ts";
-
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "./types.ts";
 
 export const REGATE_LEDGER_NAME = "regated.txt";
 
@@ -111,37 +109,23 @@ export function regateLedgerPath(): string {
  *  plain object. */
 export function loadRegated(opts: { path?: string | null } = {}): Map<string, Regated> {
   const p = opts.path ?? regateLedgerPath();
-  if (!existsSync(p)) {
-    return new Map();
-  }
-  const name = path.basename(p);
   const out = new Map<string, Regated>();
-  const lines = splitlines(readFileSync(p, "utf8"));
-  for (let i = 0; i < lines.length; i++) {
-    const n = i + 1;
-    const text = strip(lines[i]);
-    if (!text || text.startsWith("#")) {
-      continue;
-    }
-    const parts = splitWsMax(text, 4);
-    if (parts.length < 5) {
-      throw new ValueError(`${name}:${n}: expected `
-                           + "'<item id> <verdict> <date> <reason> <what was found>'");
-    }
+  const expected = "'<item id> <verdict> <date> <reason> <what was found>'";
+  for (const { where, parts } of ledger.entries(p, 5, expected)) {
     const [itemId, verdict, date, reason, note] = parts;
     if (!VERDICTS.includes(verdict)) {
-      throw new ValueError(`${name}:${n}: verdict ${repr(verdict)} is not one of `
+      throw new ValueError(`${where}: verdict ${repr(verdict)} is not one of `
                            + `${VERDICTS.join(", ")}`);
     }
     if (reason !== "-" && !withdrawn.REASONS.includes(reason)) {
-      throw new ValueError(`${name}:${n}: reason ${repr(reason)} is not one of `
+      throw new ValueError(`${where}: reason ${repr(reason)} is not one of `
                            + `${withdrawn.REASONS.join(", ")} or -`);
     }
     if (verdict.startsWith("discarded") && reason === "-") {
-      throw new ValueError(`${name}:${n}: a ${verdict} question needs a reason`);
+      throw new ValueError(`${where}: a ${verdict} question needs a reason`);
     }
     if (out.has(itemId)) {
-      throw new ValueError(`${name}:${n}: ${itemId} is recorded twice`);
+      throw new ValueError(`${where}: ${itemId} is recorded twice`);
     }
     out.set(itemId, new Regated({ item_id: itemId, verdict, date, reason, note: strip(note) }));
   }
@@ -152,17 +136,11 @@ export function loadRegated(opts: { path?: string | null } = {}): Map<string, Re
  *  run can be stopped by its ceiling between any two items. */
 export function recordRegated(entry: Regated, opts: { path?: string | null } = {}): void {
   const p = opts.path ?? regateLedgerPath();
-  // Read as Python's read_text reads, line endings made "\n".
-  const before = existsSync(p) ? readFileSync(p, "utf8").replace(/\r\n?/g, "\n") : null;
-  let text = "";
-  if (before === null) {
-    text += _HEADER + "\n";
-  } else if (before && !before.endsWith("\n")) {
-    text += "\n";  // a hand edit that left no newline must not swallow this line
-  }
+  const before = ledger.readText(p);
+  let text = before === null ? _HEADER + "\n" : "";
   text += `${entry.item_id}  ${entry.verdict.padEnd(19)}  ${entry.date}  ${entry.reason.padEnd(12)}  `
           + `${splitWs(entry.note).join(" ")}\n`;
-  appendFileSync(p, text, { encoding: "utf8" });
+  ledger.appendAfter(p, before, text);
 }
 
 /** The judge's own words from the first trial that went this way. */

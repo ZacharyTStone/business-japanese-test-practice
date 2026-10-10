@@ -11,7 +11,7 @@
  * hold still gets the end state at once: the card is simply there, the ring
  * is simply full. That is the same screen, one frame sooner.
  */
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, Easing, Platform, type ViewProps } from "react-native";
 
 import { motion } from "./theme";

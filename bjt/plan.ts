@@ -50,7 +50,7 @@
 import * as batchmod from "./batch.ts";
 import { unreadable } from "./files.ts";
 import {
-  FileNotFoundError, get, isodateUtc, isoformatUtc, len, max, min, or, round, sorted, sum, truthy,
+  FileNotFoundError, get, isodateUtc, isoformatUtc, len, ljust, max, min, or, rjust, round, sorted, sum, truthy,
 } from "./py.ts";
 import * as schemas from "./schemas.ts";
 import * as seedtable from "./seedtable.ts";
@@ -441,16 +441,6 @@ export function difficultyCoverage(): [number, number] {
   return seams.difficultyCoverage();
 }
 
-/** `f"{s:<{width}}"`: padded on the right to `width` code points. */
-function _ljust(s: string, width: number): string {
-  return s + " ".repeat(Math.max(0, width - len(s)));
-}
-
-/** `f"{s:>{width}}"`: padded on the left to `width` code points. */
-function _rjust(s: string, width: number): string {
-  return " ".repeat(Math.max(0, width - len(s))) + s;
-}
-
 /** The work order as something a person reads before approving it.
  *  `resting` (shelf → when it is tried again) says which shelves the order
  *  passed over, and why. */
@@ -468,10 +458,10 @@ export function render(surveyResult: Survey, order: readonly WorkItem[],
   const width = byType.size ? max([...byType.keys()].map((t) => len(t))) : 0;
   for (const [itemType, shelves] of byType) {
     const cells = shelves.map(
-      (s) => `${s.level} ${_rjust(String(s.have), 3)} / ${_ljust(String(s.cells_left), 5)}`,
+      (s) => `${s.level} ${rjust(String(s.have), 3)} / ${ljust(String(s.cells_left), 5)}`,
     ).join("   ");
     const mark = shelves.some((s) => s.thin) ? "  ←thin" : "";
-    lines.push(`  ${_ljust(itemType, width)}  ${cells}${mark}`);
+    lines.push(`  ${ljust(itemType, width)}  ${cells}${mark}`);
   }
   lines.push("");
   lines.push(
@@ -519,7 +509,7 @@ export function render(surveyResult: Survey, order: readonly WorkItem[],
   lines.push("");
   for (const w of order) {
     lines.push(
-      `  ${_rjust(String(w.n), 2)} × ${w.item_type} ${w.level}` +
+      `  ${rjust(String(w.n), 2)} × ${w.item_type} ${w.level}` +
       `   (has ${w.have}, ${w.cells_left} cell(s) left)`,
     );
   }

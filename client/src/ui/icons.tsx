@@ -10,7 +10,6 @@
  * Every icon here is decorative. Anything an icon labels also carries the word
  * next to it, so nothing is lost when a screen reader skips the drawing.
  */
-import React from "react";
 import Svg, { Path } from "react-native-svg";
 
 import { colors } from "./theme";

@@ -37,10 +37,10 @@
  * rewrites or removes one. A tool may make the ledger longer; only a person makes
  * it shorter.
  */
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import * as config from "./config.ts";
-import { deepcopy, get, has, or, repr, rstrip, sorted, splitlines, splitWs, splitWsMax, strip, truthy, ValueError } from "./py.ts";
+import * as ledger from "./ledger.ts";
+import { deepcopy, get, has, or, repr, rstrip, sorted, splitlines, splitWs, strip, truthy, ValueError } from "./py.ts";
 
 /** Why an item was withdrawn. The same closed set as `item_feedback.reason`
  *  (d1/migrations/0001_initial.sql), so a tester's
@@ -76,28 +76,14 @@ export function ledgerPath(): string {
  */
 export function load(opts: { path?: string | null } = {}): Record<string, Withdrawal> {
   const p = opts.path ?? ledgerPath();
-  if (!existsSync(p)) {
-    return {};
-  }
-  const name = path.basename(p);
   const out: Record<string, Withdrawal> = {};
-  const lines = splitlines(readFileSync(p, "utf8"));
-  for (let i = 0; i < lines.length; i++) {
-    const n = i + 1;
-    const line = strip(lines[i]);
-    if (!line || line.startsWith("#")) {
-      continue;
-    }
-    const parts = splitWsMax(line, 2);
-    if (parts.length < 3) {
-      throw new ValueError(`${name}:${n}: expected '<item id> <reason> <what is wrong>'`);
-    }
+  for (const { where, parts } of ledger.entries(p, 3, "'<item id> <reason> <what is wrong>'")) {
     const [itemId, reason, note] = parts;
     if (!REASONS.includes(reason)) {
-      throw new ValueError(`${name}:${n}: reason ${repr(reason)} is not one of ${REASONS.join(", ")}`);
+      throw new ValueError(`${where}: reason ${repr(reason)} is not one of ${REASONS.join(", ")}`);
     }
     if (has(out, itemId)) {
-      throw new ValueError(`${name}:${n}: ${itemId} is withdrawn twice`);
+      throw new ValueError(`${where}: ${itemId} is withdrawn twice`);
     }
     out[itemId] = new Withdrawal({ item_id: itemId, reason, note: strip(note) });
   }
@@ -154,17 +140,11 @@ export function append(entries: Iterable<Withdrawal>, opts: { heading?: string; 
   if (list.length === 0) {
     return 0;
   }
-  // Read as Python's read_text reads, line endings made "\n".
-  const before = existsSync(p) ? readFileSync(p, "utf8").replace(/\r\n?/g, "\n") : "";
+  const before = ledger.readText(p) ?? "";
   const block: string[] = before ? [""] : [];
   block.push(...splitlines(heading).map((h) => rstrip(`# ${h}`)));
   block.push(...list.map((e) => line(e)));
-  let text = "";
-  if (before && !before.endsWith("\n")) {
-    text += "\n";
-  }
-  text += block.join("\n") + "\n";
-  appendFileSync(p, text, { encoding: "utf8" });
+  ledger.appendAfter(p, before, block.join("\n") + "\n");
   return list.length;
 }
 

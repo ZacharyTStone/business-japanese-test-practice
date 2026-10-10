@@ -31,6 +31,7 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { APIError } from "better-auth/api";
 import { bearer } from "better-auth/plugins";
+import { normaliseEmail } from "./identity";
 
 export type AuthEnv = {
   DB: D1Database;
@@ -81,7 +82,7 @@ export async function refusalFor(
   email: unknown,
   emailVerified: unknown
 ): Promise<"email_not_verified" | "not_on_tester_list" | null> {
-  const address = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const address = typeof email === "string" ? normaliseEmail(email) : "";
   if (!address) return "not_on_tester_list";
   if (emailVerified !== true) return "email_not_verified";
   const listed = await db.prepare("select 1 as listed from testers where email = ?").bind(address).first();

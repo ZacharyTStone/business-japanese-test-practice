@@ -12,6 +12,7 @@ import { describe, expect, test } from "vitest";
 import * as clientConstants from "../bjt/client_constants.ts";
 import { DISTRACTOR_ROLES } from "../bjt/fidelity/roles.ts";
 import { toFloat } from "../bjt/py.ts";
+import { REASONS } from "../bjt/withdrawn.ts";
 import { tmpPath } from "./helpers.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -60,5 +61,42 @@ describe("client_constants", () => {
     const ladder = /export const PACE_MAX_SCALE = ([0-9.]+);/.exec(grade);
     expect(ladder, "grade.ts no longer declares PACE_MAX_SCALE as expected").toBeTruthy();
     expect(toFloat(ladder![1])).toBe(toFloat(ts![1]));
+  });
+
+  /** The app runs the reading clock in the last EXAM_NEAR_DAYS before the
+   *  exam (client/src/lib/exam.ts); the queue (client/worker/core/queue.ts)
+   *  follows the exam's section mix over its own EXAM_NEAR_DAYS. If the two
+   *  drift, a set would follow the exam's mix with the clock off, or the
+   *  other way round. */
+  test("the reading clock and the queue agree on when the exam is near", () => {
+    const declared = /export const EXAM_NEAR_DAYS = (\d+);/;
+    const app = declared.exec(readFileSync(path.join(ROOT, "client", "src", "lib", "exam.ts"), "utf8"));
+    expect(app, "exam.ts no longer declares EXAM_NEAR_DAYS as expected").toBeTruthy();
+    const queue = declared.exec(readFileSync(path.join(ROOT, "client", "worker", "core", "queue.ts"), "utf8"));
+    expect(queue, "queue.ts no longer declares EXAM_NEAR_DAYS as expected").toBeTruthy();
+    expect(Number(queue![1])).toBe(Number(app![1]));
+  });
+
+  /** A report's reason is one closed set in four places: the ledger that
+   *  withdraws a question (bjt/withdrawn.ts), the Worker that takes a report
+   *  (client/worker/queries.ts), the app's type for it and the list the
+   *  report sheet offers. A reason missing from one is a report the Worker
+   *  refuses, a button with no reason, or a withdrawal no report can name. */
+  test("every list of report reasons is the same set", () => {
+    const client = (...parts: string[]) => readFileSync(path.join(ROOT, "client", ...parts), "utf8");
+    const quoted = (text: string | undefined) => [...(text ?? "").matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
+    const worker = /const FEEDBACK_REASONS = new Set\(\[([^\]]*)\]\)/.exec(client("worker", "queries.ts"));
+    expect(worker, "queries.ts no longer declares FEEDBACK_REASONS as expected").toBeTruthy();
+    const union = /export type FeedbackReason =([^;]*);/.exec(client("src", "lib", "db", "practice.ts"));
+    expect(union, "practice.ts no longer declares FeedbackReason as expected").toBeTruthy();
+    const sheet = /const REASONS: [^=]*= \[([\s\S]*?)\];/.exec(client("src", "ui", "report.tsx"));
+    expect(sheet, "report.tsx no longer declares REASONS as expected").toBeTruthy();
+    const offered = [...sheet![1].matchAll(/id: "([a-z_]+)"/g)].map((m) => m[1]).sort();
+
+    const ledger = [...REASONS].sort();
+    expect(ledger.length).toBeGreaterThan(0);
+    expect(quoted(worker![1]), "queries.ts FEEDBACK_REASONS").toEqual(ledger);
+    expect(quoted(union![1]), "practice.ts FeedbackReason").toEqual(ledger);
+    expect(offered, "report.tsx REASONS").toEqual(ledger);
   });
 });

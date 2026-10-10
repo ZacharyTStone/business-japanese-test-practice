@@ -45,9 +45,7 @@ import * as llmmod from "./llm.ts";
 import { errText, fixed, floorDiv, g, get, pathStr, print, sorted, str, sum, truthy, ValueError, zip } from "./py.ts";
 import * as publish from "./publish.ts";
 import * as withdrawn from "./withdrawn.ts";
-
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "./types.ts";
 
 /** What a pass reports its progress through (`print` unless told otherwise). */
 export type Log = (...args: unknown[]) => void;

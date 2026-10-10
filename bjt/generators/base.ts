@@ -32,9 +32,10 @@ import type { Cell } from "../seedtable.ts";
 import * as answerability from "../fidelity/answerability.ts";
 import * as naturalness from "../fidelity/naturalness.ts";
 import * as roles from "../fidelity/roles.ts";
+import type { Item } from "../types.ts";
 
-/** An item as the model writes it and the pipeline passes it on: plain JSON. */
-export type Item = Record<string, any>;
+/** The generators' own name for it, so a generator imports it from here. */
+export type { Item };
 
 /** What a relation means when its label cannot carry all of it. Almost every
  *  label can: 部下 → 上司 says everything a writer needs. ウチ/ソト cannot, because

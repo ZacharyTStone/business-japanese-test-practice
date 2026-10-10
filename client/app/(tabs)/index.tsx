@@ -13,7 +13,7 @@
  * the start screen explains the plan once. Home starts the set.
  */
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {

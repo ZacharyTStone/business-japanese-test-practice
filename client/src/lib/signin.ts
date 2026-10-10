@@ -4,6 +4,7 @@
  * the Worker are lib/authClient.ts (web) and lib/phoneSignIn.ts (Android);
  * the Worker's side is worker/auth.ts.
  */
+import { NO_GOOGLE_ACCOUNT, SIGN_IN_CANCELLED } from "../../modules/google-sign-in/codes";
 
 /** How a sign-in that came back without a session went wrong. */
 export type SignInRefusal = "not_listed" | "failed";
@@ -35,8 +36,8 @@ export type PhoneSignInRefusal = "cancelled" | "no_account" | "not_listed" | "no
 /** What Google's account sheet failing means (modules/google-sign-in): the
  *  two cases the learner can do something about, and everything else. */
 export function googleRefusal(code: unknown): PhoneSignInRefusal {
-  if (code === "ERR_SIGN_IN_CANCELLED") return "cancelled";
-  if (code === "ERR_NO_GOOGLE_ACCOUNT") return "no_account";
+  if (code === SIGN_IN_CANCELLED) return "cancelled";
+  if (code === NO_GOOGLE_ACCOUNT) return "no_account";
   return "failed";
 }
 

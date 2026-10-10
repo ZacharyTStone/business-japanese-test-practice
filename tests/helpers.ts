@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, vi } from "vitest";
 import * as config from "../bjt/config.ts";
+import * as llm from "../bjt/llm.ts";
 import { sorted } from "../bjt/py.ts";
 
 const undo: (() => void)[] = [];
@@ -153,6 +154,13 @@ export function refuseSeams(): void {
  *  is behind them instead (pytest's `unmocked_seams` mark). */
 export function useRealSeams(): void {
   for (const s of SEAMS) s.obj[s.key] = s.original;
+}
+
+/** A fake Anthropic client behind `llm.seams.getClient` for the rest of the
+ *  test: `create` answers (or throws for) every request the pipeline sends. */
+export function fakeMessages(create: (params: Record<string, any>) => unknown): void {
+  const client: llm.MessagesClient = { messages: { create } };
+  patch(llm.seams, "getClient", () => client);
 }
 
 // ------------------------------------------------------------ shared helpers

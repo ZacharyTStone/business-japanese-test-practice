@@ -12,7 +12,7 @@
  * A reference, not a drill, and not a choice about the questions: nothing here
  * is recorded, and what is served next is still the queue's alone.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

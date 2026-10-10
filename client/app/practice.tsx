@@ -50,7 +50,7 @@
  * options. See AdSlot: the placement type has no member for this screen.
  */
 import { useRouter, type ErrorBoundaryProps } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

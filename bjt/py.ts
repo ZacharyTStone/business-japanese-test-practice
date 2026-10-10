@@ -65,6 +65,17 @@ export function errText(e: unknown): string {
   return str(e);
 }
 
+/** Python's name for the type of a parsed JSON value, as its errors say it
+ *  (`'NoneType' object is not subscriptable`). */
+export function typeName(v: unknown): string {
+  if (v === null || v === undefined) return "NoneType";
+  if (Array.isArray(v)) return "list";
+  if (typeof v === "object") return "dict";
+  if (typeof v === "string") return "str";
+  if (typeof v === "boolean") return "bool";
+  return Number.isInteger(v) ? "int" : "float";
+}
+
 // ------------------------------------------------------------- printing
 
 /** `repr(float)` (and `str(float)`): the shortest digits that round-trip,
@@ -232,7 +243,7 @@ export function truthy(v: unknown): boolean {
   if (typeof v === "number" && Number.isNaN(v)) return false;
   if (Array.isArray(v)) return v.length > 0;
   if (v instanceof Map || v instanceof Set) return v.size > 0;
-  if (typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) return Object.keys(v as object).length > 0;
+  if (typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) return Object.keys(v).length > 0;
   return true;
 }
 
@@ -324,11 +335,6 @@ export function floorDiv(a: number, b: number): number {
   return Math.floor(a / b);
 }
 
-/** `a % b`: the result takes the divisor's sign, as in Python. */
-export function mod(a: number, b: number): number {
-  return ((a % b) + b) % b;
-}
-
 export function sum(xs: Iterable<number>): number {
   let s = 0;
   for (const x of xs) s += x;
@@ -369,6 +375,16 @@ export function len(s: string): number {
 export function slice(s: string, start: number, end?: number): string {
   const cps = [...s];
   return cps.slice(start, end).join("");
+}
+
+/** `f"{s:<{width}}"`: padded on the right to `width` code points. */
+export function ljust(s: string, width: number): string {
+  return s + " ".repeat(Math.max(0, width - len(s)));
+}
+
+/** `f"{s:>{width}}"`: padded on the left to `width` code points. */
+export function rjust(s: string, width: number): string {
+  return " ".repeat(Math.max(0, width - len(s))) + s;
 }
 
 /** Python's `str.isspace()` set: what `split()` and `strip()` remove. A
@@ -459,11 +475,6 @@ export function splitlines(s: string): string[] {
   const lines = s.split(new RegExp("\\r\\n|[\\n\\r\\v\\f\\x1c\\x1d\\x1e\\x85\\u2028\\u2029]", "u"));
   if (lines.length && lines[lines.length - 1] === "") lines.pop();
   return lines;
-}
-
-/** `s.title()` is not used; `s.capitalize()` is. */
-export function capitalize(s: string): string {
-  return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s;
 }
 
 /** `html.escape(s, quote=True)`. */
@@ -558,23 +569,6 @@ export function indent(text: string, prefix: string): string {
   return text.replace(/^(?=.*\S)/gmu, prefix);
 }
 
-/** `textwrap.dedent(text)`. */
-export function dedent(text: string): string {
-  const lines = text.split("\n");
-  let margin: string | null = null;
-  for (const line of lines) {
-    if (line.trim() === "") continue;
-    const lead = /^[ \t]*/.exec(line)![0];
-    if (margin === null) margin = lead;
-    else {
-      let i = 0;
-      while (i < margin.length && i < lead.length && margin[i] === lead[i]) i++;
-      margin = margin.slice(0, i);
-    }
-  }
-  return lines.map((l) => (l.trim() === "" ? l.replace(/^[ \t]+$/, "") : l.slice(margin?.length ?? 0))).join("\n");
-}
-
 // ---------------------------------------------------------- containers
 
 /** A deep copy (`copy.deepcopy`) of plain data. */
@@ -593,10 +587,27 @@ export function eq(a: unknown, b: unknown): boolean {
     const bb = b as unknown[];
     return a.length === bb.length && a.every((x, i) => eq(x, bb[i]));
   }
-  const ka = Object.keys(a as object);
+  const ka = Object.keys(a);
   const kb = Object.keys(b as object);
   if (ka.length !== kb.length) return false;
   return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && eq((a as any)[k], (b as any)[k]));
+}
+
+/** `for x in value`, as Python iterates a parsed JSON value: a list's
+ *  elements, a string's characters, a dict's keys; anything else a
+ *  TypeError. */
+export function iterOf(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string") return [...v];
+  if (isDict(v)) return Object.keys(v);
+  throw new TypeError_(`'${typeof v}' object is not iterable`);
+}
+
+/** `for x in (value or [])`: nothing for None, False, 0 or "", else as
+ *  `iterOf`. */
+export function iterOr(v: unknown): unknown[] {
+  if (v === null || v === undefined || v === false || v === 0 || v === "") return [];
+  return iterOf(v);
 }
 
 /** `d.get(key, default)`: the default only when the key is absent (a key
@@ -688,24 +699,37 @@ export function toFloat(s: string): number {
   return Number(t);
 }
 
+/** `int(x)` of a parsed JSON value: an int as it is, a bool as 0 or 1, a
+ *  float cut toward zero, a string read as base 10; anything else the
+ *  TypeError `int()` raises. An infinity is an OverflowError, not a
+ *  ValueError, so a caller that reads a ValueError as "no answer" does not
+ *  read it as one, exactly as in Python. */
+export function pyInt(x: unknown): number {
+  if (typeof x === "boolean") return x ? 1 : 0;
+  if (typeof x === "number") {
+    if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
+    if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
+    return Math.trunc(x);
+  }
+  if (typeof x === "string") return toInt(x);
+  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${typeName(x)}'`);
+}
+
+/** `float(x)` of a parsed JSON value: a number as it is, a bool as 0 or 1, a
+ *  string read as `float(s)` reads it; anything else a TypeError. */
+export function pyFloat(x: unknown): number {
+  if (typeof x === "number") return x;
+  if (typeof x === "boolean") return Number(x);
+  if (typeof x === "string") return toFloat(x);
+  throw new TypeError_(`float() argument must be a string or a real number, not '${typeName(x)}'`);
+}
+
 // --------------------------------------------------------- dataclasses
 
 /** `dataclasses.replace(obj, **changes)`: a copy of the instance, same
  *  class, with some fields changed. */
 export function replace<T extends object>(obj: T, changes: Partial<T>): T {
   return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj, changes);
-}
-
-/** `dataclasses.asdict(obj)`: the instance's own fields as plain data, deep
- *  (nested instances, arrays and maps included). */
-export function asdict(obj: unknown): any {
-  if (Array.isArray(obj)) return obj.map(asdict);
-  if (obj instanceof Map) return Object.fromEntries([...obj].map(([k, v]) => [k, asdict(v)]));
-  if (obj instanceof Set) return [...obj].map(asdict);
-  if (obj && typeof obj === "object" && !(obj instanceof Date)) {
-    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, asdict(v)]));
-  }
-  return obj;
 }
 
 // --------------------------------------------------------------- time

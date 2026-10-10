@@ -76,6 +76,21 @@ describe("the sign-in's settings", () => {
     }
   });
 
+  // The list above is written out by hand, so a Better Auth upgrade that adds
+  // a route would leave it open. Every endpoint the library builds is read off
+  // its api object here: each is one the app uses or one that is closed.
+  it("closes every route Better Auth has that the app does not use", () => {
+    const auth = authFor(FULL)!;
+    const closed: readonly string[] = authOptions(FULL).disabledPaths ?? [];
+    const open: readonly string[] = OPEN_ROUTES;
+    const paths = Object.values(auth.api)
+      .map((endpoint) => (endpoint as { path?: unknown }).path)
+      .filter((path): path is string => typeof path === "string");
+    expect(paths.length).toBeGreaterThan(open.length);
+    for (const route of open) expect(paths, route).toContain(route);
+    expect(paths.filter((path) => !open.includes(path) && !closed.includes(path))).toEqual([]);
+  });
+
   it("limits the rate everywhere, and keeps a sign-in's state out of the database", () => {
     const o = authOptions(FULL);
     // On by default only where NODE_ENV says production, which a Worker never does.

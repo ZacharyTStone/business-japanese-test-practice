@@ -5,7 +5,6 @@
  * deciding whether to sign in should be able to read it first. The root
  * layout lets it past the door (app/_layout.tsx).
  */
-import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

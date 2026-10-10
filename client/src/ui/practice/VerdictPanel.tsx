@@ -3,7 +3,7 @@
  * what happened, the way on — and the explanation folded under it for those
  * who want it.
  */
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useLang } from "../../lib/i18n";
