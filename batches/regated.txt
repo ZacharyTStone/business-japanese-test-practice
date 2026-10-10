@@ -89,3 +89,58 @@ d6bb06d3b8  overruled            2026-10-09  other         The gate's cold view:
 4ff5cfd876  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
 d1f4df0c3f  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the spoken request, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “Desks/chairs are prepared by the booking department while drinks require notifying headcount to 総務部.”
 00f53e44f4  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+fd6bb953af  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+07d09e3290  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+afae5f31b2  kept                 2026-10-09  -             sanity=clean cold=1/3 full=2/2
+8091994664  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+753c57209e  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+0c99e55bd7  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+013fa68b2a  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+353e5d008b  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+a58a148f1d  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the spoken prompt, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “Most likely the audio asks about a change involving both quantity and delivery date for A-205, the only item with both attributes plausible to query.そ”
+0c022ece93  discarded:sanity     2026-10-09  unclear       The proofreader flagged explanation_mismatch: The explanation states the correct answer should be 24万円 (scaling both rows to 12 people: 180,000×1.2 + 20,000×1.2 = 240,000), but the marked answer (option 3) matches only this calculation. However, the explanation's reasoning contains an
+d0694b8a01  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+3abf299a57  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+aa772d5814  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the spoken prompt, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “300部中200部が9月10日に届くので、残りは100部となる。”
+81a2e12c4c  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+1d7ad8bafa  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+4f749dbe58  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+749cfab0e3  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+23fd538a62  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation and the spoken question, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “Delay in test environment construction likely pushes data migration start back one week to Oct 8.””
+2bb7e73bae  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+dc756cc425  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+7bc31b17c2  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+808b6996bf  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+b9b8446b1d  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation and the spoken question, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “25日は予備日として設定されており、試験が予定通り進まなかった場合の予備日となる。”
+dd4aa457b1  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+2ee42c7c01  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+01948b5471  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+dfb5fc07a2  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation and the spoken question, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “To avoid closing the office on a weekday, they'd choose the Saturday option despite higher cost.”
+b39fb5be07  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+a786957ed9  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+f833f9f24b  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+0ed5b25518  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation, so the withheld half was decorative — the answer must depend on it (2 of 3 trials); the reviewer: “Best guess based on common test pattern where quantity was revised to 六十台.”
+641b8c655c  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “典型的な妥協案として値引きを抑えつつ納期は変えない結論が選ばれやすいため。”
+dd945a7ce3  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+8f4b311918  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “最も自然な結論として、区画数は維持し、コスト削減のため備品は社内から運ぶ形になったと考えられる。”
+0534e27128  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “Most plausible common cause of prototype delay is spec changes requiring redrawing.”
+1122d7e730  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “一般的な窓口対応として営業部がまず受け、専門的な技術内容のみ他部署に回す流れが自然なため。”
+bf56a09591  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+ba7233ff60  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the conversation, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “This option describes a specific concrete change in structure, fitting the typical answer pattern for such comparison questions.”
+e42ed7e923  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+eabb6f222a  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+b2498c2196  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+476ba519b9  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+e30344079e  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+807d62e9b4  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the passage, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “典型的なビジネス場面では担当者が確認の上で期日内に先方へ返答するパターンが正解となることが多い。”
+a151810e90  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the passage, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “測定器の戻りが遅れ検査着手に影響する問題が報告すべき内容として最も妥当。”
+b8dd326e60  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+5d536c8392  discarded:sanity     2026-10-09  unclear       The proofreader flagged situation_incoherent: The situation breaks down:鈴木 at あさひ工業 is writing to佐藤 at 山川商事, but the email signature at the end reads '山川商事 佐藤', making it appear that 佐藤 sent the email to himself. The sender should be signing as 鈴木 from あさひ工業. This incoherence undermine
+5165a67c41  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2
+d0f01bbe08  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the passage, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “消去法と典型的なビジネスメール要求の内容から、納品調整に関する依頼が最も妥当と判断した。”
+239d687cb0  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the passage, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “試験準備が未着手で日程変更不可という点が最も報告すべき重大な問題と考えられる。”
+bcf3ee0bf3  discarded:sanity     2026-10-09  unclear       The proofreader flagged explanation_mismatch+situation_incoherent: The explanation claims the second day is on the 7th because the original schedule shows '6日（月）と7日（火）' but the stimulus states only '2日目：変更なし' without specifying what the unchanged date is. The stimulus does not actually tell the reader what
+7438c97fc1  kept                 2026-10-09  -             sanity=clean cold=1/3 full=2/2
+f0575e4dfd  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the passage, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “議事録のタスクとして共有フォルダのファイルに直接コメントを書き込む指示が一般的である。”
+e6cfbc7831  overruled            2026-10-09  other         The gate's cold view: a reviewer picked the correct option without the passage, so the withheld half was decorative — the answer must depend on it (2 of 2 trials); the reviewer: “The context implies a delivery shortfall issue, matching the specific partial-delivery explanation.”
+086fc7d264  kept                 2026-10-09  -             sanity=clean cold=0/2 full=2/2

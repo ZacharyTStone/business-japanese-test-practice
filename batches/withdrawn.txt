@@ -98,6 +98,14 @@ a425ecc58c  unnatural     The proofreader flagged unnatural_japanese: Option 3 s
 feeae3d00f  wrong_answer  The gate's full view: a reviewer with the whole stimulus chose option 1 「差し支えなければ、設営のほうは私にお任せいただけませんでしょうか。」 over the key in both trials; the reviewer: “丁寧かつ明確に自分が設営を担当したい意思を伝えている表現であるため。”
 97f123223d  ambiguous     The proofreader flagged second_answer_defensible: Option 3 is correct, but option 0 (資料チェック、よろしく) is a widely-attested peer-to-peer request form in casual chat that many native speakers would use in this exact situation; dismissing it as merely 'too casual' rather than noting it competes w
 
+# 2026-10-09: proposed by `bjt regate` — the proofreader and the answerability
+# gate, run over questions that had skipped both (batches/regated.txt).
+# Read each before merging: delete a line to keep its question, and mark
+# it `overruled` in regated.txt so it is not proposed again.
+0c022ece93  unclear       The proofreader flagged explanation_mismatch: The explanation states the correct answer should be 24万円 (scaling both rows to 12 people: 180,000×1.2 + 20,000×1.2 = 240,000), but the marked answer (option 3) matches only this calculation. However, the explanation's reasoning contains an
+5d536c8392  unclear       The proofreader flagged situation_incoherent: The situation breaks down:鈴木 at あさひ工業 is writing to佐藤 at 山川商事, but the email signature at the end reads '山川商事 佐藤', making it appear that 佐藤 sent the email to himself. The sender should be signing as 鈴木 from あさひ工業. This incoherence undermine
+bcf3ee0bf3  unclear       The proofreader flagged explanation_mismatch+situation_incoherent: The explanation claims the second day is on the 7th because the original schedule shows '6日（月）と7日（火）' but the stimulus states only '2日目：変更なし' without specifying what the unchanged date is. The stimulus does not actually tell the reader what
+
 # 2026-10-09: met in practice by the owner. The checks that would have stopped
 # each were added in the same commit: batch.keyOnlyOffDocument, and the
 # proofreader reading every option's why and role.
