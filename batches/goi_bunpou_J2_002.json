@@ -1,0 +1,74 @@
+{
+  "bundle_version": 2,
+  "item_type": "goi_bunpou",
+  "level": "J2",
+  "generated_at": "2026-10-10T20:05:52+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "82271f996c",
+      "item_type": "goi_bunpou",
+      "level": "J2",
+      "seed_cell": {
+        "id": "email_external+staff_to_customer+causative_permission@J2",
+        "setting": "email_external",
+        "relation": "staff_to_customer",
+        "function": "causative_permission",
+        "level": "J2",
+        "channel": "written"
+      },
+      "topic": "納品日変更の許可を顧客に依頼する",
+      "stem": "誠に勝手なお願いで恐縮ですが、納品日を来週月曜日に変更＿＿＿よろしいでしょうか。",
+      "options": [
+        {
+          "text": "させてもらわせて",
+          "role": "nonexistent_form",
+          "why": "「させてもらう」にさらに使役の「〜せる」を重ねたような形で、実際にはこのような活用は存在しない。"
+        },
+        {
+          "text": "していただいて",
+          "role": "opposite_valence",
+          "why": "「していただく」は相手に行為をしてもらう向きの表現で、ここでは納品日を変更するのは自社側なので主語の向きが逆になる。"
+        },
+        {
+          "text": "させていただいて",
+          "role": "correct",
+          "why": "自社側の都合で変更するという行為を、相手の許可を得る形で丁重に述べる言い方で、「〜てよろしいでしょうか」と自然に続く。"
+        },
+        {
+          "text": "させてもらって",
+          "role": "real_form_wrong_context",
+          "why": "「させてもらう」自体は実際に使う表現だが、くだけた言い方で、顧客あてのメール文の丁重さには合わない。"
+        }
+      ],
+      "correct_index": 2,
+      "explanation_ja": "自社の都合で納品日を変更するという行為について、相手の許可を得る丁重な言い方が「させていただく」である。「していただいて」は相手に行為をしてもらう向きになり、変更する主体が逆になってしまう。「させてもらって」は実在する表現だが話し言葉的で、顧客あてのメールの丁重さにそぐわない。「させてもらわせて」は使役と受益表現を不自然に重ねた、存在しない形である。",
+      "explanation_en": "させていただいて politely asks the customer's permission for the company's own action of changing the date; していただいて reverses the direction, させてもらって is too casual for a formal customer email, and させてもらわせて is not a real form.",
+      "vocab_notes": [
+        {
+          "term": "させていただく",
+          "reading": "させていただく",
+          "meaning": "humble causative-benefactive form used to ask permission for one's own action"
+        },
+        {
+          "term": "納品日",
+          "reading": "のうひんび",
+          "meaning": "delivery date"
+        },
+        {
+          "term": "勝手なお願い",
+          "reading": "かってなおねがい",
+          "meaning": "a self-serving request (humble apology for inconvenience caused)"
+        }
+      ],
+      "audio": {
+        "narration": null,
+        "options": [],
+        "dialogue": []
+      },
+      "model_p_correct": 0.62
+    }
+  ],
+  "audio_manifest": [],
+  "scenes": []
+}
