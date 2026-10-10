@@ -20,6 +20,7 @@ import { useLang } from "../lib/i18n";
 import type { DialogueTurn } from "../lib/types";
 import { Icon } from "./icons";
 import { colors, MIN_TOUCH, radius, space, type } from "./theme";
+import { useLatest } from "./useLatest";
 
 /**
  * One voice at a time.
@@ -299,8 +300,7 @@ function useClipQueue(
   // What the listener reads when an event arrives. Both are re-read rather than
   // captured: the list is rebuilt by the parent's render and `onFinished` is
   // usually written inline, and neither should re-subscribe the listener.
-  const live = React.useRef({ urls, onFinished, onInterrupted });
-  live.current = { urls, onFinished, onInterrupted };
+  const live = useLatest({ urls, onFinished, onInterrupted });
   /** Whether any clip of this run was given up on. */
   const missed = React.useRef(false);
 
@@ -368,8 +368,9 @@ function useClipQueue(
     };
     // `at` is a dependency so that two identical clips in a row — which share
     // one player, because the source is what builds it — still get a listener
-    // each. `owner` is a ref's value, the same for the life of the player.
-  }, [player, running, at, owner]);
+    // each. `owner` is a ref's value, the same for the life of the player, and
+    // `live` the same ref throughout.
+  }, [player, running, at, owner, live]);
 
   const stop = React.useCallback(() => {
     try {
@@ -381,11 +382,10 @@ function useClipQueue(
     setRunning(false);
     setAt(Math.max(0, live.current.urls.findIndex(Boolean)));
     releaseVoice(owner);
-  }, [player, owner]);
+  }, [player, owner, live]);
   // Read by another player taking the voice, which may happen several clips
   // after this one started, so it must reach the player playing now.
-  const stopLatest = React.useRef(stop);
-  stopLatest.current = stop;
+  const stopLatest = useLatest(stop);
 
   React.useEffect(() => {
     // The list is read through `live`, like `stop` reads it: a parent that
@@ -396,7 +396,7 @@ function useClipQueue(
       live.current.onInterrupted?.();
     });
     startPlayer(player);
-  }, [player, running, at, owner]);
+  }, [player, running, at, owner, live, stopLatest]);
 
   React.useEffect(() => () => releaseVoice(owner), [owner]);
 
@@ -405,7 +405,7 @@ function useClipQueue(
     if (first < 0) return;
     setAt(first);
     setRunning(true);
-  }, []);
+  }, [live]);
 
   return { at, running, status, start, stop };
 }

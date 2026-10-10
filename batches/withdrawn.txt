@@ -105,3 +105,10 @@ feeae3d00f  wrong_answer  The gate's full view: a reviewer with the whole stimul
 0c022ece93  unclear       The proofreader flagged explanation_mismatch: The explanation states the correct answer should be 24万円 (scaling both rows to 12 people: 180,000×1.2 + 20,000×1.2 = 240,000), but the marked answer (option 3) matches only this calculation. However, the explanation's reasoning contains an
 5d536c8392  unclear       The proofreader flagged situation_incoherent: The situation breaks down:鈴木 at あさひ工業 is writing to佐藤 at 山川商事, but the email signature at the end reads '山川商事 佐藤', making it appear that 佐藤 sent the email to himself. The sender should be signing as 鈴木 from あさひ工業. This incoherence undermine
 bcf3ee0bf3  unclear       The proofreader flagged explanation_mismatch+situation_incoherent: The explanation claims the second day is on the 7th because the original schedule shows '6日（月）と7日（火）' but the stimulus states only '2日目：変更なし' without specifying what the unchanged date is. The stimulus does not actually tell the reader what
+
+# 2026-10-09: met in practice by the owner. The checks that would have stopped
+# each were added in the same commit: batch.keyOnlyOffDocument, and the
+# proofreader reading every option's why and role.
+3abf299a57  unclear       The key 第三会議室 is the only option the timetable does not print, so it is passed unheard, and 研修センター is marked as a shared word when 研修 is in every row.
+b9b8446b1d  unclear       Option 9月27日 is a Saturday its why miscounts as the day after the reserve day, 9月24日 is marked as a wrong pairing, and the conversation says every date, so the schedule is not needed.
+0c99e55bd7  unclear       The key 第三会議室 is the only option the reservation sheet does not print, so it is passed unheard; found by the same check.

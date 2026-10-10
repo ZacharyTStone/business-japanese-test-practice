@@ -48,7 +48,7 @@
 import * as config from "./config.ts";
 import * as http from "./http.ts";
 import * as llm from "./llm.ts";
-import { errText, KeyError, repr, sum, TypeError_, zip } from "./py.ts";
+import { errText, KeyError, repr, sum, TypeError_, typeName, zip } from "./py.ts";
 import { dumps, loads } from "./pyjson.ts";
 
 /** The name the one question is sent under, and read back from. */
@@ -80,21 +80,11 @@ export function requestBody(question: string, options: string[], model: string):
   };
 }
 
-/** Python's name for the type of a parsed JSON value, as its errors say it. */
-function _typeName(v: unknown): string {
-  if (v === null || v === undefined) return "NoneType";
-  if (typeof v === "boolean") return "bool";
-  if (typeof v === "number") return Number.isInteger(v) ? "int" : "float";
-  if (typeof v === "string") return "str";
-  if (Array.isArray(v)) return "list";
-  return "dict";
-}
-
 /** `container[key]` with a string key, failing as Python's subscript does: a
  *  KeyError for a dict without it, a TypeError for anything that is not a
  *  dict. */
 function _subscript(container: unknown, key: string): unknown {
-  const kind = _typeName(container);
+  const kind = typeName(container);
   if (kind === "dict") {
     const d = container as Record<string, unknown>;
     if (!Object.prototype.hasOwnProperty.call(d, key)) throw new KeyError(key);
@@ -145,8 +135,8 @@ function _isCount(x: unknown): x is number {
 
 /** What the ledger prices, in the shape `llm.priceUsd` reads. */
 export function usageOf(reply: unknown, sent: Uint8Array): llm.UsageLike {
-  const usage = _typeName(reply) === "dict" ? (reply as Record<string, unknown>)["usage"] ?? null : null;
-  if (_typeName(usage) !== "dict") {
+  const usage = typeName(reply) === "dict" ? (reply as Record<string, unknown>)["usage"] ?? null : null;
+  if (typeName(usage) !== "dict") {
     return { input_tokens: sent.length, output_tokens: 0 };
   }
   const u = usage as Record<string, unknown>;

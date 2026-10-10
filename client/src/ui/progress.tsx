@@ -2,7 +2,7 @@
  * How far along something finite is: a ring for today's goal, a bar for a
  * set's progress or an accuracy laid beside others of its kind.
  */
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 

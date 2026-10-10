@@ -5,7 +5,6 @@
  * learner deep in a long passage still sees both: a clock that has scrolled
  * away is not pacing anybody.
  */
-import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useLang } from "../../lib/i18n";

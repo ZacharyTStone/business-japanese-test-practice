@@ -18,7 +18,6 @@
  * is opened past it — a deep link, a stale tab — so the door is the same
  * whichever way somebody walks up to it.
  */
-import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { localClock, nextJstMidnight, onJapanTime } from "../lib/day";

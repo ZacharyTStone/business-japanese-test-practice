@@ -32,12 +32,12 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { crc32, deflateSync } from "node:zlib";
 import * as config from "./config.ts";
-import { writeAtomic } from "./files.ts";
+import { isFile, writeAtomic } from "./files.ts";
 import * as http from "./http.ts";
 import * as llm from "./llm.ts";
 import {
-  AttributeError, errText, get, has, IndexError, isException, KeyError, OverflowError, replace, repr, RuntimeError,
-  sorted, str, thousands, toInt, truthy, TypeError_, ValueError,
+  AttributeError, errText, get, has, IndexError, isException, KeyError, pyInt, replace, repr, RuntimeError,
+  sorted, str, thousands, toInt, truthy, TypeError_, typeName, ValueError,
 } from "./py.ts";
 import * as r2 from "./r2.ts";
 import * as scenes from "./scenes.ts";
@@ -264,8 +264,9 @@ export async function reviewWithModel(image: Uint8Array, mediaType: string, scen
       const res = await llm.answerFromImage(image, mediaType, scene.question, [...scene.options]);
       let chosen: number;
       try {
-        chosen = _int(_dictGet(res, "choice", -1));
+        chosen = pyInt(_dictGet(res, "choice", -1));
       } catch (exc) {
+        // An infinity's OverflowError is not "no answer", as in Python.
         if (exc instanceof ValueError || exc instanceof TypeError_ || exc instanceof AttributeError) {
           throw new llm.LLMError(`the picture's reader gave no answer: ${repr(res)}`, { cause: exc });
         }
@@ -719,15 +720,6 @@ export class UploadResult {
   }
 }
 
-/** A file there and a regular file (`Path.is_file()`). */
-function _isFile(p: string): boolean {
-  try {
-    return statSync(p).isFile();
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Push every locally approved file to the bucket.
  *
@@ -748,7 +740,7 @@ export async function uploadApproved(survey: readonly scenes.Scene[], bucket: Pi
     }
     const scenePath = scene.path!;
     const local = path.join(root, scenePath);
-    if (!_isFile(local)) {
+    if (!isFile(local)) {
       continue; // known only from the bucket listing; nothing to send
     }
     const size = statSync(local).size;
@@ -838,38 +830,13 @@ function _digitsToInt(s: string): number {
   return toInt(s.normalize("NFKC"));
 }
 
-/** Python's name for the type of a JSON value, for a TypeError's message. */
-function _typeName(v: unknown): string {
-  if (v === null || v === undefined) return "NoneType";
-  if (Array.isArray(v)) return "list";
-  if (typeof v === "object") return "dict";
-  if (typeof v === "string") return "str";
-  if (typeof v === "boolean") return "bool";
-  return Number.isInteger(v) ? "int" : "float";
-}
-
 /** `d.get(key, default)` on a reply that should be a dict: an
  *  AttributeError when it is not one. */
 function _dictGet(d: unknown, key: string, dflt: unknown = null): any {
   if (d === null || d === undefined || typeof d !== "object" || Array.isArray(d)) {
-    throw new AttributeError(`'${_typeName(d)}' object has no attribute 'get'`);
+    throw new AttributeError(`'${typeName(d)}' object has no attribute 'get'`);
   }
   return get(d as Record<string, unknown>, key, dflt);
-}
-
-/** `int(x)` for a JSON value: an int as it is, a bool as 0 or 1, a float
- *  truncated, a string read as base 10; anything else a TypeError. An
- *  infinity is an OverflowError, which `reviewWithModel` does not read as
- *  "no answer", as in Python. */
-function _int(x: unknown): number {
-  if (typeof x === "boolean") return x ? 1 : 0;
-  if (typeof x === "number") {
-    if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
-    if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
-    return Math.trunc(x);
-  }
-  if (typeof x === "string") return toInt(x);
-  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${_typeName(x)}'`);
 }
 
 /** `obj[key]` on a parsed JSON value, as Python subscripts it: a dict by its
@@ -879,11 +846,11 @@ function _sub(obj: unknown, key: string | number): unknown {
     if (Array.isArray(obj) || typeof obj === "string") {
       const seq: unknown[] = typeof obj === "string" ? [...obj] : obj;
       const i = key < 0 ? seq.length + key : key;
-      if (i < 0 || i >= seq.length) throw new IndexError(`${_typeName(obj)} index out of range`);
+      if (i < 0 || i >= seq.length) throw new IndexError(`${typeName(obj)} index out of range`);
       return seq[i];
     }
     if (obj !== null && typeof obj === "object") throw new KeyError(String(key));
-    throw new TypeError_(`'${_typeName(obj)}' object is not subscriptable`);
+    throw new TypeError_(`'${typeName(obj)}' object is not subscriptable`);
   }
   if (obj !== null && typeof obj === "object" && !Array.isArray(obj)) {
     if (!has(obj, key)) throw new KeyError(repr(key));
@@ -895,5 +862,5 @@ function _sub(obj: unknown, key: string | number): unknown {
   if (typeof obj === "string") {
     throw new TypeError_("string indices must be integers, not 'str'");
   }
-  throw new TypeError_(`'${_typeName(obj)}' object is not subscriptable`);
+  throw new TypeError_(`'${typeName(obj)}' object is not subscriptable`);
 }

@@ -7,7 +7,6 @@
  * polite to a fault and still wrong. Collapsing those into "60% wrong" teaches
  * nothing.
  */
-import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useLang } from "../lib/i18n";

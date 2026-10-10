@@ -11,9 +11,10 @@
  * same filesystem); a write that fails leaves the old file exactly as it was.
  *
  * And the other half, `unreadable`: which errors mean a file could not be read
- * as JSON, for the readers that skip such a file rather than crash.
+ * as JSON, for the readers that skip such a file rather than crash; and
+ * `isFile` / `isDir`, pathlib's tests of what is on disk.
  */
-import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from "node:fs";
+import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, statSync, writeSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 
@@ -43,4 +44,23 @@ export function writeAtomic(target: string, data: Uint8Array | string, opts: { e
  *  is not JSON (`JSON.parse` throws a SyntaxError). */
 export function unreadable(e: unknown): boolean {
   return e instanceof SyntaxError || (e instanceof Error && typeof (e as NodeJS.ErrnoException).code === "string");
+}
+
+/** `Path(p).is_file()`: there and a regular file; false for a path that is
+ *  not there. */
+export function isFile(p: string): boolean {
+  try {
+    return statSync(p).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/** `Path(p).is_dir()`: false for a path that is not there. */
+export function isDir(p: string): boolean {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
 }

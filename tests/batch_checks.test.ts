@@ -676,3 +676,46 @@ describe("a graph in a bundle", () => {
     expect(check.status === "fail" && check.detail.includes("six digits")).toBe(true);
   });
 });
+
+describe("the key is not the only option off the document", () => {
+  /** The 資料聴読解 fixture with three distractors copied off its timetable. */
+  function _offPage(key: string): Item {
+    const it = deepcopy(fixtures.FIXTURES["shiryou_choudokkai"]);
+    const texts = [key, "経理部 月次", "営業部 定例", "採用面接"];
+    it["options"].forEach((o: Item, i: number) => { o["text"] = texts[i]; });
+    return it;
+  }
+
+  test("a key the document does not print among three it does is sent back", () => {
+    const found = batch.keyOnlyOffDocument(_offPage("総務部 研修"));
+    expect(found).toContain("総務部 研修");
+    expect(found).toContain("only option the document does not print");
+  });
+
+  test("a key the document prints is not a tell", () => {
+    expect(batch.keyOnlyOffDocument(_offPage("空き"))).toBeNull();
+  });
+
+  test("a distractor off the page as well is not a tell", () => {
+    const it = _offPage("総務部 研修");
+    it["options"][1]["text"] = "人事部 説明会";
+    expect(batch.keyOnlyOffDocument(it)).toBeNull();
+  });
+
+  test("an item with no document says nothing", () => {
+    expect(batch.keyOnlyOffDocument(deepcopy(fixtures.FIXTURES["hatsugen_choukai"]))).toBeNull();
+  });
+
+  test("the fixture passes", () => {
+    expect(batch.keyOnlyOffDocument(deepcopy(fixtures.FIXTURES["shiryou_choudokkai"]))).toBeNull();
+  });
+
+  test("a served item with the tell fails its bundle, and the ledger excuses it", () => {
+    // 3abf299a57: a room changed aloud, and the new room the one option off
+    // the timetable. Withdrawn, so the committed bundle passes; served, it fails.
+    const b = batch.load(path.join(BATCHES, "shiryou_choudokkai_J3_001.json"));
+    const name = "key is not the only option off the document";
+    expect(_status(batch.checkBundle(b, { withdrawnIds: [] }), name)).toBe("fail");
+    expect(_status(batch.checkBundle(b), name)).toBe("pass");
+  });
+});

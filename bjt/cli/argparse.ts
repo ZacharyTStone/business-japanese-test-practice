@@ -62,7 +62,7 @@ export class ArgumentParser {
 
   addArgument(...spec: [...string[], ArgumentOptions] | string[]): void {
     const last = spec[spec.length - 1];
-    const opts: ArgumentOptions = typeof last === "string" ? {} : (last as ArgumentOptions);
+    const opts: ArgumentOptions = typeof last === "string" ? {} : last;
     const flags = (typeof last === "string" ? spec : spec.slice(0, -1)) as string[];
     const positional = !flags[0].startsWith("-");
     const longest = flags.find((f) => f.startsWith("--")) ?? flags[0];

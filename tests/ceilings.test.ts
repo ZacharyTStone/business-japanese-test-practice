@@ -16,7 +16,7 @@ import * as llm from "../bjt/llm.ts";
 import * as pipeline from "../bjt/pipeline.ts";
 import * as plan from "../bjt/plan.ts";
 import { freshLedger, store } from "./conftest.ts";
-import { capture, countOf, mustFind, patch, setConfig, useRealSeams } from "./helpers.ts";
+import { capture, countOf, fakeMessages, mustFind, patch, setConfig, useRealSeams } from "./helpers.ts";
 
 function _usage(kw: llm.UsageLike): llm.UsageLike {
   return { ...kw };
@@ -32,22 +32,15 @@ function _approx(received: number, expected: number, message: string = ""): void
  *  answer, reporting a usage. Returns the list of requests it saw. */
 function answersFixture(): Record<string, any>[] {
   const seen: Record<string, any>[] = [];
-
-  const client = {
-    messages: {
-      create: async (kw: Record<string, any>) => {
-        seen.push(kw);
-        return {
-          stop_reason: "end_turn", stop_details: null,
-          content: [{ type: "text", text: '{"choice": 0, "reason": "x"}' }],
-          usage: _usage({ input_tokens: 1000, output_tokens: 200,
-                          cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }),
-        };
-      },
-    },
-  };
-
-  patch(llm.seams, "getClient", () => client);
+  fakeMessages(async (kw) => {
+    seen.push(kw);
+    return {
+      stop_reason: "end_turn", stop_details: null,
+      content: [{ type: "text", text: '{"choice": 0, "reason": "x"}' }],
+      usage: _usage({ input_tokens: 1000, output_tokens: 200,
+                      cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }),
+    };
+  });
   return seen;
 }
 
@@ -185,14 +178,8 @@ describe("the ledger", () => {
 
   test("a paid for refusal is still on the bill", async () => {
     const ledger = freshLedger();
-    const client = {
-      messages: {
-        create: async () => ({ stop_reason: "refusal", stop_details: "no", content: [],
-                               usage: _usage({ input_tokens: 500, output_tokens: 0 }) }),
-      },
-    };
-
-    patch(llm.seams, "getClient", () => client);
+    fakeMessages(async () => ({ stop_reason: "refusal", stop_details: "no", content: [],
+                                usage: _usage({ input_tokens: 500, output_tokens: 0 }) }));
     await expect(llm.answerChoice("q", ["a"], { model: "claude-opus-5" })).rejects.toThrow(llm.LLMError);
     expect(ledger.calls).toBe(1);
     _approx(ledger.usd, 0.0025);
@@ -246,17 +233,10 @@ describe("per call", () => {
 
   test("the generator env cannot lift the effort ceiling", async () => {
     const seen: Record<string, any> = {};
-
-    const client = {
-      messages: {
-        create: async (kw: Record<string, any>) => {
-          Object.assign(seen, kw);
-          throw new Anthropic.APIConnectionError({ message: undefined });
-        },
-      },
-    };
-
-    patch(llm.seams, "getClient", () => client);
+    fakeMessages(async (kw) => {
+      Object.assign(seen, kw);
+      throw new Anthropic.APIConnectionError({ message: undefined });
+    });
     setConfig({ GEN_EFFORT: "max" }); // as BJT_GEN_EFFORT=max would
     setConfig({ EFFORT_CEILING: "high" });
     await expect(llm.generateStructured("s", "u", { "type": "object" })).rejects.toThrow(llm.LLMError);

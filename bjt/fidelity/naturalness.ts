@@ -29,6 +29,7 @@ import { get, KeyError, len, or, truthy, ValueError, WS } from "../py.ts";
 import * as schemas from "../schemas.ts";
 import * as document from "../render/document.ts";
 import * as tts_plan from "../tts/plan.ts";
+import type { Item } from "../types.ts";
 
 /** Keigo no speaker produces. Every pattern here is taken from a real
  *  over-polite distractor: させていただく stacked on itself, できかねる given a
@@ -165,10 +166,13 @@ export const PROMPT = (
   + "a superior, not a peer; a request to another department goes by email or in "
   + "person, not on a posted notice; a date's weekday is a fact anyone can check, never "
   + "hearsay (十八日が金曜だとかで); cause and effect run the right way; and the 解説 "
-  + "and every `why` describe the same situation as the stem."
+  + "and every `why` describe the same situation as the stem.\n"
+  + "- Every `why` is shown to a learner who picked that option, so its facts are "
+  + "right (count the dates: the day after the 25th is the 26th, and a 翌営業日 is "
+  + "never a Saturday), and each distractor's role is the mistake a person choosing it "
+  + "would really be making — a date is not the wrong person's action, and a word "
+  + "every option shares is not a surface match."
 );
-
-type Item = Record<string, any>;
 
 /** (where, text) for everything `bjt/tts/plan.ts` would synthesise. */
 export function _spokenTexts(item: Item): [string, string][] {
@@ -228,7 +232,7 @@ export function twinsOfKey(item: Item): [number, string][] {
     const text = inContext(get(o, "text", ""));
     const isTwin = STANDARD_TWINS.some(([pattern, swap]) =>
       [...keyText.matchAll(pattern)].some((m) =>
-        keyText.slice(0, m.index) + swap + keyText.slice(m.index! + m[0].length) === text));
+        keyText.slice(0, m.index) + swap + keyText.slice(m.index + m[0].length) === text));
     if (isTwin) out.push([i, get(o, "text", "")]);
   });
   return out;

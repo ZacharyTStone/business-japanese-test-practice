@@ -22,7 +22,7 @@
  * a report is not important — teaches somebody that reporting does nothing,
  * which is the one outcome that makes the feature worse than not having it.
  */
-import React, { useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { reportItem, type FeedbackReason } from "../lib/db";

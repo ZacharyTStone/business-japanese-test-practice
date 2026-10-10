@@ -29,6 +29,7 @@ import * as record from "./core/record";
 import { loadSnapshot } from "./core/snapshot";
 import type { Db } from "./core/sql";
 import { iso } from "./core/time";
+import { normaliseEmail } from "./identity";
 
 export type Args = Record<string, unknown>;
 export type Ctx = { db: Db; learner: Learner; now: number; random?: (id: string) => number };
@@ -97,7 +98,7 @@ const FEEDBACK_REASONS = new Set(["unnatural", "wrong_answer", "ambiguous", "unc
 
 // ----- the queries ----------------------------------------------------------
 
-export const queries: Record<string, Query> = {
+export const queries = {
   // --- who is asking ---------------------------------------------------------
 
   /** Who the database takes this caller to be — asked once when the app
@@ -200,7 +201,7 @@ export const queries: Record<string, Query> = {
   // The address shown on the screen that asked, as a confirmation that the
   // app is deleting the account it thinks it is: a mismatch deletes nothing.
   async deleteAccount({ db, learner }, args) {
-    if (text(args, "email", 320).trim().toLowerCase() !== learner.email) bad("email", "the signed-in account's address");
+    if (normaliseEmail(text(args, "email", 320)) !== learner.email) bad("email", "the signed-in account's address");
     return profile.deleteAccount(db, learner);
   },
 
@@ -265,4 +266,13 @@ export const queries: Record<string, Query> = {
   async saveNote({ db, learner }, args) {
     return bank.saveNote(db, learner, text(args, "itemId"), textOrEmpty(args, "note", 4000).trim());
   },
-};
+} satisfies Record<string, Query>;
+
+/** The name of a query the app may ask for. */
+export type QueryName = keyof typeof queries;
+
+/** Whether `name` names one of the queries above — own keys only, so
+ *  `toString` or `__proto__` name nothing. */
+export function isQueryName(name: string): name is QueryName {
+  return Object.hasOwn(queries, name);
+}

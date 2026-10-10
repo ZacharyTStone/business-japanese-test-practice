@@ -182,7 +182,12 @@ accident is not.
   items, so a habit across a whole type (e.g. a fully-specified key among terse
   distractors) needs the per-type library sweep in `tests/batch_checks.test.ts`
   — the library is what a learner meets. Fix it by specifying the distractors,
-  never by trimming the answer.
+  never by trimming the answer. One tell is per item: a key that is the only
+  option the 資料 does not print (`batch.keyOnlyOffDocument`) is passed by
+  picking the one not on the page; a draft with it is sent back and a served
+  one fails `checkBundle`. The proofreader reads every option's `why` and what
+  its role means, since both are what a learner who picks it is shown
+  (2026-10-09: three items withdrawn for these).
 - **The discriminator sees what the learner sees.** `renderForDiscriminator`
   carries the 資料 and the 会話, not just stem and options; otherwise 状況把握, 資料聴読解,
   総合聴読解 and 総合読解 (55 of the exam's 80 questions) are rated on a fragment.

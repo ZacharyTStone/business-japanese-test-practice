@@ -17,7 +17,7 @@
  * in `templates.ts` — because every block type is a thing the renderer, the phone
  * layout, and the accessibility pass all have to handle.
  */
-import { get, has, isDict, len, or, repr, sorted, str, strip, truthy, TypeError_ } from "../py.ts";
+import { get, has, isDict, iterOf, iterOr, len, or, repr, sorted, str, strip, truthy, TypeError_ } from "../py.ts";
 import * as chart from "./chart.ts";
 import * as tpl from "./templates.ts";
 
@@ -53,24 +53,6 @@ export const _BLOCK_FIELDS = ["type", "text", "level", "items", "caption", "colu
  *  default (html.ts, the app's document.tsx), so a 0 says nothing a missing
  *  field does not. */
 export const _UNUSED_NUMBERS = ["level", "depth"] as const;
-
-/** `for x in (value or [])`, as Python iterates it: a list's elements, a
- *  string's characters, a dict's keys. */
-function iterOr(v: unknown): any[] {
-  if (v === null || v === undefined || v === false || v === 0 || v === "") return [];
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string") return [...v];
-  if (isDict(v)) return Object.keys(v);
-  throw new TypeError_(`'${typeof v}' object is not iterable`);
-}
-
-/** `for x in value`: a list's elements, a string's characters, a dict's keys. */
-function iterOf(v: unknown): any[] {
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string") return [...v];
-  if (isDict(v)) return Object.keys(v);
-  throw new TypeError_(`'${typeof v}' object is not iterable`);
-}
 
 /** `len(value)`: a list's elements, a string's characters, a dict's keys. */
 function pyLen(v: unknown): number {
@@ -442,7 +424,7 @@ export function validateDocument(doc: unknown, opts: { template?: string | null 
  *  too, because it is printed above the table. */
 export function textOf(doc: Record<string, any>): string {
   const parts: string[] = [str(get(doc, "title", ""))];
-  for (const m of iterOr(get(doc, "meta"))) {
+  for (const m of iterOr(get(doc, "meta")) as Record<string, any>[]) {
     parts.push(`${str(get(m, "label", ""))}${str(get(m, "value", ""))}`);
   }
   for (const block of iterOr(get(doc, "blocks"))) {
@@ -464,7 +446,7 @@ export function textOf(doc: Record<string, any>): string {
     for (const row of iterOr(get(block, "rows"))) {
       for (const c of iterOf(row)) parts.push(str(c));
     }
-    for (const pair of iterOr(get(block, "pairs"))) {
+    for (const pair of iterOr(get(block, "pairs")) as Record<string, any>[]) {
       parts.push(`${str(get(pair, "label", ""))}${str(get(pair, "value", ""))}`);
     }
     if (truthy(get(block, "sender"))) {

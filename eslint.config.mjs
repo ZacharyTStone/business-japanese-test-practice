@@ -40,6 +40,16 @@ export default tseslint.config(
       "no-unreachable": "error",
       // A closure over a loop variable declared with var (B023's cousin).
       "no-loop-func": "error",
+      // A cast that changes nothing: it hides the one that would, when the type moves.
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      // An empty block, an empty catch included: an error swallowed without a word.
+      "no-empty": ["error", { allowEmptyCatch: false }],
+      // A switch over a union that misses a member: a new verdict or role falls through.
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      // A throw of something not an Error: no stack, and `instanceof` checks miss it.
+      "@typescript-eslint/only-throw-error": "error",
+      // `==` between two things neither of which is null: a coercion nobody meant.
+      "eqeqeq": ["error", "smart"],
     },
   },
 );

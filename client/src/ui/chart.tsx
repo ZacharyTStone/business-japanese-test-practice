@@ -19,7 +19,7 @@
  * unit and every figure beside its label: what a sighted reader takes off the
  * bars, rather than a tour of rectangles.
  */
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { StyleSheet, Text, View, type LayoutChangeEvent, type TextStyle } from "react-native";
 import Svg, { Circle, Line, Polygon, Polyline, Rect, Text as SvgText } from "react-native-svg";
 

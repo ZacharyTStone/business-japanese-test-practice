@@ -20,6 +20,7 @@
  */
 import { createHash } from "node:crypto";
 import { get, getitem, has, or, str, truthy, utf8 } from "../py.ts";
+import type { Item } from "../types.ts";
 
 /** The narrator who reads the situation. Always the same, always neutral — the
  *  narration is not part of what is being tested. */
@@ -158,9 +159,6 @@ export const _DEFAULT_AUDIO: AudioPolicy = { stem: true, options: false, dialogu
  *  order of first appearance and stay stable for the life of an item, because
  *  the clip id hashes the voice: re-running a batch must not re-cast it. */
 export const DIALOGUE_VOICES = ["manager_m", "staff_junior_m", "staff_mid_f", "staff_mid_m", "reception_f"];
-
-/** An item as the generator emitted it (or a bundle item): plain JSON data. */
-type Item = Record<string, any>;
 
 export function audioPolicy(itemType: string): AudioPolicy {
   return typeof itemType === "string" && has(TYPE_AUDIO, itemType) ? TYPE_AUDIO[itemType] : _DEFAULT_AUDIO;

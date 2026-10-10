@@ -49,6 +49,20 @@ function recentAccuracy(rows: Answered[], now: number): number | null {
   return total === 0 ? null : right / total;
 }
 
+/** What the radar and the tag list both say of a group of answers: how many,
+ *  how many right, and the same over the last thirty days. The share right is
+ *  null for a group nobody has answered. */
+function summarise(rows: Answered[], since: string, now: number) {
+  const correct = rows.filter((r) => r.is_correct === 1).length;
+  return {
+    answered: rows.length,
+    correct,
+    accuracy: rows.length > 0 ? correct / rows.length : null,
+    recent_answered: rows.filter((r) => r.answered_at >= since).length,
+    recent_accuracy: recentAccuracy(rows, now),
+  };
+}
+
 /** The radar: every type, answered or not (v_my_type_stats). */
 export async function typeStats(db: Db, learner: Learner, now: number) {
   const [types, answers] = await db.batch([
@@ -63,23 +77,25 @@ export async function typeStats(db: Db, learner: Learner, now: number) {
   ]);
   const byType = new Map<string, Answered[]>();
   for (const r of answers.results as (Answered & { item_type: string })[]) {
-    byType.set(r.item_type, [...(byType.get(r.item_type) ?? []), r]);
+    const rows = byType.get(r.item_type);
+    if (rows) rows.push(r);
+    else byType.set(r.item_type, [r]);
   }
   const since = iso(now - THIRTY_DAYS);
   return (types.results as { id: string; label_ja: string; section: string; sort_order: number }[]).map((t) => {
     const rows = byType.get(t.id) ?? [];
-    const correct = rows.filter((r) => r.is_correct === 1).length;
+    const s = summarise(rows, since, now);
     return {
       item_type: t.id,
       label_ja: t.label_ja,
       section: t.section,
       sort_order: t.sort_order,
-      answered: rows.length,
-      correct,
-      accuracy: rows.length > 0 ? correct / rows.length : null,
+      answered: s.answered,
+      correct: s.correct,
+      accuracy: s.accuracy,
       last_answered_at: rows.reduce<string | null>((m, r) => (m === null || r.answered_at > m ? r.answered_at : m), null),
-      recent_answered: rows.filter((r) => r.answered_at >= since).length,
-      recent_accuracy: recentAccuracy(rows, now),
+      recent_answered: s.recent_answered,
+      recent_accuracy: s.recent_accuracy,
     };
   });
 }
@@ -109,16 +125,9 @@ export async function tagStats(db: Db, learner: Learner, now: number) {
   const since = iso(now - THIRTY_DAYS);
   return [...groups.values()]
     .map((g) => {
-      const correct = g.rows.filter((r) => r.is_correct === 1).length;
-      return {
-        axis: g.axis,
-        tag: g.tag,
-        answered: g.rows.length,
-        correct,
-        accuracy: correct / g.rows.length,
-        recent_answered: g.rows.filter((r) => r.answered_at >= since).length,
-        recent_accuracy: recentAccuracy(g.rows, now),
-      };
+      // A group exists only once an answer is in it, so its share is a number.
+      const s = summarise(g.rows, since, now);
+      return { axis: g.axis, tag: g.tag, ...s, accuracy: s.correct / s.answered };
     })
     .sort((a, b) => a.accuracy - b.accuracy);
 }

@@ -4,7 +4,6 @@
  * an address that can be opened in a new tab.
  */
 import { Link } from "expo-router";
-import React from "react";
 
 import { useLang } from "../lib/i18n";
 import { colors, type } from "./theme";

@@ -1,0 +1,160 @@
+{
+  "bundle_version": 2,
+  "item_type": "bamen_haaku",
+  "level": "J1",
+  "generated_at": "2026-10-09T21:00:29+00:00",
+  "generator_model": "claude-sonnet-5",
+  "items": [
+    {
+      "id": "e1aed67db4",
+      "item_type": "bamen_haaku",
+      "level": "J1",
+      "seed_cell": {
+        "id": "video_call+peer_to_peer+identify_listener_role@J1",
+        "setting": "video_call",
+        "relation": "peer_to_peer",
+        "function": "identify_listener_role",
+        "level": "J1",
+        "channel": "video"
+      },
+      "topic": "オンライン会議で取引先の切り替わりを聞き分ける",
+      "stem": "オンライン会議で、北川商会との打ち合わせが終わり、画面にはみどり物産の担当者と、自社の営業部の同僚が残っています。進行役の社員がこう話しかけました。「先ほどの見積もりの件ですが、金額の内訳を、御社の資料の書式に合わせて一度確認していただけますか。」この人は誰に向かって話していますか。",
+      "options": [
+        {
+          "text": "画面に残っているみどり物産の担当者",
+          "role": "correct",
+          "why": "「御社の資料の書式に合わせて」という言い方は取引先に向けたもので、北川商会との打ち合わせが終わった今、残っているのはみどり物産の担当者である。"
+        },
+        {
+          "text": "まだ参加していない経理部の同僚",
+          "role": "plausible_but_unmentioned",
+          "why": "金額の確認という内容から経理部を連想しやすいが、経理部の同僚はこの会議に参加しておらず、話にも一切出ていない。"
+        },
+        {
+          "text": "すでに退出した北川商会の担当者",
+          "role": "right_scene_wrong_moment",
+          "why": "同じ会議の参加者だが、北川商会との打ち合わせはすでに終わって退出しており、今話しかけている相手ではない。"
+        },
+        {
+          "text": "画面に残っている営業部の同僚",
+          "role": "wrong_participant",
+          "why": "同じ画面に映っているが、「御社」という呼びかけは社外の相手に使う言い方で、社内の同僚には使わない。"
+        }
+      ],
+      "correct_index": 0,
+      "explanation_ja": "決め手は「北川商会との打ち合わせが終わり」という状況説明と、「御社の資料の書式に合わせて」という敬語の使い方。前者で北川商会はすでに話の対象から外れたことが分かり、後者は取引先に向けた言い方なので、残っているみどり物産の担当者に話しかけていると分かる。営業部の同僚は社内の人物なので「御社」は使わず、経理部の同僚はそもそも会議に参加していない。",
+      "explanation_en": "The cue 御社の資料の書式に合わせて marks the addressee as an outside client, and the earlier note that the meeting with 北川商会 ended rules that company out, leaving みどり物産 as the one being spoken to.",
+      "vocab_notes": [
+        {
+          "term": "内訳",
+          "reading": "うちわけ",
+          "meaning": "breakdown (of a total amount)"
+        },
+        {
+          "term": "書式",
+          "reading": "しょしき",
+          "meaning": "format (of a document)"
+        }
+      ],
+      "audio": {
+        "narration": "2b3fa166c8d76a46",
+        "options": [
+          "a926b3d578919f45",
+          "6d91c52b848462ff",
+          "78ae8a07e9356e37",
+          "c463e0ac39c7e2e7"
+        ],
+        "dialogue": []
+      },
+      "scene_id": "scene_video_call_laptop",
+      "channel": "video",
+      "model_p_correct": 0.76
+    }
+  ],
+  "audio_manifest": [
+    {
+      "clip_id": "2b3fa166c8d76a46",
+      "item_id": "e1aed67db4",
+      "kind": "narration",
+      "index": null,
+      "text": "オンライン会議で、北川商会との打ち合わせが終わり、画面にはみどり物産の担当者と、自社の営業部の同僚が残っています。進行役の社員がこう話しかけました。「先ほどの見積もりの件ですが、金額の内訳を、御社の資料の書式に合わせて一度確認していただけますか。」この人は誰に向かって話していますか。",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "25c7c1a4fbc76235",
+      "item_id": "e1aed67db4",
+      "kind": "option_label",
+      "index": 0,
+      "text": "いち",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a926b3d578919f45",
+      "item_id": "e1aed67db4",
+      "kind": "option",
+      "index": 0,
+      "text": "画面に残っているみどり物産の担当者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6e34bf5479a4824e",
+      "item_id": "e1aed67db4",
+      "kind": "option_label",
+      "index": 1,
+      "text": "に",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "6d91c52b848462ff",
+      "item_id": "e1aed67db4",
+      "kind": "option",
+      "index": 1,
+      "text": "まだ参加していない経理部の同僚",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "a94822f17a881031",
+      "item_id": "e1aed67db4",
+      "kind": "option_label",
+      "index": 2,
+      "text": "さん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "78ae8a07e9356e37",
+      "item_id": "e1aed67db4",
+      "kind": "option",
+      "index": 2,
+      "text": "すでに退出した北川商会の担当者",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "5577d7cacee29a6c",
+      "item_id": "e1aed67db4",
+      "kind": "option_label",
+      "index": 3,
+      "text": "よん",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    },
+    {
+      "clip_id": "c463e0ac39c7e2e7",
+      "item_id": "e1aed67db4",
+      "kind": "option",
+      "index": 3,
+      "text": "画面に残っている営業部の同僚",
+      "voice": "narrator_f",
+      "channel": "in_person"
+    }
+  ],
+  "scenes": [
+    "scene_video_call_laptop"
+  ]
+}

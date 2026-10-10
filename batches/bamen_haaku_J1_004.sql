@@ -1,0 +1,33 @@
+-- bamen_haaku_J1_004: 1 × bamen_haaku (J1)
+-- generated 2026-10-09T21:00:29+00:00 by claude-sonnet-5
+-- Produced by bjt publish. Idempotent: re-running replaces these rows.
+
+-- Scenes are a shared bank (or, for 画像把握, one picture per item),
+-- image_path stays null until the art exists, and is deliberately not
+-- overwritten by a re-publish.
+insert into scenes (id, label_ja) values ('scene_video_call_laptop', 'ノートPCでオンライン会議') on conflict (id) do update set label_ja = excluded.label_ja;
+
+-- One row per distinct utterance. audio_path is filled in by the TTS step.
+insert into audio_clips (id, text, voice, channel) values ('2b3fa166c8d76a46', 'オンライン会議で、北川商会との打ち合わせが終わり、画面にはみどり物産の担当者と、自社の営業部の同僚が残っています。進行役の社員がこう話しかけました。「先ほどの見積もりの件ですが、金額の内訳を、御社の資料の書式に合わせて一度確認していただけますか。」この人は誰に向かって話していますか。', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('25c7c1a4fbc76235', 'いち', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('a926b3d578919f45', '画面に残っているみどり物産の担当者', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('6e34bf5479a4824e', 'に', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('6d91c52b848462ff', 'まだ参加していない経理部の同僚', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('a94822f17a881031', 'さん', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('78ae8a07e9356e37', 'すでに退出した北川商会の担当者', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('5577d7cacee29a6c', 'よん', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+insert into audio_clips (id, text, voice, channel) values ('c463e0ac39c7e2e7', '画面に残っている営業部の同僚', 'narrator_f', 'in_person') on conflict (id) do update set text = excluded.text, voice = excluded.voice, channel = excluded.channel;
+
+insert into bundles (id, item_type, level, generator_model, generated_at) values ('bamen_haaku_J1_004', 'bamen_haaku', 'J1', 'claude-sonnet-5', '2026-10-09T21:00:29+00:00') on conflict (id) do update set item_type = excluded.item_type, level = excluded.level, generator_model = excluded.generator_model, generated_at = excluded.generated_at;
+
+insert into items (id, bundle_id, item_type, level, seed_cell_id, setting, relation, function, channel, scene_id, speaker_role, listener_role, topic, stem, correct_index, explanation_ja, explanation_en, vocab_notes, documents, dialogue, narration_clip_id, model_p_correct) values ('e1aed67db4', 'bamen_haaku_J1_004', 'bamen_haaku', 'J1', 'video_call+peer_to_peer+identify_listener_role@J1', 'video_call', 'peer_to_peer', 'identify_listener_role', 'video', 'scene_video_call_laptop', null, null, 'オンライン会議で取引先の切り替わりを聞き分ける', 'オンライン会議で、北川商会との打ち合わせが終わり、画面にはみどり物産の担当者と、自社の営業部の同僚が残っています。進行役の社員がこう話しかけました。「先ほどの見積もりの件ですが、金額の内訳を、御社の資料の書式に合わせて一度確認していただけますか。」この人は誰に向かって話していますか。', 0, '決め手は「北川商会との打ち合わせが終わり」という状況説明と、「御社の資料の書式に合わせて」という敬語の使い方。前者で北川商会はすでに話の対象から外れたことが分かり、後者は取引先に向けた言い方なので、残っているみどり物産の担当者に話しかけていると分かる。営業部の同僚は社内の人物なので「御社」は使わず、経理部の同僚はそもそも会議に参加していない。', 'The cue 御社の資料の書式に合わせて marks the addressee as an outside client, and the earlier note that the meeting with 北川商会 ended rules that company out, leaving みどり物産 as the one being spoken to.', '[{"term": "内訳", "reading": "うちわけ", "meaning": "breakdown (of a total amount)"}, {"term": "書式", "reading": "しょしき", "meaning": "format (of a document)"}]', '[]', '[]', '2b3fa166c8d76a46', 0.76) on conflict (id) do update set bundle_id = excluded.bundle_id, item_type = excluded.item_type, level = excluded.level, seed_cell_id = excluded.seed_cell_id, setting = excluded.setting, relation = excluded.relation, function = excluded.function, channel = excluded.channel, scene_id = excluded.scene_id, speaker_role = excluded.speaker_role, listener_role = excluded.listener_role, topic = excluded.topic, stem = excluded.stem, correct_index = excluded.correct_index, explanation_ja = excluded.explanation_ja, explanation_en = excluded.explanation_en, vocab_notes = excluded.vocab_notes, documents = excluded.documents, dialogue = excluded.dialogue, narration_clip_id = excluded.narration_clip_id, model_p_correct = excluded.model_p_correct;
+
+-- Options are replaced wholesale rather than upserted: a corrected item can
+-- have fewer options or a different order, and a stale row left behind would
+-- be a fifth answer nobody meant to publish.
+delete from item_options where item_id in ('e1aed67db4');
+insert into item_options (item_id, position, text, role, why, clip_id) values ('e1aed67db4', 0, '画面に残っているみどり物産の担当者', 'correct', '「御社の資料の書式に合わせて」という言い方は取引先に向けたもので、北川商会との打ち合わせが終わった今、残っているのはみどり物産の担当者である。', 'a926b3d578919f45') on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
+insert into item_options (item_id, position, text, role, why, clip_id) values ('e1aed67db4', 1, 'まだ参加していない経理部の同僚', 'plausible_but_unmentioned', '金額の確認という内容から経理部を連想しやすいが、経理部の同僚はこの会議に参加しておらず、話にも一切出ていない。', '6d91c52b848462ff') on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
+insert into item_options (item_id, position, text, role, why, clip_id) values ('e1aed67db4', 2, 'すでに退出した北川商会の担当者', 'right_scene_wrong_moment', '同じ会議の参加者だが、北川商会との打ち合わせはすでに終わって退出しており、今話しかけている相手ではない。', '78ae8a07e9356e37') on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
+insert into item_options (item_id, position, text, role, why, clip_id) values ('e1aed67db4', 3, '画面に残っている営業部の同僚', 'wrong_participant', '同じ画面に映っているが、「御社」という呼びかけは社外の相手に使う言い方で、社内の同僚には使わない。', 'c463e0ac39c7e2e7') on conflict (item_id, position) do update set text = excluded.text, role = excluded.role, why = excluded.why, clip_id = excluded.clip_id;
+
