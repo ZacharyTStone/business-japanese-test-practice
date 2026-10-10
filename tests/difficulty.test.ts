@@ -212,12 +212,15 @@ describe("difficulty", () => {
     const s = store();
     generated();
     const probeCalls: [string | null, string][] = [];
+    // The judge misses the key on both sides: discarded as ambiguous.
+    const missEverything: Answer = async (question, options) => ({
+      choice: (options.indexOf(goiCorrectText()) + 1) % 4, reason: "x" });
     patch(llm, "answerChoice", _route(
-      _gateAnswerer(false), _answerer(Array(5).fill(true), probeCalls)));
+      missEverything, _answerer(Array(5).fill(true), probeCalls)));
 
     const [, , kept, detail] = await pipeline.generateAndGate(s, "goi_bunpou", "J2", { gate: true });
 
-    expect(!kept && detail.includes("discarded:leaky")).toBe(true);
+    expect(!kept && detail.includes("discarded:ambiguous")).toBe(true);
     expect(probeCalls).toEqual([]);
     expect(detail).not.toContain("difficulty=");
   });

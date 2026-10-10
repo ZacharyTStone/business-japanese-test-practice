@@ -13,6 +13,10 @@
  * Each side is run up to config.GATE_TRIALS times and the verdict is by count, so
  * a model that gets it right once out of three cold is noise, not leakage.
  *
+ * A leak discards only the 聴読解 types (COLD_DISCARDS), whose definition it
+ * breaks. For every other type it is recorded as the cold rate and the item is
+ * judged on its full side: an easy question, not a wrong one.
+ *
  * A trial the judge did not answer — an outage, a refusal, a reply cut off at its
  * token ceiling — is not a wrong answer, and the gate does not count it as one.
  * Scored as wrong it would read as a clean cold side (and the next side would be
@@ -84,6 +88,22 @@ export class Fraction {
 export const FULL_MIN = new Fraction(2, 3);
 // ...and the cold view is NOT — anything above this is treated as leakage.
 export const COLD_MAX = new Fraction(1, 3);
+
+/** The types a leak discards. 聴読解's one requirement (README) is that the
+ *  answer needs BOTH the document and the audio, so a key read off the page
+ *  alone breaks the type itself. Everywhere else a leak makes a question
+ *  easier than meant, not wrong: the owner kept every such question the
+ *  regate found (2026-10-09), and from 10-02 to 10-06 discarding them cost 15
+ *  of 22 nightly drafts. There the cold rate is recorded, the full side still
+ *  decides, and the difficulty probe measures how easy the question is. */
+export const COLD_DISCARDS: ReadonlySet<string> = new Set([
+  "joukyou_haaku", "shiryou_choudokkai", "sougou_choudokkai",
+]);
+
+/** True when a cold-side leak discards an item of this type. */
+export function leakDiscards(itemType: string): boolean {
+  return COLD_DISCARDS.has(itemType);
+}
 
 export class Trial {
   side: string;
@@ -395,13 +415,15 @@ export function leakDescription(itemType: string, opts: { result?: GateResult | 
   return what;
 }
 
-/** Run the cold side, then the full side only if the cold side passed.
+/** Run the cold side, then the full side unless the cold side discarded.
  *
- *  Cold first because it is the side that discards. A leaky item is out
- *  whatever the full view says, so asking the full question of it is three
- *  strong-model calls that cannot change the verdict. Cold-first halves the
- *  cost of a discard and leaves a kept item exactly as it was: both sides run,
- *  both rates recorded. A leaky item carries no full rate, not a fake one.
+ *  Cold first because it is the side that can discard. For a type in
+ *  COLD_DISCARDS a leaky item is out whatever the full view says, so asking
+ *  the full question of it is three strong-model calls that cannot change
+ *  the verdict. Cold-first halves the cost of that discard and leaves a kept
+ *  item exactly as it was: both sides run, both rates recorded. A discarded
+ *  leaky item carries no full rate, not a fake one. For any other type a
+ *  leak only lands in the cold rate, and the full side decides.
  *
  *  A side with an unanswered trial ends the gate there, unchecked: an
  *  unanswered cold trial scored as a miss is how an item whose judge was
@@ -420,7 +442,7 @@ export async function runGate(item: Record<string, any>): Promise<GateResult> {
   }
   const coldCorrect = correctCount(coldTrials);
   const coldRate = coldCorrect / coldTrials.length;
-  if (isLeaky(coldCorrect, planned)) {
+  if (isLeaky(coldCorrect, planned) && leakDiscards(str(get(item, "item_type", "")))) {
     return new GateResult({
       cold_success_rate: coldRate,
       full_success_rate: null,
