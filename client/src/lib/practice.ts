@@ -180,9 +180,9 @@ export function practiceReducer(state: PracticeState, action: PracticeAction): P
         pending: null,
         graded: action.verdict,
         stage: "reveal",
-        // The explanation is where a miss teaches: open after one, folded after
-        // a right answer for whoever wants it.
-        showDetails: !action.verdict.isCorrect,
+        // The explanation is where a question teaches, right or wrong: open
+        // on every verdict, folded only by the learner.
+        showDetails: true,
         answers: [
           ...state.answers,
           {
