@@ -15,7 +15,6 @@
  * the set.
  */
 import { Tabs } from "expo-router/js-tabs";
-import React from "react";
 import type { ColorValue } from "react-native";
 
 import { useLang } from "../../src/lib/i18n";

@@ -1,9 +1,9 @@
 /**
  * The last moment of a question: the other person's face, one sentence about
- * what happened, the way on — and the explanation folded under it for those
- * who want it.
+ * what happened, the way on — and the explanation open under it, folded only
+ * by whoever does not want it.
  */
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useLang } from "../../lib/i18n";
@@ -177,9 +177,8 @@ export function VerdictPanel({
         ) : null}
       </Card>
 
-      {/* The way on, right under the verdict: most answers need no more than
-          the verdict, and the explanation below can be long. The one at the
-          bottom is for whoever read all of it. */}
+      {/* The way on, once, right under the verdict: the explanation below can
+          be long, and the screen scrolls to the verdict when it lands. */}
       <View ref={nextWrap}>
         <Button
           label={nextLabel}
@@ -218,12 +217,10 @@ export function VerdictPanel({
         />
       ) : null}
 
-      {/* Every question gets one, and it is the last thing above the button to
-          leave: a report is worth making at the moment the oddness is still in
-          view, and worth nobody's attention before then. */}
+      {/* Every question gets one, and it is the last thing on the card: a
+          report is worth making at the moment the oddness is still in view,
+          and worth nobody's attention before then. */}
       <ReportQuestion key={`${item.id}-report`} itemId={item.id} />
-
-      <Button label={nextLabel} icon="chevron" onPress={onNext} />
     </FadeIn>
   );
 }

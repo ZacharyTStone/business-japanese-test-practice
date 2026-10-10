@@ -2,7 +2,6 @@
  * The first moment of a question: who you are, who you are talking to, where.
  * A picture, a document if there is one. Nothing to answer yet.
  */
-import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { useLang } from "../../lib/i18n";

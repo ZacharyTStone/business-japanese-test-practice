@@ -33,9 +33,7 @@ import {
 } from "./py.ts";
 import * as seedtable from "./seedtable.ts";
 import * as shelf_rest from "./shelf_rest.ts";
-
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "./types.ts";
 
 /**
  * The run's ceiling (or an empty account) ended a shelf part-way.

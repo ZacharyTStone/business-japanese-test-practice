@@ -55,7 +55,7 @@
  */
 import * as config from "../config.ts";
 import * as llm from "../llm.ts";
-import { get, has, or, OverflowError, slice, str, strip, toInt, truthy, TypeError_, ValueError, ZeroDivisionError } from "../py.ts";
+import { get, has, or, pyInt, slice, str, strip, truthy, TypeError_, ValueError, ZeroDivisionError } from "../py.ts";
 import * as schemas from "../schemas.ts";
 import * as textutil from "../textutil.ts";
 import * as document from "../render/document.ts";
@@ -159,22 +159,6 @@ export class GateResult {
  *  could change the verdict. The gate's early stop. */
 export type Decided = (correct: number, done: number, planned: number) => boolean;
 
-/** Python's `int(x)` of what a judge returned as its choice: a whole number
- *  as itself, a float cut toward zero, a numeral string read, a boolean as 0
- *  or 1; anything else the ValueError or TypeError `int()` raises. An
- *  infinity is an OverflowError, which a trial is not scored unanswered on,
- *  exactly as in Python. */
-function _int(x: unknown): number {
-  if (typeof x === "boolean") return x ? 1 : 0;
-  if (typeof x === "number") {
-    if (Number.isNaN(x)) throw new ValueError("cannot convert float NaN to integer");
-    if (!Number.isFinite(x)) throw new OverflowError("cannot convert float infinity to integer");
-    return Math.trunc(x);
-  }
-  if (typeof x === "string") return toInt(x);
-  throw new TypeError_(`int() argument must be a string, a bytes-like object or a real number, not '${x === null || x === undefined ? "NoneType" : Array.isArray(x) ? "list" : "dict"}'`);
-}
-
 /** Ask `model` the same question up to `trials` times and score each answer.
  *
  *  Shared with the difficulty probe (bjt/fidelity/difficulty.ts), which asks
@@ -205,12 +189,13 @@ export async function runTrials(
     let chosen: number | null;
     try {
       const res = await llm.answerChoice(question, options, { model: model });
-      chosen = _int(get(res, "choice", -1));
+      chosen = pyInt(get(res, "choice", -1));
       reason = str(or(get(res, "reason", ""), ""));
     } catch (e) {
       if (e instanceof llm.LLMBillingError) {
         throw e;  // not an unanswered trial: the run itself has to stop
       }
+      // An infinity's OverflowError is not an unanswered trial, as in Python.
       if (!(e instanceof llm.LLMError || e instanceof ValueError || e instanceof TypeError_)) {
         throw e;
       }

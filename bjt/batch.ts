@@ -39,9 +39,8 @@ import * as schemas from "./schemas.ts";
 import * as seedtable from "./seedtable.ts";
 import * as tts_plan from "./tts/plan.ts";
 import * as withdrawn from "./withdrawn.ts";
+import type { Item } from "./types.ts";
 
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
 type Bundle = Record<string, any>;
 
 /** The bundle format: audio clip ids filed by role (`narration` / `options` /
@@ -451,10 +450,15 @@ export function checkBundle(
   // A withdrawn item is no longer served; the per-item tells skip it.
   const gone: ReadonlySet<unknown> = withdrawnIds === null ? withdrawn.ids() : new Set(withdrawnIds);
 
+  // Each item as the generator emitted it, which is what the per-item checks
+  // read. Made once: none of them changes it.
+  const shapes: Item[] = [];
+  for (const it of items) shapes.push(asGeneratorShape(it));
+
   // 1. Every item still validates on its own.
   const invalid: string[] = [];
-  for (const it of items) {
-    const errs = schemas.validateItem(itemType, asGeneratorShape(it));
+  for (const [i, it] of items.entries()) {
+    const errs = schemas.validateItem(itemType, shapes[i]);
     if (errs.length) {
       invalid.push(`${str(get(it, "id"))}: ${repr(errs)}`);
     }
@@ -533,9 +537,9 @@ export function checkBundle(
   //     sent back (`Generator.generate`), and a served one either leaves the
   //     bank through the ledger or fails CI.
   const offPage: string[] = [];
-  for (const it of items) {
+  for (const [i, it] of items.entries()) {
     if (gone.has(get(it, "id"))) continue;
-    if (keyOnlyOffDocument(asGeneratorShape(it)) !== null) offPage.push(str(get(it, "id", "?")));
+    if (keyOnlyOffDocument(shapes[i]) !== null) offPage.push(str(get(it, "id", "?")));
   }
   add("key is not the only option off the document", offPage.length ? "fail" : "pass",
       offPage.length ? `only the key is missing from the document in ${repr(offPage)}`
@@ -621,8 +625,8 @@ export function checkBundle(
   // to be all digits would jump the queue in a JavaScript object.)
   const spelledOut = new Map<unknown, string>();
   let nDocs = 0;
-  for (const it of items) {
-    const shaped = asGeneratorShape(it);
+  for (const [i, it] of items.entries()) {
+    const shaped = shapes[i];
     const docs = schemas.documentsOf(shaped);
     nDocs += docs.length;
     const moved = normaliseNumerals(deepcopy(shaped));
@@ -649,8 +653,8 @@ export function checkBundle(
   //     (a label), and a check that cannot tell them apart must not be the
   //     thing that blocks a batch.
   const mixed = new Map<unknown, string[]>();
-  for (const it of items) {
-    const shaped = asGeneratorShape(it);
+  for (const [i, it] of items.entries()) {
+    const shaped = shapes[i];
     if (schemas.documentField(get(shaped, "item_type", "")) === null) {
       continue;
     }
@@ -687,11 +691,11 @@ export function checkBundle(
   //     makes the ledger compulsory: a committed item with one of these tells
   //     either leaves the bank or fails CI.
   const unnatural = new Map<unknown, string[]>();
-  for (const it of items) {
+  for (const [i, it] of items.entries()) {
     if (gone.has(get(it, "id"))) {
       continue;
     }
-    const found = naturalness.faults(asGeneratorShape(it));
+    const found = naturalness.faults(shapes[i]);
     if (found.length) {
       unnatural.set(get(it, "id", "?"), found);
     }
@@ -730,8 +734,8 @@ export function checkBundle(
   //    five, and a reading item plans none.
   const clips = get(bundle, "audio_manifest", []) as unknown[];
   let planned = 0;
-  for (const it of items) {
-    planned += tts_plan.planItem(asGeneratorShape(it), getitem(it, "id")).length;
+  for (const [i, it] of items.entries()) {
+    planned += tts_plan.planItem(shapes[i], getitem(it, "id")).length;
   }
   if (!planned) {
     add("audio manifest", "pass", "no audio — this item type is read, not heard");

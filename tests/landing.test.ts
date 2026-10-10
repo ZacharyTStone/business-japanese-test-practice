@@ -26,12 +26,12 @@ function redirectSources(): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "" && !line.startsWith("#"))
-    .map((line) => line.split(/\s+/)[0]!);
+    .map((line) => line.split(/\s+/)[0]);
 }
 
 /** Every `href` and `src` value on a page. */
 function references(html: string): string[] {
-  return [...html.matchAll(/\b(?:href|src)="([^"]*)"/g)].map((m) => m[1]!);
+  return [...html.matchAll(/\b(?:href|src)="([^"]*)"/g)].map((m) => m[1]);
 }
 
 describe.each(PAGES)("%s", (page) => {
@@ -90,7 +90,7 @@ describe("the site", () => {
     const targets = read("_redirects")
       .split("\n")
       .filter((line) => line.trim() !== "" && !line.trim().startsWith("#"))
-      .map((line) => new URL(line.trim().split(/\s+/)[1]!).origin);
+      .map((line) => new URL(line.trim().split(/\s+/)[1]).origin);
     expect(targets.length).toBeGreaterThan(0);
     expect(new Set(targets).size).toBe(1);
     expect(redirectSources().sort()).toEqual(["/app", "/privacy"]);

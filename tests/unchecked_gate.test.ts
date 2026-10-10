@@ -18,7 +18,7 @@ import * as answerability from "../bjt/fidelity/answerability.ts";
 import { Generator } from "../bjt/generators/base.ts";
 import type * as seedtable from "../bjt/seedtable.ts";
 import { goiItem, store } from "./conftest.ts";
-import { patch, setConfig, tmpPath } from "./helpers.ts";
+import { fakeMessages, patch, setConfig, tmpPath } from "./helpers.ts";
 
 type Item = Record<string, any>;
 
@@ -123,17 +123,11 @@ describe("unchecked gate", () => {
     const fresh = new llm.Spend();
     patch(llm.state, "spend", fresh);
 
-    const client = {
-      messages: {
-        create: async () => ({
-          stop_reason: "max_tokens", stop_details: null,
-          content: [{ type: "text", text: '{"choice": 1, "reason": "becau' }],
-          usage: { input_tokens: 100, output_tokens: 1500 },
-        }),
-      },
-    };
-
-    patch(llm.seams, "getClient", () => client);
+    fakeMessages(async () => ({
+      stop_reason: "max_tokens", stop_details: null,
+      content: [{ type: "text", text: '{"choice": 1, "reason": "becau' }],
+      usage: { input_tokens: 100, output_tokens: 1500 },
+    }));
     const err = await llm.answerChoice("q", ["a", "b"], { model: "claude-sonnet-5" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(llm.LLMTruncatedError);
     expect(errText(err)).toContain("max_tokens");

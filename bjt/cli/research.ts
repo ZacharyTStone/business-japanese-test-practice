@@ -32,9 +32,7 @@ import * as seedsmod from "../seeds.ts";
 import * as seedtable from "../seedtable.ts";
 import { LETTERS, printAnswer, printQuestion } from "./_print.ts";
 import type { Namespace, SubParsers } from "./argparse.ts";
-
-/** An item: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "../types.ts";
 
 // ----- the terminal ----------------------------------------------------------
 

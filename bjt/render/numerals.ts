@@ -45,7 +45,7 @@
  * part of an item that is printed *to look like something*, so it is the only
  * place the problem arises.
  */
-import { get, has, isDict, sorted, str, TypeError_ } from "../py.ts";
+import { get, has, isDict, iterOr, sorted, str } from "../py.ts";
 
 export const _DIGITS: Record<string, number> = {
   "〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4,
@@ -201,16 +201,6 @@ export function toArabicText(text: string): string {
 /** The spelled-out numbers in the string — empty when it reads like print. */
 export function kanjiNumbersIn(text: string): string[] {
   return _numbers(text).map((m) => m.text);
-}
-
-/** `for x in (value or [])`, as Python iterates it: a list's elements, a
- *  string's characters, a dict's keys. */
-function iterOr(v: unknown): unknown[] {
-  if (v === null || v === undefined || v === false || v === 0 || v === "") return [];
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string") return [...v];
-  if (isDict(v)) return Object.keys(v);
-  throw new TypeError_(`'${typeof v}' object is not iterable`);
 }
 
 /** Rewrite every number in a document as digits. Returns how many strings moved.

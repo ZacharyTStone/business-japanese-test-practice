@@ -14,10 +14,16 @@ export type Refusal = { status: 401 | 403 | 500 | 503; code: string; message: st
 /** Nobody signed in. The app offers Google. */
 export const signedOut: Refusal = { status: 401, code: "signed_out", message: "Not signed in" };
 
+/** An address as every door compares it: trimmed and lower-cased, so the
+ *  tester list, the accounts and the sign-in agree on who is who. */
+export function normaliseEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 /** The signed-in address, lower-cased, or nobody: a session without an
  *  address speaks for no one. */
 export function signedInEmail(email: string | null | undefined): string | Refusal {
-  const address = (email ?? "").trim().toLowerCase();
+  const address = normaliseEmail(email ?? "");
   return address || signedOut;
 }
 

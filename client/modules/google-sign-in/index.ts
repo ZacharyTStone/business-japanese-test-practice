@@ -17,9 +17,8 @@ import { requireOptionalNativeModule } from "expo";
 
 export type GoogleIdToken = { idToken: string; nonce: string };
 
-/** The codes `signIn` rejects with, besides anything unexpected. */
-export const SIGN_IN_CANCELLED = "ERR_SIGN_IN_CANCELLED";
-export const NO_GOOGLE_ACCOUNT = "ERR_NO_GOOGLE_ACCOUNT";
+/** The codes `signIn` rejects with, besides anything unexpected (codes.ts). */
+export { NO_GOOGLE_ACCOUNT, SIGN_IN_CANCELLED } from "./codes";
 
 type GoogleSignInModule = {
   signIn(serverClientId: string): Promise<GoogleIdToken>;

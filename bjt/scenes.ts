@@ -32,9 +32,7 @@ import * as publish from "./publish.ts";
 import { FileNotFoundError, get, KeyError, or, repr, sorted, str, truthy, ValueError } from "./py.ts";
 import * as seedtable from "./seedtable.ts";
 import * as withdrawn from "./withdrawn.ts";
-
-/** An item: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "./types.ts";
 
 /** Extensions accepted as artwork, in the order preferred when more than one
  *  exists for a scene. WebP first: these are flat illustrations, they are

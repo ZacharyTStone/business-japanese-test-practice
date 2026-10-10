@@ -13,7 +13,7 @@ import * as http from "../bjt/http.ts";
 import * as jev from "../bjt/jev.ts";
 import * as llm from "../bjt/llm.ts";
 import { freshLedger } from "./conftest.ts";
-import { patch, setConfig, setEnv } from "./helpers.ts";
+import { fakeMessages, patch, setConfig, setEnv } from "./helpers.ts";
 
 function _status(code: number, retryAfter: string | null = null): Error {
   const headers = new Headers(retryAfter ? { "retry-after": retryAfter } : {});
@@ -40,21 +40,14 @@ function waitsFixture(): number[] {
 /** A client that raises or returns each of `replies` in turn. */
 function _client(replies: unknown[]): Record<string, any>[] {
   const sent: Record<string, any>[] = [];
-
-  const client = {
-    messages: {
-      create: async (kw: Record<string, any>) => {
-        sent.push(kw);
-        const reply = replies[Math.min(sent.length, replies.length) - 1];
-        if (reply instanceof Error) {
-          throw reply;
-        }
-        return reply;
-      },
-    },
-  };
-
-  patch(llm.seams, "getClient", () => client);
+  fakeMessages(async (kw) => {
+    sent.push(kw);
+    const reply = replies[Math.min(sent.length, replies.length) - 1];
+    if (reply instanceof Error) {
+      throw reply;
+    }
+    return reply;
+  });
   return sent;
 }
 

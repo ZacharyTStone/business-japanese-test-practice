@@ -36,7 +36,7 @@
  * replaced `providers._post`.
  */
 import * as http from "../http.ts";
-import { get, has, htmlEscape, IndexError, KeyError, len, PyError, repr, RuntimeError, sorted, strip, toInt, truthy, TypeError_, ValueError } from "../py.ts";
+import { get, has, htmlEscape, IndexError, KeyError, len, PyError, repr, RuntimeError, sorted, strip, toInt, truthy, TypeError_, typeName, ValueError } from "../py.ts";
 import { dumps, loads } from "../pyjson.ts";
 import * as channel from "./channel.ts";
 
@@ -500,16 +500,6 @@ const _UTF8_STRICT = new TextDecoder("utf-8", { fatal: true });
  *  each broken sequence one U+FFFD. */
 const _UTF8_REPLACE = new TextDecoder("utf-8", { fatal: false, ignoreBOM: true });
 
-/** Python's name for the type of a JSON value, for a TypeError's message. */
-function _typeName(v: unknown): string {
-  if (v === null || v === undefined) return "NoneType";
-  if (Array.isArray(v)) return "list";
-  if (typeof v === "object") return "dict";
-  if (typeof v === "string") return "str";
-  if (typeof v === "boolean") return "bool";
-  return Number.isInteger(v) ? "int" : "float";
-}
-
 /** `obj[key]` on a parsed JSON value, as Python subscripts it: a dict by its
  *  key (only a string key is ever in one), a list or a string by an integer
  *  index, anything else a TypeError. */
@@ -518,20 +508,20 @@ function _sub(obj: unknown, key: string | number): unknown {
     if (Array.isArray(obj) || typeof obj === "string") {
       const seq: unknown[] = typeof obj === "string" ? [...obj] : obj;
       const i = key < 0 ? seq.length + key : key;
-      if (i < 0 || i >= seq.length) throw new IndexError(`${_typeName(obj)} index out of range`);
+      if (i < 0 || i >= seq.length) throw new IndexError(`${typeName(obj)} index out of range`);
       return seq[i];
     }
     if (obj !== null && typeof obj === "object") throw new KeyError(String(key));
-    throw new TypeError_(`'${_typeName(obj)}' object is not subscriptable`);
+    throw new TypeError_(`'${typeName(obj)}' object is not subscriptable`);
   }
   if (obj !== null && typeof obj === "object" && !Array.isArray(obj)) {
     if (!has(obj, key)) throw new KeyError(repr(key));
     return (obj as Record<string, unknown>)[key];
   }
   if (Array.isArray(obj) || typeof obj === "string") {
-    throw new TypeError_(`${_typeName(obj)} indices must be integers or slices, not str`);
+    throw new TypeError_(`${typeName(obj)} indices must be integers or slices, not str`);
   }
-  throw new TypeError_(`'${_typeName(obj)}' object is not subscriptable`);
+  throw new TypeError_(`'${typeName(obj)}' object is not subscriptable`);
 }
 
 /** The base64 alphabet's values; anything else is not part of the data. */
@@ -547,7 +537,7 @@ const _B64_VALUES: ReadonlyMap<string, number> = new Map(
  *  noise instead of saying there was no audio. */
 export function _b64decode(s: unknown): Uint8Array {
   if (typeof s !== "string") {
-    throw new TypeError_(`argument should be a bytes-like object or ASCII string, not '${_typeName(s)}'`);
+    throw new TypeError_(`argument should be a bytes-like object or ASCII string, not '${typeName(s)}'`);
   }
   if (new RegExp("[^\\x00-\\x7f]").test(s)) {
     throw new ValueError("string argument should contain only ASCII characters");

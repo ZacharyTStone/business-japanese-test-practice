@@ -19,6 +19,7 @@
  * those minutes it must not make the deleted account again. The database
  * tests, which have no sign-in, pass `checkSignIn: false`; nothing else may.
  */
+import { normaliseEmail } from "../identity";
 import { first, stmt, type Db } from "./sql";
 
 export type Learner = {
@@ -47,7 +48,7 @@ export async function resolveLearner(
   rawEmail: string,
   { checkSignIn = true, newId = () => crypto.randomUUID() }: { checkSignIn?: boolean; newId?: () => string } = {}
 ): Promise<Learner> {
-  const email = rawEmail.trim().toLowerCase();
+  const email = normaliseEmail(rawEmail);
   const [testerRes, userRes] = await db.batch([
     stmt(db, "select unlimited, may_veto, max_daily_goal from testers where email = ?", email),
     stmt(db, "select id from users where email = ?", email),

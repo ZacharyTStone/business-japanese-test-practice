@@ -20,7 +20,7 @@
  * visual design, so one document renders correctly in light mode, dark mode, and
  * at whatever text size the reader has chosen.
  */
-import { fixed, floorDiv, get, has, htmlEscape, isDict, len, or, PyError, rstrip, slice, str, toInt, truthy, TypeError_, ValueError } from "../py.ts";
+import { fixed, floorDiv, get, has, htmlEscape, isDict, iterOf, iterOr, len, or, PyError, rstrip, slice, str, toInt, truthy, ValueError } from "../py.ts";
 import * as chartmod from "./chart.ts";
 import type { Chart } from "./chart.ts";
 import { CALLOUT_TONES } from "./document.ts";
@@ -32,24 +32,6 @@ export const _MIN_HEADING = 2;
 export const _MAX_HEADING = 4;
 
 type Block = Record<string, any>;
-
-/** `for x in (value or [])`, as Python iterates it: a list's elements, a
- *  string's characters, a dict's keys. */
-function iterOr(v: unknown): any[] {
-  if (v === null || v === undefined || v === false || v === 0 || v === "") return [];
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string") return [...v];
-  if (isDict(v)) return Object.keys(v);
-  throw new TypeError_(`'${typeof v}' object is not iterable`);
-}
-
-/** `for x in value`. */
-function iterOf(v: unknown): any[] {
-  if (Array.isArray(v)) return v;
-  if (typeof v === "string") return [...v];
-  if (isDict(v)) return Object.keys(v);
-  throw new TypeError_(`'${typeof v}' object is not iterable`);
-}
 
 /** `int(value)`, or null where Python raises TypeError or ValueError (the
  *  two the callers catch). An infinity is an OverflowError, which they do
@@ -115,7 +97,7 @@ function _table(block: Block): string {
 }
 
 function _keyValues(block: Block): string {
-  const rows = iterOr(get(block, "pairs")).map((p) =>
+  const rows = (iterOr(get(block, "pairs")) as Record<string, any>[]).map((p) =>
     `<div class="doc-field"><dt>${_esc(get(p, "label"))}</dt>` +
     `<dd>${_esc(get(p, "value"))}</dd></div>`,
   ).join("");

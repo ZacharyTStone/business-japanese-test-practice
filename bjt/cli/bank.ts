@@ -28,9 +28,7 @@ import * as seedtable from "../seedtable.ts";
 import * as withdrawn from "../withdrawn.ts";
 import { printAnswer, printQuestion } from "./_print.ts";
 import type { Namespace, SubParsers } from "./argparse.ts";
-
-/** An item or a bundle: plain JSON data. */
-type Item = Record<string, any>;
+import type { Item } from "../types.ts";
 
 /**
  * Measure the difficulty of live items that shipped without a measurement.

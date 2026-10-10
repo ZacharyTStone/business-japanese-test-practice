@@ -36,7 +36,7 @@ function loadSqlite(): Sqlite {
         : (rest[0] as { type?: string } | undefined)?.type ?? (warning instanceof Error ? warning.name : "Warning");
       if (kind === "ExperimentalWarning" && message.startsWith("SQLite is an experimental feature")) return;
       return (emitWarning as (...args: unknown[]) => void).call(process, warning, ...rest);
-    } as typeof process.emitWarning;
+    };
     try {
       sqlite = process.getBuiltinModule("node:sqlite");
     } finally {

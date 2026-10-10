@@ -35,7 +35,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as config from "../config.ts";
-import { writeAtomic } from "../files.ts";
+import { isFile, writeAtomic } from "../files.ts";
 import * as publish from "../publish.ts";
 import { errText, floorDiv, get, isException, RuntimeError, slice, sorted, splitlines, str, strip, thousands, ValueError } from "../py.ts";
 import { dumps } from "../pyjson.ts";
@@ -389,7 +389,7 @@ export async function uploadClips(
   const remake: ReadonlySet<string> = opts.remake ?? new Set();
   for (const clip of report.clips) {
     const local = path.join(root, clip.path);
-    if (!_isFile(local)) {
+    if (!isFile(local)) {
       result.failed.push([clip.path, "file missing on this machine"]);
       continue;
     }
@@ -418,15 +418,6 @@ export async function uploadClips(
     result.sent.push(clip.path);
   }
   return result;
-}
-
-/** `Path(p).is_file()`. */
-function _isFile(p: string): boolean {
-  try {
-    return statSync(p).isFile();
-  } catch {
-    return false;
-  }
 }
 
 /**

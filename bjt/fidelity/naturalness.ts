@@ -29,6 +29,7 @@ import { get, KeyError, len, or, truthy, ValueError, WS } from "../py.ts";
 import * as schemas from "../schemas.ts";
 import * as document from "../render/document.ts";
 import * as tts_plan from "../tts/plan.ts";
+import type { Item } from "../types.ts";
 
 /** Keigo no speaker produces. Every pattern here is taken from a real
  *  over-polite distractor: させていただく stacked on itself, できかねる given a
@@ -173,8 +174,6 @@ export const PROMPT = (
   + "every option shares is not a surface match."
 );
 
-type Item = Record<string, any>;
-
 /** (where, text) for everything `bjt/tts/plan.ts` would synthesise. */
 export function _spokenTexts(item: Item): [string, string][] {
   const policy = tts_plan.audioPolicy(get(item, "item_type", ""));
@@ -233,7 +232,7 @@ export function twinsOfKey(item: Item): [number, string][] {
     const text = inContext(get(o, "text", ""));
     const isTwin = STANDARD_TWINS.some(([pattern, swap]) =>
       [...keyText.matchAll(pattern)].some((m) =>
-        keyText.slice(0, m.index) + swap + keyText.slice(m.index! + m[0].length) === text));
+        keyText.slice(0, m.index) + swap + keyText.slice(m.index + m[0].length) === text));
     if (isTwin) out.push([i, get(o, "text", "")]);
   });
   return out;

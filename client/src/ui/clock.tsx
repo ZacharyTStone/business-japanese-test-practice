@@ -27,7 +27,7 @@
  * amber and then red, the number keeps counting, and that is all — no flashing
  * and no noise. Somebody is reading Japanese; the clock is furniture.
  */
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Platform, StyleSheet, Text, View } from "react-native";
 
 import {
