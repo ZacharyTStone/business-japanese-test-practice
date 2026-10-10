@@ -138,6 +138,12 @@ accident is not.
   verdict is by count over the planned trials, so stopping early never changes
   it. A trial the judge did not answer ends the gate as `unchecked`: never
   kept, and nothing passed to the next draft.
+- **A leak discards only 聴読解** (`answerability.COLD_DISCARDS`: 状況把握,
+  資料聴読解, 総合聴読解), whose definition it breaks. Every other type records the
+  cold rate and is judged on its full side: a leak there makes a question
+  easier than meant, not wrong. The owner's decision (2026-10-10), after
+  keeping every such question the regate found and after leaks cost most
+  nightly drafts; the difficulty probe measures how easy a kept one is.
 - **Every generator is told how the cold view guesses** (`_coldTestSpec` in
   `bjt/generators/base.ts`): plan four answers equally likely with the
   withheld half unknown, never let the key be the single most typical,

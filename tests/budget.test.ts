@@ -16,13 +16,12 @@ import * as llm from "../bjt/llm.ts";
 import * as pipeline from "../bjt/pipeline.ts";
 import * as plan from "../bjt/plan.ts";
 import { deepcopy } from "../bjt/py.ts";
-import * as schemas from "../bjt/schemas.ts";
 import * as answerability from "../bjt/fidelity/answerability.ts";
 import * as dedupe from "../bjt/fidelity/dedupe.ts";
 import { type Generator, type Item } from "../bjt/generators/base.ts";
 import { getGenerator } from "../bjt/generators/index.ts";
 import type * as seedtable from "../bjt/seedtable.ts";
-import { store } from "./conftest.ts";
+import { goiCorrectText, store } from "./conftest.ts";
 import { fakeMessages, patch, setConfig, tmpPath } from "./helpers.ts";
 
 /** `quiet`: no proofreader, no probe, three trials a side. */
@@ -52,9 +51,10 @@ describe("budget", () => {
         generations.push(1);
         return _always()();
       });
-      // The cold side always picks the key: every draft is leaky.
-      patch(llm, "answerChoice", async () => ({
-        choice: schemas.correctIndex(fixtures.FIXTURES["goi_bunpou"]["options"]), reason: "x",
+      // The judge never picks the key, even with the stem: every draft is
+      // ambiguous. (A leak alone no longer discards a 語彙・文法 draft.)
+      patch(llm, "answerChoice", async (_question: string, options: string[]) => ({
+        choice: (options.indexOf(goiCorrectText()) + 1) % 4, reason: "x",
       }));
       setConfig({ SLOT_PATIENCE: 3 });
 
@@ -154,20 +154,23 @@ describe("budget", () => {
         return deepcopy(fixtures.FIXTURES["goi_bunpou"]);
       };
 
-      const answers = [0, 0, 1, 1][Symbol.iterator]();  // cold: right, right (leaky); then wrong, wrong
-
-      const judge = async (question: string, options: string[]) => {
-        const ci = options.indexOf(fixtures.FIXTURES["goi_bunpou"]["options"].find(
-          (o: Item) => o["role"] === "correct")["text"]);
-        if (question.includes("withheld")) {
-          return { choice: answers.next().value === 0 ? ci : (ci + 1) % 4,
-                   reason: "only option B is in humble form" };
-        }
-        return { choice: ci, reason: "x" };
+      // Leaky, then kept. The verdict is faked because a leak discards only a
+      // 聴読解 draft (answerability.COLD_DISCARDS), and the retry loop under
+      // test is the same for every type.
+      const leaks = [true, false][Symbol.iterator]();
+      const gate = async (_item: Item) => {
+        const leaky = leaks.next().value;
+        const reason = "only option B is in humble form";
+        return new answerability.GateResult({
+          cold_success_rate: leaky ? 1.0 : 0.0,
+          full_success_rate: leaky ? null : 1.0,
+          verdict: leaky ? "discarded:leaky" : "kept",
+          trials: leaky ? [0, 1].map((t) => new answerability.Trial(
+            { side: "cold", trial: t, chosen: 1, correct: true, reason })) : [] });
       };
 
       patch(llm, "generateStructured", fake);
-      patch(llm, "answerChoice", judge);
+      patch(answerability, "runGate", gate);
       const prompts: [string | null, string | null | undefined][] = [];
       const cls = getGenerator("goi_bunpou").constructor as { prototype: Generator };
       const realUserPrompt = cls.prototype.userPrompt;

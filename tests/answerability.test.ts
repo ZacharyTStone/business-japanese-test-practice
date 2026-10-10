@@ -10,7 +10,7 @@ import * as schemas from "../bjt/schemas.ts";
 import * as answerability from "../bjt/fidelity/answerability.ts";
 import * as difficulty from "../bjt/fidelity/difficulty.ts";
 import * as document from "../bjt/render/document.ts";
-import { goiItem } from "./conftest.ts";
+import { fixtureItem, goiItem } from "./conftest.ts";
 import { patch, setConfig } from "./helpers.ts";
 
 type Answer = (question: string, options: string[], opts?: { model?: string | null }) => Promise<Record<string, any>>;
@@ -43,9 +43,10 @@ describe("answerability", () => {
   });
 
   test("discarded leaky when cold succeeds", async () => {
-    const item = goiItem();
+    // A 聴読解 type: the answer must need the audio, so a leak discards.
+    const item = fixtureItem("shiryou_choudokkai");
     const ci = schemas.correctIndex(item["options"]);
-    // Cold picks the right answer without the stem -> distractors leak.
+    // Cold picks the right answer from the page alone -> the audio is decorative.
     patch(llm, "answerChoice", _fakeAnswerer(ci, ci));
     const res = await answerability.runGate(item);
     expect(res.cold_success_rate).toBe(1.0);
@@ -59,7 +60,7 @@ describe("answerability", () => {
   });
 
   test("the cold side runs first and alone when it leaks", async () => {
-    const item = goiItem();
+    const item = fixtureItem("shiryou_choudokkai");
     const ci = schemas.correctIndex(item["options"]);
     const asked: string[] = [];
 
@@ -69,6 +70,42 @@ describe("answerability", () => {
     });
     await answerability.runGate(item);
     expect(asked).toEqual(["cold", "cold"]);
+  });
+
+  /** Outside 聴読解 a leak makes a question easier than meant, not wrong
+   *  (2026-10-10): the cold rate is recorded and the full side decides. */
+  test("a leak outside 聴読解 is recorded, not discarded", async () => {
+    const item = goiItem();
+    const ci = schemas.correctIndex(item["options"]);
+    const asked: string[] = [];
+    patch(llm, "answerChoice", async (question: string) => {
+      asked.push(question.includes("withheld") ? "cold" : "full");
+      return { choice: ci, reason: "x" };
+    });
+    const res = await answerability.runGate(item);
+    expect(res.verdict).toBe("kept");
+    expect(res.cold_success_rate).toBe(1.0);
+    expect(res.full_success_rate).toBe(1.0);
+    expect(asked).toEqual(["cold", "cold", "full", "full"]);
+  });
+
+  test("a leak outside 聴読解 is still discarded when the full side fails", async () => {
+    const item = goiItem();
+    const ci = schemas.correctIndex(item["options"]);
+    // Cold right, full wrong: the key is a guess the stem does not support.
+    patch(llm, "answerChoice", _fakeAnswerer((ci + 1) % 4, ci));
+    const res = await answerability.runGate(item);
+    expect(res.cold_success_rate).toBe(1.0);
+    expect(res.verdict).toBe("discarded:ambiguous");
+  });
+
+  test("only the 聴読解 types discard a leak", () => {
+    expect([...answerability.COLD_DISCARDS].sort()).toEqual(
+      ["joukyou_haaku", "shiryou_choudokkai", "sougou_choudokkai"]);
+    for (const t of ["goi_bunpou", "hyougen", "bamen_haaku", "hatsugen_choukai",
+                     "gazou_haaku", "sougou_choukai", "sougou_dokkai"]) {
+      expect(answerability.leakDiscards(t), t).toBe(false);
+    }
   });
 
   test("discarded ambiguous when full fails", async () => {
@@ -227,15 +264,15 @@ describe("answerability", () => {
   });
 
   test("the judges reason is kept and fed back", async () => {
-    const item = goiItem();
+    const item = fixtureItem("shiryou_choudokkai");
     const ci = schemas.correctIndex(item["options"]);
     patch(llm, "answerChoice", async () => ({ choice: ci, reason: "the only polite one" }));
     const res = await answerability.runGate(item);
     expect(res.verdict).toBe("discarded:leaky");
     expect(res.trials.every((t) => t.reason === "the only polite one")).toBe(true);
-    const text = answerability.leakDescription("goi_bunpou", { result: res });
+    const text = answerability.leakDescription("shiryou_choudokkai", { result: res });
     expect(text.includes("the only polite one") && text.split("the only polite one").length - 1 === 1).toBe(true);
-    expect(text).toContain("stem hidden");
+    expect(text).toContain("without the spoken prompt");
     // No result, or no cold reasons: the plain sentence.
     expect(answerability.leakDescription("goi_bunpou")).not.toContain("own words");
   });
